@@ -1,0 +1,109 @@
+import { useMemo, useState } from 'react'
+import { HEX_SIZE, hexToWorld, hexDistance } from '../../utils/hex'
+import type { GridPosition } from '../../../shared/types'
+
+type HexGridProps = {
+  radius: number
+  playerPosition: GridPosition | null
+  moveRange: number
+  enemyPositions: GridPosition[]
+  selectedTargetPosition: GridPosition | null
+  moveTargetPosition: GridPosition | null
+  onHexClick: (q: number, r: number) => void
+}
+
+const getHexColor = (
+  q: number,
+  r: number,
+  playerPosition: GridPosition | null,
+  moveRange: number,
+  enemyPositions: GridPosition[],
+  selectedTargetPosition: GridPosition | null,
+  moveTargetPosition: GridPosition | null,
+  isAlternate: boolean,
+  isHovered: boolean
+): string => {
+  if (moveTargetPosition && moveTargetPosition.x === q && moveTargetPosition.z === r) {
+    return '#00ff00'
+  }
+  
+  if (selectedTargetPosition && selectedTargetPosition.x === q && selectedTargetPosition.z === r) {
+    return '#ffcc00'
+  }
+  
+  const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
+  if (isEnemy) {
+    return isHovered ? '#cc4444' : '#aa2222'
+  }
+  
+  if (playerPosition) {
+    const distance = hexDistance(q, r, playerPosition.x, playerPosition.z)
+    if (distance <= moveRange && distance > 0) {
+      return isHovered ? '#448844' : '#224422'
+    }
+  }
+
+  if (isHovered) {
+    return '#444444'
+  }
+  
+  return isAlternate ? '#1a1a1a' : '#252525'
+}
+
+const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: { 
+  q: number; 
+  r: number; 
+  color: string; 
+  onClick: () => void;
+  onHover: () => void;
+  onUnhover: () => void;
+}) => {
+  const [x, z] = hexToWorld(q, r)
+  return (
+    <mesh 
+      position={[x, -0.05, z]} 
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+      onPointerOver={(e) => { e.stopPropagation(); onHover() }}
+      onPointerOut={(e) => { e.stopPropagation(); onUnhover() }}
+    >
+      <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 0.1, 6]} />
+      <meshStandardMaterial color={color} />
+    </mesh>
+  )
+}
+
+export const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, onHexClick }: HexGridProps) => {
+  const [hoveredHex, setHoveredHex] = useState<{q: number, r: number} | null>(null)
+
+  const tiles = useMemo(() => {
+    const result: { q: number; r: number }[] = []
+    for (let q = -radius; q <= radius; q += 1) {
+      for (let r = -radius; r <= radius; r += 1) {
+        if (Math.abs(q + r) > radius) continue
+        result.push({ q, r })
+      }
+    }
+    return result
+  }, [radius])
+
+  return (
+    <group>
+      {tiles.map(({ q, r }) => {
+        const isAlternate = (q + r) % 2 === 0
+        const isHovered = hoveredHex?.q === q && hoveredHex?.r === r
+        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isAlternate, isHovered)
+        return (
+          <HexTile 
+            key={`${q},${r}`} 
+            q={q} 
+            r={r} 
+            color={color} 
+            onClick={() => onHexClick(q, r)}
+            onHover={() => setHoveredHex({ q, r })}
+            onUnhover={() => setHoveredHex(null)}
+          />
+        )
+      })}
+    </group>
+  )
+}
