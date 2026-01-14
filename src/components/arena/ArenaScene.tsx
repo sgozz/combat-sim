@@ -2,8 +2,9 @@ import { OrbitControls, Environment, GizmoHelper, GizmoViewport, Html } from '@r
 import { HexGrid } from './HexGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
-import { hexToWorld } from '../../utils/hex'
+import { hexToWorld, getHexInDirection } from '../../utils/hex'
 import type { CombatantState, CharacterSheet, GridPosition, VisualEffect } from '../../../shared/types'
+import { useMemo } from 'react'
 
 type ArenaSceneProps = {
   combatants: CombatantState[]
@@ -61,6 +62,17 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
   const selectedTarget = combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetPosition = selectedTarget?.position ?? null
 
+  const frontArcHexes = useMemo(() => {
+    if (!playerCombatant) return []
+    const { x: q, z: r } = playerCombatant.position
+    const f = playerCombatant.facing
+    return [
+      getHexInDirection(q, r, f),
+      getHexInDirection(q, r, f - 1),
+      getHexInDirection(q, r, f + 1),
+    ]
+  }, [playerCombatant])
+
   return (
     <>
       <ambientLight intensity={0.5} />
@@ -73,6 +85,7 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
         enemyPositions={enemyPositions}
         selectedTargetPosition={selectedTargetPosition}
         moveTargetPosition={moveTarget}
+        frontArcHexes={frontArcHexes}
         onHexClick={(q, r) => onGridClick({ x: q, y: 0, z: r })}
       />
       

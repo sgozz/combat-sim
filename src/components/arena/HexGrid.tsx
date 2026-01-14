@@ -9,6 +9,7 @@ type HexGridProps = {
   enemyPositions: GridPosition[]
   selectedTargetPosition: GridPosition | null
   moveTargetPosition: GridPosition | null
+  frontArcHexes: { q: number; r: number }[]
   onHexClick: (q: number, r: number) => void
 }
 
@@ -20,6 +21,7 @@ const getHexColor = (
   enemyPositions: GridPosition[],
   selectedTargetPosition: GridPosition | null,
   moveTargetPosition: GridPosition | null,
+  isFrontArc: boolean,
   isAlternate: boolean,
   isHovered: boolean
 ): string => {
@@ -45,6 +47,10 @@ const getHexColor = (
 
   if (isHovered) {
     return '#444444'
+  }
+
+  if (isFrontArc) {
+    return isAlternate ? '#2a2a2a' : '#333333'
   }
   
   return isAlternate ? '#1a1a1a' : '#252525'
@@ -72,7 +78,7 @@ const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: {
   )
 }
 
-export const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, onHexClick }: HexGridProps) => {
+export const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, frontArcHexes, onHexClick }: HexGridProps) => {
   const [hoveredHex, setHoveredHex] = useState<{q: number, r: number} | null>(null)
 
   const tiles = useMemo(() => {
@@ -91,7 +97,8 @@ export const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, sel
       {tiles.map(({ q, r }) => {
         const isAlternate = (q + r) % 2 === 0
         const isHovered = hoveredHex?.q === q && hoveredHex?.r === r
-        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isAlternate, isHovered)
+        const isFrontArc = frontArcHexes.some(h => h.q === q && h.r === r)
+        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isFrontArc, isAlternate, isHovered)
         return (
           <HexTile 
             key={`${q},${r}`} 

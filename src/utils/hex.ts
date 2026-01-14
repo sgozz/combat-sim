@@ -42,3 +42,13 @@ export const worldToHex = (x: number, z: number): { q: number; r: number } => {
 export const hexDistance = (q1: number, r1: number, q2: number, r2: number): number => {
   return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2
 }
+
+export const getHexInDirection = (q: number, r: number, direction: number): { q: number; r: number } => {
+  const directions = [
+    { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+    { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+  ];
+  // Ensure positive modulo
+  const d = directions[(direction % 6 + 6) % 6];
+  return { q: q + d.q, r: r + d.r };
+}
