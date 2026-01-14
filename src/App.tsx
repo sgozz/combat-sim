@@ -42,6 +42,9 @@ function App() {
   const [lobbyId, setLobbyId] = useState<string | null>(null)
   const [matchState, setMatchState] = useState<MatchState | null>(null)
   const [logs, setLogs] = useState<string[]>([])
+  const [showJoinModal, setShowJoinModal] = useState(false)
+  const [selectedLobbyId, setSelectedLobbyId] = useState<string | null>(null)
+  const [filterType, setFilterType] = useState<'open' | 'in_match' | 'all'>('open')
 
   useEffect(() => {
     const ws = new WebSocket('ws://127.0.0.1:8080')
@@ -49,7 +52,11 @@ function App() {
 
     ws.onopen = () => {
       setLogs((prev) => [...prev, 'Connected to server.'])
-      const name = window.prompt('Enter your nickname')?.trim() || `Player-${Math.floor(Math.random() * 1000)}`
+      const storedName = window.localStorage.getItem('gurps.nickname')?.trim()
+      const name = storedName && storedName.length > 0
+        ? storedName
+        : (window.prompt('Enter your nickname')?.trim() || `Player-${Math.floor(Math.random() * 1000)}`)
+      window.localStorage.setItem('gurps.nickname', name)
       ws.send(JSON.stringify({ type: 'auth', name }))
     }
 
@@ -118,12 +125,18 @@ function App() {
   }
 
   const joinLobby = () => {
-    const lobby = lobbies.find((candidate) => candidate.status === 'open')
-    if (!lobby) {
-      setLogs((prev) => [...prev, 'No open lobbies to join.'])
-      return
-    }
+    setSelectedLobbyId(null)
+    setShowJoinModal(true)
+  }
+
+  const confirmJoin = () => {
+    if (!selectedLobbyId) return
+    const lobby = lobbies.find((candidate) => candidate.id === selectedLobbyId)
+    if (!lobby) return
+    
     sendMessage({ type: 'join_lobby', lobbyId: lobby.id })
+    setLogs((prev) => [...prev, `Joining lobby ${lobby.id}.`])
+    setShowJoinModal(false)
   }
 
   const startMatch = () => {
@@ -173,7 +186,7 @@ function App() {
                 ))
               ) : (
                 lobbies.map((lobby) => (
-                  <li key={lobby.id}>{lobby.name} ({lobby.playerCount}/{lobby.maxPlayers})</li>
+                  <li key={lobby.id}>{lobby.name} ({lobby.playerCount}/{lobby.maxPlayers}) - {lobby.id}</li>
                 ))
               )}
             </ul>
@@ -215,6 +228,71 @@ function App() {
           </div>
         </div>
       </aside>
+
+      {showJoinModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Join Lobby</h2>
+            
+            <div className="filter-controls">
+              <div className="filter-group">
+                <button 
+                  className={`filter-btn ${filterType === 'open' ? 'active' : ''}`}
+                  onClick={() => setFilterType('open')}
+                >
+                  Open
+                </button>
+                <button 
+                  className={`filter-btn ${filterType === 'in_match' ? 'active' : ''}`}
+                  onClick={() => setFilterType('in_match')}
+                >
+                  In Match
+                </button>
+                <button 
+                  className={`filter-btn ${filterType === 'all' ? 'active' : ''}`}
+                  onClick={() => setFilterType('all')}
+                >
+                  All
+                </button>
+              </div>
+            </div>
+
+            <div className="lobby-list">
+              {lobbies.filter(l => filterType === 'all' || l.status === filterType).length === 0 ? (
+                <div className="empty-state">No lobbies found</div>
+              ) : (
+                lobbies
+                  .filter(l => filterType === 'all' || l.status === filterType)
+                  .map((lobby) => (
+                  <div
+                    key={lobby.id}
+                    className={`lobby-item ${selectedLobbyId === lobby.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedLobbyId(lobby.id)}
+                  >
+                    <div className="lobby-name">{lobby.name}</div>
+                    <div className="lobby-meta">
+                      <span className="lobby-status">{lobby.status}</span>
+                      <span className="lobby-count">
+                        {lobby.playerCount}/{lobby.maxPlayers}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => setShowJoinModal(false)}>Cancel</button>
+              <button
+                disabled={!selectedLobbyId}
+                onClick={confirmJoin}
+                className="primary"
+              >
+                Join
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
