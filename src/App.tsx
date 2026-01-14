@@ -120,6 +120,10 @@ function App() {
     return <WelcomeScreen onComplete={handleWelcomeComplete} />
   }
 
+  if (screen === 'lobby' && !player) {
+    return <div style={{color: 'white', padding: '20px', textAlign: 'center'}}>Connecting to server...</div>
+  }
+
   if (screen === 'lobby' && player) {
     return (
       <>
