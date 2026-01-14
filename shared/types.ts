@@ -83,6 +83,8 @@ export type MatchState = {
   activeTurnPlayerId: Id;
   round: number;
   log: string[];
+  winnerId?: Id;
+  status: "active" | "finished";
 };
 
 export type LobbySummary = {
@@ -93,18 +95,27 @@ export type LobbySummary = {
   status: "open" | "in_match";
 };
 
+export type CombatActionPayload =
+  | { type: "attack"; targetId: Id }
+  | { type: "defend" }
+  | { type: "move"; position: GridPosition }
+  | { type: "end_turn" };
+
 export type ClientToServerMessage =
   | { type: "auth"; name: string }
   | { type: "create_lobby"; name: string; maxPlayers: number }
   | { type: "join_lobby"; lobbyId: Id }
   | { type: "leave_lobby" }
+  | { type: "delete_lobby"; lobbyId: Id }
+  | { type: "list_lobbies" }
   | { type: "start_match" }
   | { type: "select_character"; character: CharacterSheet }
-  | { type: "action"; action: string; payload?: Record<string, unknown> };
+  | { type: "action"; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
 
 export type ServerToClientMessage =
   | { type: "auth_ok"; player: Player }
   | { type: "lobbies"; lobbies: LobbySummary[] }
   | { type: "lobby_joined"; lobbyId: Id; players: Player[] }
+  | { type: "lobby_left" }
   | { type: "match_state"; state: MatchState }
   | { type: "error"; message: string };

@@ -1,0 +1,127 @@
+.lobby-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-left: 3px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.lobby-card:hover {
+  background: #252525;
+  border-color: #444;
+  border-left-color: inherit;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.lobby-card-open {
+  border-left-color: #22c55e;
+}
+
+.lobby-card-in_match {
+  border-left-color: #ef4444;
+}
+
+.lobby-card-starting {
+  border-left-color: #f59e0b;
+}
+
+.lobby-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.lobby-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.lobby-card-title h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.lobby-card-dot {
+  font-size: 0.75rem;
+}
+
+.lobby-card-players {
+  font-size: 1rem;
+  color: #888;
+  font-weight: 600;
+  background: #252525;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+.lobby-card-meta {
+  margin-bottom: 1rem;
+}
+
+.lobby-card-status {
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.lobby-card-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.lobby-card-join {
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.lobby-card-join:hover {
+  background: #16a34a;
+  transform: translateX(4px);
+}
+
+.lobby-card-full {
+  color: #888;
+  font-size: 0.875rem;
+  font-style: italic;
+  padding: 0.6rem 1rem;
+}
+
+.lobby-card-spectate {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.lobby-card-spectate:disabled {
+  background: #333;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.lobby-card-spectate:hover:not(:disabled) {
+  background: #535bf2;
+}

@@ -7,13 +7,15 @@ import { open, type Database } from "sqlite";
 import type {
   CharacterSheet,
   ClientToServerMessage,
+  CombatActionPayload,
   CombatantState,
+  GridPosition,
   LobbySummary,
   MatchState,
   Player,
   ServerToClientMessage,
 } from "../../shared/types";
-import { advanceTurn, calculateDerivedStats } from "../../shared/rules";
+import { advanceTurn, calculateDerivedStats, resolveAttack } from "../../shared/rules";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const DB_PATH = path.join(process.cwd(), "data.sqlite");
@@ -305,7 +307,7 @@ const persistLobbyState = async (lobby: Lobby) => {
   }
 };
 
-const leaveLobby = async (socket: WebSocket) => {
+const leaveLobby = async (socket: WebSocket, explicit: boolean = false) => {
   const state = connections.get(socket);
   if (!state?.lobbyId || !state.playerId) {
     return;
@@ -313,22 +315,28 @@ const leaveLobby = async (socket: WebSocket) => {
   const lobby = lobbies.get(state.lobbyId);
   if (!lobby) {
     connections.set(socket, { playerId: state.playerId });
+    if (explicit) {
+      sendMessage(socket, { type: "lobby_left" });
+    }
     return;
   }
-  const departingPlayer = lobby.players.find((player) => player.id === state.playerId) ?? null;
-  lobby.players = lobby.players.filter((player) => player.id !== state.playerId);
-  if (departingPlayer) {
-    await upsertPlayerProfile({ ...departingPlayer, characterId: departingPlayer.characterId }, null);
-  }
-  if (lobby.players.length === 0) {
-    lobbies.delete(lobby.id);
-    matches.delete(lobby.id);
-    await deleteLobby(lobby.id);
-  } else {
-    await persistLobbyState(lobby);
+  if (explicit) {
+    const departingPlayer = lobby.players.find((player) => player.id === state.playerId) ?? null;
+    lobby.players = lobby.players.filter((player) => player.id !== state.playerId);
+    if (departingPlayer) {
+      await upsertPlayerProfile({ ...departingPlayer, characterId: departingPlayer.characterId }, null);
+    }
+    if (lobby.players.length === 0) {
+      lobbies.delete(lobby.id);
+      matches.delete(lobby.id);
+      await deleteLobby(lobby.id);
+    } else {
+      await persistLobbyState(lobby);
+    }
+    broadcastLobbies();
+    sendMessage(socket, { type: "lobby_left" });
   }
   connections.set(socket, { playerId: state.playerId });
-  broadcastLobbies();
 };
 
 const createBotCharacter = (name: string): CharacterSheet => {
@@ -374,6 +382,22 @@ const ensureMinimumBots = async (lobby: Lobby) => {
   }
 };
 
+const calculateHexDistance = (from: GridPosition, to: GridPosition) => {
+  const q1 = from.x, r1 = from.z;
+  const q2 = to.x, r2 = to.z;
+  const s1 = -q1 - r1;
+  const s2 = -q2 - r2;
+  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2));
+};
+
+const getCombatantByPlayerId = (state: MatchState, playerId: string) => {
+  return state.combatants.find((combatant) => combatant.playerId === playerId) ?? null;
+};
+
+const getCharacterById = (state: MatchState, characterId: string) => {
+  return state.characters.find((character) => character.id === characterId) ?? null;
+};
+
 const createMatchState = (lobby: Lobby): MatchState => {
   const characters = lobby.players.map((player) => {
     const existing = playerCharacters.get(player.id);
@@ -401,14 +425,20 @@ const createMatchState = (lobby: Lobby): MatchState => {
     return fallback;
   });
 
-  const combatants: CombatantState[] = characters.map((character, index) => ({
-    playerId: lobby.players[index]?.id ?? character.id,
-    characterId: character.id,
-    position: { x: index, y: 0, z: 0 },
-    currentHP: character.derived.hitPoints,
-    currentFP: character.derived.fatiguePoints,
-    statusEffects: [],
-  }));
+  const combatants: CombatantState[] = characters.map((character, index) => {
+    const player = lobby.players[index];
+    const isBot = player?.isBot ?? false;
+    const q = isBot ? 6 : -2;
+    const r = index;
+    return {
+      playerId: player?.id ?? character.id,
+      characterId: character.id,
+      position: { x: q, y: 0, z: r },
+      currentHP: character.derived.hitPoints,
+      currentFP: character.derived.fatiguePoints,
+      statusEffects: [],
+    };
+  });
 
   return {
     id: randomUUID(),
@@ -418,10 +448,95 @@ const createMatchState = (lobby: Lobby): MatchState => {
     activeTurnPlayerId: lobby.players[0]?.id ?? "",
     round: 1,
     log: ["Match started."],
+    status: "active",
   };
 };
 
+const checkVictory = (match: MatchState): MatchState => {
+  if (match.status === "finished") return match;
+
+  const aliveCombatants = match.combatants.filter((c) => c.currentHP > 0);
+  if (aliveCombatants.length <= 1) {
+    const winner = aliveCombatants[0];
+    const winnerPlayer = winner ? match.players.find((p) => p.id === winner.playerId) : null;
+    return {
+      ...match,
+      status: "finished",
+      winnerId: winner?.playerId,
+      log: [
+        ...match.log,
+        winnerPlayer ? `${winnerPlayer.name} wins!` : "Draw - no survivors!",
+      ],
+    };
+  }
+  return match;
+};
+
+const findNearestEnemy = (
+  botCombatant: CombatantState,
+  allCombatants: CombatantState[],
+  botPlayerId: string
+): CombatantState | null => {
+  let nearest: CombatantState | null = null;
+  let minDistance = Infinity;
+  for (const combatant of allCombatants) {
+    if (combatant.playerId === botPlayerId) continue;
+    if (combatant.currentHP <= 0) continue;
+    const dist = calculateHexDistance(botCombatant.position, combatant.position);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearest = combatant;
+    }
+  }
+  return nearest;
+};
+
+const getHexNeighbors = (q: number, r: number): GridPosition[] => {
+  const directions = [
+    { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+    { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+  ];
+  return directions.map((d) => ({ x: q + d.q, y: 0, z: r + d.r }));
+};
+
+const computeHexMoveToward = (
+  from: GridPosition,
+  to: GridPosition,
+  maxMove: number,
+  stopDistance: number = 1
+): GridPosition => {
+  let current = { ...from };
+  let remaining = maxMove;
+
+  while (remaining > 0) {
+    const currentDist = calculateHexDistance(current, to);
+    if (currentDist <= stopDistance) break;
+
+    const neighbors = getHexNeighbors(current.x, current.z);
+    let bestNeighbor = current;
+    let bestDist = currentDist;
+
+    for (const neighbor of neighbors) {
+      const dist = calculateHexDistance(neighbor, to);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestNeighbor = neighbor;
+      }
+    }
+
+    if (bestDist >= currentDist) break;
+    if (bestDist < stopDistance) break;
+    current = bestNeighbor;
+    remaining--;
+  }
+
+  return current;
+};
+
 const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
+  if (match.status === "finished") {
+    return;
+  }
   const activePlayer = lobby.players.find((player) => player.id === match.activeTurnPlayerId);
   if (!activePlayer?.isBot) {
     return;
@@ -433,9 +548,99 @@ const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
   const timer = setTimeout(async () => {
     const currentMatch = matches.get(lobby.id);
     if (!currentMatch) return;
+
+    const botCombatant = getCombatantByPlayerId(currentMatch, activePlayer.id);
+    if (!botCombatant || botCombatant.currentHP <= 0) {
+      const updated = advanceTurn({
+        ...currentMatch,
+        log: [...currentMatch.log, `${activePlayer.name} is incapacitated.`],
+      });
+      matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+      return;
+    }
+
+    const target = findNearestEnemy(botCombatant, currentMatch.combatants, activePlayer.id);
+    if (!target) {
+      const updated = advanceTurn({
+        ...currentMatch,
+        log: [...currentMatch.log, `${activePlayer.name} finds no targets.`],
+      });
+      matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+      return;
+    }
+
+    const distanceToTarget = calculateHexDistance(botCombatant.position, target.position);
+
+    if (distanceToTarget <= 1) {
+      const attackerCharacter = getCharacterById(currentMatch, botCombatant.characterId);
+      const targetCharacter = getCharacterById(currentMatch, target.characterId);
+      if (!attackerCharacter || !targetCharacter) {
+        const updated = advanceTurn({
+          ...currentMatch,
+          log: [...currentMatch.log, `${activePlayer.name} waits.`],
+        });
+        matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        scheduleBotTurn(lobby, updated);
+        return;
+      }
+
+      const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+      const defense = targetCharacter.derived.dodge;
+      const damageFormula = attackerCharacter.equipment[0]?.damage ?? "1d";
+      const result = resolveAttack({ skill, defense, damage: damageFormula });
+
+      let updatedCombatants = currentMatch.combatants;
+      let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}`;
+
+      if (result.outcome === "miss") {
+        logEntry += ": miss.";
+      } else if (result.outcome === "defended") {
+        logEntry += ": defended.";
+      } else {
+        const damage = result.damage?.total ?? 0;
+        updatedCombatants = currentMatch.combatants.map((combatant) => {
+          if (combatant.playerId !== target.playerId) return combatant;
+          const nextHp = Math.max(combatant.currentHP - damage, 0);
+          return { ...combatant, currentHP: nextHp };
+        });
+        logEntry += `: hit for ${damage} damage.`;
+      }
+
+      let updated = advanceTurn({
+        ...currentMatch,
+        combatants: updatedCombatants,
+        log: [...currentMatch.log, logEntry],
+      });
+      updated = checkVictory(updated);
+      matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+      return;
+    }
+
+    const botCharacter = getCharacterById(currentMatch, botCombatant.characterId);
+    const maxMove = botCharacter?.derived.basicMove ?? 5;
+    const newPosition = computeHexMoveToward(botCombatant.position, target.position, maxMove);
+
+    const updatedCombatants = currentMatch.combatants.map((combatant) =>
+      combatant.playerId === activePlayer.id
+        ? { ...combatant, position: newPosition }
+        : combatant
+    );
+
     const updated = advanceTurn({
       ...currentMatch,
-      log: [...currentMatch.log, `${activePlayer.name} waits.`],
+      combatants: updatedCombatants,
+      log: [...currentMatch.log, `${activePlayer.name} moves to (${newPosition.x}, ${newPosition.z}).`],
     });
     matches.set(lobby.id, updated);
     await upsertMatch(lobby.id, updated);
@@ -507,6 +712,10 @@ const startServer = async () => {
           }
           return;
         }
+        case "list_lobbies": {
+          sendMessage(socket, { type: "lobbies", lobbies: Array.from(lobbies.values()).map(summarizeLobby) });
+          return;
+        }
         case "create_lobby": {
           const player = requirePlayer(socket);
           if (!player) return;
@@ -555,7 +764,28 @@ const startServer = async () => {
           return;
         }
         case "leave_lobby": {
-          await leaveLobby(socket);
+          await leaveLobby(socket, true);
+          return;
+        }
+        case "delete_lobby": {
+          const player = requirePlayer(socket);
+          if (!player) return;
+          const lobbyToDelete = lobbies.get(message.lobbyId);
+          if (!lobbyToDelete) {
+            sendMessage(socket, { type: "error", message: "Lobby not found." });
+            return;
+          }
+          for (const lobbyPlayer of lobbyToDelete.players) {
+            await upsertPlayerProfile(lobbyPlayer, null);
+          }
+          lobbies.delete(message.lobbyId);
+          matches.delete(message.lobbyId);
+          await deleteLobby(message.lobbyId);
+          const connState = connections.get(socket);
+          if (connState?.lobbyId === message.lobbyId) {
+            connections.set(socket, { playerId: connState.playerId });
+          }
+          broadcastLobbies();
           return;
         }
         case "select_character": {
@@ -603,7 +833,26 @@ const startServer = async () => {
             sendMessage(socket, { type: "error", message: "Match not found." });
             return;
           }
-          if (message.action === "end_turn") {
+          if (match.status === "finished") {
+            sendMessage(socket, { type: "error", message: "Match is over." });
+            return;
+          }
+          if (match.activeTurnPlayerId !== player.id) {
+            sendMessage(socket, { type: "error", message: "Not your turn." });
+            return;
+          }
+          const payload = message.payload as CombatActionPayload | undefined;
+          if (!payload || payload.type !== message.action) {
+            sendMessage(socket, { type: "error", message: "Invalid action payload." });
+            return;
+          }
+          const actorCombatant = getCombatantByPlayerId(match, player.id);
+          if (!actorCombatant) {
+            sendMessage(socket, { type: "error", message: "Combatant not found." });
+            return;
+          }
+
+          if (payload.type === "end_turn") {
             const updated = advanceTurn({
               ...match,
               log: [...match.log, `${player.name} ends their turn.`],
@@ -614,6 +863,111 @@ const startServer = async () => {
             scheduleBotTurn(lobby, updated);
             return;
           }
+
+          if (payload.type === "move") {
+            const actorCharacter = getCharacterById(match, actorCombatant.characterId);
+            if (!actorCharacter) {
+              sendMessage(socket, { type: "error", message: "Character not found." });
+              return;
+            }
+            const distance = calculateHexDistance(actorCombatant.position, payload.position);
+            const allowed = actorCharacter.derived.basicMove;
+            if (distance > allowed) {
+              sendMessage(socket, { type: "error", message: "Move exceeds Basic Move." });
+              return;
+            }
+            const updatedCombatants = match.combatants.map((combatant) =>
+              combatant.playerId === player.id
+                ? { ...combatant, position: { x: payload.position.x, y: 0, z: payload.position.z } }
+                : combatant
+            );
+            const updated = advanceTurn({
+              ...match,
+              combatants: updatedCombatants,
+              log: [...match.log, `${player.name} moves to (${payload.position.x}, ${payload.position.z}).`],
+            });
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            scheduleBotTurn(lobby, updated);
+            return;
+          }
+
+          if (payload.type === "defend") {
+            const updated = advanceTurn({
+              ...match,
+              combatants: match.combatants.map((combatant) =>
+                combatant.playerId === player.id
+                  ? { ...combatant, statusEffects: [...combatant.statusEffects, "defending"] }
+                  : combatant
+              ),
+              log: [...match.log, `${player.name} takes a defensive posture.`],
+            });
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            scheduleBotTurn(lobby, updated);
+            return;
+          }
+
+          if (payload.type === "attack") {
+            const targetCombatant = match.combatants.find(
+              (combatant) => combatant.playerId === payload.targetId
+            );
+            if (!targetCombatant) {
+              sendMessage(socket, { type: "error", message: "Target not found." });
+              return;
+            }
+            const distance = calculateHexDistance(actorCombatant.position, targetCombatant.position);
+            if (distance > 1) {
+              sendMessage(socket, { type: "error", message: "Target out of melee range." });
+              return;
+            }
+            const attackerCharacter = getCharacterById(match, actorCombatant.characterId);
+            const targetCharacter = getCharacterById(match, targetCombatant.characterId);
+            if (!attackerCharacter || !targetCharacter) {
+              sendMessage(socket, { type: "error", message: "Character not found." });
+              return;
+            }
+            const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+            const defense = targetCharacter.derived.dodge;
+            const damageFormula = attackerCharacter.equipment[0]?.damage ?? "1d";
+            const result = resolveAttack({ skill, defense, damage: damageFormula });
+
+            let updatedCombatants = match.combatants;
+            let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}`;
+
+            if (result.outcome === "miss") {
+              logEntry += ": miss.";
+            } else if (result.outcome === "defended") {
+              logEntry += ": defended.";
+            } else {
+              const damage = result.damage?.total ?? 0;
+              updatedCombatants = match.combatants.map((combatant) => {
+                if (combatant.playerId !== targetCombatant.playerId) return combatant;
+                const nextHp = Math.max(combatant.currentHP - damage, 0);
+                return {
+                  ...combatant,
+                  currentHP: nextHp,
+                  statusEffects: damage > 0 ? [...combatant.statusEffects, "shock"] : combatant.statusEffects,
+                };
+              });
+              logEntry += `: hit for ${damage} damage.`;
+            }
+
+            let updated = advanceTurn({
+              ...match,
+              combatants: updatedCombatants,
+              log: [...match.log, logEntry],
+            });
+            updated = checkVictory(updated);
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            scheduleBotTurn(lobby, updated);
+            return;
+          }
+
           sendMessage(socket, { type: "error", message: "Action handling not implemented." });
           return;
         }
@@ -623,7 +977,7 @@ const startServer = async () => {
     });
 
     socket.on("close", () => {
-      void leaveLobby(socket);
+      void leaveLobby(socket, false);
       connections.delete(socket);
     });
   });
