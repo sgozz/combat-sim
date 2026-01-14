@@ -1,8 +1,9 @@
-import { OrbitControls, Environment, GizmoHelper, GizmoViewport } from '@react-three/drei'
+import { OrbitControls, Environment, GizmoHelper, GizmoViewport, Html } from '@react-three/drei'
 import { HexGrid } from './HexGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
-import type { CombatantState, CharacterSheet, GridPosition } from '../../../shared/types'
+import { hexToWorld } from '../../utils/hex'
+import type { CombatantState, CharacterSheet, GridPosition, VisualEffect } from '../../../shared/types'
 
 type ArenaSceneProps = {
   combatants: CombatantState[]
@@ -12,11 +13,44 @@ type ArenaSceneProps = {
   selectedTargetId: string | null
   isPlayerTurn: boolean
   playerMoveRange: number
+  visualEffects: (VisualEffect & { id: string })[]
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+const FloatingText = ({ effect }: { effect: VisualEffect }) => {
+  const [x, z] = hexToWorld(effect.position.x, effect.position.z)
+  
+  let content = ''
+  let color = 'white'
+  
+  if (effect.type === 'damage') {
+    content = `-${effect.value}`
+    color = '#ff4444'
+  } else if (effect.type === 'miss') {
+    content = 'Miss'
+    color = '#aaaaaa'
+  } else if (effect.type === 'defend') {
+    content = 'Blocked'
+    color = '#4444ff'
+  }
+
+  return (
+    <Html position={[x, 3, z]} center style={{ pointerEvents: 'none' }}>
+      <div style={{
+        color,
+        fontSize: '24px',
+        fontWeight: 'bold',
+        textShadow: '0 0 4px black',
+        animation: 'floatUp 1s ease-out forwards'
+      }}>
+        {content}
+      </div>
+    </Html>
+  )
+}
+
+export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, visualEffects, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null
   
@@ -51,6 +85,10 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
           isSelected={combatant.playerId === selectedTargetId}
           onClick={() => onCombatantClick(combatant.playerId)}
         />
+      ))}
+
+      {visualEffects.map((effect) => (
+        <FloatingText key={effect.id} effect={effect} />
       ))}
 
       {moveTarget && <MoveMarker position={moveTarget} />}

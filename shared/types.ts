@@ -124,10 +124,16 @@ export type ClientToServerMessage =
   | { type: "select_character"; character: CharacterSheet }
   | { type: "action"; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
 
+export type VisualEffect = 
+  | { type: 'damage'; targetId: Id; value: number; position: GridPosition }
+  | { type: 'miss'; targetId: Id; position: GridPosition }
+  | { type: 'defend'; targetId: Id; position: GridPosition };
+
 export type ServerToClientMessage =
   | { type: "auth_ok"; player: Player }
   | { type: "lobbies"; lobbies: LobbySummary[] }
   | { type: "lobby_joined"; lobbyId: Id; players: Player[] }
   | { type: "lobby_left" }
   | { type: "match_state"; state: MatchState }
+  | { type: "visual_effect"; effect: VisualEffect }
   | { type: "error"; message: string };

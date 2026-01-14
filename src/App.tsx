@@ -18,6 +18,7 @@ function App() {
     matchState,
     logs,
     screen,
+    visualEffects,
     setScreen,
     setLogs,
     initializeConnection,
@@ -157,6 +158,7 @@ function App() {
         lobbyPlayers={lobbyPlayers}
         lobbyId={lobbyId}
         logs={logs}
+        visualEffects={visualEffects}
         moveTarget={moveTarget}
         selectedTargetId={selectedTargetId}
         isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}

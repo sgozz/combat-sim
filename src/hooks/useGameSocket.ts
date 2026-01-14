@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { ServerToClientMessage, Player, LobbySummary, MatchState } from '../../shared/types'
+import type { ServerToClientMessage, Player, LobbySummary, MatchState, VisualEffect } from '../../shared/types'
 
 export type ScreenState = 'welcome' | 'lobby' | 'waiting' | 'match'
 
@@ -12,6 +12,7 @@ export const useGameSocket = () => {
   const [matchState, setMatchState] = useState<MatchState | null>(null)
   const [logs, setLogs] = useState<string[]>([])
   const [screen, setScreen] = useState<ScreenState>('welcome')
+  const [visualEffects, setVisualEffects] = useState<(VisualEffect & { id: string })[]>([])
 
   const initializeConnection = useCallback((name: string) => {
     const ws = new WebSocket('ws://127.0.0.1:8080')
@@ -50,6 +51,14 @@ export const useGameSocket = () => {
           setLobbyPlayers(message.state.players)
           setLogs(message.state.log)
           setScreen('match')
+          break
+        case 'visual_effect':
+          const id = crypto.randomUUID()
+          const effect = { ...message.effect, id }
+          setVisualEffects(prev => [...prev, effect])
+          setTimeout(() => {
+            setVisualEffects(prev => prev.filter(e => e.id !== id))
+          }, 2000)
           break
         case 'error':
           setLogs((prev) => [...prev, `Error: ${message.message}`])
@@ -93,6 +102,7 @@ export const useGameSocket = () => {
     matchState,
     logs,
     screen,
+    visualEffects,
     setScreen,
     setLogs,
     initializeConnection,

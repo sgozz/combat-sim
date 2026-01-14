@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { GameStatusPanel, GameActionPanel } from './GameHUD'
-import type { MatchState, Player, GridPosition, CombatActionPayload } from '../../../shared/types'
+import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect } from '../../../shared/types'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -9,6 +9,7 @@ type GameScreenProps = {
   lobbyPlayers: Player[]
   lobbyId: string | null
   logs: string[]
+  visualEffects: (VisualEffect & { id: string })[]
   moveTarget: GridPosition | null
   selectedTargetId: string | null
   isPlayerTurn: boolean
@@ -30,6 +31,7 @@ export const GameScreen = ({
   lobbyPlayers,
   lobbyId,
   logs,
+  visualEffects,
   moveTarget,
   selectedTargetId,
   isPlayerTurn,
@@ -70,6 +72,7 @@ export const GameScreen = ({
             selectedTargetId={selectedTargetId}
             isPlayerTurn={isPlayerTurn}
             playerMoveRange={playerMoveRange}
+            visualEffects={visualEffects}
             onGridClick={onGridClick}
             onCombatantClick={onCombatantClick}
           />

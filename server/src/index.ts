@@ -1013,8 +1013,16 @@ const startServer = async () => {
 
             if (result.outcome === "miss") {
               logEntry += ": miss.";
+              sendToLobby(lobby, { 
+                type: "visual_effect", 
+                effect: { type: "miss", targetId: targetCombatant.playerId, position: targetCombatant.position } 
+              });
             } else if (result.outcome === "defended") {
               logEntry += ": defended.";
+              sendToLobby(lobby, { 
+                type: "visual_effect", 
+                effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
+              });
             } else {
               const damage = result.damage?.total ?? 0;
               updatedCombatants = match.combatants.map((combatant) => {
@@ -1027,6 +1035,10 @@ const startServer = async () => {
                 };
               });
               logEntry += `: hit for ${damage} damage.`;
+              sendToLobby(lobby, { 
+                type: "visual_effect", 
+                effect: { type: "damage", targetId: targetCombatant.playerId, value: damage, position: targetCombatant.position } 
+              });
             }
 
             let updated = advanceTurn({
