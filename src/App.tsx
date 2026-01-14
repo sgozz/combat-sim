@@ -14,6 +14,8 @@ type ArenaSceneProps = {
   playerId: string | null
   moveTarget: GridPosition | null
   selectedTargetId: string | null
+  isPlayerTurn: boolean
+  playerMoveRange: number
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
 }
@@ -57,22 +59,79 @@ const hexDistance = (q1: number, r1: number, q2: number, r2: number) => {
   return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2
 }
 
-const HexGrid = ({ radius }: { radius: number }) => {
-  const tiles = []
-  for (let q = -radius; q <= radius; q += 1) {
-    for (let r = -radius; r <= radius; r += 1) {
-      if (Math.abs(q + r) > radius) continue
-      const [x, z] = hexToWorld(q, r)
-      const isAlternate = (q + r) % 2 === 0
-      tiles.push(
-        <mesh key={`${q},${r}`} position={[x, -0.05, z]}>
-          <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 0.1, 6]} />
-          <meshStandardMaterial color={isAlternate ? '#1a1a1a' : '#202020'} />
-        </mesh>
-      )
+type HexGridProps = {
+  radius: number
+  playerPosition: GridPosition | null
+  moveRange: number
+  enemyPositions: GridPosition[]
+  selectedTargetPosition: GridPosition | null
+  moveTargetPosition: GridPosition | null
+}
+
+const getHexColor = (
+  q: number,
+  r: number,
+  playerPosition: GridPosition | null,
+  moveRange: number,
+  enemyPositions: GridPosition[],
+  selectedTargetPosition: GridPosition | null,
+  moveTargetPosition: GridPosition | null,
+  isAlternate: boolean
+): string => {
+  if (moveTargetPosition && moveTargetPosition.x === q && moveTargetPosition.z === r) {
+    return '#00ff00'
+  }
+  
+  if (selectedTargetPosition && selectedTargetPosition.x === q && selectedTargetPosition.z === r) {
+    return '#ffcc00'
+  }
+  
+  const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
+  if (isEnemy) {
+    return '#aa2222'
+  }
+  
+  if (playerPosition) {
+    const distance = hexDistance(q, r, playerPosition.x, playerPosition.z)
+    if (distance <= moveRange && distance > 0) {
+      return '#224422'
     }
   }
-  return <group>{tiles}</group>
+  
+  return isAlternate ? '#1a1a1a' : '#252525'
+}
+
+const HexTile = ({ q, r, color }: { q: number; r: number; color: string }) => {
+  const [x, z] = hexToWorld(q, r)
+  return (
+    <mesh position={[x, -0.05, z]}>
+      <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 0.1, 6]} />
+      <meshStandardMaterial color={color} />
+    </mesh>
+  )
+}
+
+const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition }: HexGridProps) => {
+  const tiles = useMemo(() => {
+    const result: { q: number; r: number }[] = []
+    for (let q = -radius; q <= radius; q += 1) {
+      for (let r = -radius; r <= radius; r += 1) {
+        if (Math.abs(q + r) > radius) continue
+        result.push({ q, r })
+      }
+    }
+    return result
+  }, [radius])
+
+  return (
+    <group>
+      {tiles.map(({ q, r }) => {
+        const isAlternate = (q + r) % 2 === 0
+        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isAlternate)
+        return <HexTile key={`${q},${r}`} q={q} r={r} color={color} />
+      })}
+    </group>
+  )
 }
 
 const MoveMarker = ({ position }: { position: GridPosition }) => {
@@ -158,13 +217,30 @@ const ClickablePlane = ({ onGridClick }: { onGridClick: (position: GridPosition)
   return null
 }
 
-const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTargetId, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+  const playerCombatant = combatants.find(c => c.playerId === playerId)
+  const playerPosition = playerCombatant?.position ?? null
+  
+  const enemyPositions = combatants
+    .filter(c => c.playerId !== playerId)
+    .map(c => c.position)
+  
+  const selectedTarget = combatants.find(c => c.playerId === selectedTargetId)
+  const selectedTargetPosition = selectedTarget?.position ?? null
+
   return (
     <>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       
-      <HexGrid radius={10} />
+      <HexGrid 
+        radius={10} 
+        playerPosition={isPlayerTurn ? playerPosition : null}
+        moveRange={isPlayerTurn ? playerMoveRange : 0}
+        enemyPositions={enemyPositions}
+        selectedTargetPosition={selectedTargetPosition}
+        moveTargetPosition={moveTarget}
+      />
       
       {combatants.map((combatant) => (
         <Combatant
@@ -736,6 +812,8 @@ function App() {
             playerId={player?.id ?? null}
             moveTarget={moveTarget}
             selectedTargetId={selectedTargetId}
+            isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}
+            playerMoveRange={activeCombatant ? (matchState?.characters.find(c => c.id === activeCombatant.characterId)?.derived.basicMove ?? 5) : 5}
             onGridClick={handleGridClick}
             onCombatantClick={handleCombatantClick}
           />
