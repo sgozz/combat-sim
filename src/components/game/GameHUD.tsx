@@ -1,4 +1,4 @@
-import type { MatchState, Player, CombatActionPayload } from '../../../shared/types'
+import type { MatchState, Player, CombatActionPayload, ManeuverType } from '../../../shared/types'
 
 type GamePanelProps = {
   matchState: MatchState | null
@@ -52,6 +52,8 @@ type GameActionPanelProps = {
   logs: string[]
   moveTarget: unknown
   selectedTargetId: string | null
+  currentManeuver: ManeuverType | null
+  isMyTurn: boolean
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
   onStartMatch: () => void
@@ -61,11 +63,23 @@ type GameActionPanelProps = {
   inLobbyButNoMatch: boolean
 }
 
+const MANEUVERS: { type: ManeuverType; label: string }[] = [
+  { type: 'do_nothing', label: 'Do Nothing' },
+  { type: 'move', label: 'Move' },
+  { type: 'aim', label: 'Aim' },
+  { type: 'attack', label: 'Attack' },
+  { type: 'all_out_attack', label: 'All-Out Attack' },
+  { type: 'all_out_defense', label: 'All-Out Defense' },
+  { type: 'move_and_attack', label: 'Move & Attack' },
+]
+
 export const GameActionPanel = ({ 
   matchState, 
   logs, 
   moveTarget, 
   selectedTargetId,
+  currentManeuver,
+  isMyTurn,
   onAction,
   onLeaveLobby,
   onStartMatch,
@@ -79,52 +93,76 @@ export const GameActionPanel = ({
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
     : null
 
-  const actionButtons = matchState
-    ? [
+  const renderContent = () => {
+    if (!matchState) {
+      if (inLobbyButNoMatch) {
+        return [
+          { label: 'Edit Character', onClick: onOpenCharacterEditor },
+          { label: 'Start Match', onClick: onStartMatch },
+          { label: 'Leave Lobby', onClick: onLeaveLobby },
+        ]
+      }
+      return [
+        { label: 'Edit Character', onClick: onOpenCharacterEditor },
+        { label: 'Create Lobby', onClick: onCreateLobby },
+        { label: 'Join Lobby', onClick: onJoinLobby },
+      ]
+    }
+
+    if (isMyTurn && !currentManeuver) {
+      return MANEUVERS.map(m => ({
+        label: m.label,
+        onClick: () => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
+      }))
+    }
+
+    // Standard actions if maneuver selected or not my turn (view only?)
+    // If not my turn, maybe show nothing or just Leave.
+    // Assuming we show actions but they might fail or be disabled.
+    // Better to hide if not my turn? Current logic showed them.
+    // Let's keep showing them but maybe disable?
+    
+    return [
         {
           label: selectedTargetId ? `Attack ${selectedTargetName}` : 'Attack (select target)',
+          disabled: !isMyTurn,
           onClick: () => {
-            if (!selectedTargetId) {
-              return
-            }
+            if (!selectedTargetId) return
             onAction('attack', { type: 'attack', targetId: selectedTargetId })
           },
         },
         {
           label: 'Defend',
+          disabled: !isMyTurn,
           onClick: () => onAction('defend', { type: 'defend' }),
         },
         {
           label: moveTarget ? 'Confirm Move' : 'Move (click grid)',
-          onClick: () => {
-             onAction('move_click')
-          },
+          disabled: !isMyTurn,
+          onClick: () => onAction('move_click'),
         },
         ...(moveTarget ? [{ label: 'Cancel Move', onClick: () => onAction('cancel_move') }] : []),
-        { label: 'End Turn', onClick: () => onAction('end_turn', { type: 'end_turn' }) },
+        { label: 'End Turn', disabled: !isMyTurn, onClick: () => onAction('end_turn', { type: 'end_turn' }) },
         { label: 'Leave Match', onClick: onLeaveLobby },
       ]
-    : inLobbyButNoMatch
-      ? [
-          { label: 'Edit Character', onClick: onOpenCharacterEditor },
-          { label: 'Start Match', onClick: onStartMatch },
-          { label: 'Leave Lobby', onClick: onLeaveLobby },
-        ]
-      : [
-          { label: 'Edit Character', onClick: onOpenCharacterEditor },
-          { label: 'Create Lobby', onClick: onCreateLobby },
-          { label: 'Join Lobby', onClick: onJoinLobby },
-        ]
+  }
+
+  const buttons = renderContent()
 
   return (
     <aside className="panel panel-right">
       <div className="panel-header">Actions & Log</div>
       <div className="panel-content">
         <div className="card">
-          <h3>Actions</h3>
-          {actionButtons.map((action) => (
-            <button key={action.label} className="action-btn" onClick={action.onClick}>
-              {action.label}
+          <h3>{isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
+          {buttons.map((btn) => (
+            <button 
+              key={btn.label} 
+              className="action-btn" 
+              onClick={btn.onClick}
+              disabled={btn.disabled}
+            >
+              {btn.label}
             </button>
           ))}
         </div>

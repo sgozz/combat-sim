@@ -44,6 +44,9 @@ export const GameScreen = ({
   onJoinLobby,
   inLobbyButNoMatch
 }: GameScreenProps) => {
+  const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id)
+  const currentManeuver = currentCombatant?.maneuver ?? null
+
   return (
     <div className="app-container">
       <GameStatusPanel
@@ -78,6 +81,8 @@ export const GameScreen = ({
         logs={logs}
         moveTarget={moveTarget}
         selectedTargetId={selectedTargetId}
+        currentManeuver={currentManeuver}
+        isMyTurn={isPlayerTurn}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
         onStartMatch={onStartMatch}

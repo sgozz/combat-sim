@@ -66,10 +66,21 @@ export type GridPosition = {
   z: number;
 };
 
+export type ManeuverType = 
+  | 'do_nothing' 
+  | 'move' 
+  | 'aim' 
+  | 'attack' 
+  | 'all_out_attack' 
+  | 'all_out_defense' 
+  | 'move_and_attack';
+
 export type CombatantState = {
   playerId: Id;
   characterId: Id;
   position: GridPosition;
+  facing: number; // 0-5
+  maneuver: ManeuverType | null;
   currentHP: number;
   currentFP: number;
   statusEffects: string[];
@@ -96,6 +107,7 @@ export type LobbySummary = {
 };
 
 export type CombatActionPayload =
+  | { type: "select_maneuver"; maneuver: ManeuverType }
   | { type: "attack"; targetId: Id }
   | { type: "defend" }
   | { type: "move"; position: GridPosition }

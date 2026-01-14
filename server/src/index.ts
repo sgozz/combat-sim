@@ -430,10 +430,13 @@ const createMatchState = (lobby: Lobby): MatchState => {
     const isBot = player?.isBot ?? false;
     const q = isBot ? 6 : -2;
     const r = index;
+    const facing = isBot ? 3 : 0; // Bots face West (-q), Players face East (+q)
     return {
       playerId: player?.id ?? character.id,
       characterId: character.id,
       position: { x: q, y: 0, z: r },
+      facing,
+      maneuver: null,
       currentHP: character.derived.hitPoints,
       currentFP: character.derived.fatiguePoints,
       statusEffects: [],
@@ -497,6 +500,19 @@ const getHexNeighbors = (q: number, r: number): GridPosition[] => {
     { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
   ];
   return directions.map((d) => ({ x: q + d.q, y: 0, z: r + d.r }));
+};
+
+const calculateFacing = (from: GridPosition, to: GridPosition): number => {
+  const dq = to.x - from.x;
+  const dr = to.z - from.z;
+  if (dq === 0 && dr === 0) return 0;
+
+  const x = dq + dr / 2;
+  const y = dr * Math.sqrt(3) / 2;
+  const angle = Math.atan2(y, x);
+  
+  const sector = Math.round(-angle / (Math.PI / 3));
+  return (sector + 6) % 6;
 };
 
 const computeHexMoveToward = (
@@ -630,10 +646,11 @@ const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
     const botCharacter = getCharacterById(currentMatch, botCombatant.characterId);
     const maxMove = botCharacter?.derived.basicMove ?? 5;
     const newPosition = computeHexMoveToward(botCombatant.position, target.position, maxMove);
+    const newFacing = calculateFacing(botCombatant.position, newPosition);
 
     const updatedCombatants = currentMatch.combatants.map((combatant) =>
       combatant.playerId === activePlayer.id
-        ? { ...combatant, position: newPosition }
+        ? { ...combatant, position: newPosition, facing: newFacing }
         : combatant
     );
 
@@ -852,6 +869,26 @@ const startServer = async () => {
             return;
           }
 
+          if (payload.type === "select_maneuver") {
+            const updatedCombatants = match.combatants.map((c) =>
+              c.playerId === player.id ? { ...c, maneuver: payload.maneuver } : c
+            );
+            const updated = {
+              ...match,
+              combatants: updatedCombatants,
+              log: [...match.log, `${player.name} chooses ${payload.maneuver.replace(/_/g, " ")}.`],
+            };
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            return;
+          }
+
+          if (!actorCombatant.maneuver) {
+            sendMessage(socket, { type: "error", message: "Select a maneuver first." });
+            return;
+          }
+
           if (payload.type === "end_turn") {
             const updated = advanceTurn({
               ...match,
@@ -871,14 +908,33 @@ const startServer = async () => {
               return;
             }
             const distance = calculateHexDistance(actorCombatant.position, payload.position);
-            const allowed = actorCharacter.derived.basicMove;
+            
+            let allowed = actorCharacter.derived.basicMove;
+            const m = actorCombatant.maneuver;
+            
+            if (m === 'do_nothing' || m === 'all_out_defense') { // AoD allows step? Yes (B366: Step or half move?) Let's say 1 step for now standard
+               // Actually AoD (Increased Def) allows Step. AoD (Double) allows Step.
+               // Do Nothing: No move.
+               if (m === 'do_nothing') allowed = 0;
+               else allowed = 1; // AoD step
+            } else if (m === 'attack' || m === 'all_out_attack' || m === 'aim') {
+               allowed = 1; // Step
+               if (m === 'all_out_attack') allowed = Math.floor(actorCharacter.derived.basicMove / 2); // AoA allows half move
+            } 
+            // 'move', 'move_and_attack' allow full move (default)
+
             if (distance > allowed) {
-              sendMessage(socket, { type: "error", message: "Move exceeds Basic Move." });
+              sendMessage(socket, { type: "error", message: `Move exceeds allowed for ${m} (${allowed}).` });
               return;
             }
+            const newFacing = calculateFacing(actorCombatant.position, payload.position);
             const updatedCombatants = match.combatants.map((combatant) =>
               combatant.playerId === player.id
-                ? { ...combatant, position: { x: payload.position.x, y: 0, z: payload.position.z } }
+                ? { 
+                    ...combatant, 
+                    position: { x: payload.position.x, y: 0, z: payload.position.z },
+                    facing: newFacing
+                  }
                 : combatant
             );
             const updated = advanceTurn({
@@ -930,12 +986,30 @@ const startServer = async () => {
               return;
             }
             const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
-            const defense = targetCharacter.derived.dodge;
+            
+            const targetFacing = targetCombatant.facing;
+            const attackDirection = calculateFacing(targetCombatant.position, actorCombatant.position);
+            const relativeDir = (attackDirection - targetFacing + 6) % 6;
+
+            let defenseMod = 0;
+            let canDefend = true;
+            let defenseDescription = "normal";
+
+            if (relativeDir === 3) { // Back
+              canDefend = false;
+              defenseDescription = "backstab (no defense)";
+            } else if (relativeDir === 2 || relativeDir === 4) { // Side
+              defenseMod = -2;
+              defenseDescription = "flank (-2)";
+            }
+
+            const baseDefense = targetCharacter.derived.dodge;
+            const effectiveDefense = canDefend ? baseDefense + defenseMod : undefined;
             const damageFormula = attackerCharacter.equipment[0]?.damage ?? "1d";
-            const result = resolveAttack({ skill, defense, damage: damageFormula });
+            const result = resolveAttack({ skill, defense: effectiveDefense, damage: damageFormula });
 
             let updatedCombatants = match.combatants;
-            let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}`;
+            let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} (${defenseDescription})`;
 
             if (result.outcome === "miss") {
               logEntry += ": miss.";

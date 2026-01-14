@@ -37,9 +37,16 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const currentIndex = state.players.findIndex((player) => player.id === state.activeTurnPlayerId);
   const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % state.players.length;
   const round = nextIndex === 0 ? state.round + 1 : state.round;
+  const nextPlayerId = state.players[nextIndex]?.id ?? "";
+
+  const combatants = state.combatants.map(c => 
+    c.playerId === nextPlayerId ? { ...c, maneuver: null } : c
+  );
+
   return {
     ...state,
-    activeTurnPlayerId: state.players[nextIndex]?.id ?? "",
+    combatants,
+    activeTurnPlayerId: nextPlayerId,
     round,
   };
 };

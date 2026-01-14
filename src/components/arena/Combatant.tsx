@@ -13,13 +13,20 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const color = isPlayer ? '#646cff' : '#ff4444'
   const emissive = isSelected ? '#ffff00' : '#000000'
   const [x, z] = hexToWorld(combatant.position.x, combatant.position.z)
+  const rotation = -combatant.facing * (Math.PI / 3)
   
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, 1, 0]} onClick={onClick}>
-        <capsuleGeometry args={[0.4, 0.8, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
+      <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 1, 0]} onClick={onClick}>
+          <capsuleGeometry args={[0.4, 0.8, 4, 8]} />
+          <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+        </mesh>
+        <mesh position={[0.4, 1.5, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[0.2, 0.5, 8]} />
+          <meshStandardMaterial color="#eeeeee" />
+        </mesh>
+      </group>
       {isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.5, 0.65, 6]} />
