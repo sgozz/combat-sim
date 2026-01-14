@@ -23,3 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 /server/data.sqlite
+
+# SQLite
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
