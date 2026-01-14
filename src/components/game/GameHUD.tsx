@@ -109,6 +109,12 @@ export const GameActionPanel = ({
       ]
     }
 
+    if (matchState.status === 'finished') {
+      return [
+        { label: 'Leave Match', onClick: onLeaveLobby },
+      ]
+    }
+
     if (isMyTurn && !currentManeuver) {
       return MANEUVERS.map(m => ({
         label: m.label,
@@ -154,7 +160,7 @@ export const GameActionPanel = ({
       <div className="panel-header">Actions & Log</div>
       <div className="panel-content">
         <div className="card">
-          <h3>{isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
+          <h3>{matchState?.status === 'finished' ? 'Match Over' : isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
           {buttons.map((btn) => (
             <button 
               key={btn.label} 
