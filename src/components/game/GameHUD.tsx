@@ -63,14 +63,14 @@ type GameActionPanelProps = {
   inLobbyButNoMatch: boolean
 }
 
-const MANEUVERS: { type: ManeuverType; label: string }[] = [
-  { type: 'do_nothing', label: 'Do Nothing' },
-  { type: 'move', label: 'Move' },
-  { type: 'aim', label: 'Aim' },
-  { type: 'attack', label: 'Attack' },
-  { type: 'all_out_attack', label: 'All-Out Attack' },
-  { type: 'all_out_defense', label: 'All-Out Defense' },
-  { type: 'move_and_attack', label: 'Move & Attack' },
+const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string }[] = [
+  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.' },
+  { type: 'move', label: 'Move', icon: '🏃', desc: 'Full move. No attack. Active defense allowed.' },
+  { type: 'aim', label: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.' },
+  { type: 'attack', label: 'Attack', icon: '⚔️', desc: 'Standard attack. Step allowed. Active defense allowed.' },
+  { type: 'all_out_attack', label: 'All-Out Attack', icon: '😡', desc: 'Bonus to hit or damage. Half move. NO DEFENSE.' },
+  { type: 'all_out_defense', label: 'All-Out Defense', icon: '🛡️', desc: 'Bonus to defense (+2). Step allowed. No attack.' },
+  { type: 'move_and_attack', label: 'Move & Attack', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.' },
 ]
 
 export const GameActionPanel = ({ 
@@ -96,41 +96,53 @@ export const GameActionPanel = ({
   const renderContent = () => {
     if (!matchState) {
       if (inLobbyButNoMatch) {
-        return [
-          { label: 'Edit Character', onClick: onOpenCharacterEditor },
-          { label: 'Start Match', onClick: onStartMatch },
-          { label: 'Leave Lobby', onClick: onLeaveLobby },
-        ]
+        return (
+          <div className="action-grid">
+            <button className="action-btn" onClick={onOpenCharacterEditor}>Edit Character</button>
+            <button className="action-btn primary" onClick={onStartMatch}>Start Match</button>
+            <button className="action-btn danger" onClick={onLeaveLobby}>Leave Lobby</button>
+          </div>
+        )
       }
-      return [
-        { label: 'Edit Character', onClick: onOpenCharacterEditor },
-        { label: 'Create Lobby', onClick: onCreateLobby },
-        { label: 'Join Lobby', onClick: onJoinLobby },
-      ]
+      return (
+        <div className="action-grid">
+          <button className="action-btn" onClick={onOpenCharacterEditor}>Edit Character</button>
+          <button className="action-btn primary" onClick={onCreateLobby}>Create Lobby</button>
+          <button className="action-btn" onClick={onJoinLobby}>Join Lobby</button>
+        </div>
+      )
     }
 
     if (matchState.status === 'finished') {
-      return [
-        { label: 'Leave Match', onClick: onLeaveLobby },
-      ]
+      return (
+        <div className="action-grid">
+          <button className="action-btn danger" onClick={onLeaveLobby}>Leave Match</button>
+        </div>
+      )
     }
 
     if (isMyTurn && !currentManeuver) {
-      return MANEUVERS.map(m => ({
-        label: m.label,
-        onClick: () => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
-      }))
+      return (
+        <div className="maneuver-grid">
+          {MANEUVERS.map(m => (
+            <button 
+              key={m.type}
+              className="maneuver-btn"
+              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })}
+              title={m.desc}
+            >
+              <div className="maneuver-icon">{m.icon}</div>
+              <div className="maneuver-label">{m.label}</div>
+            </button>
+          ))}
+        </div>
+      )
     }
 
-    // Standard actions if maneuver selected or not my turn (view only?)
-    // If not my turn, maybe show nothing or just Leave.
-    // Assuming we show actions but they might fail or be disabled.
-    // Better to hide if not my turn? Current logic showed them.
-    // Let's keep showing them but maybe disable?
-    
-    return [
+    const actions = [
         {
           label: selectedTargetId ? `Attack ${selectedTargetName}` : 'Attack (select target)',
+          icon: '⚔️',
           disabled: !isMyTurn,
           onClick: () => {
             if (!selectedTargetId) return
@@ -139,21 +151,37 @@ export const GameActionPanel = ({
         },
         {
           label: 'Defend',
+          icon: '🛡️',
           disabled: !isMyTurn,
           onClick: () => onAction('defend', { type: 'defend' }),
         },
         {
           label: moveTarget ? 'Confirm Move' : 'Move (click grid)',
+          icon: '🦶',
           disabled: !isMyTurn,
           onClick: () => onAction('move_click'),
         },
-        ...(moveTarget ? [{ label: 'Cancel Move', onClick: () => onAction('cancel_move') }] : []),
-        { label: 'End Turn', disabled: !isMyTurn, onClick: () => onAction('end_turn', { type: 'end_turn' }) },
-        { label: 'Leave Match', onClick: onLeaveLobby },
+        ...(moveTarget ? [{ label: 'Cancel Move', icon: '❌', onClick: () => onAction('cancel_move') }] : []),
+        { label: 'End Turn', icon: '⌛', disabled: !isMyTurn, onClick: () => onAction('end_turn', { type: 'end_turn' }) },
+        { label: 'Leave Match', icon: '🚪', onClick: onLeaveLobby },
       ]
-  }
 
-  const buttons = renderContent()
+    return (
+      <div className="action-grid">
+        {actions.map((btn) => (
+          <button 
+            key={btn.label} 
+            className={`action-btn ${btn.label.includes('Cancel') ? 'danger' : ''}`}
+            onClick={btn.onClick}
+            disabled={btn.disabled}
+          >
+            {btn.icon && <span className="btn-icon">{btn.icon}</span>}
+            {btn.label}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <aside className="panel panel-right">
@@ -161,16 +189,7 @@ export const GameActionPanel = ({
       <div className="panel-content">
         <div className="card">
           <h3>{matchState?.status === 'finished' ? 'Match Over' : isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
-          {buttons.map((btn) => (
-            <button 
-              key={btn.label} 
-              className="action-btn" 
-              onClick={btn.onClick}
-              disabled={btn.disabled}
-            >
-              {btn.label}
-            </button>
-          ))}
+          {renderContent()}
         </div>
 
         <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

@@ -1,3 +1,4 @@
+import { Html } from '@react-three/drei'
 import { hexToWorld } from '../../utils/hex'
 import type { CombatantState, CharacterSheet } from '../../../shared/types'
 
@@ -15,6 +16,10 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const [x, z] = hexToWorld(combatant.position.x, combatant.position.z)
   const rotation = -combatant.facing * (Math.PI / 3)
   
+  const maxHP = character?.derived.hitPoints ?? 10
+  const hpPercent = Math.max(0, Math.min(100, (combatant.currentHP / maxHP) * 100))
+  const hpColor = hpPercent > 50 ? '#44ff44' : hpPercent > 20 ? '#ffff44' : '#ff4444'
+
   return (
     <group position={[x, 0, z]}>
       <group rotation={[0, rotation, 0]}>
@@ -27,22 +32,50 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
           <meshStandardMaterial color="#eeeeee" />
         </mesh>
       </group>
+      
       {isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.5, 0.65, 6]} />
           <meshBasicMaterial color="#ff0" transparent opacity={0.8} />
         </mesh>
       )}
-      <mesh position={[0, 1.9, 0]}>
-        <planeGeometry args={[1, 0.15]} />
-        <meshBasicMaterial color="#333" />
-      </mesh>
-      {character && (
-        <mesh position={[-(1 - combatant.currentHP / character.derived.hitPoints) / 2, 1.9, 0.01]}>
-          <planeGeometry args={[Math.max(0.01, combatant.currentHP / character.derived.hitPoints), 0.12]} />
-          <meshBasicMaterial color={combatant.currentHP > character.derived.hitPoints / 3 ? '#4f4' : '#f44'} />
-        </mesh>
-      )}
+
+      {/* Floating Label & Health Bar */}
+      <Html position={[0, 2.5, 0]} center style={{ pointerEvents: 'none' }}>
+        <div style={{ 
+          background: 'rgba(0,0,0,0.6)', 
+          padding: '4px 8px', 
+          borderRadius: '4px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2px',
+          minWidth: '80px'
+        }}>
+          <div style={{ 
+            color: 'white', 
+            fontSize: '12px', 
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap'
+          }}>
+            {character?.name ?? 'Unknown'}
+          </div>
+          <div style={{ 
+            width: '100%', 
+            height: '4px', 
+            background: '#333', 
+            borderRadius: '2px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              width: `${hpPercent}%`, 
+              height: '100%', 
+              background: hpColor,
+              transition: 'width 0.3s ease-out'
+            }} />
+          </div>
+        </div>
+      </Html>
     </group>
   )
 }
