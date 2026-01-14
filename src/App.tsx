@@ -1,7 +1,6 @@
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, GizmoHelper, GizmoViewport } from '@react-three/drei'
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import * as THREE from 'three'
 import type { CombatActionPayload, CombatantState, GridPosition, LobbySummary, MatchState, Player, ServerToClientMessage, CharacterSheet, Attributes, Skill, Equipment } from '../shared/types'
 import { calculateDerivedStats } from '../shared/rules'
 import { WelcomeScreen } from './components/WelcomeScreen'
@@ -28,33 +27,6 @@ const hexToWorld = (q: number, r: number): [number, number] => {
   return [x, z]
 }
 
-const worldToHex = (x: number, z: number) => {
-  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * z) / HEX_SIZE
-  const r = (2 / 3 * z) / HEX_SIZE
-
-  const cubeX = q
-  const cubeZ = r
-  const cubeY = -cubeX - cubeZ
-
-  let rx = Math.round(cubeX)
-  let ry = Math.round(cubeY)
-  let rz = Math.round(cubeZ)
-
-  const xDiff = Math.abs(rx - cubeX)
-  const yDiff = Math.abs(ry - cubeY)
-  const zDiff = Math.abs(rz - cubeZ)
-
-  if (xDiff > yDiff && xDiff > zDiff) {
-    rx = -ry - rz
-  } else if (yDiff > zDiff) {
-    ry = -rx - rz
-  } else {
-    rz = -rx - ry
-  }
-
-  return { q: rx, r: rz }
-}
-
 const hexDistance = (q1: number, r1: number, q2: number, r2: number) => {
   return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2
 }
@@ -66,6 +38,7 @@ type HexGridProps = {
   enemyPositions: GridPosition[]
   selectedTargetPosition: GridPosition | null
   moveTargetPosition: GridPosition | null
+  onHexClick: (q: number, r: number) => void
 }
 
 const getHexColor = (
@@ -76,7 +49,8 @@ const getHexColor = (
   enemyPositions: GridPosition[],
   selectedTargetPosition: GridPosition | null,
   moveTargetPosition: GridPosition | null,
-  isAlternate: boolean
+  isAlternate: boolean,
+  isHovered: boolean
 ): string => {
   if (moveTargetPosition && moveTargetPosition.x === q && moveTargetPosition.z === r) {
     return '#00ff00'
@@ -88,30 +62,48 @@ const getHexColor = (
   
   const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
   if (isEnemy) {
-    return '#aa2222'
+    return isHovered ? '#cc4444' : '#aa2222'
   }
   
   if (playerPosition) {
     const distance = hexDistance(q, r, playerPosition.x, playerPosition.z)
     if (distance <= moveRange && distance > 0) {
-      return '#224422'
+      return isHovered ? '#448844' : '#224422'
     }
+  }
+
+  if (isHovered) {
+    return '#444444'
   }
   
   return isAlternate ? '#1a1a1a' : '#252525'
 }
 
-const HexTile = ({ q, r, color }: { q: number; r: number; color: string }) => {
+const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: { 
+  q: number; 
+  r: number; 
+  color: string; 
+  onClick: () => void;
+  onHover: () => void;
+  onUnhover: () => void;
+}) => {
   const [x, z] = hexToWorld(q, r)
   return (
-    <mesh position={[x, -0.05, z]}>
+    <mesh 
+      position={[x, -0.05, z]} 
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+      onPointerOver={(e) => { e.stopPropagation(); onHover() }}
+      onPointerOut={(e) => { e.stopPropagation(); onUnhover() }}
+    >
       <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 0.1, 6]} />
       <meshStandardMaterial color={color} />
     </mesh>
   )
 }
 
-const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition }: HexGridProps) => {
+const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, onHexClick }: HexGridProps) => {
+  const [hoveredHex, setHoveredHex] = useState<{q: number, r: number} | null>(null)
+
   const tiles = useMemo(() => {
     const result: { q: number; r: number }[] = []
     for (let q = -radius; q <= radius; q += 1) {
@@ -127,8 +119,19 @@ const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTa
     <group>
       {tiles.map(({ q, r }) => {
         const isAlternate = (q + r) % 2 === 0
-        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isAlternate)
-        return <HexTile key={`${q},${r}`} q={q} r={r} color={color} />
+        const isHovered = hoveredHex?.q === q && hoveredHex?.r === r
+        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isAlternate, isHovered)
+        return (
+          <HexTile 
+            key={`${q},${r}`} 
+            q={q} 
+            r={r} 
+            color={color} 
+            onClick={() => onHexClick(q, r)}
+            onHover={() => setHoveredHex({ q, r })}
+            onUnhover={() => setHoveredHex(null)}
+          />
+        )
       })}
     </group>
   )
@@ -183,40 +186,6 @@ const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: Comb
   )
 }
 
-const ClickablePlane = ({ onGridClick }: { onGridClick: (position: GridPosition) => void }) => {
-  const { camera, gl } = useThree()
-  const raycaster = useMemo(() => new THREE.Raycaster(), [])
-  const planeY = 0
-
-  const handleClick = useCallback(
-    (event: MouseEvent) => {
-      const rect = gl.domElement.getBoundingClientRect()
-      const mouse = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1
-      )
-      raycaster.setFromCamera(mouse, camera)
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -planeY)
-      const intersection = new THREE.Vector3()
-      raycaster.ray.intersectPlane(plane, intersection)
-      if (intersection) {
-        const hex = worldToHex(intersection.x, intersection.z)
-        onGridClick({ x: hex.q, y: 0, z: hex.r })
-      }
-    },
-    [camera, gl, raycaster, onGridClick]
-  )
-
-  useEffect(() => {
-    gl.domElement.addEventListener('click', handleClick)
-    return () => {
-      gl.domElement.removeEventListener('click', handleClick)
-    }
-  }, [gl, handleClick])
-
-  return null
-}
-
 const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null
@@ -240,6 +209,7 @@ const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTarg
         enemyPositions={enemyPositions}
         selectedTargetPosition={selectedTargetPosition}
         moveTargetPosition={moveTarget}
+        onHexClick={(q, r) => onGridClick({ x: q, y: 0, z: r })}
       />
       
       {combatants.map((combatant) => (
@@ -255,8 +225,6 @@ const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTarg
 
       {moveTarget && <MoveMarker position={moveTarget} />}
 
-      <ClickablePlane onGridClick={onGridClick} />
-      
       <OrbitControls makeDefault />
       
       <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
