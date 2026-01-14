@@ -111,6 +111,8 @@ export type CombatActionPayload =
   | { type: "attack"; targetId: Id }
   | { type: "defend" }
   | { type: "move"; position: GridPosition }
+  | { type: "turn_left" }
+  | { type: "turn_right" }
   | { type: "end_turn" };
 
 export type ClientToServerMessage =

@@ -889,6 +889,26 @@ const startServer = async () => {
             return;
           }
 
+          if (payload.type === "turn_left" || payload.type === "turn_right") {
+            const delta = payload.type === "turn_right" ? 1 : -1;
+            const newFacing = (actorCombatant.facing + delta + 6) % 6;
+            const updatedCombatants = match.combatants.map((c) =>
+              c.playerId === player.id ? { ...c, facing: newFacing } : c
+            );
+            
+            const dirName = payload.type === "turn_right" ? "right" : "left";
+            const updated = {
+                ...match,
+                combatants: updatedCombatants,
+                log: [...match.log, `${player.name} turns ${dirName}.`]
+            };
+            
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            return;
+          }
+
           if (payload.type === "end_turn") {
             const updated = advanceTurn({
               ...match,

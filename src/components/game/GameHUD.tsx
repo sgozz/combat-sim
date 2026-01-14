@@ -157,6 +157,18 @@ export const GameActionPanel = ({
           onClick: () => onAction('defend', { type: 'defend' }),
         },
         {
+          label: 'Turn Left',
+          icon: '↺',
+          disabled: !isMyTurn,
+          onClick: () => onAction('turn_left', { type: 'turn_left' }),
+        },
+        {
+          label: 'Turn Right',
+          icon: '↻',
+          disabled: !isMyTurn,
+          onClick: () => onAction('turn_right', { type: 'turn_right' }),
+        },
+        {
           label: moveTarget ? 'Confirm Move' : 'Move (click grid)',
           icon: '🦶',
           disabled: !isMyTurn,
