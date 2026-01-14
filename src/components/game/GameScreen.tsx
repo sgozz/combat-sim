@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { GameStatusPanel, GameActionPanel } from './GameHUD'
+import { InitiativeTracker } from './InitiativeTracker'
 import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect } from '../../../shared/types'
 
 type GameScreenProps = {
@@ -59,9 +60,7 @@ export const GameScreen = ({
       />
 
       <main className="canvas-container">
-        <div className="overlay-ui">
-          Current Turn: {matchState?.players.find((p) => p.id === matchState.activeTurnPlayerId)?.name ?? 'Waiting'}
-        </div>
+        <InitiativeTracker matchState={matchState} />
         <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
           <color attach="background" args={['#111']} />
           <ArenaScene

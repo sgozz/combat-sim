@@ -1,3 +1,4 @@
+import { CombatLog } from './CombatLog'
 import type { MatchState, Player, CombatActionPayload, ManeuverType } from '../../../shared/types'
 
 type GamePanelProps = {
@@ -192,14 +193,7 @@ export const GameActionPanel = ({
           {renderContent()}
         </div>
 
-        <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <h3>Combat Log</h3>
-          <div style={{ flex: 1, overflowY: 'auto', minHeight: '100px' }}>
-            {logs.map((log, i) => (
-              <div key={i} className="log-entry">{log}</div>
-            ))}
-          </div>
-        </div>
+        <CombatLog logs={logs} />
       </div>
     </aside>
   )

@@ -578,3 +578,71 @@
   0% { transform: translateY(0); opacity: 1; }
   100% { transform: translateY(-50px); opacity: 0; }
 }
+
+/* Initiative Tracker */
+.initiative-tracker {
+  background: #1a1a1a;
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.initiative-list {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.initiative-card {
+  background: #252525;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  position: relative;
+  opacity: 0.7;
+  transition: all 0.3s;
+}
+
+.initiative-card.active {
+  background: #333;
+  border-color: #646cff;
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(100, 108, 255, 0.3);
+}
+
+.initiative-avatar {
+  font-size: 1.2rem;
+}
+
+.initiative-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #ddd;
+}
+
+.initiative-indicator {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #646cff;
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.round-counter {
+  font-weight: bold;
+  color: #888;
+  padding: 0 1rem;
+  font-size: 1.2rem;
+}
