@@ -1011,20 +1011,28 @@ const startServer = async () => {
             let updatedCombatants = match.combatants;
             let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} (${defenseDescription})`;
 
+            const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number }, label: string) => 
+              `(${label} ${r.target} vs ${r.roll}: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
+
             if (result.outcome === "miss") {
-              logEntry += ": miss.";
+              logEntry += `: Miss. ${formatRoll(result.attack, 'Skill')}`;
               sendToLobby(lobby, { 
                 type: "visual_effect", 
                 effect: { type: "miss", targetId: targetCombatant.playerId, position: targetCombatant.position } 
               });
             } else if (result.outcome === "defended") {
-              logEntry += ": defended.";
+              logEntry += `: Defended. ${formatRoll(result.attack, 'Attack')} -> ${formatRoll(result.defense!, 'Defense')}`;
               sendToLobby(lobby, { 
                 type: "visual_effect", 
                 effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
               });
             } else {
-              const damage = result.damage?.total ?? 0;
+              const dmg = result.damage!;
+              const damage = dmg.total;
+              const rolls = dmg.rolls.join(',');
+              const mod = dmg.modifier !== 0 ? (dmg.modifier > 0 ? `+${dmg.modifier}` : `${dmg.modifier}`) : '';
+              const dmgDetail = `(${damageFormula}: [${rolls}]${mod})`;
+
               updatedCombatants = match.combatants.map((combatant) => {
                 if (combatant.playerId !== targetCombatant.playerId) return combatant;
                 const nextHp = Math.max(combatant.currentHP - damage, 0);
@@ -1034,7 +1042,7 @@ const startServer = async () => {
                   statusEffects: damage > 0 ? [...combatant.statusEffects, "shock"] : combatant.statusEffects,
                 };
               });
-              logEntry += `: hit for ${damage} damage.`;
+              logEntry += `: Hit for ${damage} damage ${dmgDetail}. ${formatRoll(result.attack, 'Attack')}`;
               sendToLobby(lobby, { 
                 type: "visual_effect", 
                 effect: { type: "damage", targetId: targetCombatant.playerId, value: damage, position: targetCombatant.position } 
