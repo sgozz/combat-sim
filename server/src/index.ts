@@ -1011,8 +1011,8 @@ const startServer = async () => {
             let updatedCombatants = match.combatants;
             let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} (${defenseDescription})`;
 
-            const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number }, label: string) => 
-              `(${label} ${r.target} vs ${r.roll}: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
+            const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
+              `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
             if (result.outcome === "miss") {
               logEntry += `: Miss. ${formatRoll(result.attack, 'Skill')}`;

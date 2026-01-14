@@ -2,10 +2,34 @@ import type { Attributes, DerivedStats, MatchState } from "./types";
 
 export type RollResult = {
   roll: number;
+  dice: number[];
   target: number;
   margin: number;
   success: boolean;
   critical: boolean;
+};
+
+// ...
+
+export const roll3d6 = (random: () => number = Math.random): { total: number; dice: number[] } => {
+  const d1 = Math.floor(random() * 6) + 1;
+  const d2 = Math.floor(random() * 6) + 1;
+  const d3 = Math.floor(random() * 6) + 1;
+  return { total: d1 + d2 + d3, dice: [d1, d2, d3] };
+};
+
+export const skillCheck = (target: number, random: () => number = Math.random): RollResult => {
+  const { total: roll, dice } = roll3d6(random);
+  const margin = target - roll;
+  const critical = isCriticalSuccess(roll, target) || isCriticalFailure(roll, target);
+  return {
+    roll,
+    dice,
+    target,
+    margin,
+    success: margin >= 0 && !isCriticalFailure(roll, target),
+    critical,
+  };
 };
 
 export type DamageRoll = {
@@ -63,26 +87,6 @@ const isCriticalFailure = (roll: number, target: number): boolean => {
   if (roll === 17 && target <= 15) return true;
   if (roll === 16 && target <= 6) return true;
   return false;
-};
-
-export const roll3d6 = (random: () => number = Math.random): number => {
-  const d1 = Math.floor(random() * 6) + 1;
-  const d2 = Math.floor(random() * 6) + 1;
-  const d3 = Math.floor(random() * 6) + 1;
-  return d1 + d2 + d3;
-};
-
-export const skillCheck = (target: number, random: () => number = Math.random): RollResult => {
-  const roll = roll3d6(random);
-  const margin = target - roll;
-  const critical = isCriticalSuccess(roll, target) || isCriticalFailure(roll, target);
-  return {
-    roll,
-    target,
-    margin,
-    success: margin >= 0 && !isCriticalFailure(roll, target),
-    critical,
-  };
 };
 
 export const rollDamage = (formula: string, random: () => number = Math.random): DamageRoll => {
