@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useGameSocket } from './hooks/useGameSocket'
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { LobbyBrowser } from './components/LobbyBrowser'
 import { GameScreen } from './components/game/GameScreen'
@@ -116,6 +117,36 @@ function App() {
     }
     setSelectedTargetId(targetPlayerId)
   }, [matchState, player])
+
+  // Cycle through enemy targets with Tab
+  const handleCycleTarget = useCallback(() => {
+    if (!matchState || !player) return
+    const enemies = matchState.combatants.filter(c => c.playerId !== player.id)
+    if (enemies.length === 0) return
+
+    const currentIndex = enemies.findIndex(c => c.playerId === selectedTargetId)
+    const nextIndex = (currentIndex + 1) % enemies.length
+    setSelectedTargetId(enemies[nextIndex].playerId)
+  }, [matchState, player, selectedTargetId])
+
+  // Determine if player has already selected a maneuver this turn
+  const hasManeuver = useMemo(() => {
+    if (!matchState || !player) return false
+    const combatant = matchState.combatants.find(c => c.playerId === player.id)
+    return !!combatant?.maneuver
+  }, [matchState, player])
+
+  // Keyboard navigation hook
+  useKeyboardNavigation({
+    matchState,
+    selectedTargetId,
+    moveTarget,
+    isMyTurn: matchState?.activeTurnPlayerId === player?.id,
+    hasManeuver,
+    onAction: handleGameAction,
+    onCycleTarget: handleCycleTarget,
+    onCancelMove: () => setMoveTarget(null),
+  })
 
   if (screen === 'welcome') {
     return <WelcomeScreen onComplete={handleWelcomeComplete} />

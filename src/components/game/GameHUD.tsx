@@ -1,4 +1,5 @@
 import { CombatLog } from './CombatLog'
+import { KEYBOARD_HINTS } from '../../hooks/useKeyboardNavigation'
 import type { MatchState, Player, CombatActionPayload, ManeuverType } from '../../../shared/types'
 
 type GamePanelProps = {
@@ -126,12 +127,13 @@ export const GameActionPanel = ({
       return (
         <div className="maneuver-grid">
           {MANEUVERS.map(m => (
-            <button 
+            <button
               key={m.type}
               className="maneuver-btn"
               onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })}
-              title={m.desc}
+              title={`${m.desc} [${KEYBOARD_HINTS.maneuvers[m.type]}]`}
             >
+              <span className="kbd-hint">{KEYBOARD_HINTS.maneuvers[m.type]}</span>
               <div className="maneuver-icon">{m.icon}</div>
               <div className="maneuver-label">{m.label}</div>
             </button>
@@ -144,6 +146,7 @@ export const GameActionPanel = ({
         {
           label: selectedTargetId ? `Attack ${selectedTargetName}` : 'Attack (select target)',
           icon: '⚔️',
+          kbd: KEYBOARD_HINTS.actions.attack,
           disabled: !isMyTurn,
           onClick: () => {
             if (!selectedTargetId) return
@@ -153,41 +156,47 @@ export const GameActionPanel = ({
         {
           label: 'Defend',
           icon: '🛡️',
+          kbd: KEYBOARD_HINTS.actions.defend,
           disabled: !isMyTurn,
           onClick: () => onAction('defend', { type: 'defend' }),
         },
         {
           label: 'Turn Left',
           icon: '↺',
+          kbd: KEYBOARD_HINTS.actions.turnLeft,
           disabled: !isMyTurn,
           onClick: () => onAction('turn_left', { type: 'turn_left' }),
         },
         {
           label: 'Turn Right',
           icon: '↻',
+          kbd: KEYBOARD_HINTS.actions.turnRight,
           disabled: !isMyTurn,
           onClick: () => onAction('turn_right', { type: 'turn_right' }),
         },
         {
           label: moveTarget ? 'Confirm Move' : 'Move (click grid)',
           icon: '🦶',
+          kbd: KEYBOARD_HINTS.actions.move,
           disabled: !isMyTurn,
           onClick: () => onAction('move_click'),
         },
-        ...(moveTarget ? [{ label: 'Cancel Move', icon: '❌', onClick: () => onAction('cancel_move') }] : []),
-        { label: 'End Turn', icon: '⌛', disabled: !isMyTurn, onClick: () => onAction('end_turn', { type: 'end_turn' }) },
+        ...(moveTarget ? [{ label: 'Cancel Move', icon: '❌', kbd: KEYBOARD_HINTS.actions.cancel, onClick: () => onAction('cancel_move') }] : []),
+        { label: 'End Turn', icon: '⌛', kbd: KEYBOARD_HINTS.actions.endTurn, disabled: !isMyTurn, onClick: () => onAction('end_turn', { type: 'end_turn' }) },
         { label: 'Leave Match', icon: '🚪', onClick: onLeaveLobby },
       ]
 
     return (
       <div className="action-grid">
         {actions.map((btn) => (
-          <button 
-            key={btn.label} 
+          <button
+            key={btn.label}
             className={`action-btn ${btn.label.includes('Cancel') ? 'danger' : ''}`}
             onClick={btn.onClick}
             disabled={btn.disabled}
+            title={btn.kbd ? `[${btn.kbd}]` : undefined}
           >
+            {btn.kbd && <span className="kbd-hint">{btn.kbd}</span>}
             {btn.icon && <span className="btn-icon">{btn.icon}</span>}
             {btn.label}
           </button>

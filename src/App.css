@@ -646,3 +646,35 @@
   padding: 0 1rem;
   font-size: 1.2rem;
 }
+
+/* Keyboard Hints */
+.kbd-hint {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #888;
+  font-size: 0.65rem;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-weight: bold;
+  border: 1px solid #444;
+  text-transform: uppercase;
+}
+
+.maneuver-btn,
+.action-btn {
+  position: relative;
+}
+
+.maneuver-btn:hover .kbd-hint,
+.action-btn:hover .kbd-hint {
+  background: rgba(100, 108, 255, 0.3);
+  border-color: #646cff;
+  color: #aaf;
+}
+
+.action-btn:disabled .kbd-hint {
+  opacity: 0.4;
+}
