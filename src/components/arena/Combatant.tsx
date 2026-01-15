@@ -10,6 +10,13 @@ type CombatantProps = {
   onClick: () => void
 }
 
+const STATUS_ICONS: Record<string, string> = {
+  shock: '⚡',
+  defending: '🛡️',
+  stunned: '😵',
+  aiming: '🎯',
+}
+
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
   const color = isPlayer ? '#646cff' : '#ff4444'
   const emissive = isSelected ? '#ffff00' : '#000000'
@@ -43,36 +50,58 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
       {/* Floating Label & Health Bar */}
       <Html position={[0, 2.5, 0]} center style={{ pointerEvents: 'none' }}>
         <div style={{ 
-          background: 'rgba(0,0,0,0.6)', 
-          padding: '4px 8px', 
-          borderRadius: '4px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '2px',
-          minWidth: '80px'
+          gap: '2px'
         }}>
+          {combatant.statusEffects.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              gap: '4px', 
+              marginBottom: '2px',
+              textShadow: '0 0 4px black'
+            }}>
+              {combatant.statusEffects.map((effect) => (
+                <span key={effect} style={{ fontSize: '20px' }} title={effect}>
+                  {STATUS_ICONS[effect] || effect}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div style={{ 
-            color: 'white', 
-            fontSize: '12px', 
-            fontWeight: 'bold',
-            whiteSpace: 'nowrap'
-          }}>
-            {character?.name ?? 'Unknown'}
-          </div>
-          <div style={{ 
-            width: '100%', 
-            height: '4px', 
-            background: '#333', 
-            borderRadius: '2px',
-            overflow: 'hidden'
+            background: 'rgba(0,0,0,0.6)', 
+            padding: '4px 8px', 
+            borderRadius: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '2px',
+            minWidth: '80px'
           }}>
             <div style={{ 
-              width: `${hpPercent}%`, 
-              height: '100%', 
-              background: hpColor,
-              transition: 'width 0.3s ease-out'
-            }} />
+              color: 'white', 
+              fontSize: '12px', 
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap'
+            }}>
+              {character?.name ?? 'Unknown'}
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: '4px', 
+              background: '#333', 
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                width: `${hpPercent}%`, 
+                height: '100%', 
+                background: hpColor,
+                transition: 'width 0.3s ease-out'
+              }} />
+            </div>
           </div>
         </div>
       </Html>
