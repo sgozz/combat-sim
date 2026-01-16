@@ -102,9 +102,6 @@ function AppRoutes() {
 
     if (payload) {
       sendMessage({ type: 'action', action: payload.type, payload })
-      if (payload.type === 'attack') {
-        setSelectedTargetId(null)
-      }
     }
   }, [moveTarget, sendMessage, setLogs])
 

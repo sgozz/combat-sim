@@ -439,10 +439,18 @@ const createMatchState = (lobby: Lobby): MatchState => {
       name: player.name,
       attributes,
       derived: calculateDerivedStats(attributes),
-      skills: [],
+      skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
       advantages: [],
       disadvantages: [],
-      equipment: [],
+      equipment: [{ 
+        id: randomUUID(), 
+        name: "Club", 
+        type: "melee",
+        damage: "1d+1",
+        reach: '1' as const,
+        parry: 0,
+        skillUsed: "Brawling"
+      }],
       pointsTotal: 100,
     };
     playerCharacters.set(player.id, fallback);
