@@ -1,161 +1,193 @@
 # AGENTS.md
 
-## Scope
-This file applies to the entire repository.
+## Overview
+GURPS combat simulator with React/Three.js client and Node.js WebSocket server.
 
-## Summary
-- Web client: React + TypeScript + Vite (root).
-- Server: Node.js + TypeScript + ws (`server/`).
-- Shared types and rules: `shared/`.
-- UI uses `@react-three/fiber` and `@react-three/drei` for 3D.
-
-## Required Context Files
-- No Cursor rules found in `.cursor/rules/` or `.cursorrules`.
-- No Copilot rules found in `.github/copilot-instructions.md`.
+| Layer | Stack | Location |
+|-------|-------|----------|
+| Client | React 19 + Vite 7 + @react-three/fiber | `src/` |
+| Server | Node.js + ws + sqlite | `server/` |
+| Shared | TypeScript types + rules | `shared/` |
 
 ## Node Version
-- Required: Node `22.12.0` via `nvm` (Vite 7 requires >=20.19 or >=22.12).
-- Use: `nvm use 22.12.0` before running client/server.
+**Required**: Node 22.12.0+ (Vite 7 requirement)
+```bash
+nvm use 22.12.0
+```
 
-## Install Commands
-- Root: `npm install`
-- Server: `npm install` in `server/`
+## Commands
 
-## Build / Lint / Test Commands
-### Root (client)
-- Dev server: `npm run dev`
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Preview: `npm run preview`
+### Client (root)
+```bash
+npm install          # Install dependencies
+npm run dev          # Dev server (localhost:5173)
+npm run build        # Type-check + production build
+npm run lint         # ESLint
+npm run preview      # Preview production build
+```
 
-### Server
-- Dev server: `npm run dev` (in `server/`)
-- Build: `npm run build` (in `server/`)
-- Start: `npm run start` (in `server/`)
+### Server (`server/`)
+```bash
+npm install          # Install dependencies
+npm run dev          # Dev server with hot reload (tsx watch)
+npm run build        # Compile TypeScript
+npm run start        # Run compiled JS
+```
 
-### Single Test
-- No test runner configured in the repo.
-- If tests are added later, document the exact single-test command here.
+### Tests (Vitest)
+```bash
+# Run all tests
+npx vitest run
 
-## Troubleshooting
-- If the client shows “WebSocket closed before connection”, verify Node is `22.12.0` and StrictMode remains disabled.
-- If the lobby buttons do nothing, confirm the server is listening on `127.0.0.1:8080`.
-- Use logs in the right panel to confirm `Connected to server` and `Joined lobby` messages.
+# Run single test file
+npx vitest run shared/rules.test.ts
 
-## Repository Layout
-- `src/` React UI and Three.js arena.
-- `shared/` TypeScript types and rules helpers.
-- `server/` WebSocket server and match state.
-- `public/` static assets.
+# Run tests matching name pattern
+npx vitest run -t "Skill Check"
 
-## Runtime Architecture
-- Client connects to WebSocket at `ws://127.0.0.1:8080`.
-- Server is authoritative for lobby and match state.
-- Client displays lobby, match state, and action buttons.
-- React StrictMode is disabled to avoid double WebSocket connect/close in dev.
+# Watch mode
+npx vitest
 
-## Shared Contracts
-- Message types live in `shared/types.ts`.
-- Keep client/server message schemas in sync.
-- Use `ClientToServerMessage` and `ServerToClientMessage` for JSON payloads.
+# With UI
+npx vitest --ui
+```
 
-## Rules Engine
-- Core rolls and turn advance live in `shared/rules.ts`.
-- Keep rules as pure functions with explicit inputs/outputs.
-- Avoid side effects inside rules.
+Test config: `vite.config.ts` with `happy-dom` environment.
+Setup file: `src/test/setup.ts` (imports `@testing-library/jest-dom`).
 
-## Code Style Guidelines
-### General
-- Use TypeScript strict mode; avoid `any` and `as any`.
-- Prefer explicit types for public APIs and shared contracts.
-- Keep functions small and single-purpose.
-- Favor immutability for state updates.
-- Do not introduce new dependencies without need.
+## Directory Structure
+```
+src/
+  components/
+    arena/      # Three.js scene (HexGrid, Combatant, ArenaScene)
+    game/       # Game UI (GameHUD, CombatLog, InitiativeTracker)
+    ui/         # Modals, editors
+  hooks/        # useGameSocket, etc.
+  utils/        # Hex math, helpers
+shared/
+  types.ts      # Message contracts, game state types
+  rules.ts      # GURPS rules (pure functions)
+  rules.test.ts # Unit tests for rules
+server/
+  src/          # WebSocket server, match logic
+```
 
-### Imports
-- Use ES module imports only.
-- Group imports: external libraries first, then local shared, then relative.
-- Use type-only imports (`import type { ... }`) where appropriate.
+## Architecture
+- Client connects to `ws://127.0.0.1:8080`
+- Server is authoritative for all game state
+- Message contracts in `shared/types.ts`: `ClientToServerMessage`, `ServerToClientMessage`
+- React StrictMode disabled (prevents double WebSocket connections in dev)
+
+## Code Style
+
+### TypeScript
+- Strict mode enabled; **never** use `any`, `as any`, `@ts-ignore`
+- Explicit types for public APIs and shared contracts
+- Use `import type { ... }` for type-only imports
+- Prefer immutability for state updates
+
+### Imports (order)
+1. External libraries (`react`, `three`, `ws`)
+2. Shared modules (`../shared/types`)
+3. Relative imports (`./components/...`)
 
 ### Naming
-- Types and interfaces: `PascalCase`.
-- Variables and functions: `camelCase`.
-- Constants: `UPPER_SNAKE_CASE` only for true constants.
-- WebSocket message types: `snake_case` strings.
+| Element | Convention | Example |
+|---------|------------|---------|
+| Types/Interfaces | PascalCase | `CharacterSheet`, `MatchState` |
+| Variables/Functions | camelCase | `handleGridClick`, `activeCombatant` |
+| Constants | UPPER_SNAKE_CASE | `MAX_PLAYERS` |
+| Message types | snake_case strings | `"auth_ok"`, `"match_state"` |
 
 ### Formatting
-- Match existing file formatting and indentation.
-- Do not reformat unrelated code.
-- Prefer 2-space indentation in TS/TSX files.
+- 2-space indentation
+- Match existing file style; don't reformat unrelated code
 
-### React / UI
-- Use functional components.
-- Keep UI state and server state separated.
-- Avoid inline styling unless already used in the file.
-- Keep 3D scene logic in a separate component when possible.
-
-### Three.js / R3F
-- Keep scene elements lightweight for MVP.
-- Avoid heavy geometry or textures by default.
-- Do not add new animation loops unless required.
-
-### Server
-- Keep server state in-memory for MVP.
-- WebSocket handlers must validate required data.
-- Avoid blocking operations inside message handlers.
+### React
+- Functional components only
+- Keep UI state separate from server state
+- Memoize callbacks with `useCallback` when passed to children
+- 3D scene logic in dedicated components under `components/arena/`
 
 ### Error Handling
-- Never swallow errors silently.
-- Send structured error messages to the client: `{ type: "error", message }`.
-- On client, log errors to the combat log.
+- Never swallow errors silently
+- Server sends: `{ type: "error", message: string }`
+- Client logs errors to combat log panel
 
-### Logging
-- Use concise log entries for match events.
-- Add logs to `MatchState.log` for user-visible events.
+### Rules Engine (`shared/rules.ts`)
+- Pure functions only—no side effects
+- Accept `random` parameter for testability (defaults to `Math.random`)
+- Keep game logic here, not in components or server handlers
 
-### Types and State
-- All match state changes should produce a new object.
-- Keep IDs as strings; use UUIDs for new entities.
-- Avoid using array indices as identifiers in state.
+## State Management
 
-## Frontend State Expectations
-- `player` is set after `auth_ok`.
-- `lobbyId` set after `lobby_joined`.
-- `matchState` set after `match_state`.
-- `lobbyPlayers` should mirror the server lobby state.
+### Client State Flow
+1. `auth` → `auth_ok` → sets `player`
+2. `join_lobby` → `lobby_joined` → sets `lobbyId`, `lobbyPlayers`
+3. `start_match` → `match_state` → sets `matchState`
 
-## Backend State Expectations
-- `players` map keyed by player ID.
-- `lobbies` map keyed by lobby ID.
-- `matches` map keyed by lobby ID.
-- `playerCharacters` map keyed by player ID.
+### Server State (in-memory)
+- `players`: Map<Id, Player>
+- `lobbies`: Map<Id, Lobby>
+- `matches`: Map<Id, MatchState>
 
-## Bot Behavior
-- Bots are added to ensure minimum player count.
-- Bot turns are scheduled with a timer.
-- Keep bot actions deterministic for now.
+### Types Reference
+```typescript
+// Key types from shared/types.ts
+type MatchState = {
+  id: Id;
+  players: Player[];
+  characters: CharacterSheet[];
+  combatants: CombatantState[];
+  activeTurnPlayerId: Id;
+  round: number;
+  log: string[];
+  status: "active" | "finished";
+};
+```
 
-## Test Strategy (if added later)
-- Prefer unit tests for `shared/rules.ts`.
-- Prefer integration tests for server message flow.
-- UI tests should focus on lobby and match transitions.
+## Testing Strategy
+- Unit tests for `shared/rules.ts` (pure functions, mock `random`)
+- Integration tests for server message flow
+- Use `happy-dom` for React component tests
 
-## Documentation
-- Keep README minimal unless requested.
-- Update `AGENTS.md` when build or test commands change.
+## Common Patterns
 
-## PR / Commit Notes
-- Do not commit unless explicitly requested.
-- Avoid unrelated refactors in feature work.
+### WebSocket Message Handler
+```typescript
+// Server-side pattern
+case "action":
+  const match = matches.get(lobbyId);
+  if (!match) { send({ type: "error", message: "No match" }); return; }
+  // Validate, update state, broadcast
+  break;
+```
 
-## Known Gaps
-- Combat actions beyond turn-advance are placeholders.
-- Character creation UI not implemented yet.
-- No persistence layer configured.
+### React Hook Pattern
+```typescript
+const handleAction = useCallback((action: string) => {
+  sendMessage({ type: 'action', action });
+}, [sendMessage]);
+```
+
+## Troubleshooting
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| WebSocket closed immediately | Wrong Node version | `nvm use 22.12.0` |
+| Lobby buttons unresponsive | Server not running | Start server on :8080 |
+| Double connections in dev | StrictMode enabled | Keep StrictMode disabled |
 
 ## Quick Start
-1. `nvm use 22.12.0`
-2. `npm install` (root)
-3. `npm install` (server)
-4. `npm run dev` (root)
-5. `npm run dev` (server)
+```bash
+nvm use 22.12.0
+npm install && npm install --prefix server
+npm run dev &                    # Terminal 1: client
+npm run dev --prefix server      # Terminal 2: server
+```
+
+## Notes for Agents
+- Do not commit unless explicitly requested
+- Avoid unrelated refactors in feature PRs
+- Run `npm run lint` and `npx vitest run` before completing tasks
+- Keep message schemas in sync between client/server
+- Bot actions should be deterministic

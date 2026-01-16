@@ -1,5 +1,6 @@
-import type { CharacterSheet, Attributes, Skill, Equipment } from '../../../shared/types'
-import { calculateDerivedStats } from '../../../shared/rules'
+import { Tooltip } from './Tooltip'
+import type { CharacterSheet, Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType } from '../../../shared/types'
+import { calculateDerivedStats, calculateTotalPoints } from '../../../shared/rules'
 
 type CharacterEditorProps = {
   character: CharacterSheet
@@ -42,7 +43,18 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
     const name = window.prompt('Weapon name (e.g., Sword, Club)')?.trim()
     if (!name) return
     const damage = window.prompt('Damage formula (e.g., 1d+2, 2d)', '1d+1')?.trim() || '1d'
-    const newEquip: Equipment = { id: crypto.randomUUID(), name, damage }
+    const typeInput = window.prompt('Damage type (crushing, cutting, impaling, piercing)', 'crushing')?.trim().toLowerCase()
+    const validTypes: DamageType[] = ['crushing', 'cutting', 'impaling', 'piercing']
+    const damageType: DamageType = validTypes.includes(typeInput as DamageType) ? (typeInput as DamageType) : 'crushing'
+    const newEquip: Equipment = { 
+      id: crypto.randomUUID(), 
+      name, 
+      type: 'melee',
+      damage,
+      damageType,
+      reach: 1,
+      parry: 0,
+    }
     setCharacter({
       ...character,
       equipment: [...character.equipment, newEquip],
@@ -56,10 +68,54 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
     })
   }
 
+  const addAdvantage = () => {
+    const name = window.prompt('Advantage name (e.g., Combat Reflexes)')?.trim()
+    if (!name) return
+    const description = window.prompt('Description (optional)')?.trim()
+    const newAdvantage: Advantage = { id: crypto.randomUUID(), name, description: description || undefined }
+    setCharacter({
+      ...character,
+      advantages: [...character.advantages, newAdvantage],
+    })
+  }
+
+  const removeAdvantage = (id: string) => {
+    setCharacter({
+      ...character,
+      advantages: character.advantages.filter(a => a.id !== id),
+    })
+  }
+
+  const addDisadvantage = () => {
+    const name = window.prompt('Disadvantage name (e.g., Bad Temper)')?.trim()
+    if (!name) return
+    const description = window.prompt('Description (optional)')?.trim()
+    const newDisadvantage: Disadvantage = { id: crypto.randomUUID(), name, description: description || undefined }
+    setCharacter({
+      ...character,
+      disadvantages: [...character.disadvantages, newDisadvantage],
+    })
+  }
+
+  const removeDisadvantage = (id: string) => {
+    setCharacter({
+      ...character,
+      disadvantages: character.disadvantages.filter(d => d.id !== id),
+    })
+  }
+
+  const totalPoints = calculateTotalPoints(character)
+
   return (
     <div className="modal-overlay">
       <div className="modal-content character-modal">
-        <h2>Character Builder</h2>
+        <div className="modal-header">
+          <h2>Character Builder</h2>
+          <div className="point-total">
+            <span className="point-label">Total Points:</span>
+            <span className={`point-value ${totalPoints > 150 ? 'over-budget' : ''}`}>{totalPoints}</span>
+          </div>
+        </div>
         
         <div className="char-section">
           <label className="char-label">Name</label>
@@ -98,6 +154,44 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
 
         <div className="char-section">
           <label className="char-label">
+            Advantages
+            <button className="add-btn" onClick={addAdvantage}>+ Add</button>
+          </label>
+          <div className="list-items">
+            {character.advantages.length === 0 ? (
+              <div className="empty-list">No advantages added</div>
+            ) : (
+              character.advantages.map((adv) => (
+                <div key={adv.id} className="list-item">
+                  <span>{adv.name}{adv.description ? ` (${adv.description})` : ''}</span>
+                  <button className="remove-btn" onClick={() => removeAdvantage(adv.id)}>x</button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="char-section">
+          <label className="char-label">
+            Disadvantages
+            <button className="add-btn" onClick={addDisadvantage}>+ Add</button>
+          </label>
+          <div className="list-items">
+            {character.disadvantages.length === 0 ? (
+              <div className="empty-list">No disadvantages added</div>
+            ) : (
+              character.disadvantages.map((dis) => (
+                <div key={dis.id} className="list-item">
+                  <span>{dis.name}{dis.description ? ` (${dis.description})` : ''}</span>
+                  <button className="remove-btn" onClick={() => removeDisadvantage(dis.id)}>x</button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="char-section">
+          <label className="char-label">
             Skills
             <button className="add-btn" onClick={addSkill}>+ Add</button>
           </label>
@@ -107,7 +201,9 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
             ) : (
               character.skills.map((skill) => (
                 <div key={skill.id} className="list-item">
-                  <span>{skill.name} ({skill.level})</span>
+                  <Tooltip content="Skill Level determines your base chance to succeed." position="right">
+                    <span>{skill.name} ({skill.level})</span>
+                  </Tooltip>
                   <button className="remove-btn" onClick={() => removeSkill(skill.id)}>x</button>
                 </div>
               ))
@@ -126,7 +222,12 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
             ) : (
               character.equipment.map((equip) => (
                 <div key={equip.id} className="list-item">
-                  <span>{equip.name} ({equip.damage})</span>
+                  <Tooltip 
+                    content={`Reach: ${equip.reach ?? 1}, Parry: ${equip.parry ?? 0}${equip.block ? `, Block: ${equip.block}` : ''}`} 
+                    position="right"
+                  >
+                    <span>{equip.name} ({equip.damage} {equip.damageType ?? 'cr'})</span>
+                  </Tooltip>
                   <button className="remove-btn" onClick={() => removeEquipment(equip.id)}>x</button>
                 </div>
               ))

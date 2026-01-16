@@ -52,7 +52,7 @@ export const useGameSocket = () => {
           setLogs(message.state.log)
           setScreen('match')
           break
-        case 'visual_effect':
+        case 'visual_effect': {
           const id = crypto.randomUUID()
           const effect = { ...message.effect, id }
           setVisualEffects(prev => [...prev, effect])
@@ -60,6 +60,7 @@ export const useGameSocket = () => {
             setVisualEffects(prev => prev.filter(e => e.id !== id))
           }, 2000)
           break
+        }
         case 'error':
           setLogs((prev) => [...prev, `Error: ${message.message}`])
           break

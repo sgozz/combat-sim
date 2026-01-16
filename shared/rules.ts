@@ -1,4 +1,4 @@
-import type { Attributes, DerivedStats, MatchState } from "./types";
+import type { Attributes, DerivedStats, MatchState, CharacterSheet, DamageType, Posture } from "./types";
 
 export type RollResult = {
   roll: number;
@@ -54,6 +54,100 @@ export const calculateDerivedStats = (attributes: Attributes): DerivedStats => {
   return { hitPoints, fatiguePoints, basicSpeed, basicMove, dodge };
 };
 
+export const calculateAttributeCost = (attributes: Attributes): number => {
+  const stCost = (attributes.strength - 10) * 10;
+  const dxCost = (attributes.dexterity - 10) * 20;
+  const iqCost = (attributes.intelligence - 10) * 20;
+  const htCost = (attributes.health - 10) * 10;
+  return stCost + dxCost + iqCost + htCost;
+};
+
+export const calculateSkillCost = (skillLevel: number, attributeLevel: number, difficulty: 'E' | 'A' | 'H' | 'VH' = 'A'): number => {
+  const relative = skillLevel - attributeLevel;
+  const difficultyOffset = { 'E': 0, 'A': -1, 'H': -2, 'VH': -3 }[difficulty];
+  const effectiveRelative = relative + difficultyOffset;
+  
+  if (effectiveRelative < 0) return 1;
+  if (effectiveRelative === 0) return 1;
+  if (effectiveRelative === 1) return 2;
+  if (effectiveRelative === 2) return 4;
+  return 4 + (effectiveRelative - 2) * 4;
+};
+
+export const calculateTotalPoints = (character: CharacterSheet): number => {
+  const attrCost = calculateAttributeCost(character.attributes);
+  const skillCost = character.skills.reduce((sum, skill) => {
+    return sum + calculateSkillCost(skill.level, character.attributes.dexterity);
+  }, 0);
+  return attrCost + skillCost;
+};
+
+export type DefenseType = 'dodge' | 'parry' | 'block';
+
+export type DefenseOptions = {
+  dodge: number;
+  parry: { value: number; weapon: string } | null;
+  block: { value: number; shield: string } | null;
+};
+
+export const calculateParry = (skillLevel: number, weaponParryMod: number = 0): number => {
+  return Math.floor(skillLevel / 2) + 3 + weaponParryMod;
+};
+
+export const calculateBlock = (shieldSkill: number, shieldBlockMod: number = 0): number => {
+  return Math.floor(shieldSkill / 2) + 3 + shieldBlockMod;
+};
+
+export const getRangePenalty = (distance: number): number => {
+  if (distance <= 2) return 0;
+  if (distance <= 3) return -1;
+  if (distance <= 5) return -2;
+  if (distance <= 7) return -3;
+  if (distance <= 10) return -4;
+  if (distance <= 15) return -5;
+  if (distance <= 20) return -6;
+  if (distance <= 30) return -7;
+  if (distance <= 50) return -8;
+  if (distance <= 70) return -9;
+  if (distance <= 100) return -10;
+  return -11;
+};
+
+export const getDefenseOptions = (
+  character: CharacterSheet,
+  dodgeValue: number
+): DefenseOptions => {
+  const result: DefenseOptions = {
+    dodge: dodgeValue,
+    parry: null,
+    block: null,
+  };
+  
+  const meleeWeapon = character.equipment.find(e => e.type === 'melee' && e.parry !== undefined);
+  if (meleeWeapon) {
+    const weaponSkill = character.skills.find(s => s.name === meleeWeapon.skillUsed);
+    if (weaponSkill) {
+      result.parry = {
+        value: calculateParry(weaponSkill.level, meleeWeapon.parry ?? 0),
+        weapon: meleeWeapon.name,
+      };
+    }
+  }
+  
+  const shield = character.equipment.find(e => e.type === 'shield');
+  if (shield) {
+    const shieldSkill = character.skills.find(s => s.name === 'Shield');
+    if (shieldSkill) {
+      result.block = {
+        value: calculateBlock(shieldSkill.level, shield.block ?? 0),
+        shield: shield.name,
+      };
+    }
+  }
+  
+  return result;
+};
+
 export const advanceTurn = (state: MatchState): MatchState => {
   if (state.players.length === 0) {
     return state;
@@ -63,9 +157,13 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const round = nextIndex === 0 ? state.round + 1 : state.round;
   const nextPlayerId = state.players[nextIndex]?.id ?? "";
 
-  const combatants = state.combatants.map(c => 
-    c.playerId === nextPlayerId ? { ...c, maneuver: null } : c
-  );
+  const combatants = state.combatants.map(c => {
+    if (c.playerId === nextPlayerId) {
+      const cleanedEffects = c.statusEffects.filter(e => e !== 'shock' && e !== 'defending');
+      return { ...c, maneuver: null, statusEffects: cleanedEffects };
+    }
+    return c;
+  });
 
   return {
     ...state,
@@ -99,6 +197,77 @@ export const rollDamage = (formula: string, random: () => number = Math.random):
   const rolls = Array.from({ length: diceCount }, () => Math.floor(random() * 6) + 1);
   const total = rolls.reduce((sum, value) => sum + value, 0) + modifier;
   return { total, rolls, modifier };
+};
+
+/**
+ * GURPS damage type multipliers (vs torso):
+ * - Crushing (cr): x1
+ * - Cutting (cut): x1.5 (round down)
+ * - Impaling (imp): x2
+ * - Piercing (pi): x1
+ */
+export const getDamageMultiplier = (damageType: DamageType): number => {
+  switch (damageType) {
+    case 'cutting':
+      return 1.5;
+    case 'impaling':
+      return 2;
+    case 'crushing':
+    case 'piercing':
+    default:
+      return 1;
+  }
+};
+
+export const applyDamageMultiplier = (
+  baseDamage: number,
+  damageType: DamageType = 'crushing'
+): number => {
+  const multiplier = getDamageMultiplier(damageType);
+  return Math.floor(baseDamage * multiplier);
+};
+
+export type PostureModifiers = {
+  toHitMelee: number;
+  toHitRanged: number;
+  defenseVsMelee: number;
+  defenseVsRanged: number;
+  moveMultiplier: number;
+};
+
+export const getPostureModifiers = (posture: Posture): PostureModifiers => {
+  switch (posture) {
+    case 'crouching':
+      return { toHitMelee: 0, toHitRanged: 0, defenseVsMelee: -2, defenseVsRanged: 2, moveMultiplier: 2/3 };
+    case 'kneeling':
+      return { toHitMelee: -2, toHitRanged: 0, defenseVsMelee: -2, defenseVsRanged: 2, moveMultiplier: 1/3 };
+    case 'prone':
+      return { toHitMelee: -4, toHitRanged: -2, defenseVsMelee: -3, defenseVsRanged: 4, moveMultiplier: 0 };
+    case 'standing':
+    default:
+      return { toHitMelee: 0, toHitRanged: 0, defenseVsMelee: 0, defenseVsRanged: 0, moveMultiplier: 1 };
+  }
+};
+
+export type HTCheckResult = {
+  roll: number;
+  target: number;
+  success: boolean;
+  margin: number;
+};
+
+export const rollHTCheck = (
+  ht: number, 
+  currentHP: number, 
+  maxHP: number, 
+  random: () => number = Math.random
+): HTCheckResult => {
+  const { total: roll } = roll3d6(random);
+  const hpMultiple = Math.floor(Math.abs(currentHP) / maxHP);
+  const penalty = hpMultiple > 0 ? hpMultiple : 0;
+  const target = ht - penalty;
+  const margin = target - roll;
+  return { roll, target, success: margin >= 0, margin };
 };
 
 export const resolveAttack = (options: {

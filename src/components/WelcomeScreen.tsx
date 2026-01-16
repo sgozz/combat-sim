@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tutorial } from './ui/Tutorial'
 import './WelcomeScreen.css'
 
 type WelcomeScreenProps = {
@@ -8,6 +9,7 @@ type WelcomeScreenProps = {
 export const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
+  const [showTutorial, setShowTutorial] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,11 +60,21 @@ export const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
             {error && <div className="welcome-error">{error}</div>}
           </div>
           
-          <button type="submit" className="welcome-button">
-            Enter Arena →
-          </button>
+          <div className="welcome-actions">
+            <button type="submit" className="welcome-button">
+              Enter Arena →
+            </button>
+            <button 
+              type="button" 
+              className="welcome-button secondary"
+              onClick={() => setShowTutorial(true)}
+            >
+              How to Play
+            </button>
+          </div>
         </form>
       </div>
+      {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
     </div>
   )
 }

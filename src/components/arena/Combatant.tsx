@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react'
 import { Html } from '@react-three/drei'
 import { hexToWorld } from '../../utils/hex'
 import type { CombatantState, CharacterSheet } from '../../../shared/types'
@@ -15,6 +16,8 @@ const STATUS_ICONS: Record<string, string> = {
   defending: '🛡️',
   stunned: '😵',
   aiming: '🎯',
+  unconscious: '💤',
+  dead: '💀',
 }
 
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
@@ -25,7 +28,29 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   
   const maxHP = character?.derived.hitPoints ?? 10
   const hpPercent = Math.max(0, Math.min(100, (combatant.currentHP / maxHP) * 100))
-  const hpColor = hpPercent > 50 ? '#44ff44' : hpPercent > 20 ? '#ffff44' : '#ff4444'
+  
+  // Track HP for damage flash
+  const [isFlashing, setIsFlashing] = useState(false)
+  const prevHpRef = useRef(combatant.currentHP)
+
+  useEffect(() => {
+    if (combatant.currentHP < prevHpRef.current) {
+      setIsFlashing(true)
+      const timer = setTimeout(() => setIsFlashing(false), 400)
+      return () => clearTimeout(timer)
+    }
+    prevHpRef.current = combatant.currentHP
+  }, [combatant.currentHP])
+
+  // Determine bar color
+  let hpColor = '#4f4' // Green (>50%)
+  if (combatant.currentHP <= 0) {
+    hpColor = '#666' // Dead/Unconscious
+  } else if (hpPercent <= 20) {
+    hpColor = '#f44' // Red (low)
+  } else if (hpPercent <= 50) {
+    hpColor = '#ff4' // Yellow (<=50%)
+  }
 
   return (
     <group position={[x, 0, z]}>
@@ -48,20 +73,10 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
       )}
 
       {/* Floating Label & Health Bar */}
-      <Html position={[0, 2.5, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px'
-        }}>
+      <Html position={[0, 2.5, 0]} center style={{ pointerEvents: 'none', zIndex: 100 }}>
+        <div className={`hp-bar-container ${isFlashing ? 'flash' : ''}`}>
           {combatant.statusEffects.length > 0 && (
-            <div style={{ 
-              display: 'flex', 
-              gap: '4px', 
-              marginBottom: '2px',
-              textShadow: '0 0 4px black'
-            }}>
+            <div className="status-effects-row">
               {combatant.statusEffects.map((effect) => (
                 <span key={effect} style={{ fontSize: '20px' }} title={effect}>
                   {STATUS_ICONS[effect] || effect}
@@ -70,41 +85,26 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
             </div>
           )}
 
-          <div style={{ 
-            background: 'rgba(0,0,0,0.6)', 
-            padding: '4px 8px', 
-            borderRadius: '4px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            minWidth: '80px'
-          }}>
-            <div style={{ 
-              color: 'white', 
-              fontSize: '12px', 
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap'
-            }}>
-              {character?.name ?? 'Unknown'}
-            </div>
-            <div style={{ 
-              width: '100%', 
-              height: '4px', 
-              background: '#333', 
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}>
-              <div style={{ 
-                width: `${hpPercent}%`, 
-                height: '100%', 
-                background: hpColor,
-                transition: 'width 0.3s ease-out'
-              }} />
-            </div>
+          <div className="hp-bar-name">
+            {character?.name ?? 'Unknown'}
+          </div>
+          
+          <div className="hp-bar-track">
+            <div 
+              className={`hp-bar-fill ${combatant.currentHP <= 0 ? 'dead' : ''}`}
+              style={{ 
+                width: `${hpPercent}%`,
+                backgroundColor: hpColor
+              }} 
+            />
+          </div>
+          
+          <div className="hp-bar-text">
+            {Math.ceil(combatant.currentHP)} / {maxHP}
           </div>
         </div>
       </Html>
     </group>
   )
 }
+

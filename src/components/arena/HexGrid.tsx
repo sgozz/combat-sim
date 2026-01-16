@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Text, Billboard } from '@react-three/drei'
 import { HEX_SIZE, hexToWorld, hexDistance } from '../../utils/hex'
 import type { GridPosition } from '../../../shared/types'
 
@@ -6,6 +7,8 @@ type HexGridProps = {
   radius: number
   playerPosition: GridPosition | null
   moveRange: number
+  attackRange: number
+  isPlayerTurn: boolean
   enemyPositions: GridPosition[]
   selectedTargetPosition: GridPosition | null
   moveTargetPosition: GridPosition | null
@@ -18,6 +21,8 @@ const getHexColor = (
   r: number,
   playerPosition: GridPosition | null,
   moveRange: number,
+  attackRange: number,
+  isPlayerTurn: boolean,
   enemyPositions: GridPosition[],
   selectedTargetPosition: GridPosition | null,
   moveTargetPosition: GridPosition | null,
@@ -35,13 +40,31 @@ const getHexColor = (
   
   const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
   if (isEnemy) {
-    return isHovered ? '#cc4444' : '#aa2222'
+    if (isPlayerTurn && playerPosition) {
+      const distance = hexDistance(q, r, playerPosition.x, playerPosition.z)
+      if (distance <= attackRange) {
+        return isHovered ? '#cc4444' : '#aa2222'
+      }
+    }
+    // Enemy out of range or not player turn - dimmed red
+    return isHovered ? '#882222' : '#661111'
   }
   
   if (playerPosition) {
     const distance = hexDistance(q, r, playerPosition.x, playerPosition.z)
-    if (distance <= moveRange && distance > 0) {
-      return isHovered ? '#448844' : '#224422'
+    
+    // Player's own hex
+    if (distance === 0) {
+       return isAlternate ? '#1a1a1a' : '#252525'
+    }
+
+    if (isPlayerTurn) {
+      if (distance <= moveRange) {
+        return isHovered ? '#448844' : '#224422'
+      } else {
+        // Out of move range - dim it
+        return isHovered ? '#333333' : '#1a1a1a'
+      }
     }
   }
 
@@ -78,7 +101,7 @@ const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: {
   )
 }
 
-export const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, frontArcHexes, onHexClick }: HexGridProps) => {
+export const HexGrid = ({ radius, playerPosition, moveRange, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, frontArcHexes, onHexClick }: HexGridProps) => {
   const [hoveredHex, setHoveredHex] = useState<{q: number, r: number} | null>(null)
 
   const tiles = useMemo(() => {
@@ -92,13 +115,37 @@ export const HexGrid = ({ radius, playerPosition, moveRange, enemyPositions, sel
     return result
   }, [radius])
 
+  const hoverInfo = useMemo(() => {
+    if (!hoveredHex || !playerPosition || !isPlayerTurn) return null
+    
+    const dist = hexDistance(hoveredHex.q, hoveredHex.r, playerPosition.x, playerPosition.z)
+    const isReachable = dist <= moveRange
+    const color = isReachable ? '#44ff44' : '#ff4444'
+    const [x, z] = hexToWorld(hoveredHex.q, hoveredHex.r)
+    
+    return { dist, color, position: [x, 0.5, z] as [number, number, number] }
+  }, [hoveredHex, playerPosition, isPlayerTurn, moveRange])
+
   return (
     <group>
+      {hoverInfo && (
+        <Billboard position={hoverInfo.position}>
+          <Text
+            fontSize={0.6}
+            color={hoverInfo.color}
+            outlineWidth={0.05}
+            outlineColor="#000000"
+            anchorY="middle"
+          >
+            {hoverInfo.dist}
+          </Text>
+        </Billboard>
+      )}
       {tiles.map(({ q, r }) => {
         const isAlternate = (q + r) % 2 === 0
         const isHovered = hoveredHex?.q === q && hoveredHex?.r === r
         const isFrontArc = frontArcHexes.some(h => h.q === q && h.r === r)
-        const color = getHexColor(q, r, playerPosition, moveRange, enemyPositions, selectedTargetPosition, moveTargetPosition, isFrontArc, isAlternate, isHovered)
+        const color = getHexColor(q, r, playerPosition, moveRange, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, isFrontArc, isAlternate, isHovered)
         return (
           <HexTile 
             key={`${q},${r}`} 

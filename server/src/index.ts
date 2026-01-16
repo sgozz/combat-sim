@@ -15,7 +15,7 @@ import type {
   Player,
   ServerToClientMessage,
 } from "../../shared/types";
-import { advanceTurn, calculateDerivedStats, resolveAttack } from "../../shared/rules";
+import { advanceTurn, calculateDerivedStats, resolveAttack, getDefenseOptions, getRangePenalty, applyDamageMultiplier, getPostureModifiers, rollHTCheck } from "../../shared/rules";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const DB_PATH = path.join(process.cwd(), "data.sqlite");
@@ -354,7 +354,15 @@ const createBotCharacter = (name: string): CharacterSheet => {
     skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
     advantages: [],
     disadvantages: [],
-    equipment: [{ id: randomUUID(), name: "Club", damage: "1d+1" }],
+    equipment: [{ 
+      id: randomUUID(), 
+      name: "Club", 
+      type: "melee",
+      damage: "1d+1",
+      reach: 1,
+      parry: 0,
+      skillUsed: "Brawling"
+    }],
     pointsTotal: 75,
   };
 };
@@ -430,35 +438,61 @@ const createMatchState = (lobby: Lobby): MatchState => {
     const isBot = player?.isBot ?? false;
     const q = isBot ? 6 : -2;
     const r = index;
-    const facing = isBot ? 3 : 0; // Bots face West (-q), Players face East (+q)
+    const facing = isBot ? 3 : 0;
     return {
       playerId: player?.id ?? character.id,
       characterId: character.id,
       position: { x: q, y: 0, z: r },
       facing,
+      posture: 'standing' as const,
       maneuver: null,
       currentHP: character.derived.hitPoints,
       currentFP: character.derived.fatiguePoints,
       statusEffects: [],
+      aimTurns: 0,
+      aimTargetId: null,
     };
   });
 
+  const initiativeOrder = combatants
+    .map(c => {
+      const char = characters.find(ch => ch.id === c.characterId);
+      return {
+        playerId: c.playerId,
+        basicSpeed: char?.derived.basicSpeed ?? 5,
+        dexterity: char?.attributes.dexterity ?? 10,
+        random: Math.random(),
+      };
+    })
+    .sort((a, b) => {
+      if (b.basicSpeed !== a.basicSpeed) return b.basicSpeed - a.basicSpeed;
+      if (b.dexterity !== a.dexterity) return b.dexterity - a.dexterity;
+      return b.random - a.random;
+    });
+  
+  const sortedPlayers = initiativeOrder.map(i => lobby.players.find(p => p.id === i.playerId)!);
+  const firstPlayerId = sortedPlayers[0]?.id ?? "";
+
   return {
     id: randomUUID(),
-    players: lobby.players,
+    players: sortedPlayers,
     characters,
     combatants,
-    activeTurnPlayerId: lobby.players[0]?.id ?? "",
+    activeTurnPlayerId: firstPlayerId,
     round: 1,
     log: ["Match started."],
     status: "active",
   };
 };
 
+const isDefeated = (combatant: CombatantState): boolean => {
+  return combatant.currentHP <= 0 || combatant.statusEffects.includes('unconscious');
+};
+
 const checkVictory = (match: MatchState): MatchState => {
   if (match.status === "finished") return match;
 
-  const aliveCombatants = match.combatants.filter((c) => c.currentHP > 0);
+  const aliveCombatants = match.combatants.filter((c) => !isDefeated(c));
   if (aliveCombatants.length <= 1) {
     const winner = aliveCombatants[0];
     const winnerPlayer = winner ? match.players.find((p) => p.id === winner.playerId) : null;
@@ -484,7 +518,7 @@ const findNearestEnemy = (
   let minDistance = Infinity;
   for (const combatant of allCombatants) {
     if (combatant.playerId === botPlayerId) continue;
-    if (combatant.currentHP <= 0) continue;
+    if (isDefeated(combatant)) continue;
     const dist = calculateHexDistance(botCombatant.position, combatant.position);
     if (dist < minDistance) {
       minDistance = dist;
@@ -610,7 +644,8 @@ const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
 
       const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
       const defense = targetCharacter.derived.dodge;
-      const damageFormula = attackerCharacter.equipment[0]?.damage ?? "1d";
+      const weapon = attackerCharacter.equipment[0];
+      const damageFormula = weapon?.damage ?? "1d";
       const result = resolveAttack({ skill, defense, damage: damageFormula });
 
       let updatedCombatants = currentMatch.combatants;
@@ -621,13 +656,15 @@ const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
       } else if (result.outcome === "defended") {
         logEntry += ": defended.";
       } else {
-        const damage = result.damage?.total ?? 0;
+        const baseDamage = result.damage?.total ?? 0;
+        const damageType = weapon?.damageType ?? 'crushing';
+        const finalDamage = applyDamageMultiplier(baseDamage, damageType);
         updatedCombatants = currentMatch.combatants.map((combatant) => {
           if (combatant.playerId !== target.playerId) return combatant;
-          const nextHp = Math.max(combatant.currentHP - damage, 0);
+          const nextHp = Math.max(combatant.currentHP - finalDamage, 0);
           return { ...combatant, currentHP: nextHp };
         });
-        logEntry += `: hit for ${damage} damage.`;
+        logEntry += `: hit for ${finalDamage} ${damageType} damage.`;
       }
 
       let updated = advanceTurn({
@@ -870,13 +907,40 @@ const startServer = async () => {
           }
 
           if (payload.type === "select_maneuver") {
-            const updatedCombatants = match.combatants.map((c) =>
-              c.playerId === player.id ? { ...c, maneuver: payload.maneuver } : c
-            );
+            const previousManeuver = actorCombatant.maneuver;
+            const newManeuver = payload.maneuver;
+            
+            const updatedCombatants = match.combatants.map((c) => {
+              if (c.playerId !== player.id) return c;
+              
+              let aimTurns = c.aimTurns;
+              let aimTargetId = c.aimTargetId;
+              
+              if (newManeuver === 'aim') {
+                if (previousManeuver === 'aim') {
+                  aimTurns = Math.min(aimTurns + 1, 3);
+                } else {
+                  aimTurns = 1;
+                }
+              } else {
+                aimTurns = 0;
+                aimTargetId = null;
+              }
+              
+              return { ...c, maneuver: newManeuver, aimTurns, aimTargetId };
+            });
+            
+            let logMsg = `${player.name} chooses ${newManeuver.replace(/_/g, " ")}`;
+            const updatedActor = updatedCombatants.find(c => c.playerId === player.id);
+            if (newManeuver === 'aim' && updatedActor && updatedActor.aimTurns > 1) {
+              logMsg += ` (turn ${updatedActor.aimTurns})`;
+            }
+            logMsg += '.';
+            
             const updated = {
               ...match,
               combatants: updatedCombatants,
-              log: [...match.log, `${player.name} chooses ${payload.maneuver.replace(/_/g, " ")}.`],
+              log: [...match.log, logMsg],
             };
             matches.set(lobby.id, updated);
             await upsertMatch(lobby.id, updated);
@@ -909,10 +973,58 @@ const startServer = async () => {
             return;
           }
 
+          if (payload.type === "aim_target") {
+            if (actorCombatant.maneuver !== 'aim') {
+              sendMessage(socket, { type: "error", message: "Must select Aim maneuver first." });
+              return;
+            }
+            const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
+            if (!targetCombatant) {
+              sendMessage(socket, { type: "error", message: "Target not found." });
+              return;
+            }
+            const targetPlayer = match.players.find(p => p.id === payload.targetId);
+            const updatedCombatants = match.combatants.map((c) =>
+              c.playerId === player.id ? { ...c, aimTargetId: payload.targetId } : c
+            );
+            const updated = advanceTurn({
+              ...match,
+              combatants: updatedCombatants,
+              log: [...match.log, `${player.name} aims at ${targetPlayer?.name ?? 'target'}.`],
+            });
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            scheduleBotTurn(lobby, updated);
+            return;
+          }
+
           if (payload.type === "end_turn") {
             const updated = advanceTurn({
               ...match,
               log: [...match.log, `${player.name} ends their turn.`],
+            });
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            scheduleBotTurn(lobby, updated);
+            return;
+          }
+
+          if (payload.type === "change_posture") {
+            const newPosture = payload.posture;
+            const oldPosture = actorCombatant.posture;
+            if (newPosture === oldPosture) {
+              sendMessage(socket, { type: "error", message: "Already in that posture." });
+              return;
+            }
+            const updatedCombatants = match.combatants.map((c) =>
+              c.playerId === player.id ? { ...c, posture: newPosture } : c
+            );
+            const updated = advanceTurn({
+              ...match,
+              combatants: updatedCombatants,
+              log: [...match.log, `${player.name} changes to ${newPosture} posture.`],
             });
             matches.set(lobby.id, updated);
             await upsertMatch(lobby.id, updated);
@@ -928,20 +1040,21 @@ const startServer = async () => {
               return;
             }
             const distance = calculateHexDistance(actorCombatant.position, payload.position);
+            const postureMods = getPostureModifiers(actorCombatant.posture);
             
-            let allowed = actorCharacter.derived.basicMove;
+            let allowed = Math.floor(actorCharacter.derived.basicMove * postureMods.moveMultiplier);
             const m = actorCombatant.maneuver;
             
-            if (m === 'do_nothing' || m === 'all_out_defense') { // AoD allows step? Yes (B366: Step or half move?) Let's say 1 step for now standard
-               // Actually AoD (Increased Def) allows Step. AoD (Double) allows Step.
-               // Do Nothing: No move.
+            if (m === 'do_nothing' || m === 'all_out_defense') {
                if (m === 'do_nothing') allowed = 0;
-               else allowed = 1; // AoD step
+               else allowed = Math.min(allowed, 1);
             } else if (m === 'attack' || m === 'all_out_attack' || m === 'aim') {
-               allowed = 1; // Step
-               if (m === 'all_out_attack') allowed = Math.floor(actorCharacter.derived.basicMove / 2); // AoA allows half move
-            } 
-            // 'move', 'move_and_attack' allow full move (default)
+               if (m === 'all_out_attack') {
+                 allowed = Math.min(allowed, Math.floor(actorCharacter.derived.basicMove / 2));
+               } else {
+                 allowed = Math.min(allowed, 1);
+               }
+            }
 
             if (distance > allowed) {
               sendMessage(socket, { type: "error", message: `Move exceeds allowed for ${m} (${allowed}).` });
@@ -995,17 +1108,52 @@ const startServer = async () => {
               return;
             }
             const distance = calculateHexDistance(actorCombatant.position, targetCombatant.position);
-            if (distance > 1) {
-              sendMessage(socket, { type: "error", message: "Target out of melee range." });
-              return;
-            }
             const attackerCharacter = getCharacterById(match, actorCombatant.characterId);
             const targetCharacter = getCharacterById(match, targetCombatant.characterId);
             if (!attackerCharacter || !targetCharacter) {
               sendMessage(socket, { type: "error", message: "Character not found." });
               return;
             }
-            const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+            
+            const weapon = attackerCharacter.equipment[0];
+            const isRanged = weapon?.type === 'ranged';
+            const weaponReach = weapon?.reach ?? 1;
+            
+            if (!isRanged && distance > weaponReach) {
+              sendMessage(socket, { type: "error", message: `Target out of melee range (reach ${weaponReach}).` });
+              return;
+            }
+            
+            let skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+            const attackerManeuver = actorCombatant.maneuver;
+            
+            if (isRanged) {
+              const rangePenalty = getRangePenalty(distance);
+              skill += rangePenalty;
+            }
+            
+            // All-Out Attack: +4 to hit (B365)
+            if (attackerManeuver === 'all_out_attack') {
+              skill += 4;
+            } else if (attackerManeuver === 'move_and_attack') {
+              // Move and Attack: -4 to skill, max 9 (B365)
+              skill = Math.min(skill - 4, 9);
+            }
+            
+            // Aim bonus: +Acc on first turn, +1 per additional turn up to +3 total (B364)
+            if (actorCombatant.aimTurns > 0 && actorCombatant.aimTargetId === payload.targetId) {
+              const weaponAcc = weapon?.accuracy ?? 0;
+              const aimBonus = weaponAcc + Math.min(actorCombatant.aimTurns - 1, 2);
+              skill += aimBonus;
+            }
+            
+            const shockPenalty = actorCombatant.statusEffects.filter(e => e === 'shock').length;
+            if (shockPenalty > 0) {
+              skill -= Math.min(shockPenalty, 4);
+            }
+            
+            const attackerPosture = getPostureModifiers(actorCombatant.posture);
+            skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
             
             const targetFacing = targetCombatant.facing;
             const attackDirection = calculateFacing(targetCombatant.position, actorCombatant.position);
@@ -1015,16 +1163,57 @@ const startServer = async () => {
             let canDefend = true;
             let defenseDescription = "normal";
 
-            if (relativeDir === 3) { // Back
+            if (relativeDir === 3) {
               canDefend = false;
               defenseDescription = "backstab (no defense)";
-            } else if (relativeDir === 2 || relativeDir === 4) { // Side
+            } else if (relativeDir === 2 || relativeDir === 4) {
               defenseMod = -2;
               defenseDescription = "flank (-2)";
             }
 
-            const baseDefense = targetCharacter.derived.dodge;
-            const effectiveDefense = canDefend ? baseDefense + defenseMod : undefined;
+            const targetManeuver = targetCombatant.maneuver;
+            
+            // All-Out Defense: +2 to active defenses (B366)
+            if (targetManeuver === 'all_out_defense') {
+              defenseMod += 2;
+              defenseDescription += defenseDescription === "normal" ? "AoD (+2)" : " + AoD (+2)";
+            }
+            
+            // All-Out Attack: target cannot defend (B365)
+            if (targetManeuver === 'all_out_attack') {
+              canDefend = false;
+              defenseDescription = "target in AoA (no defense)";
+            }
+            
+            if (targetCombatant.statusEffects.includes('defending')) {
+              defenseMod += 1;
+              defenseDescription += defenseDescription === "normal" ? "defensive (+1)" : " + defensive (+1)";
+            }
+
+            const targetPosture = getPostureModifiers(targetCombatant.posture);
+            const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
+            if (postureDefBonus !== 0) {
+              defenseMod += postureDefBonus;
+              const sign = postureDefBonus > 0 ? '+' : '';
+              defenseDescription += defenseDescription === "normal" 
+                ? `${targetCombatant.posture} (${sign}${postureDefBonus})` 
+                : ` + ${targetCombatant.posture} (${sign}${postureDefBonus})`;
+            }
+
+            const defenseOptions = getDefenseOptions(targetCharacter, targetCharacter.derived.dodge);
+            let bestDefense = defenseOptions.dodge;
+            let defenseUsed = "Dodge";
+            
+            if (defenseOptions.parry && defenseOptions.parry.value > bestDefense) {
+              bestDefense = defenseOptions.parry.value;
+              defenseUsed = `Parry (${defenseOptions.parry.weapon})`;
+            }
+            if (defenseOptions.block && defenseOptions.block.value > bestDefense) {
+              bestDefense = defenseOptions.block.value;
+              defenseUsed = `Block (${defenseOptions.block.shield})`;
+            }
+            
+            const effectiveDefense = canDefend ? bestDefense + defenseMod : undefined;
             const damageFormula = attackerCharacter.equipment[0]?.damage ?? "1d";
             const result = resolveAttack({ skill, defense: effectiveDefense, damage: damageFormula });
 
@@ -1041,31 +1230,54 @@ const startServer = async () => {
                 effect: { type: "miss", targetId: targetCombatant.playerId, position: targetCombatant.position } 
               });
             } else if (result.outcome === "defended") {
-              logEntry += `: Defended. ${formatRoll(result.attack, 'Attack')} -> ${formatRoll(result.defense!, 'Defense')}`;
+              logEntry += `: ${defenseUsed}! ${formatRoll(result.attack, 'Attack')} -> ${formatRoll(result.defense!, defenseUsed)}`;
               sendToLobby(lobby, { 
                 type: "visual_effect", 
                 effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
               });
             } else {
               const dmg = result.damage!;
-              const damage = dmg.total;
+              const baseDamage = dmg.total;
+              const damageType = weapon?.damageType ?? 'crushing';
+              const finalDamage = applyDamageMultiplier(baseDamage, damageType);
               const rolls = dmg.rolls.join(',');
               const mod = dmg.modifier !== 0 ? (dmg.modifier > 0 ? `+${dmg.modifier}` : `${dmg.modifier}`) : '';
-              const dmgDetail = `(${damageFormula}: [${rolls}]${mod})`;
+              const multiplier = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
+              const dmgDetail = multiplier 
+                ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${multiplier} = ${finalDamage})`
+                : `(${damageFormula}: [${rolls}]${mod} ${damageType})`;
 
+              const targetMaxHP = targetCharacter.derived.hitPoints;
+              const targetHT = targetCharacter.attributes.health;
+              
               updatedCombatants = match.combatants.map((combatant) => {
                 if (combatant.playerId !== targetCombatant.playerId) return combatant;
-                const nextHp = Math.max(combatant.currentHP - damage, 0);
-                return {
-                  ...combatant,
-                  currentHP: nextHp,
-                  statusEffects: damage > 0 ? [...combatant.statusEffects, "shock"] : combatant.statusEffects,
-                };
+                const newHP = combatant.currentHP - finalDamage;
+                const wasAboveZero = combatant.currentHP > 0;
+                const nowAtOrBelowZero = newHP <= 0;
+                
+                let effects = finalDamage > 0 ? [...combatant.statusEffects, "shock"] : [...combatant.statusEffects];
+                
+                if (wasAboveZero && nowAtOrBelowZero && !effects.includes('unconscious')) {
+                  const htCheck = rollHTCheck(targetHT, newHP, targetMaxHP);
+                  if (!htCheck.success) {
+                    effects = [...effects, 'unconscious'];
+                  }
+                }
+                
+                return { ...combatant, currentHP: newHP, statusEffects: effects };
               });
-              logEntry += `: Hit for ${damage} damage ${dmgDetail}. ${formatRoll(result.attack, 'Attack')}`;
+              
+              const updatedTarget = updatedCombatants.find(c => c.playerId === targetCombatant.playerId);
+              const fellUnconscious = updatedTarget?.statusEffects.includes('unconscious') && !targetCombatant.statusEffects.includes('unconscious');
+              
+              logEntry += `: Hit for ${finalDamage} damage ${dmgDetail}. ${formatRoll(result.attack, 'Attack')}`;
+              if (fellUnconscious) {
+                logEntry += ` ${targetCharacter.name} falls unconscious!`;
+              }
               sendToLobby(lobby, { 
                 type: "visual_effect", 
-                effect: { type: "damage", targetId: targetCombatant.playerId, value: damage, position: targetCombatant.position } 
+                effect: { type: "damage", targetId: targetCombatant.playerId, value: finalDamage, position: targetCombatant.position } 
               });
             }
 

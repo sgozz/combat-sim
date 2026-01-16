@@ -1,3 +1,4 @@
+import { Tooltip } from '../ui/Tooltip'
 import type { MatchState } from '../../../shared/types'
 
 export const InitiativeTracker = ({ matchState }: { matchState: MatchState | null }) => {
@@ -9,18 +10,28 @@ export const InitiativeTracker = ({ matchState }: { matchState: MatchState | nul
   return (
     <div className="initiative-tracker">
       <div className="initiative-list">
-        {matchState.players.map((player, i) => (
-          <div 
-            key={player.id} 
-            className={`initiative-card ${i === activeIndex ? 'active' : ''}`}
-          >
-            <div className="initiative-avatar">
-              {player.isBot ? '🤖' : '👤'}
-            </div>
-            <div className="initiative-name">{player.name}</div>
-            {i === activeIndex && <div className="initiative-indicator">Current Turn</div>}
-          </div>
-        ))}
+        {matchState.players.map((player, i) => {
+          const combatant = matchState.combatants.find(c => c.playerId === player.id)
+          const character = combatant ? matchState.characters.find(c => c.id === combatant.characterId) : null
+          
+          const tooltipContent = character 
+            ? `${character.name} (HP: ${combatant?.currentHP}/${character.derived.hitPoints}, FP: ${combatant?.currentFP}/${character.derived.fatiguePoints})`
+            : player.name
+
+          return (
+            <Tooltip key={player.id} content={tooltipContent} position="bottom">
+              <div 
+                className={`initiative-card ${i === activeIndex ? 'active' : ''}`}
+              >
+                <div className="initiative-avatar">
+                  {player.isBot ? '🤖' : '👤'}
+                </div>
+                <div className="initiative-name">{player.name}</div>
+                {i === activeIndex && <div className="initiative-indicator">Current Turn</div>}
+              </div>
+            </Tooltip>
+          )
+        })}
       </div>
       <div className="round-counter">
         Round {matchState.round}

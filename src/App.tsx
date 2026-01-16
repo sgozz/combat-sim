@@ -5,9 +5,12 @@ import { LobbyBrowser } from './components/LobbyBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { CharacterEditor } from './components/ui/CharacterEditor'
 import { JoinLobbyModal } from './components/ui/JoinLobbyModal'
+import { applyAccessibilitySettings } from './components/ui/SettingsPanel'
 import type { GridPosition, CharacterSheet, CombatActionPayload } from '../shared/types'
 import { hexDistance } from './utils/hex'
 import './App.css'
+
+applyAccessibilitySettings()
 
 function App() {
   const {

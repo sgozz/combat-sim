@@ -2,6 +2,7 @@ import { OrbitControls, Environment, GizmoHelper, GizmoViewport, Html } from '@r
 import { HexGrid } from './HexGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
+import { CameraControls } from './CameraControls'
 import { hexToWorld, getHexInDirection } from '../../utils/hex'
 import type { CombatantState, CharacterSheet, GridPosition, VisualEffect } from '../../../shared/types'
 import { useMemo } from 'react'
@@ -62,6 +63,29 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
   const selectedTarget = combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetPosition = selectedTarget?.position ?? null
 
+  const attackRange = useMemo(() => {
+    if (!playerCombatant) return 1
+    const character = characters.find(c => c.id === playerCombatant.characterId)
+    if (!character) return 1
+
+    let maxRange = 1
+    // Check for melee reach and ranged range
+    character.equipment.forEach(item => {
+      if (item.type === 'melee' && item.reach) {
+        maxRange = Math.max(maxRange, item.reach)
+      }
+      if (item.type === 'ranged' && item.range) {
+        // Parse range like "100/200" or "50"
+        const parts = item.range.split('/')
+        const itemMax = parseInt(parts[parts.length - 1], 10)
+        if (!isNaN(itemMax)) {
+          maxRange = Math.max(maxRange, itemMax)
+        }
+      }
+    })
+    return maxRange
+  }, [playerCombatant, characters])
+
   const frontArcHexes = useMemo(() => {
     if (!playerCombatant) return []
     const { x: q, z: r } = playerCombatant.position
@@ -82,6 +106,8 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
         radius={10} 
         playerPosition={isPlayerTurn ? playerPosition : null}
         moveRange={isPlayerTurn ? playerMoveRange : 0}
+        attackRange={attackRange}
+        isPlayerTurn={isPlayerTurn}
         enemyPositions={enemyPositions}
         selectedTargetPosition={selectedTargetPosition}
         moveTargetPosition={moveTarget}
@@ -106,6 +132,7 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
 
       {moveTarget && <MoveMarker position={moveTarget} />}
 
+      <CameraControls />
       <OrbitControls makeDefault />
       
       <GizmoHelper alignment="bottom-right" margin={[80, 80]}>

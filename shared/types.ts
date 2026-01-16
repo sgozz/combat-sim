@@ -33,12 +33,25 @@ export type Disadvantage = {
   description?: string;
 };
 
+export type EquipmentType = 'melee' | 'ranged' | 'shield' | 'armor' | 'other';
+
+export type DamageType = 'crushing' | 'cutting' | 'impaling' | 'piercing';
+
+export type Posture = 'standing' | 'crouching' | 'kneeling' | 'prone';
+
 export type Equipment = {
   id: Id;
   name: string;
+  type: EquipmentType;
   damage?: string;
+  damageType?: DamageType;
   range?: string;
   weight?: number;
+  accuracy?: number;
+  reach?: number;
+  parry?: number;
+  block?: number;
+  skillUsed?: string;
 };
 
 export type CharacterSheet = {
@@ -80,10 +93,13 @@ export type CombatantState = {
   characterId: Id;
   position: GridPosition;
   facing: number; // 0-5
+  posture: Posture;
   maneuver: ManeuverType | null;
   currentHP: number;
   currentFP: number;
   statusEffects: string[];
+  aimTurns: number;
+  aimTargetId: Id | null;
 };
 
 export type MatchState = {
@@ -109,10 +125,12 @@ export type LobbySummary = {
 export type CombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType }
   | { type: "attack"; targetId: Id }
+  | { type: "aim_target"; targetId: Id }
   | { type: "defend" }
   | { type: "move"; position: GridPosition }
   | { type: "turn_left" }
   | { type: "turn_right" }
+  | { type: "change_posture"; posture: Posture }
   | { type: "end_turn" };
 
 export type ClientToServerMessage =

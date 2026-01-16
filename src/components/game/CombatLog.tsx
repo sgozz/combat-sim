@@ -1,37 +1,100 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
-const RichLogEntry = ({ text }: { text: string }) => {
-  const parts = text.split(/(\b(?:attacks|hit|damage|miss|defended|moves|chooses)\b|\d+)/g)
+type LogType = 'combat' | 'movement' | 'system'
+
+const getLogType = (text: string): LogType => {
+  if (/attacks|hit|damage|miss|defended|parry|block|dodge/i.test(text)) return 'combat'
+  if (/moves|position|turn/i.test(text)) return 'movement'
+  return 'system'
+}
+
+const getLogIcon = (text: string): string => {
+  if (/attacks/i.test(text)) return '⚔️'
+  if (/hit|damage/i.test(text)) return '💥'
+  if (/defended|parry|block|dodge/i.test(text)) return '🛡️'
+  if (/miss/i.test(text)) return '💨'
+  if (/moves/i.test(text)) return '👣'
+  if (/chooses/i.test(text)) return '📋'
+  if (/unconscious/i.test(text)) return '💀'
+  if (/wins/i.test(text)) return '🏆'
+  return 'ℹ️'
+}
+
+const getLogColor = (text: string): string => {
+  if (/hit|damage/i.test(text)) return '#ff4444'
+  if (/defended|parry|block/i.test(text)) return '#646cff'
+  if (/miss/i.test(text)) return '#888'
+  if (/moves|chooses/i.test(text)) return '#888'
+  if (/wins/i.test(text)) return '#4f4'
+  if (/unconscious/i.test(text)) return '#f44'
+  return '#ccc'
+}
+
+const LogEntry = ({ text, index }: { text: string; index: number }) => {
+  const icon = getLogIcon(text)
+  const color = getLogColor(text)
+  const isEven = index % 2 === 0
   
   return (
-    <div className="log-entry">
-      {parts.map((part, i) => {
-        if (part === 'attacks' || part === 'hit' || part === 'damage') return <span key={i} style={{color: '#ff4444', fontWeight: part === 'hit' ? 'bold' : 'normal'}}>{part}</span>
-        if (part === 'miss') return <span key={i} style={{color: '#888'}}>{part}</span>
-        if (part === 'defended') return <span key={i} style={{color: '#646cff'}}>{part}</span>
-        if (part === 'moves' || part === 'chooses') return <span key={i} style={{color: '#44ff44'}}>{part}</span>
-        if (/^\d+$/.test(part)) return <span key={i} style={{color: 'white', fontWeight: 'bold'}}>{part}</span>
-        return part
-      })}
+    <div 
+      className={`combat-log-entry ${isEven ? 'even' : 'odd'}`}
+      style={{ color }}
+    >
+      <span className="log-icon">{icon}</span>
+      <span className="log-text">{text}</span>
     </div>
   )
 }
 
+type FilterType = 'all' | 'combat' | 'movement'
+
 export const CombatLog = ({ logs }: { logs: string[] }) => {
-  const endRef = useRef<HTMLDivElement>(null)
+  const [filter, setFilter] = useState<FilterType>('all')
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const filteredLogs = logs.filter(log => {
+    if (filter === 'all') return true
+    return getLogType(log) === filter
+  })
+
+  const reversedLogs = [...filteredLogs].reverse()
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [logs])
 
   return (
-    <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '0' }}>
+    <div className="card combat-log-card">
       <h3>Combat Log</h3>
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: '100px', display: 'flex', flexDirection: 'column' }}>
-        {logs.map((log, i) => (
-          <RichLogEntry key={i} text={log} />
+      <div className="combat-log-filters">
+        <div className="filter-group">
+          <button 
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            All
+          </button>
+          <button 
+            className={`filter-btn ${filter === 'combat' ? 'active' : ''}`}
+            onClick={() => setFilter('combat')}
+          >
+            Combat
+          </button>
+          <button 
+            className={`filter-btn ${filter === 'movement' ? 'active' : ''}`}
+            onClick={() => setFilter('movement')}
+          >
+            Movement
+          </button>
+        </div>
+      </div>
+      <div className="combat-log-entries" ref={scrollRef}>
+        {reversedLogs.map((log, i) => (
+          <LogEntry key={`${logs.length - i}-${log}`} text={log} index={i} />
         ))}
-        <div ref={endRef} />
+        {reversedLogs.length === 0 && (
+          <div className="empty-log">No entries</div>
+        )}
       </div>
     </div>
   )
