@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
-import { TurnBanner } from './TurnBanner'
 import { TurnStepper } from './TurnStepper'
 
 import { ActionBar } from './ActionBar'
@@ -109,10 +108,11 @@ export const GameScreen = ({
 
       <main className="canvas-container">
         <InitiativeTracker matchState={matchState} />
-        <TurnBanner 
+        <CombatToast 
+          logs={logs} 
           activeTurnPlayerId={matchState?.activeTurnPlayerId}
-          players={matchState?.players ?? []}
           currentPlayerId={player?.id}
+          players={matchState?.players}
         />
         {matchState && matchState.status === 'active' && (
           <TurnStepper
@@ -121,7 +121,6 @@ export const GameScreen = ({
           />
         )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
-        <CombatToast logs={logs} />
         <button 
           className="settings-btn" 
           onClick={() => setShowSettings(true)}

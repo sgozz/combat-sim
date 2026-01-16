@@ -1,16 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 
+type ToastType = 'attack' | 'defend' | 'damage' | 'death' | 'info' | 'my-turn' | 'opponent-turn'
+
 type Toast = {
   id: string
   message: string
-  type: 'attack' | 'defend' | 'damage' | 'death' | 'info'
+  type: ToastType
 }
 
 type CombatToastProps = {
   logs: string[]
+  activeTurnPlayerId?: string
+  currentPlayerId?: string
+  players?: { id: string; name: string }[]
 }
 
-const getToastType = (message: string): Toast['type'] => {
+const getToastType = (message: string): ToastType => {
   if (message.includes('killed') || message.includes('dies') || message.includes('unconscious')) return 'death'
   if (message.includes('parries') || message.includes('blocks') || message.includes('dodges')) return 'defend'
   if (message.includes('damage') || message.includes('hits for')) return 'damage'
@@ -18,20 +23,23 @@ const getToastType = (message: string): Toast['type'] => {
   return 'info'
 }
 
-const getToastIcon = (type: Toast['type']): string => {
+const getToastIcon = (type: ToastType): string => {
   switch (type) {
     case 'attack': return '⚔️'
     case 'defend': return '🛡️'
     case 'damage': return '💥'
     case 'death': return '💀'
+    case 'my-turn': return '🎯'
+    case 'opponent-turn': return '⏳'
     default: return '📢'
   }
 }
 
-export const CombatToast = ({ logs }: CombatToastProps) => {
+export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players }: CombatToastProps) => {
   const [toasts, setToasts] = useState<Toast[]>([])
   const initialLogCount = useRef(logs.length)
   const lastLogCount = useRef(logs.length)
+  const lastTurnPlayerIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (logs.length > lastLogCount.current && logs.length > initialLogCount.current) {
@@ -62,6 +70,25 @@ export const CombatToast = ({ logs }: CombatToastProps) => {
     }
     lastLogCount.current = logs.length
   }, [logs])
+
+  useEffect(() => {
+    if (!activeTurnPlayerId || activeTurnPlayerId === lastTurnPlayerIdRef.current) return
+    
+    lastTurnPlayerIdRef.current = activeTurnPlayerId
+    
+    const isMyTurn = activeTurnPlayerId === currentPlayerId
+    const activePlayer = players?.find(p => p.id === activeTurnPlayerId)
+    
+    if (!activePlayer) return
+
+    const turnToast: Toast = {
+      id: `turn-${Date.now()}`,
+      message: isMyTurn ? "YOUR TURN" : `${activePlayer.name}'s Turn`,
+      type: isMyTurn ? 'my-turn' : 'opponent-turn'
+    }
+    
+    setToasts(prev => [turnToast, ...prev])
+  }, [activeTurnPlayerId, currentPlayerId, players])
 
   useEffect(() => {
     if (toasts.length === 0) return

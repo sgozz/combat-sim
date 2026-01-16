@@ -39,8 +39,8 @@
 }
 
 .panel {
-  width: 280px;
-  min-width: 280px;
+  width: 220px;
+  min-width: 220px;
   background-color: #1a1a1a;
   border-right: 1px solid #333;
   display: flex;
@@ -52,8 +52,8 @@
 }
 
 .panel-right {
-  width: 240px;
-  min-width: 240px;
+  width: 220px;
+  min-width: 220px;
   border-right: none;
   border-left: 1px solid #333;
   box-shadow: -5px 0 15px rgba(0,0,0,0.5);
@@ -1541,48 +1541,6 @@
   border-color: #646cff;
 }
 
-/* Turn Banner */
-.turn-banner {
-  position: absolute;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 1rem 3rem;
-  background: rgba(0, 0, 0, 0.9);
-  border: 2px solid;
-  border-radius: 8px;
-  font-size: 2rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  z-index: 1000;
-  pointer-events: none;
-  animation: slideInFadeOut 2s ease-in-out forwards;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  white-space: nowrap;
-}
-
-.turn-banner.my-turn {
-  color: #4f4;
-  border-color: #4f4;
-  text-shadow: 0 0 20px rgba(68, 255, 68, 0.5);
-  background: linear-gradient(to bottom, rgba(0,20,0,0.95), rgba(0,10,0,0.95));
-}
-
-.turn-banner.opponent-turn {
-  color: #ffaa00;
-  border-color: #ffaa00;
-  text-shadow: 0 0 20px rgba(255, 170, 0, 0.5);
-  background: linear-gradient(to bottom, rgba(20,10,0,0.95), rgba(10,5,0,0.95));
-}
-
-@keyframes slideInFadeOut {
-  0% { transform: translate(-50%, -100%); opacity: 0; }
-  15% { transform: translate(-50%, 0); opacity: 1; }
-  85% { transform: translate(-50%, 0); opacity: 1; }
-  100% { transform: translate(-50%, 20px); opacity: 0; }
-}
-
-
 /* HP Bar Compact (default visible) */
 .hp-bar-compact {
   display: flex;
@@ -2229,27 +2187,25 @@
 /* Combat Toast Notifications */
 .combat-toast-container {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 50px;
+  right: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  z-index: 5000;
+  gap: 4px;
+  z-index: 500;
   pointer-events: none;
+  max-width: 350px;
 }
 
 .combat-toast {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  background: rgba(0, 0, 0, 0.9);
-  border-radius: 8px;
-  border: 2px solid #444;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 6px;
+  border: 1px solid #444;
   animation: toast-in 0.3s ease-out;
-  min-width: 300px;
-  max-width: 500px;
 }
 
 .combat-toast-attack {
@@ -2277,12 +2233,24 @@
   border-color: #666;
 }
 
+.combat-toast-my-turn {
+  border-color: #4f4;
+  background: rgba(0, 30, 0, 0.95);
+  box-shadow: 0 0 20px rgba(68, 255, 68, 0.4);
+}
+
+.combat-toast-opponent-turn {
+  border-color: #ffaa00;
+  background: rgba(30, 20, 0, 0.95);
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);
+}
+
 .toast-icon {
-  font-size: 1.8rem;
+  font-size: 1rem;
 }
 
 .toast-message {
-  font-size: 1.1rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: #fff;
 }
@@ -2300,9 +2268,10 @@
 
 @media (max-width: 768px) {
   .combat-toast-container {
-    top: auto;
-    bottom: 90px;
-    left: 0;
+    top: 50px;
+    right: 8px;
+    left: auto;
+    max-width: 250px;
     right: 0;
     transform: none;
     padding: 0 0.5rem;
