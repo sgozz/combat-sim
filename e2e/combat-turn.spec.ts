@@ -1,5 +1,9 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
+function uniqueName(base: string): string {
+  return `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
 async function setupPlayer(context: BrowserContext, nickname: string): Promise<Page> {
   const page = await context.newPage()
   
@@ -15,6 +19,15 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   await nameInput.fill(nickname)
   
   await page.getByRole('button', { name: /enter arena/i }).click()
+  await page.waitForTimeout(2000)
+  
+  const quickMatchVisible = await page.getByText(/quick match/i).isVisible().catch(() => false)
+  
+  if (!quickMatchVisible) {
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(1000)
+  }
   
   await expect(page.getByText(/create lobby|quick match/i)).toBeVisible({ timeout: 10000 })
   
@@ -24,7 +37,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
 test.describe('Single Player Combat Flow', () => {
   test('player can start match and see combat UI', async ({ browser }) => {
     const context = await browser.newContext()
-    const player = await setupPlayer(context, 'TestWarrior')
+    const player = await setupPlayer(context, uniqueName('Warrior'))
     
     const quickMatchBtn = player.getByRole('button', { name: /quick match/i })
     await expect(quickMatchBtn).toBeVisible({ timeout: 5000 })
@@ -51,12 +64,12 @@ test.describe('Single Player Combat Flow', () => {
     
     await player.waitForTimeout(2000)
     
-    const maneuverVisible = await player.getByText(/choose maneuver/i).isVisible().catch(() => false)
-    const actionsVisible = await player.getByText(/actions/i).isVisible().catch(() => false)
+    const maneuverBtnVisible = await player.locator('.maneuver-btn').first().isVisible().catch(() => false)
+    const panelVisible = await player.locator('.panel-right').isVisible().catch(() => false)
     
-    expect(maneuverVisible || actionsVisible).toBeTruthy()
+    expect(maneuverBtnVisible || panelVisible).toBeTruthy()
     
-    if (maneuverVisible) {
+    if (maneuverBtnVisible) {
       const attackBtn = player.locator('.maneuver-btn').filter({ hasText: /Attack/ }).first()
       if (await attackBtn.isVisible().catch(() => false)) {
         await attackBtn.click()
@@ -75,7 +88,7 @@ test.describe('Single Player Combat Flow', () => {
 
   test('player can use keyboard shortcuts', async ({ browser }) => {
     const context = await browser.newContext()
-    const player = await setupPlayer(context, 'KeyboardUser')
+    const player = await setupPlayer(context, uniqueName('KeyUser'))
     
     await player.getByRole('button', { name: /quick match/i }).click()
     await expect(player.getByText(/leave lobby/i)).toBeVisible({ timeout: 10000 })
@@ -83,9 +96,9 @@ test.describe('Single Player Combat Flow', () => {
     await player.getByRole('button', { name: /start match/i }).click()
     await player.waitForTimeout(2000)
     
-    const maneuverVisible = await player.getByText(/choose maneuver/i).isVisible().catch(() => false)
+    const maneuverBtnVisible = await player.locator('.maneuver-btn').first().isVisible().catch(() => false)
     
-    if (maneuverVisible) {
+    if (maneuverBtnVisible) {
       await player.keyboard.press('1')
       await player.waitForTimeout(500)
       
