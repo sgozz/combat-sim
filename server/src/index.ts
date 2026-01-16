@@ -1052,6 +1052,10 @@ const startServer = async () => {
                if (m === 'all_out_attack') {
                  allowed = Math.min(allowed, Math.floor(actorCharacter.derived.basicMove / 2));
                } else {
+                 if (actorCombatant.statusEffects.includes('has_stepped')) {
+                   sendMessage(socket, { type: "error", message: "Already stepped this turn." });
+                   return;
+                 }
                  allowed = Math.min(allowed, 1);
                }
             }
@@ -1066,10 +1070,26 @@ const startServer = async () => {
                 ? { 
                     ...combatant, 
                     position: { x: payload.position.x, y: 0, z: payload.position.z },
-                    facing: newFacing
+                    facing: newFacing,
+                    statusEffects: [...combatant.statusEffects, 'has_stepped']
                   }
                 : combatant
             );
+            
+            const isStepOnly = m === 'attack' || m === 'aim';
+            
+            if (isStepOnly) {
+              const updated: MatchState = {
+                ...match,
+                combatants: updatedCombatants,
+                log: [...match.log, `${player.name} steps to (${payload.position.x}, ${payload.position.z}).`],
+              };
+              matches.set(lobby.id, updated);
+              await upsertMatch(lobby.id, updated);
+              sendToLobby(lobby, { type: "match_state", state: updated });
+              return;
+            }
+            
             const updated = advanceTurn({
               ...match,
               combatants: updatedCombatants,

@@ -1,0 +1,92 @@
+import { useState, useEffect, useRef } from 'react'
+
+type Toast = {
+  id: string
+  message: string
+  type: 'attack' | 'defend' | 'damage' | 'death' | 'info'
+}
+
+type CombatToastProps = {
+  logs: string[]
+}
+
+const getToastType = (message: string): Toast['type'] => {
+  if (message.includes('killed') || message.includes('dies') || message.includes('unconscious')) return 'death'
+  if (message.includes('parries') || message.includes('blocks') || message.includes('dodges')) return 'defend'
+  if (message.includes('damage') || message.includes('hits for')) return 'damage'
+  if (message.includes('attacks') || message.includes('shoots')) return 'attack'
+  return 'info'
+}
+
+const getToastIcon = (type: Toast['type']): string => {
+  switch (type) {
+    case 'attack': return '⚔️'
+    case 'defend': return '🛡️'
+    case 'damage': return '💥'
+    case 'death': return '💀'
+    default: return '📢'
+  }
+}
+
+export const CombatToast = ({ logs }: CombatToastProps) => {
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const initialLogCount = useRef(logs.length)
+  const lastLogCount = useRef(logs.length)
+
+  useEffect(() => {
+    if (logs.length > lastLogCount.current && logs.length > initialLogCount.current) {
+      const newLogs = logs.slice(lastLogCount.current)
+      const importantLogs = newLogs.filter(log => 
+        log.includes('attacks') || 
+        log.includes('hits') || 
+        log.includes('damage') ||
+        log.includes('parries') ||
+        log.includes('blocks') ||
+        log.includes('dodges') ||
+        log.includes('killed') ||
+        log.includes('dies') ||
+        log.includes('unconscious') ||
+        log.includes('misses') ||
+        log.includes('Critical')
+      )
+      
+      const newToasts = importantLogs.map((message, i) => ({
+        id: `${Date.now()}-${i}`,
+        message,
+        type: getToastType(message)
+      }))
+      
+      if (newToasts.length > 0) {
+        setToasts(prev => [...prev, ...newToasts])
+      }
+    }
+    lastLogCount.current = logs.length
+  }, [logs])
+
+  useEffect(() => {
+    if (toasts.length === 0) return
+    
+    const timer = setTimeout(() => {
+      setToasts(prev => prev.slice(1))
+    }, 3000)
+    
+    return () => clearTimeout(timer)
+  }, [toasts])
+
+  if (toasts.length === 0) return null
+
+  return (
+    <div className="combat-toast-container">
+      {toasts.slice(0, 3).map((toast, index) => (
+        <div 
+          key={toast.id} 
+          className={`combat-toast combat-toast-${toast.type}`}
+          style={{ opacity: 1 - (index * 0.2) }}
+        >
+          <span className="toast-icon">{getToastIcon(toast.type)}</span>
+          <span className="toast-message">{toast.message}</span>
+        </div>
+      ))}
+    </div>
+  )
+}

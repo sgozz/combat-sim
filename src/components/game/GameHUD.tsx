@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
 import type { MatchState, Player, CombatActionPayload, ManeuverType } from '../../../shared/types'
@@ -28,12 +29,18 @@ export const GameStatusPanel = ({
   lobbyPlayers, 
   lobbyId 
 }: GamePanelProps) => {
+  const [collapsed, setCollapsed] = useState(false)
   const activeCombatant = matchState?.combatants.find((combatant) => combatant.playerId === player?.id) ?? null
 
   return (
-    <aside className="panel">
-      <div className="panel-header">Lobby / Status</div>
-      <div className="panel-content">
+    <aside className={`panel ${collapsed ? 'collapsed' : ''}`}>
+      <div className="panel-header">
+        <span>Status</span>
+        <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? '▶' : '◀'}
+        </button>
+      </div>
+      {!collapsed && <div className="panel-content">
         <div className="card">
           <h3>Active Character</h3>
           <Tooltip content="The name of the currently active character" position="right">
@@ -65,7 +72,7 @@ export const GameStatusPanel = ({
           </ul>
           <div>Lobby: {lobbyId ?? 'Not joined'}</div>
         </div>
-      </div>
+      </div>}
     </aside>
   )
 }
@@ -111,6 +118,7 @@ export const GameActionPanel = ({
   onJoinLobby,
   inLobbyButNoMatch
 }: GameActionPanelProps) => {
+  const [collapsed, setCollapsed] = useState(false)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
@@ -202,8 +210,9 @@ export const GameActionPanel = ({
                 className="maneuver-btn"
                 onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })}
               >
-                <div className="maneuver-icon">{m.icon}</div>
-                <div className="maneuver-label"><span className="key-hint">[{m.key}]</span> {m.label}</div>
+                <span className="maneuver-icon">{m.icon}</span>
+                <span className="maneuver-label">{m.label}</span>
+                <span className="key-hint">{m.key}</span>
               </button>
             </Tooltip>
           ))}
@@ -211,102 +220,120 @@ export const GameActionPanel = ({
       )
     }
 
-    const actions = [
-        {
-          label: selectedTargetId ? `Attack ${selectedTargetName}` : 'Attack (select target)',
-          icon: '⚔️',
-          disabled: !isMyTurn,
-          onClick: () => {
-            if (!selectedTargetId) return
-            onAction('attack', { type: 'attack', targetId: selectedTargetId })
-          },
-        },
-        {
-          label: 'Defend',
-          icon: '🛡️',
-          disabled: !isMyTurn,
-          onClick: () => onAction('defend', { type: 'defend' }),
-        },
-        {
-          label: 'Turn Left',
-          icon: '↺',
-          disabled: !isMyTurn,
-          onClick: () => onAction('turn_left', { type: 'turn_left' }),
-        },
-        {
-          label: 'Turn Right',
-          icon: '↻',
-          disabled: !isMyTurn,
-          onClick: () => onAction('turn_right', { type: 'turn_right' }),
-        },
-        {
-          label: moveTarget ? 'Confirm Move' : 'Move (click grid)',
-          icon: '🦶',
-          disabled: !isMyTurn,
-          onClick: () => onAction('move_click'),
-        },
-        ...(moveTarget ? [{ label: 'Cancel Move', icon: '❌', onClick: () => onAction('cancel_move') }] : []),
-        { label: 'End Turn', icon: '⌛', disabled: !isMyTurn, onClick: () => onAction('end_turn', { type: 'end_turn' }) },
-        { label: 'Leave Match', icon: '🚪', onClick: onLeaveLobby },
-      ]
+    const maneuverLabel = currentManeuver ? MANEUVERS.find(m => m.type === currentManeuver) : null
+
+    const getManeuverInstructions = () => {
+      switch (currentManeuver) {
+        case 'move':
+          return { text: 'Click a hex to move. Full movement allowed.', canAttack: false, canMove: true, isStep: false }
+        case 'attack':
+          return { text: 'Click enemy to attack. You can step 1 hex first.', canAttack: true, canMove: true, isStep: true }
+        case 'all_out_attack':
+          return { text: 'Click enemy to attack (+4 to hit). NO DEFENSE this turn!', canAttack: true, canMove: false, isStep: false }
+        case 'all_out_defense':
+          return { text: 'Defending. +2 to all defenses. Click End Turn.', canAttack: false, canMove: false, isStep: false }
+        case 'move_and_attack':
+          return { text: 'Move then attack (-4 to hit, max skill 9).', canAttack: true, canMove: true, isStep: false }
+        case 'aim':
+          return { text: 'Aiming. You gain +Acc bonus next turn.', canAttack: false, canMove: false, isStep: false }
+        case 'do_nothing':
+          return { text: 'Waiting. Click End Turn.', canAttack: false, canMove: false, isStep: false }
+        default:
+          return { text: '', canAttack: false, canMove: false, isStep: false }
+      }
+    }
+
+    const instructions = getManeuverInstructions()
+    const hasStepped = activeCombatant?.statusEffects.includes('has_stepped') ?? false
+    const canStillMove = instructions.canMove && !(instructions.isStep && hasStepped)
 
     return (
-      <div className="action-grid">
-        {hitChanceInfo && (
-          <div className="hit-chance-preview" style={{ 
-            gridColumn: '1 / -1', 
-            padding: '10px', 
-            background: 'rgba(0,0,0,0.3)', 
-            borderRadius: '4px',
-            marginBottom: '10px',
-            borderLeft: `4px solid ${hitChanceInfo.color}`
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <strong style={{ color: '#fff' }}>Target: {selectedTargetName}</strong>
-              <span style={{ color: '#aaa' }}>{hitChanceInfo.dist} hexes</span>
+      <div className="action-section">
+        {currentManeuver && maneuverLabel && (
+          <>
+            <div className="current-maneuver-banner">
+              <span className="maneuver-icon-small">{maneuverLabel.icon}</span>
+              <span className="maneuver-name">{maneuverLabel.label}</span>
             </div>
-            <div style={{ fontSize: '0.9em', color: '#ccc' }}>
-              <Tooltip content="Base skill level before modifiers" position="top">
-                <span style={{ borderBottom: '1px dotted #888', cursor: 'help' }}>{hitChanceInfo.skillName}</span>
-              </Tooltip>: {hitChanceInfo.baseSkillLevel} {hitChanceInfo.rangeMod < 0 ? `(${hitChanceInfo.rangeMod} range)` : ''} 
-              {' '}→ <strong>{hitChanceInfo.effectiveSkill}</strong>
+            <div className="maneuver-instructions">{instructions.text}</div>
+          </>
+        )}
+        
+        {hitChanceInfo && instructions.canAttack && (
+          <div className="hit-chance-preview">
+            <div className="hit-chance-header">
+              <strong>Target: {selectedTargetName}</strong>
+              <span>{hitChanceInfo.dist} hex{hitChanceInfo.dist !== 1 ? 'es' : ''}</span>
             </div>
-            <div style={{ 
-              fontSize: '1.2em', 
-              fontWeight: 'bold', 
-              color: hitChanceInfo.color,
-              marginTop: '4px' 
-            }}>
-              Hit Chance: {hitChanceInfo.prob}%
+            <div className="hit-chance-calc">
+              {hitChanceInfo.skillName}: {hitChanceInfo.baseSkillLevel}
+              {hitChanceInfo.rangeMod < 0 && ` (${hitChanceInfo.rangeMod} range)`}
+              {' → '}<strong>{hitChanceInfo.effectiveSkill}</strong>
+            </div>
+            <div className="hit-chance-value" style={{ color: hitChanceInfo.color }}>
+              {hitChanceInfo.prob}% to hit
             </div>
           </div>
         )}
-        {actions.map((btn) => (
+
+        <div className="action-buttons">
+          {instructions.canAttack && (
+            <button 
+              className="action-btn primary"
+              disabled={!selectedTargetId}
+              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId })}
+            >
+              <span className="btn-icon">⚔️</span>
+              {selectedTargetId ? `Attack ${selectedTargetName}` : 'Select a target on map'}
+            </button>
+          )}
+          
+          {canStillMove && (
+            <>
+              {moveTarget ? (
+                <>
+                  <button className="action-btn" onClick={() => onAction('move_click')}>
+                    <span className="btn-icon">✓</span> {instructions.isStep ? 'Step (1 hex)' : 'Confirm Move'}
+                  </button>
+                  <button className="action-btn danger" onClick={() => onAction('cancel_move')}>
+                    <span className="btn-icon">✕</span> Cancel
+                  </button>
+                </>
+              ) : (
+                <div className="action-hint">{instructions.isStep ? 'Click adjacent hex to step (optional)' : 'Click a hex on the map to move'}</div>
+              )}
+            </>
+          )}
+
           <button 
-            key={btn.label} 
-            className={`action-btn ${btn.label.includes('Cancel') ? 'danger' : ''}`}
-            onClick={btn.onClick}
-            disabled={btn.disabled}
+            className="action-btn end-turn"
+            onClick={() => onAction('end_turn', { type: 'end_turn' })}
           >
-            {btn.icon && <span className="btn-icon">{btn.icon}</span>}
-            {btn.label}
+            <span className="btn-icon">⌛</span> End Turn
           </button>
-        ))}
+        </div>
       </div>
     )
   }
 
   return (
-    <aside className="panel panel-right">
-      <div className="panel-header">Actions & Log</div>
-      <div className="panel-content">
-        <div className="card">
-          <h3>{matchState?.status === 'finished' ? 'Match Over' : isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
-          {renderContent()}
-        </div>
-
-        <CombatLog logs={logs} />
+    <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
+      <div className="panel-header">
+        <span>{isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</span>
+        <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? '◀' : '▶'}
+        </button>
       </div>
+      {!collapsed && (
+        <div className="panel-content">
+          <div className="card">
+            <h3>{matchState?.status === 'finished' ? 'Match Over' : isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
+            {renderContent()}
+          </div>
+
+          <CombatLog logs={logs} />
+        </div>
+      )}
     </aside>
   )
 }

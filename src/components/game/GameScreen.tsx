@@ -2,9 +2,13 @@ import { useEffect, useCallback, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnBanner } from './TurnBanner'
+import { TurnStepper } from './TurnStepper'
+import { FloatingStatus } from './FloatingStatus'
+import { ActionBar } from './ActionBar'
 import { GameStatusPanel, GameActionPanel } from './GameHUD'
 import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
+import { CombatToast } from './CombatToast'
 import { SettingsPanel } from '../ui/SettingsPanel'
 import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType } from '../../../shared/types'
 
@@ -62,7 +66,10 @@ export const GameScreen = ({
   inLobbyButNoMatch
 }: GameScreenProps) => {
   const [showSettings, setShowSettings] = useState(false)
-  const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id)
+  const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
+  const currentCharacter = currentCombatant 
+    ? matchState?.characters.find(c => c.id === currentCombatant.characterId) ?? null 
+    : null
   const currentManeuver = currentCombatant?.maneuver ?? null
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -104,7 +111,15 @@ export const GameScreen = ({
           players={matchState?.players ?? []}
           currentPlayerId={player?.id}
         />
+        {matchState && matchState.status === 'active' && (
+          <TurnStepper
+            isMyTurn={isPlayerTurn}
+            currentManeuver={currentManeuver}
+          />
+        )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
+        <FloatingStatus combatant={currentCombatant} character={currentCharacter} />
+        <CombatToast logs={logs} />
         <button 
           className="settings-btn" 
           onClick={() => setShowSettings(true)}
@@ -146,6 +161,13 @@ export const GameScreen = ({
       />
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      <ActionBar
+        isMyTurn={isPlayerTurn}
+        currentManeuver={currentManeuver}
+        selectedTargetId={selectedTargetId}
+        onAction={onAction}
+      />
     </div>
   )
 }

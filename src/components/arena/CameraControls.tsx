@@ -46,25 +46,27 @@ export const CameraControls = () => {
 
   return (
     <Html fullscreen style={{ pointerEvents: 'none', zIndex: 100 }}>
-      <div className="camera-controls-panel">
-        <div className="panel-header" style={{ fontSize: '0.8rem', marginBottom: '0.5rem', borderBottom: '1px solid #444', paddingBottom: '0.25rem' }}>Camera</div>
+      <div className="camera-controls-compact">
         <button 
-          className={`camera-btn ${mode === 'top' ? 'active' : ''}`}
+          className={`camera-btn-compact ${mode === 'top' ? 'active' : ''}`}
           onClick={() => setMode('top')}
+          title="Top-Down"
         >
-          Top-Down
+          ⬇
         </button>
         <button 
-          className={`camera-btn ${mode === 'isometric' ? 'active' : ''}`}
+          className={`camera-btn-compact ${mode === 'isometric' ? 'active' : ''}`}
           onClick={() => setMode('isometric')}
+          title="Isometric"
         >
-          Isometric
+          ◇
         </button>
         <button 
-          className={`camera-btn ${mode === 'free' ? 'active' : ''}`}
+          className={`camera-btn-compact ${mode === 'free' ? 'active' : ''}`}
           onClick={() => setMode('free')}
+          title="Free Camera"
         >
-          Free
+          ⟲
         </button>
       </div>
     </Html>

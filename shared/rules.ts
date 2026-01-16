@@ -159,7 +159,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
 
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
-      const cleanedEffects = c.statusEffects.filter(e => e !== 'shock' && e !== 'defending');
+      const cleanedEffects = c.statusEffects.filter(e => e !== 'shock' && e !== 'defending' && e !== 'has_stepped');
       return { ...c, maneuver: null, statusEffects: cleanedEffects };
     }
     return c;

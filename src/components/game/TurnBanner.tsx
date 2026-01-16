@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { Player } from '../../../shared/types'
 
 type TurnBannerProps = {
@@ -10,12 +10,19 @@ type TurnBannerProps = {
 export const TurnBanner = ({ activeTurnPlayerId, players, currentPlayerId }: TurnBannerProps) => {
   const [visible, setVisible] = useState(false)
   const [content, setContent] = useState({ text: '', type: '' })
+  const lastTurnPlayerIdRef = useRef<string | undefined>(undefined)
   
   useEffect(() => {
     if (!activeTurnPlayerId) {
       setVisible(false)
       return
     }
+    
+    if (activeTurnPlayerId === lastTurnPlayerIdRef.current) {
+      return
+    }
+    
+    lastTurnPlayerIdRef.current = activeTurnPlayerId
     
     const isMyTurn = activeTurnPlayerId === currentPlayerId
     const activePlayer = players.find(p => p.id === activeTurnPlayerId)
@@ -29,7 +36,7 @@ export const TurnBanner = ({ activeTurnPlayerId, players, currentPlayerId }: Tur
     
     setVisible(true)
     
-    const timer = setTimeout(() => setVisible(false), 2000)
+    const timer = setTimeout(() => setVisible(false), 2500)
     return () => clearTimeout(timer)
   }, [activeTurnPlayerId, currentPlayerId, players])
 

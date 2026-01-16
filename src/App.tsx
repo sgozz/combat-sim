@@ -10,8 +10,6 @@ import type { GridPosition, CharacterSheet, CombatActionPayload } from '../share
 import { hexDistance } from './utils/hex'
 import './App.css'
 
-applyAccessibilitySettings()
-
 function App() {
   const {
     player,
@@ -33,6 +31,10 @@ function App() {
   const [showCharacterModal, setShowCharacterModal] = useState(false)
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [editingCharacter, setEditingCharacter] = useState<CharacterSheet | null>(null)
+
+  useEffect(() => {
+    applyAccessibilitySettings()
+  }, [])
 
   useEffect(() => {
     const storedName = window.localStorage.getItem('gurps.nickname')?.trim()

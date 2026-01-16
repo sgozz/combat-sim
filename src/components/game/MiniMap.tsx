@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import type { MatchState } from '../../../shared/types'
 
 type MiniMapProps = {
@@ -11,26 +10,26 @@ const MAP_SIZE = 150
 const CENTER = MAP_SIZE / 2
 const GRID_RADIUS = 10
 
+const hexToPixel = (q: number, r: number) => {
+  const x = CENTER + HEX_SIZE * 1.5 * q
+  const y = CENTER + HEX_SIZE * Math.sqrt(3) * (r + q / 2)
+  return { x, y }
+}
+
+const GRID_HEXES = (() => {
+  const hexes = []
+  for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
+    const r1 = Math.max(-GRID_RADIUS, -q - GRID_RADIUS)
+    const r2 = Math.min(GRID_RADIUS, -q + GRID_RADIUS)
+    for (let r = r1; r <= r2; r++) {
+      hexes.push({ q, r })
+    }
+  }
+  return hexes
+})()
+
 export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
   if (!matchState) return null
-
-  const hexToPixel = (q: number, r: number) => {
-    const x = CENTER + HEX_SIZE * 1.5 * q
-    const y = CENTER + HEX_SIZE * Math.sqrt(3) * (r + q / 2)
-    return { x, y }
-  }
-
-  const gridHexes = useMemo(() => {
-    const hexes = []
-    for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
-      const r1 = Math.max(-GRID_RADIUS, -q - GRID_RADIUS)
-      const r2 = Math.min(GRID_RADIUS, -q + GRID_RADIUS)
-      for (let r = r1; r <= r2; r++) {
-        hexes.push({ q, r })
-      }
-    }
-    return hexes
-  }, [])
 
   return (
     <div className="mini-map-container">
@@ -38,7 +37,7 @@ export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
         <circle cx={CENTER} cy={CENTER} r={MAP_SIZE / 2} fill="rgba(0, 0, 0, 0.8)" />
         
         <g className="mini-map-grid">
-          {gridHexes.map(({ q, r }) => {
+          {GRID_HEXES.map(({ q, r }) => {
             const { x, y } = hexToPixel(q, r)
             return (
               <polygon
