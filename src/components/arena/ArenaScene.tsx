@@ -77,7 +77,10 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     // Check for melee reach and ranged range
     character.equipment.forEach(item => {
       if (item.type === 'melee' && item.reach) {
-        maxRange = Math.max(maxRange, item.reach)
+        // Parse reach like "1", "C,1", "1,2" - extract max numeric value
+        const reachNumbers = item.reach.split(',').map(r => r === 'C' ? 0 : parseInt(r, 10)).filter(n => !isNaN(n))
+        const itemMaxReach = Math.max(...reachNumbers, 1)
+        maxRange = Math.max(maxRange, itemMaxReach)
       }
       if (item.type === 'ranged' && item.range) {
         // Parse range like "100/200" or "50"
@@ -117,7 +120,14 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         selectedTargetPosition={selectedTargetPosition}
         moveTargetPosition={moveTarget}
         frontArcHexes={frontArcHexes}
-        onHexClick={(q, r) => onGridClick({ x: q, y: 0, z: r })}
+        onHexClick={(q, r) => {
+          const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
+          if (enemyAtHex) {
+            onCombatantClick(enemyAtHex.playerId)
+          } else {
+            onGridClick({ x: q, y: 0, z: r })
+          }
+        }}
       />
       
       {combatants.map((combatant) => (

@@ -39,6 +39,11 @@ export type DamageType = 'crushing' | 'cutting' | 'impaling' | 'piercing';
 
 export type Posture = 'standing' | 'crouching' | 'kneeling' | 'prone';
 
+// Reach: "C" = close combat only, "1" = 1 hex, "C,1" = both, "1,2" = 1 or 2 hexes
+export type Reach = 'C' | '1' | '2' | '3' | 'C,1' | '1,2' | '2,3';
+
+export type ShieldSize = 'small' | 'medium' | 'large';
+
 export type Equipment = {
   id: Id;
   name: string;
@@ -48,11 +53,23 @@ export type Equipment = {
   range?: string;
   weight?: number;
   accuracy?: number;
-  reach?: number;
+  reach?: Reach;
   parry?: number;
   block?: number;
+  shieldSize?: ShieldSize;
   skillUsed?: string;
 };
+
+// Grappling states
+export type GrappleState = {
+  grappledBy: Id | null;
+  grappling: Id | null;
+  cpSpent: number; // Control Points spent on grapple
+  cpReceived: number; // Control Points received from grappler
+};
+
+// Close combat relative position
+export type CloseCombatPosition = 'front' | 'side' | 'back';
 
 export type CharacterSheet = {
   id: Id;
@@ -92,7 +109,7 @@ export type CombatantState = {
   playerId: Id;
   characterId: Id;
   position: GridPosition;
-  facing: number; // 0-5
+  facing: number;
   posture: Posture;
   maneuver: ManeuverType | null;
   currentHP: number;
@@ -100,6 +117,10 @@ export type CombatantState = {
   statusEffects: string[];
   aimTurns: number;
   aimTargetId: Id | null;
+  inCloseCombatWith: Id | null;
+  closeCombatPosition: CloseCombatPosition | null;
+  grapple: GrappleState | null;
+  usedReaction: boolean;
 };
 
 export type MatchState = {
@@ -122,6 +143,8 @@ export type LobbySummary = {
   status: "open" | "in_match";
 };
 
+export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'release';
+
 export type CombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType }
   | { type: "attack"; targetId: Id }
@@ -131,7 +154,13 @@ export type CombatActionPayload =
   | { type: "turn_left" }
   | { type: "turn_right" }
   | { type: "change_posture"; posture: Posture }
-  | { type: "end_turn" };
+  | { type: "end_turn" }
+  | { type: "enter_close_combat"; targetId: Id }
+  | { type: "exit_close_combat" }
+  | { type: "grapple"; targetId: Id; action: GrappleAction }
+  | { type: "break_free" }
+  | { type: "respond_close_combat"; accept: boolean }
+  | { type: "respond_exit"; response: 'let_go' | 'follow' | 'attack' };
 
 export type ClientToServerMessage =
   | { type: "auth"; name: string }
@@ -147,7 +176,13 @@ export type ClientToServerMessage =
 export type VisualEffect = 
   | { type: 'damage'; targetId: Id; value: number; position: GridPosition }
   | { type: 'miss'; targetId: Id; position: GridPosition }
-  | { type: 'defend'; targetId: Id; position: GridPosition };
+  | { type: 'defend'; targetId: Id; position: GridPosition }
+  | { type: 'grapple'; attackerId: Id; targetId: Id; position: GridPosition }
+  | { type: 'close_combat'; attackerId: Id; targetId: Id; position: GridPosition };
+
+export type PendingAction = 
+  | { type: 'close_combat_request'; attackerId: Id; targetId: Id }
+  | { type: 'exit_close_combat_request'; exitingId: Id; targetId: Id };
 
 export type ServerToClientMessage =
   | { type: "auth_ok"; player: Player }
@@ -156,4 +191,5 @@ export type ServerToClientMessage =
   | { type: "lobby_left" }
   | { type: "match_state"; state: MatchState }
   | { type: "visual_effect"; effect: VisualEffect }
+  | { type: "pending_action"; action: PendingAction }
   | { type: "error"; message: string };

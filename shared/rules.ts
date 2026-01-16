@@ -1,4 +1,4 @@
-import type { Attributes, DerivedStats, MatchState, CharacterSheet, DamageType, Posture } from "./types";
+import type { Attributes, DerivedStats, MatchState, CharacterSheet, DamageType, Posture, Reach, Equipment, ShieldSize, CloseCombatPosition } from "./types";
 
 export type RollResult = {
   roll: number;
@@ -160,7 +160,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
       const cleanedEffects = c.statusEffects.filter(e => e !== 'shock' && e !== 'defending' && e !== 'has_stepped');
-      return { ...c, maneuver: null, statusEffects: cleanedEffects };
+      return { ...c, maneuver: null, statusEffects: cleanedEffects, usedReaction: false };
     }
     return c;
   });
@@ -300,4 +300,237 @@ export const resolveAttack = (options: {
 
   const damage = rollDamage(options.damage, random);
   return { attack, defense, damage, outcome: "hit" };
+};
+
+// ============ CLOSE COMBAT (B391-392) ============
+
+export const parseReach = (reach: Reach): { min: number; max: number; hasC: boolean } => {
+  if (reach === 'C') return { min: 0, max: 0, hasC: true };
+  if (reach === '1') return { min: 1, max: 1, hasC: false };
+  if (reach === '2') return { min: 2, max: 2, hasC: false };
+  if (reach === '3') return { min: 3, max: 3, hasC: false };
+  if (reach === 'C,1') return { min: 0, max: 1, hasC: true };
+  if (reach === '1,2') return { min: 1, max: 2, hasC: false };
+  if (reach === '2,3') return { min: 2, max: 3, hasC: false };
+  return { min: 1, max: 1, hasC: false };
+};
+
+export const canAttackAtDistance = (reach: Reach, distance: number): boolean => {
+  const { min, max, hasC } = parseReach(reach);
+  if (distance === 0) return hasC || min <= 1;
+  return distance >= min && distance <= max;
+};
+
+export type CloseCombatAttackModifiers = {
+  toHit: number;
+  canAttack: boolean;
+  reason: string;
+};
+
+export const getCloseCombatAttackModifiers = (
+  weapon: Equipment,
+  distance: number
+): CloseCombatAttackModifiers => {
+  if (distance !== 0) {
+    return { toHit: 0, canAttack: true, reason: 'normal range' };
+  }
+  
+  const reach = weapon.reach ?? '1';
+  const { hasC, min } = parseReach(reach);
+  
+  if (hasC) {
+    return { toHit: 0, canAttack: true, reason: 'close combat weapon' };
+  }
+  
+  if (min === 1) {
+    return { toHit: -2, canAttack: true, reason: 'Reach 1 weapon in close combat (-2)' };
+  }
+  
+  return { toHit: 0, canAttack: false, reason: `Reach ${reach} cannot be used in close combat` };
+};
+
+export type CloseCombatDefenseModifiers = {
+  dodge: number;
+  parry: number;
+  block: number;
+  retreatBonus: number;
+  canParry: boolean;
+  canBlock: boolean;
+};
+
+export const getCloseCombatDefenseModifiers = (
+  weaponReach: Reach | undefined,
+  shieldSize: ShieldSize | undefined,
+  inCloseCombat: boolean
+): CloseCombatDefenseModifiers => {
+  if (!inCloseCombat) {
+    return { dodge: 0, parry: 0, block: 0, retreatBonus: 3, canParry: true, canBlock: true };
+  }
+  
+  const reach = weaponReach ?? '1';
+  const { hasC, min } = parseReach(reach);
+  
+  let parryMod = 0;
+  let canParry = true;
+  
+  if (hasC) {
+    parryMod = 0;
+  } else if (min === 1) {
+    parryMod = -2;
+  } else {
+    canParry = false;
+  }
+  
+  let blockMod = 0;
+  const canBlock = true;
+  if (shieldSize === 'medium' || shieldSize === 'large') {
+    blockMod = -2;
+  }
+  
+  return {
+    dodge: 0,
+    parry: parryMod,
+    block: blockMod,
+    retreatBonus: 1,
+    canParry,
+    canBlock,
+  };
+};
+
+export type QuickContestResult = {
+  attacker: RollResult;
+  defender: RollResult;
+  attackerWins: boolean;
+  margin: number;
+};
+
+export const quickContest = (
+  attackerSkill: number,
+  defenderSkill: number,
+  random: () => number = Math.random
+): QuickContestResult => {
+  const attacker = skillCheck(attackerSkill, random);
+  const defender = skillCheck(defenderSkill, random);
+  
+  const attackerMargin = attacker.margin;
+  const defenderMargin = defender.margin;
+  
+  let attackerWins: boolean;
+  let margin: number;
+  
+  if (attacker.success && !defender.success) {
+    attackerWins = true;
+    margin = attackerMargin - defenderMargin;
+  } else if (!attacker.success && defender.success) {
+    attackerWins = false;
+    margin = defenderMargin - attackerMargin;
+  } else {
+    margin = attackerMargin - defenderMargin;
+    attackerWins = margin > 0;
+  }
+  
+  return { attacker, defender, attackerWins, margin };
+};
+
+export const getCloseCombatPositionModifier = (position: CloseCombatPosition | null): number => {
+  if (position === 'side') return -2;
+  if (position === 'back') return -4;
+  return 0;
+};
+
+export const canDefendFromPosition = (position: CloseCombatPosition | null): boolean => {
+  return position !== 'back';
+};
+
+// ============ GRAPPLING (Martial Arts) ============
+
+export type GrappleAttemptResult = {
+  attack: RollResult;
+  defense: RollResult | null;
+  success: boolean;
+  controlPoints: number;
+};
+
+export const resolveGrappleAttempt = (
+  attackerDX: number,
+  attackerSkill: number,
+  defenderDX: number,
+  canDefend: boolean,
+  random: () => number = Math.random
+): GrappleAttemptResult => {
+  const effectiveSkill = Math.max(attackerDX, attackerSkill);
+  const attack = skillCheck(effectiveSkill, random);
+  
+  if (!attack.success) {
+    return { attack, defense: null, success: false, controlPoints: 0 };
+  }
+  
+  if (!canDefend) {
+    const cp = Math.max(0, attack.margin);
+    return { attack, defense: null, success: true, controlPoints: cp };
+  }
+  
+  const defense = skillCheck(defenderDX, random);
+  if (defense.success) {
+    return { attack, defense, success: false, controlPoints: 0 };
+  }
+  
+  const cp = Math.max(0, attack.margin);
+  return { attack, defense, success: true, controlPoints: cp };
+};
+
+export type BreakFreeResult = {
+  roll: RollResult;
+  success: boolean;
+};
+
+export const resolveBreakFree = (
+  defenderST: number,
+  defenderSkill: number,
+  controlPoints: number,
+  random: () => number = Math.random
+): BreakFreeResult => {
+  const effectiveSkill = Math.max(defenderST, defenderSkill) - controlPoints;
+  const roll = skillCheck(effectiveSkill, random);
+  return { roll, success: roll.success };
+};
+
+export type GrappleTechniqueResult = {
+  roll: RollResult;
+  success: boolean;
+  damage?: DamageRoll;
+  effect: string;
+};
+
+export const resolveGrappleTechnique = (
+  technique: 'throw' | 'lock' | 'choke' | 'pin',
+  skill: number,
+  ST: number,
+  controlPoints: number,
+  random: () => number = Math.random
+): GrappleTechniqueResult => {
+  const cpBonus = Math.floor(controlPoints / 2);
+  const effectiveSkill = skill + cpBonus;
+  const roll = skillCheck(effectiveSkill, random);
+  
+  if (!roll.success) {
+    return { roll, success: false, effect: 'failed' };
+  }
+  
+  switch (technique) {
+    case 'throw': {
+      const damage = rollDamage(`${Math.ceil(ST / 2)}d`, random);
+      return { roll, success: true, damage, effect: 'thrown to ground, stunned' };
+    }
+    case 'lock': {
+      const damage = rollDamage('1d-1', random);
+      return { roll, success: true, damage, effect: 'arm/leg locked, ongoing pain' };
+    }
+    case 'choke': {
+      return { roll, success: true, effect: 'choking, lose 1 FP per second' };
+    }
+    case 'pin': {
+      return { roll, success: true, effect: 'pinned, cannot act' };
+    }
+  }
 };

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { ServerToClientMessage, Player, LobbySummary, MatchState, VisualEffect } from '../../shared/types'
+import type { ServerToClientMessage, Player, LobbySummary, MatchState, VisualEffect, PendingAction } from '../../shared/types'
 
 export type ScreenState = 'welcome' | 'lobby' | 'waiting' | 'match'
 
@@ -13,6 +13,7 @@ export const useGameSocket = () => {
   const [logs, setLogs] = useState<string[]>([])
   const [screen, setScreen] = useState<ScreenState>('welcome')
   const [visualEffects, setVisualEffects] = useState<(VisualEffect & { id: string })[]>([])
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const connectingRef = useRef(false)
 
   const initializeConnection = useCallback((name: string) => {
@@ -66,6 +67,9 @@ export const useGameSocket = () => {
           }, 2000)
           break
         }
+        case 'pending_action':
+          setPendingAction(message.action)
+          break
         case 'error':
           setLogs((prev) => [...prev, `Error: ${message.message}`])
           break
@@ -110,8 +114,10 @@ export const useGameSocket = () => {
     logs,
     screen,
     visualEffects,
+    pendingAction,
     setScreen,
     setLogs,
+    setPendingAction,
     initializeConnection,
     sendMessage
   }

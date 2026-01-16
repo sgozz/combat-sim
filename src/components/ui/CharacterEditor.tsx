@@ -52,7 +52,7 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
       type: 'melee',
       damage,
       damageType,
-      reach: 1,
+      reach: '1',
       parry: 0,
     }
     setCharacter({

@@ -26,40 +26,61 @@ type GamePanelProps = {
 export const GameStatusPanel = ({ 
   matchState, 
   player, 
-  lobbyPlayers, 
-  lobbyId 
+  lobbyPlayers
 }: GamePanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const activeCombatant = matchState?.combatants.find((combatant) => combatant.playerId === player?.id) ?? null
+  const character = matchState?.characters.find((c) => c.id === activeCombatant?.characterId) ?? null
+  
+  const hpMax = character?.derived.hitPoints ?? 10
+  const fpMax = character?.derived.fatiguePoints ?? 10
+  const hpCurrent = activeCombatant?.currentHP ?? hpMax
+  const fpCurrent = activeCombatant?.currentFP ?? fpMax
+  const hpPercent = Math.max(0, (hpCurrent / hpMax) * 100)
+  const fpPercent = Math.max(0, (fpCurrent / fpMax) * 100)
+  
+  let hpColor = '#4f4'
+  if (hpPercent <= 20) hpColor = '#f44'
+  else if (hpPercent <= 50) hpColor = '#ff4'
 
   return (
     <aside className={`panel ${collapsed ? 'collapsed' : ''}`}>
       <div className="panel-header">
-        <span>Status</span>
+        <span>{character?.name ?? 'Status'}</span>
         <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? '▶' : '◀'}
         </button>
       </div>
       {!collapsed && <div className="panel-content">
-        <div className="card">
-          <h3>Active Character</h3>
-          <Tooltip content="The name of the currently active character" position="right">
-            <div>Name: {matchState?.characters.find((c) => c.id === activeCombatant?.characterId)?.name ?? 'Unassigned'}</div>
-          </Tooltip>
-          <Tooltip content="Hit Points: Determine how much injury you can take. Death checks at -HP." position="right">
-            <div>HP: {activeCombatant?.currentHP ?? '-'}</div>
-          </Tooltip>
-          <Tooltip content="Fatigue Points: Measure of endurance. Reaching 0 causes collapse." position="right">
-            <div>FP: {activeCombatant?.currentFP ?? '-'}</div>
-          </Tooltip>
-          <Tooltip content="Current physical status affecting your ability to act." position="right">
-            <div>Status: <span style={{ color: '#4f4' }}>OK</span></div>
-          </Tooltip>
-        </div>
+        {activeCombatant && character && (
+          <div className="card character-status-card">
+            <div className="stat-bar-row">
+              <span className="stat-label">HP</span>
+              <div className="stat-bar-track">
+                <div className="stat-bar-fill" style={{ width: `${hpPercent}%`, backgroundColor: hpColor }} />
+              </div>
+              <span className="stat-value">{hpCurrent}/{hpMax}</span>
+            </div>
+            <div className="stat-bar-row">
+              <span className="stat-label">FP</span>
+              <div className="stat-bar-track">
+                <div className="stat-bar-fill fp" style={{ width: `${fpPercent}%` }} />
+              </div>
+              <span className="stat-value">{fpCurrent}/{fpMax}</span>
+            </div>
+            {activeCombatant.statusEffects.length > 0 && (
+              <div className="status-effects-list">
+                {activeCombatant.statusEffects.map(effect => (
+                  <span key={effect} className="status-tag">{effect}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="card">
           <h3>Participants</h3>
-          <ul>
+          <ul className="participants-list">
             {lobbyPlayers.length > 0 ? (
               lobbyPlayers.map((participant) => (
                 <li key={participant.id}>
@@ -70,7 +91,6 @@ export const GameStatusPanel = ({
               <li>No players</li>
             )}
           </ul>
-          <div>Lobby: {lobbyId ?? 'Not joined'}</div>
         </div>
       </div>}
     </aside>
@@ -288,6 +308,71 @@ export const GameActionPanel = ({
             </button>
           )}
           
+          {activeCombatant?.inCloseCombatWith && (
+            <div className="close-combat-actions">
+              <div className="cc-label">In Close Combat</div>
+              {!activeCombatant.grapple?.grappling && !activeCombatant.grapple?.grappledBy && (
+                <button 
+                  className="action-btn"
+                  onClick={() => onAction('grapple', { type: 'grapple', targetId: activeCombatant.inCloseCombatWith!, action: 'grab' })}
+                >
+                  Grapple
+                </button>
+              )}
+              {activeCombatant.grapple?.grappling && (
+                <>
+                  <button 
+                    className="action-btn"
+                    onClick={() => onAction('grapple', { type: 'grapple', targetId: activeCombatant.grapple!.grappling!, action: 'throw' })}
+                  >
+                    Throw
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => onAction('grapple', { type: 'grapple', targetId: activeCombatant.grapple!.grappling!, action: 'lock' })}
+                  >
+                    Arm Lock
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => onAction('grapple', { type: 'grapple', targetId: activeCombatant.grapple!.grappling!, action: 'choke' })}
+                  >
+                    Choke
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => onAction('grapple', { type: 'grapple', targetId: activeCombatant.grapple!.grappling!, action: 'release' })}
+                  >
+                    Release
+                  </button>
+                </>
+              )}
+              {activeCombatant.grapple?.grappledBy && (
+                <button 
+                  className="action-btn warning"
+                  onClick={() => onAction('break_free', { type: 'break_free' })}
+                >
+                  Break Free
+                </button>
+              )}
+              <button 
+                className="action-btn"
+                onClick={() => onAction('exit_close_combat', { type: 'exit_close_combat' })}
+              >
+                Exit Close Combat
+              </button>
+            </div>
+          )}
+          
+          {isMyTurn && !activeCombatant?.inCloseCombatWith && selectedTargetId && hitChanceInfo && hitChanceInfo.dist <= 1 && (instructions.canAttack || instructions.canMove) && (
+            <button 
+              className="action-btn"
+              onClick={() => onAction('enter_close_combat', { type: 'enter_close_combat', targetId: selectedTargetId })}
+            >
+              Enter Close Combat
+            </button>
+          )}
+          
           {canStillMove && (
             <>
               {moveTarget ? (
@@ -327,7 +412,6 @@ export const GameActionPanel = ({
       {!collapsed && (
         <div className="panel-content">
           <div className="card">
-            <h3>{matchState?.status === 'finished' ? 'Match Over' : isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</h3>
             {renderContent()}
           </div>
 

@@ -20,6 +20,9 @@ const STATUS_ICONS: Record<string, string> = {
   aiming: '🎯',
   unconscious: '💤',
   dead: '💀',
+  grappling: '🤼',
+  grappled: '🔒',
+  close_combat: '⚔️',
 }
 
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
@@ -65,19 +68,22 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
     prevHpRef.current = combatant.currentHP
   }, [combatant.currentHP])
 
-  // Determine bar color
-  let hpColor = '#4f4' // Green (>50%)
+  let hpColor = '#4f4'
   if (combatant.currentHP <= 0) {
-    hpColor = '#666' // Dead/Unconscious
+    hpColor = '#666'
   } else if (hpPercent <= 20) {
-    hpColor = '#f44' // Red (low)
+    hpColor = '#f44'
   } else if (hpPercent <= 50) {
-    hpColor = '#ff4' // Yellow (<=50%)
+    hpColor = '#ff4'
   }
+  
+  const isGrappling = combatant.grapple?.grappling != null
+  const isGrappled = combatant.grapple?.grappledBy != null
+  const inCloseCombat = combatant.inCloseCombatWith != null
 
   return (
-    <group ref={groupRef} position={[targetX, 0, targetZ]}>
-      <mesh position={[0, 1, 0]} onClick={onClick}>
+    <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>
+      <mesh position={[0, 1, 0]}>
         <capsuleGeometry args={[0.4, 0.8, 4, 8]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
@@ -92,8 +98,15 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
           <meshBasicMaterial color="#ff0" transparent opacity={0.8} />
         </mesh>
       )}
+      
+      {inCloseCombat && !isSelected && (
+        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.45, 0.55, 6]} />
+          <meshBasicMaterial color={isGrappling || isGrappled ? '#f80' : '#f0f'} transparent opacity={0.6} />
+        </mesh>
+      )}
 
-      <Html position={[0, 2.5, 0]} center style={{ zIndex: 10 }}>
+      <Html position={[0, 2.5, 0]} center style={{ zIndex: 10, pointerEvents: 'none' }}>
         <div className={`hp-bar-compact ${isFlashing ? 'flash' : ''}`}>
           <div className="hp-bar-name-compact">{character?.name ?? '?'}</div>
           <div className="hp-bar-track-compact">
@@ -102,9 +115,12 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
               style={{ width: `${hpPercent}%`, backgroundColor: hpColor }} 
             />
           </div>
-          {combatant.statusEffects.length > 0 && (
+          {(combatant.statusEffects.length > 0 || inCloseCombat) && (
             <div className="status-icons-compact">
-              {combatant.statusEffects.slice(0, 3).map((effect) => (
+              {isGrappling && <span title="Grappling">{STATUS_ICONS.grappling}</span>}
+              {isGrappled && <span title="Grappled">{STATUS_ICONS.grappled}</span>}
+              {inCloseCombat && !isGrappling && !isGrappled && <span title="Close Combat">{STATUS_ICONS.close_combat}</span>}
+              {combatant.statusEffects.slice(0, 2).map((effect) => (
                 <span key={effect} title={effect}>{STATUS_ICONS[effect] || '•'}</span>
               ))}
             </div>
@@ -114,8 +130,11 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
           <div className="hp-bar-details-content">
             <div className="hp-detail-name">{character?.name ?? 'Unknown'}</div>
             <div className="hp-detail-hp">{Math.ceil(combatant.currentHP)} / {maxHP} HP</div>
-            {combatant.statusEffects.length > 0 && (
+            {(combatant.statusEffects.length > 0 || inCloseCombat) && (
               <div className="hp-detail-status">
+                {isGrappling && <span className="status-tag">{STATUS_ICONS.grappling} Grappling</span>}
+                {isGrappled && <span className="status-tag">{STATUS_ICONS.grappled} Grappled</span>}
+                {inCloseCombat && !isGrappling && !isGrappled && <span className="status-tag">{STATUS_ICONS.close_combat} Close Combat</span>}
                 {combatant.statusEffects.map((effect) => (
                   <span key={effect} className="status-tag">
                     {STATUS_ICONS[effect]} {effect}

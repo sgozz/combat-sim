@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnBanner } from './TurnBanner'
 import { TurnStepper } from './TurnStepper'
-import { FloatingStatus } from './FloatingStatus'
+
 import { ActionBar } from './ActionBar'
 import { GameStatusPanel, GameActionPanel } from './GameHUD'
 import { InitiativeTracker } from './InitiativeTracker'
@@ -11,7 +11,7 @@ import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 import { SettingsPanel } from '../ui/SettingsPanel'
 import type { CameraMode } from '../arena/CameraControls'
-import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType } from '../../../shared/types'
+import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType, PendingAction } from '../../../shared/types'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -24,9 +24,11 @@ type GameScreenProps = {
   selectedTargetId: string | null
   isPlayerTurn: boolean
   playerMoveRange: number
+  pendingAction: PendingAction | null
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
   onAction: (action: string, payload?: CombatActionPayload) => void
+  onPendingActionResponse: (response: string) => void
   onLeaveLobby: () => void
   onStartMatch: () => void
   onOpenCharacterEditor: () => void
@@ -56,9 +58,11 @@ export const GameScreen = ({
   selectedTargetId,
   isPlayerTurn,
   playerMoveRange,
+  pendingAction,
   onGridClick,
   onCombatantClick,
   onAction,
+  onPendingActionResponse,
   onLeaveLobby,
   onStartMatch,
   onOpenCharacterEditor,
@@ -69,9 +73,6 @@ export const GameScreen = ({
   const [showSettings, setShowSettings] = useState(false)
   const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
-  const currentCharacter = currentCombatant 
-    ? matchState?.characters.find(c => c.id === currentCombatant.characterId) ?? null 
-    : null
   const currentManeuver = currentCombatant?.maneuver ?? null
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -120,7 +121,6 @@ export const GameScreen = ({
           />
         )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
-        <FloatingStatus combatant={currentCombatant} character={currentCharacter} />
         <CombatToast logs={logs} />
         <button 
           className="settings-btn" 
@@ -187,6 +187,20 @@ export const GameScreen = ({
       />
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {pendingAction?.type === 'exit_close_combat_request' && pendingAction.targetId === player?.id && (
+        <div className="modal-overlay">
+          <div className="pending-action-modal">
+            <h3>Opponent Exiting Close Combat</h3>
+            <p>{matchState?.players.find(p => p.id === pendingAction.exitingId)?.name} is trying to exit close combat.</p>
+            <div className="pending-action-buttons">
+              <button onClick={() => onPendingActionResponse('let_go')}>Let Go</button>
+              <button onClick={() => onPendingActionResponse('follow')}>Follow</button>
+              <button onClick={() => onPendingActionResponse('attack')}>Free Attack</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ActionBar
         isMyTurn={isPlayerTurn}

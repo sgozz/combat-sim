@@ -13,8 +13,18 @@ import {
   applyDamageMultiplier,
   getPostureModifiers,
   rollHTCheck,
+  parseReach,
+  canAttackAtDistance,
+  getCloseCombatAttackModifiers,
+  getCloseCombatDefenseModifiers,
+  getCloseCombatPositionModifier,
+  canDefendFromPosition,
+  quickContest,
+  resolveGrappleAttempt,
+  resolveBreakFree,
+  resolveGrappleTechnique,
 } from './rules'
-import type { CharacterSheet, MatchState, CombatantState, Player } from './types'
+import type { CharacterSheet, MatchState, CombatantState, Player, Equipment } from './types'
 
 describe('GURPS Rules', () => {
   describe('Skill Check', () => {
@@ -172,8 +182,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -189,8 +199,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -208,8 +218,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['shock', 'defending', 'stunned'], aimTurns: 0, aimTargetId: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['shock', 'defending', 'stunned'], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -227,8 +237,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -334,6 +344,287 @@ describe('GURPS Rules', () => {
       const random = () => 0.4
       const result = rollHTCheck(10, -5, 10, random)
       expect(result.target).toBe(10)
+    })
+  })
+
+  describe('Close Combat - Reach Parsing', () => {
+    it('parses reach C as close combat only', () => {
+      const result = parseReach('C')
+      expect(result).toEqual({ min: 0, max: 0, hasC: true })
+    })
+
+    it('parses reach 1 as standard melee', () => {
+      const result = parseReach('1')
+      expect(result).toEqual({ min: 1, max: 1, hasC: false })
+    })
+
+    it('parses reach 2 as polearm-like', () => {
+      const result = parseReach('2')
+      expect(result).toEqual({ min: 2, max: 2, hasC: false })
+    })
+
+    it('parses reach C,1 as dagger-like', () => {
+      const result = parseReach('C,1')
+      expect(result).toEqual({ min: 0, max: 1, hasC: true })
+    })
+
+    it('parses reach 1,2 as flexible weapon', () => {
+      const result = parseReach('1,2')
+      expect(result).toEqual({ min: 1, max: 2, hasC: false })
+    })
+
+    it('parses reach 2,3 as long polearm', () => {
+      const result = parseReach('2,3')
+      expect(result).toEqual({ min: 2, max: 3, hasC: false })
+    })
+  })
+
+  describe('Close Combat - Can Attack at Distance', () => {
+    it('C weapons can attack at distance 0 only', () => {
+      expect(canAttackAtDistance('C', 0)).toBe(true)
+      expect(canAttackAtDistance('C', 1)).toBe(false)
+    })
+
+    it('reach 1 weapons can attack at distance 0 (with penalty) and 1', () => {
+      expect(canAttackAtDistance('1', 0)).toBe(true)
+      expect(canAttackAtDistance('1', 1)).toBe(true)
+      expect(canAttackAtDistance('1', 2)).toBe(false)
+    })
+
+    it('reach 2 weapons cannot attack at distance 0', () => {
+      expect(canAttackAtDistance('2', 0)).toBe(false)
+      expect(canAttackAtDistance('2', 1)).toBe(false)
+      expect(canAttackAtDistance('2', 2)).toBe(true)
+    })
+
+    it('C,1 weapons can attack at 0 and 1', () => {
+      expect(canAttackAtDistance('C,1', 0)).toBe(true)
+      expect(canAttackAtDistance('C,1', 1)).toBe(true)
+      expect(canAttackAtDistance('C,1', 2)).toBe(false)
+    })
+
+    it('1,2 weapons can attack at 0, 1, and 2', () => {
+      expect(canAttackAtDistance('1,2', 0)).toBe(true)
+      expect(canAttackAtDistance('1,2', 1)).toBe(true)
+      expect(canAttackAtDistance('1,2', 2)).toBe(true)
+      expect(canAttackAtDistance('1,2', 3)).toBe(false)
+    })
+  })
+
+  describe('Close Combat - Attack Modifiers', () => {
+    const knife: Equipment = { id: '1', name: 'Knife', type: 'melee', damage: '1d-2', damageType: 'cutting', reach: 'C', parry: -1 }
+    const sword: Equipment = { id: '2', name: 'Sword', type: 'melee', damage: '2d', damageType: 'cutting', reach: '1', parry: 0 }
+    const spear: Equipment = { id: '3', name: 'Spear', type: 'melee', damage: '1d+2', damageType: 'impaling', reach: '2', parry: 0 }
+
+    it('C weapons have no penalty in close combat', () => {
+      const result = getCloseCombatAttackModifiers(knife, 0)
+      expect(result.canAttack).toBe(true)
+      expect(result.toHit).toBe(0)
+    })
+
+    it('reach 1 weapons have -2 penalty in close combat', () => {
+      const result = getCloseCombatAttackModifiers(sword, 0)
+      expect(result.canAttack).toBe(true)
+      expect(result.toHit).toBe(-2)
+    })
+
+    it('reach 2+ weapons cannot attack in close combat', () => {
+      const result = getCloseCombatAttackModifiers(spear, 0)
+      expect(result.canAttack).toBe(false)
+    })
+
+    it('all weapons have no penalty at normal range', () => {
+      expect(getCloseCombatAttackModifiers(knife, 1).toHit).toBe(0)
+      expect(getCloseCombatAttackModifiers(sword, 1).toHit).toBe(0)
+      expect(getCloseCombatAttackModifiers(spear, 2).toHit).toBe(0)
+    })
+  })
+
+  describe('Close Combat - Defense Modifiers', () => {
+    it('not in close combat has normal defenses', () => {
+      const result = getCloseCombatDefenseModifiers('1', undefined, false)
+      expect(result.parry).toBe(0)
+      expect(result.block).toBe(0)
+      expect(result.retreatBonus).toBe(3)
+      expect(result.canParry).toBe(true)
+    })
+
+    it('C weapons have no parry penalty in close combat', () => {
+      const result = getCloseCombatDefenseModifiers('C', undefined, true)
+      expect(result.parry).toBe(0)
+      expect(result.canParry).toBe(true)
+    })
+
+    it('reach 1 weapons have -2 parry in close combat', () => {
+      const result = getCloseCombatDefenseModifiers('1', undefined, true)
+      expect(result.parry).toBe(-2)
+      expect(result.canParry).toBe(true)
+    })
+
+    it('reach 2+ weapons cannot parry in close combat', () => {
+      const result = getCloseCombatDefenseModifiers('2', undefined, true)
+      expect(result.canParry).toBe(false)
+    })
+
+    it('medium/large shields have -2 block in close combat', () => {
+      expect(getCloseCombatDefenseModifiers('1', 'medium', true).block).toBe(-2)
+      expect(getCloseCombatDefenseModifiers('1', 'large', true).block).toBe(-2)
+    })
+
+    it('small shields have no block penalty in close combat', () => {
+      expect(getCloseCombatDefenseModifiers('1', 'small', true).block).toBe(0)
+    })
+
+    it('retreat bonus is reduced to +1 in close combat', () => {
+      const result = getCloseCombatDefenseModifiers('1', undefined, true)
+      expect(result.retreatBonus).toBe(1)
+    })
+  })
+
+  describe('Close Combat - Position Modifiers', () => {
+    it('front position has no penalty', () => {
+      expect(getCloseCombatPositionModifier('front')).toBe(0)
+      expect(getCloseCombatPositionModifier(null)).toBe(0)
+    })
+
+    it('side position has -2 defense', () => {
+      expect(getCloseCombatPositionModifier('side')).toBe(-2)
+    })
+
+    it('back position has -4 defense', () => {
+      expect(getCloseCombatPositionModifier('back')).toBe(-4)
+    })
+
+    it('can defend from front and side', () => {
+      expect(canDefendFromPosition('front')).toBe(true)
+      expect(canDefendFromPosition('side')).toBe(true)
+      expect(canDefendFromPosition(null)).toBe(true)
+    })
+
+    it('cannot defend from back', () => {
+      expect(canDefendFromPosition('back')).toBe(false)
+    })
+  })
+
+  describe('Quick Contest', () => {
+    it('attacker wins when only attacker succeeds', () => {
+      const lowRoll = () => 0.2
+      const highRoll = () => 0.8
+      let callCount = 0
+      const random = () => {
+        callCount++
+        return callCount <= 3 ? lowRoll() : highRoll()
+      }
+      const result = quickContest(12, 10, random)
+      expect(result.attacker.success).toBe(true)
+      expect(result.defender.success).toBe(false)
+      expect(result.attackerWins).toBe(true)
+    })
+
+    it('defender wins when only defender succeeds', () => {
+      const lowRoll = () => 0.2
+      const highRoll = () => 0.8
+      let callCount = 0
+      const random = () => {
+        callCount++
+        return callCount <= 3 ? highRoll() : lowRoll()
+      }
+      const result = quickContest(12, 10, random)
+      expect(result.attacker.success).toBe(false)
+      expect(result.defender.success).toBe(true)
+      expect(result.attackerWins).toBe(false)
+    })
+
+    it('higher margin wins when both succeed', () => {
+      const random = () => 0.3
+      const result = quickContest(15, 10, random)
+      expect(result.attacker.success).toBe(true)
+      expect(result.defender.success).toBe(true)
+      expect(result.attackerWins).toBe(true)
+      expect(result.margin).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Grappling', () => {
+    it('grapple attempt fails on missed attack', () => {
+      const highRoll = () => 0.9
+      const result = resolveGrappleAttempt(10, 12, 10, true, highRoll)
+      expect(result.success).toBe(false)
+      expect(result.controlPoints).toBe(0)
+    })
+
+    it('grapple succeeds and gains CP on successful attack vs undefended', () => {
+      const lowRoll = () => 0.2
+      const result = resolveGrappleAttempt(10, 12, 10, false, lowRoll)
+      expect(result.success).toBe(true)
+      expect(result.controlPoints).toBeGreaterThan(0)
+    })
+
+    it('grapple fails if defender successfully defends', () => {
+      const lowRoll = () => 0.2
+      const result = resolveGrappleAttempt(10, 12, 12, true, lowRoll)
+      expect(result.attack.success).toBe(true)
+      expect(result.defense?.success).toBe(true)
+      expect(result.success).toBe(false)
+    })
+
+    it('break free succeeds with high ST vs low CP', () => {
+      const lowRoll = () => 0.2
+      const result = resolveBreakFree(14, 10, 2, lowRoll)
+      expect(result.success).toBe(true)
+    })
+
+    it('break free fails with penalty from high CP', () => {
+      const medRoll = () => 0.5
+      const result = resolveBreakFree(10, 10, 8, medRoll)
+      expect(result.success).toBe(false)
+    })
+  })
+
+  describe('Grapple Techniques', () => {
+    it('throw deals damage based on ST', () => {
+      const lowRoll = () => 0.2
+      const result = resolveGrappleTechnique('throw', 14, 12, 4, lowRoll)
+      expect(result.success).toBe(true)
+      expect(result.damage).toBeDefined()
+      expect(result.effect).toContain('thrown')
+    })
+
+    it('lock deals 1d-1 damage', () => {
+      const lowRoll = () => 0.2
+      const result = resolveGrappleTechnique('lock', 14, 12, 4, lowRoll)
+      expect(result.success).toBe(true)
+      expect(result.damage).toBeDefined()
+      expect(result.effect).toContain('lock')
+    })
+
+    it('choke causes FP loss', () => {
+      const lowRoll = () => 0.2
+      const result = resolveGrappleTechnique('choke', 14, 12, 4, lowRoll)
+      expect(result.success).toBe(true)
+      expect(result.effect).toContain('chok')
+    })
+
+    it('pin immobilizes target', () => {
+      const lowRoll = () => 0.2
+      const result = resolveGrappleTechnique('pin', 14, 12, 4, lowRoll)
+      expect(result.success).toBe(true)
+      expect(result.effect).toContain('pin')
+    })
+
+    it('techniques fail on bad roll', () => {
+      const highRoll = () => 0.9
+      const result = resolveGrappleTechnique('throw', 10, 12, 0, highRoll)
+      expect(result.success).toBe(false)
+      expect(result.effect).toBe('failed')
+    })
+
+    it('CP bonus improves technique skill', () => {
+      const medRoll = () => 0.5
+      const withoutCP = resolveGrappleTechnique('throw', 10, 12, 0, medRoll)
+      const withCP = resolveGrappleTechnique('throw', 10, 12, 8, medRoll)
+      expect(withCP.success).toBe(true)
+      expect(withoutCP.success).toBe(false)
     })
   })
 })

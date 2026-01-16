@@ -23,8 +23,10 @@ function AppRoutes() {
     matchState,
     logs,
     visualEffects,
+    pendingAction,
     setScreen,
     setLogs,
+    setPendingAction,
     initializeConnection,
     sendMessage
   } = useGameSocket()
@@ -196,9 +198,14 @@ function AppRoutes() {
               selectedTargetId={selectedTargetId}
               isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}
               playerMoveRange={activeCombatant ? (matchState?.characters.find(c => c.id === activeCombatant.characterId)?.derived.basicMove ?? 5) : 5}
+              pendingAction={pendingAction}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}
               onAction={handleGameAction}
+              onPendingActionResponse={(response) => {
+                sendMessage({ type: 'action', payload: { type: 'respond_exit', response } })
+                setPendingAction(null)
+              }}
               onLeaveLobby={handleLeaveLobby}
               onStartMatch={() => sendMessage({ type: 'start_match' })}
               onOpenCharacterEditor={() => {
