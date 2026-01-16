@@ -206,7 +206,15 @@ export const GameScreen = ({
         isMyTurn={isPlayerTurn}
         currentManeuver={currentManeuver}
         selectedTargetId={selectedTargetId}
+        matchState={matchState}
+        moveTarget={moveTarget}
+        inLobbyButNoMatch={inLobbyButNoMatch}
         onAction={onAction}
+        onLeaveLobby={onLeaveLobby}
+        onStartMatch={onStartMatch}
+        onOpenCharacterEditor={onOpenCharacterEditor}
+        onCreateLobby={onCreateLobby}
+        onJoinLobby={onJoinLobby}
       />
     </div>
   )
