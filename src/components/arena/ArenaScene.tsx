@@ -2,7 +2,7 @@ import { OrbitControls, Environment, GizmoHelper, GizmoViewport, Html } from '@r
 import { HexGrid } from './HexGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
-import { CameraControls } from './CameraControls'
+import { CameraControls, type CameraMode } from './CameraControls'
 import { hexToWorld, getHexInDirection } from '../../utils/hex'
 import type { CombatantState, CharacterSheet, GridPosition, VisualEffect } from '../../../shared/types'
 import { useMemo } from 'react'
@@ -11,11 +11,13 @@ type ArenaSceneProps = {
   combatants: CombatantState[]
   characters: CharacterSheet[]
   playerId: string | null
+  activeTurnPlayerId: string | null
   moveTarget: GridPosition | null
   selectedTargetId: string | null
   isPlayerTurn: boolean
   playerMoveRange: number
   visualEffects: (VisualEffect & { id: string })[]
+  cameraMode: CameraMode
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
 }
@@ -52,9 +54,12 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, visualEffects, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null
+  
+  const activeCombatant = combatants.find(c => c.playerId === activeTurnPlayerId)
+  const activeCombatantPosition = activeCombatant?.position ?? null
   
   const enemyPositions = combatants
     .filter(c => c.playerId !== playerId)
@@ -132,7 +137,7 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
 
       {moveTarget && <MoveMarker position={moveTarget} />}
 
-      <CameraControls />
+      <CameraControls targetPosition={activeCombatantPosition} mode={cameraMode} />
       <OrbitControls makeDefault />
       
       <GizmoHelper alignment="bottom-right" margin={[80, 80]}>

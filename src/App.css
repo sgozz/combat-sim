@@ -1267,6 +1267,7 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
+  z-index: 1000;
   background: rgba(26, 26, 26, 0.85);
   padding: 4px;
   border-radius: 6px;
@@ -1347,74 +1348,109 @@
 }
 
 
-/* HP Bar Styles */
-.hp-bar-container {
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
+/* HP Bar Compact (default visible) */
+.hp-bar-compact {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-width: 80px;
-  backdrop-filter: blur(2px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  pointer-events: auto;
+  cursor: default;
 }
 
-.hp-bar-container.flash {
-  animation: damageFlash 0.4s ease-out;
-  border-color: rgba(255, 50, 50, 0.8);
+.hp-bar-compact.flash {
+  animation: damageFlashCompact 0.4s ease-out;
 }
 
-@keyframes damageFlash {
-  0% {
-    background-color: rgba(255, 0, 0, 0.5);
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
-  }
-  100% {
-    background-color: rgba(0, 0, 0, 0.6);
-    transform: scale(1);
-    box-shadow: none;
-  }
+@keyframes damageFlashCompact {
+  0% { background: rgba(255, 0, 0, 0.6); transform: scale(1.1); }
+  100% { background: rgba(0, 0, 0, 0.5); transform: scale(1); }
 }
 
-.hp-bar-name {
+.hp-bar-name-compact {
   color: white;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-}
-
-.hp-bar-track {
-  width: 100%;
-  height: 6px;
-  background: #222;
-  border-radius: 3px;
+  max-width: 50px;
   overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.5);
-  position: relative;
+  text-overflow: ellipsis;
 }
 
-.hp-bar-fill {
+.hp-bar-track-compact {
+  width: 40px;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hp-bar-fill-compact {
   height: 100%;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: width 0.3s ease;
 }
 
-.hp-bar-fill.dead {
-  background-color: #666 !important;
-  filter: grayscale(100%);
-}
-
-.hp-bar-text {
+.status-icons-compact {
+  display: flex;
+  gap: 1px;
   font-size: 10px;
-  color: #ddd;
+}
+
+/* HP Bar Details (shown on hover) */
+.hp-bar-details {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
+}
+
+.hp-bar-compact:hover + .hp-bar-details,
+.hp-bar-details:hover {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hp-bar-details-content {
+  background: rgba(0, 0, 0, 0.9);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+}
+
+.hp-detail-name {
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.hp-detail-hp {
+  color: #aaa;
+  font-size: 12px;
   font-family: monospace;
-  margin-top: 1px;
-  text-shadow: 0 1px 1px black;
+}
+
+.hp-detail-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.status-tag {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #ddd;
 }
 
 /* Tooltips */

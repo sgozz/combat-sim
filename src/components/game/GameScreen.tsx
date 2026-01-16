@@ -10,6 +10,7 @@ import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 import { SettingsPanel } from '../ui/SettingsPanel'
+import type { CameraMode } from '../arena/CameraControls'
 import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType } from '../../../shared/types'
 
 type GameScreenProps = {
@@ -66,6 +67,7 @@ export const GameScreen = ({
   inLobbyButNoMatch
 }: GameScreenProps) => {
   const [showSettings, setShowSettings] = useState(false)
+  const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
   const currentCharacter = currentCombatant 
     ? matchState?.characters.find(c => c.id === currentCombatant.characterId) ?? null 
@@ -127,17 +129,41 @@ export const GameScreen = ({
         >
           ⚙️
         </button>
+        <div className="camera-controls-compact">
+          <button 
+            className={`camera-btn-compact ${cameraMode === 'follow' ? 'active' : ''}`}
+            onClick={() => setCameraMode('follow')}
+            title="Follow Active"
+          >👁</button>
+          <button 
+            className={`camera-btn-compact ${cameraMode === 'top' ? 'active' : ''}`}
+            onClick={() => setCameraMode('top')}
+            title="Top-Down"
+          >⬇</button>
+          <button 
+            className={`camera-btn-compact ${cameraMode === 'isometric' ? 'active' : ''}`}
+            onClick={() => setCameraMode('isometric')}
+            title="Isometric"
+          >◇</button>
+          <button 
+            className={`camera-btn-compact ${cameraMode === 'free' ? 'active' : ''}`}
+            onClick={() => setCameraMode('free')}
+            title="Free Camera"
+          >⟲</button>
+        </div>
         <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
           <color attach="background" args={['#111']} />
           <ArenaScene
             combatants={matchState?.combatants ?? []}
             characters={matchState?.characters ?? []}
             playerId={player?.id ?? null}
+            activeTurnPlayerId={matchState?.activeTurnPlayerId ?? null}
             moveTarget={moveTarget}
             selectedTargetId={selectedTargetId}
             isPlayerTurn={isPlayerTurn}
             playerMoveRange={playerMoveRange}
             visualEffects={visualEffects}
+            cameraMode={cameraMode}
             onGridClick={onGridClick}
             onCombatantClick={onCombatantClick}
           />

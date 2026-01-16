@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Disabling lint rules that conflict with Three.js imperative mutations
 /* eslint-disable */
 
-import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useState, useMemo } from 'react'
+import { useRef, useEffect } from 'react'
 import { Vector3 } from 'three'
+import { hexToWorld } from '../../utils/hex'
+import type { GridPosition } from '../../../shared/types'
 
-type CameraMode = 'free' | 'top' | 'isometric'
+export type CameraMode = 'free' | 'top' | 'isometric' | 'follow'
 
 interface OrbitControlsLike {
   enabled: boolean
@@ -16,15 +16,23 @@ interface OrbitControlsLike {
   update: () => void
 }
 
-export const CameraControls = () => {
+type CameraControlsProps = {
+  targetPosition: GridPosition | null
+  mode: CameraMode
+}
+
+export const CameraControls = ({ targetPosition, mode }: CameraControlsProps) => {
   const controls = useThree((state) => state.controls) as unknown as OrbitControlsLike | null
   const { camera } = useThree()
   
-  const [mode, setMode] = useState<CameraMode>('free')
-
-  const TOP_POS = useMemo(() => new Vector3(0, 20, 0), [])
-  const ISO_POS = useMemo(() => new Vector3(15, 15, 15), [])
-  const CENTER = useMemo(() => new Vector3(0, 0, 0), [])
+  const followTarget = useRef(new Vector3(0, 0, 0))
+  
+  useEffect(() => {
+    if (targetPosition) {
+      const [wx, wz] = hexToWorld(targetPosition.x, targetPosition.z)
+      followTarget.current.set(wx, 0, wz)
+    }
+  }, [targetPosition])
 
   useFrame((_, delta) => {
     if (!controls) return
@@ -36,39 +44,26 @@ export const CameraControls = () => {
 
     if (controls.enabled) controls.enabled = false
 
-    const targetPos = mode === 'top' ? TOP_POS : ISO_POS
     const speed = 2.0 * delta
+    const target = followTarget.current
 
-    camera.position.lerp(targetPos, speed)
-    controls.target.lerp(CENTER, speed)
+    if (mode === 'follow') {
+      const offset = new Vector3(8, 10, 8)
+      const targetCamPos = target.clone().add(offset)
+      camera.position.lerp(targetCamPos, speed)
+      controls.target.lerp(target, speed)
+    } else if (mode === 'top') {
+      const topPos = target.clone().add(new Vector3(0, 20, 0.1))
+      camera.position.lerp(topPos, speed)
+      controls.target.lerp(target, speed)
+    } else if (mode === 'isometric') {
+      const isoPos = target.clone().add(new Vector3(12, 12, 12))
+      camera.position.lerp(isoPos, speed)
+      controls.target.lerp(target, speed)
+    }
+    
     camera.lookAt(controls.target)
   })
 
-  return (
-    <Html fullscreen style={{ pointerEvents: 'none', zIndex: 100 }}>
-      <div className="camera-controls-compact">
-        <button 
-          className={`camera-btn-compact ${mode === 'top' ? 'active' : ''}`}
-          onClick={() => setMode('top')}
-          title="Top-Down"
-        >
-          ⬇
-        </button>
-        <button 
-          className={`camera-btn-compact ${mode === 'isometric' ? 'active' : ''}`}
-          onClick={() => setMode('isometric')}
-          title="Isometric"
-        >
-          ◇
-        </button>
-        <button 
-          className={`camera-btn-compact ${mode === 'free' ? 'active' : ''}`}
-          onClick={() => setMode('free')}
-          title="Free Camera"
-        >
-          ⟲
-        </button>
-      </div>
-    </Html>
-  )
+  return null
 }

@@ -700,7 +700,7 @@ const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
     await upsertMatch(lobby.id, updated);
     sendToLobby(lobby, { type: "match_state", state: updated });
     scheduleBotTurn(lobby, updated);
-  }, 800);
+  }, 1500);
   botTimers.set(lobby.id, timer);
 };
 
