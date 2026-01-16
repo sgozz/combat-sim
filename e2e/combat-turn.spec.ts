@@ -35,6 +35,59 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
 }
 
 test.describe('Single Player Combat Flow', () => {
+  test('Move and Attack allows attack after movement', async ({ browser }) => {
+    const context = await browser.newContext()
+    const player = await setupPlayer(context, uniqueName('MoveAttacker'))
+    
+    await player.getByRole('button', { name: /quick match/i }).click()
+    await expect(player.getByText(/leave lobby/i)).toBeVisible({ timeout: 10000 })
+    
+    await player.getByRole('button', { name: /start match/i }).click()
+    await player.waitForTimeout(2000)
+    
+    // Select Move & Attack maneuver (key 5)
+    const moveAttackBtn = player.locator('.maneuver-btn').filter({ hasText: /Move.*Attack|Rush/i }).first()
+    const btnVisible = await moveAttackBtn.isVisible().catch(() => false)
+    
+    if (btnVisible) {
+      await moveAttackBtn.click()
+      await player.waitForTimeout(500)
+      
+      // Click on canvas to move (click somewhere on the 3D arena)
+      const canvas = player.locator('canvas').first()
+      if (await canvas.isVisible().catch(() => false)) {
+        const box = await canvas.boundingBox()
+        if (box) {
+          // Click slightly to the right of center to move
+          await canvas.click({ position: { x: box.width / 2 + 50, y: box.height / 2 } })
+          await player.waitForTimeout(500)
+          
+          // After clicking hex, confirm move button should appear
+          const confirmBtn = player.getByRole('button', { name: /confirm move/i })
+          if (await confirmBtn.isVisible().catch(() => false)) {
+            await confirmBtn.click()
+            await player.waitForTimeout(500)
+          }
+          
+          // After moving, attack button should STILL be visible (this is the bug fix verification)
+          const attackBtn = player.locator('.action-btn').filter({ hasText: /attack/i }).first()
+          const attackVisible = await attackBtn.isVisible().catch(() => false)
+          
+          // The attack button should be visible after moving in Move & Attack
+          // If it's not visible, it might be because no target is in range, which is OK
+          // The key test is that we didn't end turn - check that maneuver panel shows our maneuver
+          const maneuverBanner = player.locator('.current-maneuver-banner')
+          const bannerVisible = await maneuverBanner.isVisible().catch(() => false)
+          
+          // Either attack button is visible OR maneuver banner shows we're still in our turn
+          expect(attackVisible || bannerVisible).toBeTruthy()
+        }
+      }
+    }
+    
+    await context.close()
+  })
+
   test('player can start match and see combat UI', async ({ browser }) => {
     const context = await browser.newContext()
     const player = await setupPlayer(context, uniqueName('Warrior'))

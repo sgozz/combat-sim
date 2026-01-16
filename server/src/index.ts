@@ -1076,13 +1076,15 @@ const startServer = async () => {
                 : combatant
             );
             
-            const isStepOnly = m === 'attack' || m === 'aim';
+            // These maneuvers allow action after movement - don't end turn
+            const allowsActionAfterMove = m === 'attack' || m === 'aim' || m === 'move_and_attack';
             
-            if (isStepOnly) {
+            if (allowsActionAfterMove) {
+              const moveVerb = m === 'move_and_attack' ? 'moves' : 'steps';
               const updated: MatchState = {
                 ...match,
                 combatants: updatedCombatants,
-                log: [...match.log, `${player.name} steps to (${payload.position.x}, ${payload.position.z}).`],
+                log: [...match.log, `${player.name} ${moveVerb} to (${payload.position.x}, ${payload.position.z}).`],
               };
               matches.set(lobby.id, updated);
               await upsertMatch(lobby.id, updated);
