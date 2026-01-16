@@ -8,6 +8,7 @@ type ActionBarProps = {
   matchState: MatchState | null
   moveTarget: GridPosition | null
   inLobbyButNoMatch: boolean
+  playerId: string | null
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
   onStartMatch: () => void
@@ -31,6 +32,7 @@ export const ActionBar = ({
   matchState,
   moveTarget,
   inLobbyButNoMatch,
+  playerId,
   onAction,
   onLeaveLobby,
   onStartMatch,
@@ -39,6 +41,18 @@ export const ActionBar = ({
   onJoinLobby
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
+  
+  const playerCombatant = playerId && matchState 
+    ? matchState.combatants.find(c => c.playerId === playerId) 
+    : null
+  const playerCharacter = playerCombatant && matchState
+    ? matchState.characters.find(c => c.id === playerCombatant.characterId)
+    : null
+    
+  const maxHP = playerCharacter?.derived.hitPoints ?? 0
+  const currentHP = playerCombatant?.currentHP ?? 0
+  const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
+  const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
 
   if (!matchState) {
     if (inLobbyButNoMatch) {
@@ -99,13 +113,21 @@ export const ActionBar = ({
   const canAttack = currentManeuver === 'attack' || currentManeuver === 'all_out_attack' || currentManeuver === 'move_and_attack'
   const canMove = currentManeuver === 'move' || currentManeuver === 'attack' || currentManeuver === 'move_and_attack'
 
+  const selectedTarget = selectedTargetId ? matchState.combatants.find(c => c.playerId === selectedTargetId) : null
+  const selectedTargetName = selectedTarget 
+    ? matchState.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Enemy'
+    : null
+
   const getHint = () => {
-    if (!currentManeuver) return 'Select maneuver'
+    if (!currentManeuver) return 'Select maneuver ↓'
     if (canAttack && !selectedTargetId) return 'Tap enemy to target'
-    if (canMove && !moveTarget) return 'Tap hex to move'
+    if (canMove && !moveTarget && !selectedTargetId) return 'Tap hex to move'
     return null
   }
   const hint = getHint()
+  
+  const canShowAttackBtn = canAttack && selectedTargetId
+  const canShowMoveBtn = moveTarget !== null
 
   return (
     <>
@@ -131,6 +153,17 @@ export const ActionBar = ({
         </div>
       )}
       <div className="action-bar">
+        {playerCombatant && (
+          <div className="action-bar-status">
+            <div className="action-bar-hp-bar">
+              <div 
+                className="action-bar-hp-fill" 
+                style={{ width: `${hpPercent}%`, background: hpColor }}
+              />
+            </div>
+            <span className="action-bar-hp-text">{currentHP}/{maxHP}</span>
+          </div>
+        )}
         <button 
           className={`action-bar-btn ${!currentManeuver ? 'highlight' : ''}`}
           onClick={() => setShowManeuvers(!showManeuvers)}
@@ -139,30 +172,28 @@ export const ActionBar = ({
           <span className="action-bar-label">{currentManeuver ? 'Change' : 'Maneuver'}</span>
         </button>
 
-        {hint ? (
+        {hint && (
           <div className="action-bar-hint">{hint}</div>
-        ) : (
-          <>
-            {canAttack && selectedTargetId && (
-              <button
-                className="action-bar-btn primary"
-                onClick={() => onAction('attack', { type: 'attack', targetId: selectedTargetId })}
-              >
-                <span className="action-bar-icon">⚔️</span>
-                <span className="action-bar-label">Attack</span>
-              </button>
-            )}
+        )}
+        
+        {canShowAttackBtn && (
+          <button
+            className="action-bar-btn primary"
+            onClick={() => onAction('attack', { type: 'attack', targetId: selectedTargetId })}
+          >
+            <span className="action-bar-icon">⚔️</span>
+            <span className="action-bar-label">{selectedTargetName}</span>
+          </button>
+        )}
 
-            {moveTarget && (
-              <button
-                className="action-bar-btn primary"
-                onClick={() => onAction('move_click')}
-              >
-                <span className="action-bar-icon">✓</span>
-                <span className="action-bar-label">Move</span>
-              </button>
-            )}
-          </>
+        {canShowMoveBtn && (
+          <button
+            className="action-bar-btn primary"
+            onClick={() => onAction('move_click')}
+          >
+            <span className="action-bar-icon">✓</span>
+            <span className="action-bar-label">Move</span>
+          </button>
         )}
 
         <button

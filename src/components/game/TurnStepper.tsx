@@ -30,7 +30,7 @@ export const TurnStepper = ({ isMyTurn, currentManeuver }: TurnStepperProps) => 
       <div className="turn-stepper compact phase-plan">
         <span className="stepper-dot active"></span>
         <span className="phase-label">STEP 1:</span>
-        <span>Choose a maneuver →</span>
+        <span>Choose a maneuver <span className="arrow-hint">→</span></span>
       </div>
     )
   }
@@ -40,7 +40,7 @@ export const TurnStepper = ({ isMyTurn, currentManeuver }: TurnStepperProps) => 
       <span className="stepper-dot done"></span>
       <span className="phase-label">STEP 2:</span>
       <span className="maneuver-badge">{MANEUVER_LABELS[currentManeuver]}</span>
-      <span>→ Execute action or End Turn</span>
+      <span><span className="arrow-hint">→</span> Execute or End Turn</span>
     </div>
   )
 }

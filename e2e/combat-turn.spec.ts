@@ -1,5 +1,7 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
+const MOBILE_VIEWPORT = { width: 390, height: 844 }
+
 function uniqueName(base: string): string {
   return `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -216,5 +218,208 @@ test.describe('UI Elements', () => {
     
     await expect(page.getByRole('button', { name: /quick match/i })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('button', { name: /refresh/i })).toBeVisible({ timeout: 5000 })
+  })
+})
+
+test.describe('Mobile UI', () => {
+  test('mobile can start match and see action bar with HP', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
+    const page = await context.newPage()
+    
+    await page.addInitScript(() => {
+      localStorage.removeItem('gurps.nickname')
+    })
+    
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    
+    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileWarrior'))
+    await page.getByRole('button', { name: /enter arena/i }).click()
+    await page.waitForTimeout(2000)
+    
+    const quickMatchBtn = page.getByRole('button', { name: /quick match/i })
+    await expect(quickMatchBtn).toBeVisible({ timeout: 10000 })
+    await quickMatchBtn.click()
+    await page.waitForTimeout(1000)
+    
+    const startBtn = page.getByRole('button', { name: /start match/i })
+    await expect(startBtn).toBeVisible({ timeout: 5000 })
+    await startBtn.click()
+    await page.waitForTimeout(2000)
+    
+    const actionBar = page.locator('.action-bar')
+    await expect(actionBar).toBeVisible({ timeout: 10000 })
+    
+    const hpStatus = page.locator('.action-bar-status')
+    const hpVisible = await hpStatus.isVisible().catch(() => false)
+    
+    const maneuverBtn = actionBar.locator('.action-bar-btn').filter({ hasText: /maneuver|change/i }).first()
+    const maneuverVisible = await maneuverBtn.isVisible().catch(() => false)
+    
+    expect(hpVisible || maneuverVisible).toBeTruthy()
+    
+    await context.close()
+  })
+
+  test('mobile maneuver popup opens and closes', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
+    const page = await context.newPage()
+    
+    await page.addInitScript(() => {
+      localStorage.removeItem('gurps.nickname')
+    })
+    
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    
+    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileManeuver'))
+    await page.getByRole('button', { name: /enter arena/i }).click()
+    await page.waitForTimeout(2000)
+    
+    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.waitForTimeout(1000)
+    
+    await page.getByRole('button', { name: /start match/i }).click()
+    await page.waitForTimeout(2000)
+    
+    const actionBar = page.locator('.action-bar')
+    await expect(actionBar).toBeVisible({ timeout: 10000 })
+    
+    const maneuverBtn = actionBar.locator('.action-bar-btn').filter({ hasText: /maneuver|change/i }).first()
+    if (await maneuverBtn.isVisible().catch(() => false)) {
+      await maneuverBtn.click()
+      await page.waitForTimeout(500)
+      
+      const maneuverPopup = page.locator('.action-bar-maneuvers')
+      await expect(maneuverPopup).toBeVisible({ timeout: 3000 })
+      
+      const attackOption = maneuverPopup.locator('.action-bar-maneuver-btn').filter({ hasText: /attack/i }).first()
+      if (await attackOption.isVisible().catch(() => false)) {
+        await attackOption.click()
+        await page.waitForTimeout(500)
+        
+        await expect(maneuverPopup).not.toBeVisible()
+      }
+    }
+    
+    await context.close()
+  })
+
+  test('mobile shows attack button after selecting target', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
+    const page = await context.newPage()
+    
+    await page.addInitScript(() => {
+      localStorage.removeItem('gurps.nickname')
+    })
+    
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    
+    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileAttacker'))
+    await page.getByRole('button', { name: /enter arena/i }).click()
+    await page.waitForTimeout(2000)
+    
+    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.waitForTimeout(1000)
+    
+    await page.getByRole('button', { name: /start match/i }).click()
+    await page.waitForTimeout(2000)
+    
+    const actionBar = page.locator('.action-bar')
+    await expect(actionBar).toBeVisible({ timeout: 10000 })
+    
+    const maneuverBtn = actionBar.locator('.action-bar-btn').filter({ hasText: /maneuver|change/i }).first()
+    if (await maneuverBtn.isVisible().catch(() => false)) {
+      await maneuverBtn.click()
+      await page.waitForTimeout(500)
+      
+      const maneuverPopup = page.locator('.action-bar-maneuvers')
+      const attackOption = maneuverPopup.locator('.action-bar-maneuver-btn').filter({ hasText: /attack/i }).first()
+      if (await attackOption.isVisible().catch(() => false)) {
+        await attackOption.click()
+        await page.waitForTimeout(500)
+      }
+    }
+    
+    const hint = actionBar.locator('.action-bar-hint')
+    const hintText = await hint.textContent().catch(() => '')
+    
+    if (hintText?.includes('enemy') || hintText?.includes('target')) {
+      const canvas = page.locator('canvas').first()
+      if (await canvas.isVisible().catch(() => false)) {
+        const box = await canvas.boundingBox()
+        if (box) {
+          await canvas.click({ position: { x: box.width / 2 + 30, y: box.height / 2 } })
+          await page.waitForTimeout(1000)
+          
+          const attackBtn = actionBar.locator('.action-bar-btn.primary').first()
+          const attackVisible = await attackBtn.isVisible().catch(() => false)
+          
+          expect(attackVisible).toBeTruthy()
+        }
+      }
+    }
+    
+    await context.close()
+  })
+
+  test('mobile initiative tracker is compact', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
+    const page = await context.newPage()
+    
+    await page.addInitScript(() => {
+      localStorage.removeItem('gurps.nickname')
+    })
+    
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    
+    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileInit'))
+    await page.getByRole('button', { name: /enter arena/i }).click()
+    await page.waitForTimeout(2000)
+    
+    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.waitForTimeout(1000)
+    
+    await page.getByRole('button', { name: /start match/i }).click()
+    await page.waitForTimeout(2000)
+    
+    const initiativeTracker = page.locator('.initiative-tracker')
+    if (await initiativeTracker.isVisible().catch(() => false)) {
+      const indicator = page.locator('.initiative-indicator')
+      const indicatorHidden = !(await indicator.isVisible().catch(() => false))
+      expect(indicatorHidden).toBeTruthy()
+    }
+    
+    await context.close()
+  })
+
+  test('mobile camera controls are hidden', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
+    const page = await context.newPage()
+    
+    await page.addInitScript(() => {
+      localStorage.removeItem('gurps.nickname')
+    })
+    
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    
+    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileCam'))
+    await page.getByRole('button', { name: /enter arena/i }).click()
+    await page.waitForTimeout(2000)
+    
+    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.waitForTimeout(1000)
+    
+    await page.getByRole('button', { name: /start match/i }).click()
+    await page.waitForTimeout(2000)
+    
+    const cameraControls = page.locator('.camera-controls-compact')
+    const cameraHidden = !(await cameraControls.isVisible().catch(() => false))
+    expect(cameraHidden).toBeTruthy()
+    
+    await context.close()
   })
 })

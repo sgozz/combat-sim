@@ -209,6 +209,7 @@ export const GameScreen = ({
         matchState={matchState}
         moveTarget={moveTarget}
         inLobbyButNoMatch={inLobbyButNoMatch}
+        playerId={player?.id ?? null}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
         onStartMatch={onStartMatch}
