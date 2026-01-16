@@ -87,9 +87,9 @@ export const ArenaScene = ({ combatants, characters, playerId, moveTarget, selec
   }, [playerCombatant, characters])
 
   const frontArcHexes = useMemo(() => {
-    if (!playerCombatant) return []
+    if (!playerCombatant?.position) return []
     const { x: q, z: r } = playerCombatant.position
-    const f = playerCombatant.facing
+    const f = playerCombatant.facing ?? 0
     return [
       getHexInDirection(q, r, f),
       getHexInDirection(q, r, f - 1),

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { ServerToClientMessage, Player, LobbySummary, MatchState, VisualEffect } from '../../shared/types'
 
 export type ScreenState = 'welcome' | 'lobby' | 'waiting' | 'match'
@@ -13,8 +13,13 @@ export const useGameSocket = () => {
   const [logs, setLogs] = useState<string[]>([])
   const [screen, setScreen] = useState<ScreenState>('welcome')
   const [visualEffects, setVisualEffects] = useState<(VisualEffect & { id: string })[]>([])
+  const connectingRef = useRef(false)
 
   const initializeConnection = useCallback((name: string) => {
+    if (connectingRef.current) {
+      return
+    }
+    connectingRef.current = true
     const ws = new WebSocket('ws://127.0.0.1:8080')
     setSocket(ws)
 
@@ -77,6 +82,7 @@ export const useGameSocket = () => {
       setLobbyId(null)
       setMatchState(null)
       setLobbyPlayers([])
+      connectingRef.current = false
     }
   }, [])
 

@@ -9,9 +9,10 @@ type LobbyBrowserProps = {
   onQuickMatch: () => void
   onJoinLobby: (lobbyId: string) => void
   onRefresh: () => void
+  onLogout?: () => void
 }
 
-export const LobbyBrowser = ({ player, lobbies, onQuickMatch, onJoinLobby, onRefresh }: LobbyBrowserProps) => {
+export const LobbyBrowser = ({ player, lobbies, onQuickMatch, onJoinLobby, onRefresh, onLogout }: LobbyBrowserProps) => {
   useEffect(() => {
     const interval = setInterval(() => {
       onRefresh()
@@ -29,6 +30,11 @@ export const LobbyBrowser = ({ player, lobbies, onQuickMatch, onJoinLobby, onRef
         </div>
         <div className="lobby-browser-user">
           <span className="lobby-browser-username">{player.name}</span>
+          {onLogout && (
+            <button className="logout-button" onClick={onLogout} title="Logout">
+              ↩
+            </button>
+          )}
         </div>
       </header>
 

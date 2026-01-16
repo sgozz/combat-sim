@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { LobbyBrowser } from './components/LobbyBrowser'
@@ -10,7 +11,10 @@ import type { GridPosition, CharacterSheet, CombatActionPayload } from '../share
 import { hexDistance } from './utils/hex'
 import './App.css'
 
-function App() {
+function AppRoutes() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  
   const {
     player,
     lobbies,
@@ -18,7 +22,6 @@ function App() {
     lobbyId,
     matchState,
     logs,
-    screen,
     visualEffects,
     setScreen,
     setLogs,
@@ -39,10 +42,22 @@ function App() {
   useEffect(() => {
     const storedName = window.localStorage.getItem('gurps.nickname')?.trim()
     if (storedName && storedName.length > 0) {
-      setScreen('lobby')
-      initializeConnection(storedName)
+      if (!player) {
+        initializeConnection(storedName)
+      }
+      if (location.pathname === '/') {
+        navigate('/lobby', { replace: true })
+      }
+    } else if (location.pathname !== '/') {
+      navigate('/', { replace: true })
     }
-  }, [initializeConnection, setScreen])
+  }, [initializeConnection, navigate, location.pathname, player])
+
+  useEffect(() => {
+    if (lobbyId && location.pathname === '/lobby') {
+      navigate('/game', { replace: true })
+    }
+  }, [lobbyId, navigate, location.pathname])
 
   const activeCombatant = useMemo(() => {
     if (!matchState || !player) return null
@@ -53,6 +68,7 @@ function App() {
     window.localStorage.setItem('gurps.nickname', nickname)
     setScreen('lobby')
     initializeConnection(nickname)
+    navigate('/lobby')
   }
 
   const handleQuickMatch = () => {
@@ -122,96 +138,121 @@ function App() {
     setSelectedTargetId(targetPlayerId)
   }, [matchState, player])
 
-  if (screen === 'welcome') {
-    return <WelcomeScreen onComplete={handleWelcomeComplete} />
-  }
+  const handleLeaveLobby = useCallback(() => {
+    sendMessage({ type: 'leave_lobby' })
+    navigate('/lobby')
+  }, [sendMessage, navigate])
 
-  if (screen === 'lobby' && !player) {
-    return <div style={{color: 'white', padding: '20px', textAlign: 'center'}}>Connecting to server...</div>
-  }
-
-  if (screen === 'lobby' && player) {
-    return (
-      <>
-        <LobbyBrowser
-          player={player}
-          lobbies={lobbies}
-          onQuickMatch={handleQuickMatch}
-          onJoinLobby={(id) => sendMessage({ type: 'join_lobby', lobbyId: id })}
-          onRefresh={handleRefreshLobbies}
-        />
-        {showJoinModal && (
-          <JoinLobbyModal 
-            lobbies={lobbies}
-            onJoin={(id) => {
-              sendMessage({ type: 'join_lobby', lobbyId: id })
-              setShowJoinModal(false)
-            }}
-            onDelete={(id) => sendMessage({ type: 'delete_lobby', lobbyId: id })}
-            onCancel={() => setShowJoinModal(false)}
-          />
-        )}
-      </>
-    )
-  }
+  const handleLogout = useCallback(() => {
+    window.localStorage.removeItem('gurps.nickname')
+    window.location.href = '/'
+  }, [])
 
   return (
-    <>
-      <GameScreen
-        matchState={matchState}
-        player={player}
-        lobbyPlayers={lobbyPlayers}
-        lobbyId={lobbyId}
-        logs={logs}
-        visualEffects={visualEffects}
-        moveTarget={moveTarget}
-        selectedTargetId={selectedTargetId}
-        isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}
-        playerMoveRange={activeCombatant ? (matchState?.characters.find(c => c.id === activeCombatant.characterId)?.derived.basicMove ?? 5) : 5}
-        onGridClick={handleGridClick}
-        onCombatantClick={handleCombatantClick}
-        onAction={handleGameAction}
-        onLeaveLobby={() => sendMessage({ type: 'leave_lobby' })}
-        onStartMatch={() => sendMessage({ type: 'start_match' })}
-        onOpenCharacterEditor={() => {
-          setShowCharacterModal(true)
-        }}
-        onCreateLobby={() => {
-           const name = window.prompt('Lobby name')?.trim() || `${player?.name}'s Lobby`
-           sendMessage({ type: 'create_lobby', name, maxPlayers: 4 })
-        }}
-        onJoinLobby={() => setShowJoinModal(true)}
-        inLobbyButNoMatch={!matchState && !!lobbyId}
-      />
+    <Routes>
+      <Route path="/" element={<WelcomeScreen onComplete={handleWelcomeComplete} />} />
       
-      {showCharacterModal && (
-        <CharacterEditor 
-          character={editingCharacter || {
-             id: crypto.randomUUID(),
-             name: player?.name ?? 'New Character',
-             attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
-             derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
-             skills: [],
-             advantages: [],
-             disadvantages: [],
-             equipment: [],
-             pointsTotal: 100
-          }}
-          setCharacter={setEditingCharacter}
-          onSave={() => {
-            if (editingCharacter) {
-              sendMessage({ type: 'select_character', character: editingCharacter })
-              setShowCharacterModal(false)
-              setEditingCharacter(null)
-            }
-          }}
-          onCancel={() => {
-            setShowCharacterModal(false)
-            setEditingCharacter(null)
-          }}
-        />
-      )}
-    </>
+      <Route path="/lobby" element={
+        !player ? (
+          <div style={{color: 'white', padding: '20px', textAlign: 'center'}}>Connecting to server...</div>
+        ) : (
+          <>
+            <LobbyBrowser
+              player={player}
+              lobbies={lobbies}
+              onQuickMatch={handleQuickMatch}
+              onJoinLobby={(id) => sendMessage({ type: 'join_lobby', lobbyId: id })}
+              onRefresh={handleRefreshLobbies}
+              onLogout={handleLogout}
+            />
+            {showJoinModal && (
+              <JoinLobbyModal 
+                lobbies={lobbies}
+                onJoin={(id) => {
+                  sendMessage({ type: 'join_lobby', lobbyId: id })
+                  setShowJoinModal(false)
+                }}
+                onDelete={(id) => sendMessage({ type: 'delete_lobby', lobbyId: id })}
+                onCancel={() => setShowJoinModal(false)}
+              />
+            )}
+          </>
+        )
+      } />
+      
+      <Route path="/game" element={
+        !player ? (
+          <Navigate to="/" replace />
+        ) : (
+          <>
+            <GameScreen
+              matchState={matchState}
+              player={player}
+              lobbyPlayers={lobbyPlayers}
+              lobbyId={lobbyId}
+              logs={logs}
+              visualEffects={visualEffects}
+              moveTarget={moveTarget}
+              selectedTargetId={selectedTargetId}
+              isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}
+              playerMoveRange={activeCombatant ? (matchState?.characters.find(c => c.id === activeCombatant.characterId)?.derived.basicMove ?? 5) : 5}
+              onGridClick={handleGridClick}
+              onCombatantClick={handleCombatantClick}
+              onAction={handleGameAction}
+              onLeaveLobby={handleLeaveLobby}
+              onStartMatch={() => sendMessage({ type: 'start_match' })}
+              onOpenCharacterEditor={() => {
+                setShowCharacterModal(true)
+              }}
+              onCreateLobby={() => {
+                 const name = window.prompt('Lobby name')?.trim() || `${player?.name}'s Lobby`
+                 sendMessage({ type: 'create_lobby', name, maxPlayers: 4 })
+              }}
+              onJoinLobby={() => setShowJoinModal(true)}
+              inLobbyButNoMatch={!matchState && !!lobbyId}
+            />
+            
+            {showCharacterModal && (
+              <CharacterEditor 
+                character={editingCharacter || {
+                   id: crypto.randomUUID(),
+                   name: player?.name ?? 'New Character',
+                   attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
+                   derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
+                   skills: [],
+                   advantages: [],
+                   disadvantages: [],
+                   equipment: [],
+                   pointsTotal: 100
+                }}
+                setCharacter={setEditingCharacter}
+                onSave={() => {
+                  if (editingCharacter) {
+                    sendMessage({ type: 'select_character', character: editingCharacter })
+                    setShowCharacterModal(false)
+                    setEditingCharacter(null)
+                  }
+                }}
+                onCancel={() => {
+                  setShowCharacterModal(false)
+                  setEditingCharacter(null)
+                }}
+              />
+            )}
+          </>
+        )
+      } />
+      
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   )
 }
 

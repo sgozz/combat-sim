@@ -125,3 +125,54 @@
 .lobby-card-spectate:hover:not(:disabled) {
   background: #535bf2;
 }
+
+@media (max-width: 768px) {
+  .lobby-card {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  .lobby-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .lobby-card-title h3 {
+    font-size: 1rem;
+  }
+
+  .lobby-card-players {
+    font-size: 0.875rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .lobby-card-actions {
+    flex-direction: column;
+  }
+
+  .lobby-card-join,
+  .lobby-card-spectate {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem 1rem;
+  }
+
+  .lobby-card-join:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .lobby-card {
+    padding: 0.875rem;
+  }
+
+  .lobby-card-title h3 {
+    font-size: 0.9rem;
+  }
+
+  .lobby-card-status {
+    font-size: 0.8rem;
+  }
+}
