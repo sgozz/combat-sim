@@ -234,7 +234,7 @@ export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'relea
 
 export type CombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant; aodVariant?: AODVariant }
-  | { type: "attack"; targetId: Id; hitLocation?: HitLocation }
+  | { type: "attack"; targetId: Id; hitLocation?: HitLocation; deceptiveLevel?: 0 | 1 | 2 }
   | { type: "aim_target"; targetId: Id }
   | { type: "evaluate_target"; targetId: Id }
   | { type: "defend"; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }

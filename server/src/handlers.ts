@@ -882,6 +882,11 @@ const handleAttackAction = async (
     skill -= actorCombatant.shockPenalty;
   }
   
+  const deceptiveLevel = payload.deceptiveLevel ?? 0;
+  if (deceptiveLevel > 0) {
+    skill -= deceptiveLevel * 2;
+  }
+  
   const attackerPosture = getPostureModifiers(actorCombatant.posture);
   skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
   
@@ -1176,7 +1181,7 @@ const handleAttackAction = async (
     weapon: weapon?.name ?? 'Unarmed',
     damage: damageFormula,
     damageType,
-    deceptivePenalty: 0,
+    deceptivePenalty: deceptiveLevel,
     timestamp: Date.now(),
   };
 

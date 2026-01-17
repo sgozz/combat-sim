@@ -147,6 +147,7 @@ export const GameActionPanel = ({
 }: GameActionPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
+  const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
@@ -187,7 +188,8 @@ export const GameActionPanel = ({
     const rangeMod = getRangePenalty(dist)
     const hitLocMod = getHitLocationPenalty(selectedHitLocation)
     const shockMod = activeCombatant.shockPenalty > 0 ? -activeCombatant.shockPenalty : 0
-    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod
+    const deceptiveMod = deceptiveLevel > 0 ? -(deceptiveLevel * 2) : 0
+    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod + deceptiveMod
     const prob = getHitProbability(effectiveSkill)
     
     let color = '#ff4444'
@@ -201,6 +203,7 @@ export const GameActionPanel = ({
       rangeMod,
       hitLocMod,
       shockMod,
+      deceptiveMod,
       effectiveSkill,
       prob,
       color
@@ -463,10 +466,37 @@ export const GameActionPanel = ({
               {hitChanceInfo.rangeMod < 0 && ` (${hitChanceInfo.rangeMod} range)`}
               {hitChanceInfo.hitLocMod < 0 && ` (${hitChanceInfo.hitLocMod} ${selectedHitLocation.replace('_', ' ')})`}
               {hitChanceInfo.shockMod < 0 && ` (${hitChanceInfo.shockMod} shock)`}
+              {hitChanceInfo.deceptiveMod < 0 && ` (${hitChanceInfo.deceptiveMod} deceptive)`}
               {' → '}<strong>{hitChanceInfo.effectiveSkill}</strong>
             </div>
             <div className="hit-chance-value" style={{ color: hitChanceInfo.color }}>
               {hitChanceInfo.prob}% to hit
+            </div>
+          </div>
+        )}
+
+        {instructions.canAttack && selectedTargetId && (
+          <div className="deceptive-attack-section">
+            <label className="deceptive-label">Deceptive Attack:</label>
+            <div className="deceptive-buttons">
+              <button 
+                className={`deceptive-btn ${deceptiveLevel === 0 ? 'active' : ''}`}
+                onClick={() => setDeceptiveLevel(0)}
+              >
+                None
+              </button>
+              <button 
+                className={`deceptive-btn ${deceptiveLevel === 1 ? 'active' : ''}`}
+                onClick={() => setDeceptiveLevel(1)}
+              >
+                -2 hit / -1 def
+              </button>
+              <button 
+                className={`deceptive-btn ${deceptiveLevel === 2 ? 'active' : ''}`}
+                onClick={() => setDeceptiveLevel(2)}
+              >
+                -4 hit / -2 def
+              </button>
             </div>
           </div>
         )}
@@ -476,7 +506,7 @@ export const GameActionPanel = ({
             <button 
               className="action-btn primary"
               disabled={!selectedTargetId}
-              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: selectedHitLocation })}
+              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: selectedHitLocation, deceptiveLevel })}
             >
               <span className="btn-icon">⚔️</span>
               {selectedTargetId ? `Attack ${selectedTargetName} [${selectedHitLocation.replace('_', ' ')}]` : 'Select a target on map'}
