@@ -9,8 +9,10 @@ import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 import { SettingsPanel } from '../ui/SettingsPanel'
+import DefenseModal from '../ui/DefenseModal'
+import { useCountdown } from '../../hooks/useCountdown'
 import type { CameraMode } from '../arena/CameraControls'
-import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType, PendingAction } from '../../../shared/types'
+import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType, PendingAction, DefenseType } from '../../../shared/types'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -71,6 +73,28 @@ export const GameScreen = ({
   const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
   const currentManeuver = currentCombatant?.maneuver ?? null
+
+  const pendingDefense = matchState?.pendingDefense
+  const isDefending = pendingDefense?.defenderId === player?.id
+  const attackerPlayer = matchState?.players.find(p => p.id === pendingDefense?.attackerId)
+  const defenderCharacter = matchState?.characters.find(c => c.id === currentCombatant?.characterId)
+  const inCloseCombat = currentCombatant?.inCloseCombatWith !== null
+
+  const handleDefenseTimeout = useCallback(() => {
+    if (isDefending) {
+      onAction('defend', { type: 'defend', defenseType: 'dodge', retreat: false, dodgeAndDrop: false })
+    }
+  }, [isDefending, onAction])
+
+  const defenseTimeRemaining = useCountdown(
+    15,
+    isDefending ? pendingDefense?.timestamp : undefined,
+    handleDefenseTimeout
+  )
+
+  const handleDefenseChoice = useCallback((choice: { type: DefenseType; retreat: boolean; dodgeAndDrop: boolean }) => {
+    onAction('defend', { type: 'defend', defenseType: choice.type, retreat: choice.retreat, dodgeAndDrop: choice.dodgeAndDrop })
+  }, [onAction])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isPlayerTurn) return
@@ -196,6 +220,18 @@ export const GameScreen = ({
       />
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {isDefending && pendingDefense && defenderCharacter && currentCombatant && (
+        <DefenseModal
+          pendingDefense={pendingDefense}
+          character={defenderCharacter}
+          combatant={currentCombatant}
+          attackerName={attackerPlayer?.name ?? 'Unknown'}
+          inCloseCombat={inCloseCombat}
+          onDefend={handleDefenseChoice}
+          timeRemaining={defenseTimeRemaining}
+        />
+      )}
 
       {pendingAction?.type === 'exit_close_combat_request' && pendingAction.targetId === player?.id && (
         <div className="modal-overlay">
