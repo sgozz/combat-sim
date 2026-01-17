@@ -121,13 +121,26 @@ export const GameScreen = ({
           />
         )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
-        <button 
-          className="settings-btn" 
-          onClick={() => setShowSettings(true)}
-          title="Accessibility Settings"
-        >
-          ⚙️
-        </button>
+        <div className="top-buttons">
+          <button 
+            className="back-btn" 
+            onClick={() => {
+              if (!matchState || matchState.status === 'finished' || confirm('Leave the current game?')) {
+                onLeaveLobby()
+              }
+            }}
+            title="Back to Lobby List"
+          >
+            ← Lobbies
+          </button>
+          <button 
+            className="settings-btn" 
+            onClick={() => setShowSettings(true)}
+            title="Accessibility Settings"
+          >
+            ⚙️
+          </button>
+        </div>
         <div className="camera-controls-compact">
           <button 
             className={`camera-btn-compact ${cameraMode === 'follow' ? 'active' : ''}`}

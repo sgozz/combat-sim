@@ -133,6 +133,7 @@ export type MatchState = {
   log: string[];
   winnerId?: Id;
   status: "active" | "finished";
+  finishedAt?: number;
 };
 
 export type LobbySummary = {
@@ -160,7 +161,8 @@ export type CombatActionPayload =
   | { type: "grapple"; targetId: Id; action: GrappleAction }
   | { type: "break_free" }
   | { type: "respond_close_combat"; accept: boolean }
-  | { type: "respond_exit"; response: 'let_go' | 'follow' | 'attack' };
+  | { type: "respond_exit"; response: 'let_go' | 'follow' | 'attack' }
+  | { type: "surrender" };
 
 export type ClientToServerMessage =
   | { type: "auth"; name: string }

@@ -223,19 +223,51 @@ export const GameActionPanel = ({
 
     if (isMyTurn && !currentManeuver) {
       return (
-        <div className="maneuver-grid">
-          {MANEUVERS.map(m => (
-            <Tooltip key={m.type} content={m.desc} position="top">
-              <button 
-                className="maneuver-btn"
-                onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })}
-              >
-                <span className="maneuver-icon">{m.icon}</span>
-                <span className="maneuver-label">{m.label}</span>
-                <span className="key-hint">{m.key}</span>
-              </button>
-            </Tooltip>
-          ))}
+        <>
+          <div className="maneuver-grid">
+            {MANEUVERS.map(m => (
+              <Tooltip key={m.type} content={m.desc} position="top">
+                <button 
+                  className="maneuver-btn"
+                  onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })}
+                >
+                  <span className="maneuver-icon">{m.icon}</span>
+                  <span className="maneuver-label">{m.label}</span>
+                  <span className="key-hint">{m.key}</span>
+                </button>
+              </Tooltip>
+            ))}
+          </div>
+          <button 
+            className="action-btn danger"
+            style={{ marginTop: '1rem' }}
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
+            }}
+          >
+            <span className="btn-icon">🏳️</span> Give Up
+          </button>
+        </>
+      )
+    }
+    
+    if (!isMyTurn) {
+      return (
+        <div className="action-section">
+          <div className="action-hint">Waiting for opponent...</div>
+          <button 
+            className="action-btn danger"
+            style={{ marginTop: '1rem' }}
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
+            }}
+          >
+            <span className="btn-icon">🏳️</span> Give Up
+          </button>
         </div>
       )
     }
@@ -415,6 +447,17 @@ export const GameActionPanel = ({
             onClick={() => onAction('end_turn', { type: 'end_turn' })}
           >
             <span className="btn-icon">⌛</span> End Turn
+          </button>
+
+          <button 
+            className="action-btn danger"
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
+            }}
+          >
+            <span className="btn-icon">🏳️</span> Give Up
           </button>
         </div>
       </div>

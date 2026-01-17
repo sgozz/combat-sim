@@ -1,6 +1,7 @@
 import { Tooltip } from './Tooltip'
 import type { CharacterSheet, Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType } from '../../../shared/types'
 import { calculateDerivedStats, calculateTotalPoints } from '../../../shared/rules'
+import { CHARACTER_TEMPLATES, TEMPLATE_NAMES } from '../../data/characterTemplates'
 
 type CharacterEditorProps = {
   character: CharacterSheet
@@ -10,6 +11,19 @@ type CharacterEditorProps = {
 }
 
 export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: CharacterEditorProps) => {
+  const loadTemplate = (templateKey: string) => {
+    const template = CHARACTER_TEMPLATES[templateKey]
+    if (template) {
+      setCharacter({
+        ...template,
+        id: character.id,
+        skills: template.skills.map(s => ({ ...s, id: crypto.randomUUID() })),
+        equipment: template.equipment.map(e => ({ ...e, id: crypto.randomUUID() })),
+        advantages: template.advantages.map(a => ({ ...a, id: crypto.randomUUID() })),
+        disadvantages: template.disadvantages.map(d => ({ ...d, id: crypto.randomUUID() })),
+      })
+    }
+  }
   const updateAttribute = (attr: keyof Attributes, delta: number) => {
     const current = character.attributes[attr]
     const newValue = Math.max(7, Math.min(20, current + delta))
@@ -117,6 +131,21 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
           </div>
         </div>
         
+        <div className="char-section">
+          <label className="char-label">Load Template</label>
+          <div className="template-buttons">
+            {TEMPLATE_NAMES.map(key => (
+              <button 
+                key={key} 
+                className="template-btn"
+                onClick={() => loadTemplate(key)}
+              >
+                {CHARACTER_TEMPLATES[key].name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="char-section">
           <label className="char-label">Name</label>
           <input

@@ -256,6 +256,18 @@ export const ActionBar = ({
           <span className="action-bar-icon">⌛</span>
           <span className="action-bar-label">End</span>
         </button>
+
+        <button
+          className="action-bar-btn danger"
+          onClick={() => {
+            if (confirm('Surrender and end the match?')) {
+              onAction('surrender', { type: 'surrender' })
+            }
+          }}
+        >
+          <span className="action-bar-icon">🏳️</span>
+          <span className="action-bar-label">Give Up</span>
+        </button>
       </div>
     </>
   )

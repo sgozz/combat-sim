@@ -157,7 +157,7 @@ const initializeDatabase = async () => {
     );
   `);
 
-  const playerColumns = await db.all<{ name: string }>("PRAGMA table_info(players)");
+  const playerColumns = await db.all("PRAGMA table_info(players)") as { name: string }[];
   const columnNames = new Set(playerColumns.map((column) => column.name));
   if (!columnNames.has("lobby_id")) {
     await db.exec("ALTER TABLE players ADD COLUMN lobby_id TEXT");
@@ -169,7 +169,7 @@ const initializeDatabase = async () => {
     await db.exec("ALTER TABLE players ADD COLUMN id TEXT");
   }
 
-  const missingIds = await db.all<{ name: string }>("SELECT name FROM players WHERE id IS NULL");
+  const missingIds = await db.all("SELECT name FROM players WHERE id IS NULL") as { name: string }[];
   for (const row of missingIds) {
     await db.run("UPDATE players SET id = ? WHERE name = ?", randomUUID(), row.name);
   }
@@ -226,7 +226,7 @@ const upsertMatch = async (lobbyId: string, state: MatchState) => {
 };
 
 const loadPersistedData = async () => {
-  const characterRows = await db.all<CharacterRow>("SELECT id, data FROM characters");
+  const characterRows = await db.all("SELECT id, data FROM characters") as CharacterRow[];
   const characterMap = new Map<string, CharacterSheet>();
   for (const row of characterRows) {
     try {
@@ -237,9 +237,9 @@ const loadPersistedData = async () => {
     }
   }
 
-  const playerRows = await db.all<PlayerRow>(
+  const playerRows = await db.all(
     "SELECT id, name, character_id, lobby_id, is_bot FROM players"
-  );
+  ) as PlayerRow[];
   for (const row of playerRows) {
     const id = row.id ?? randomUUID();
     const characterId = row.character_id ?? "";
@@ -258,7 +258,7 @@ const loadPersistedData = async () => {
     }
   }
 
-  const lobbyRows = await db.all<LobbyRow>("SELECT id, name, max_players, status, players_json FROM lobbies");
+  const lobbyRows = await db.all("SELECT id, name, max_players, status, players_json FROM lobbies") as LobbyRow[];
   for (const row of lobbyRows) {
     let lobbyPlayers: Player[] = [];
     if (row.players_json) {
@@ -289,7 +289,7 @@ const loadPersistedData = async () => {
     });
   }
 
-  const matchRows = await db.all<MatchRow>("SELECT lobby_id, state_json FROM matches");
+  const matchRows = await db.all("SELECT lobby_id, state_json FROM matches") as MatchRow[];
   for (const row of matchRows) {
     try {
       const state = JSON.parse(row.state_json) as MatchState;
@@ -529,6 +529,7 @@ const checkVictory = (match: MatchState): MatchState => {
     return {
       ...match,
       status: "finished",
+      finishedAt: Date.now(),
       winnerId: winner?.playerId,
       log: [
         ...match.log,
@@ -1015,6 +1016,22 @@ const startServer = async () => {
             return;
           }
           
+          // Surrender can be done at any time, even when not your turn
+          if (payload.type === "surrender") {
+            const opponent = match.players.find(p => p.id !== player.id);
+            const updated: MatchState = {
+              ...match,
+              status: "finished",
+              finishedAt: Date.now(),
+              winnerId: opponent?.id,
+              log: [...match.log, `${player.name} surrenders! ${opponent?.name ?? 'Opponent'} wins!`],
+            };
+            matches.set(lobby.id, updated);
+            await upsertMatch(lobby.id, updated);
+            sendToLobby(lobby, { type: "match_state", state: updated });
+            return;
+          }
+
           if (match.activeTurnPlayerId !== player.id) {
             sendMessage(socket, { type: "error", message: "Not your turn." });
             return;
@@ -1669,7 +1686,7 @@ const startServer = async () => {
                   if (c.playerId === player.id) {
                     return { 
                       ...c, 
-                      grapple: { ...c.grapple, grappling: payload.targetId, cpSpent: cp },
+                      grapple: { grappledBy: c.grapple?.grappledBy ?? null, grappling: payload.targetId, cpSpent: cp, cpReceived: c.grapple?.cpReceived ?? 0 },
                       inCloseCombatWith: payload.targetId,
                       closeCombatPosition: 'front' as const,
                       position: targetCombatant.position
@@ -1678,7 +1695,7 @@ const startServer = async () => {
                   if (c.playerId === payload.targetId) {
                     return { 
                       ...c, 
-                      grapple: { ...c.grapple, grappledBy: player.id, cpReceived: cp },
+                      grapple: { grappledBy: player.id, grappling: c.grapple?.grappling ?? null, cpSpent: c.grapple?.cpSpent ?? 0, cpReceived: cp },
                       inCloseCombatWith: player.id,
                       closeCombatPosition: 'front' as const
                     };
@@ -1720,7 +1737,7 @@ const startServer = async () => {
                 scheduleBotTurn(lobby, updated);
               }
             } else if (payload.action === 'throw' || payload.action === 'lock' || payload.action === 'choke' || payload.action === 'pin') {
-              if (!actorCombatant.grapple.grappling) {
+              if (!actorCombatant.grapple?.grappling) {
                 sendMessage(socket, { type: "error", message: "Must be grappling to use this technique." });
                 return;
               }
@@ -1814,13 +1831,16 @@ const startServer = async () => {
           }
 
           if (payload.type === "break_free") {
-            if (!actorCombatant.grapple.grappledBy) {
+            if (!actorCombatant.grapple?.grappledBy) {
               sendMessage(socket, { type: "error", message: "Not being grappled." });
               return;
             }
             
+            const grappledById = actorCombatant.grapple.grappledBy;
+            const cpPenalty = actorCombatant.grapple.cpReceived ?? 0;
+            
             const attackerCharacter = getCharacterById(match, actorCombatant.characterId);
-            const grapplerCombatant = match.combatants.find(c => c.playerId === actorCombatant.grapple.grappledBy);
+            const grapplerCombatant = match.combatants.find(c => c.playerId === grappledById);
             const grapplerCharacter = grapplerCombatant ? getCharacterById(match, grapplerCombatant.characterId) : null;
             
             if (!attackerCharacter) {
@@ -1829,7 +1849,6 @@ const startServer = async () => {
             }
             
             const wrestlingSkill = attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.strength;
-            const cpPenalty = actorCombatant.grapple.cpReceived;
             const breakResult = resolveBreakFree(
               attackerCharacter.attributes.strength,
               wrestlingSkill,
@@ -1841,7 +1860,7 @@ const startServer = async () => {
             
             if (breakResult.success) {
               const updatedCombatants = match.combatants.map(c => {
-                if (c.playerId === player.id || c.playerId === actorCombatant.grapple.grappledBy) {
+                if (c.playerId === player.id || c.playerId === grappledById) {
                   return { 
                     ...c, 
                     grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },
@@ -1892,9 +1911,82 @@ const startServer = async () => {
     });
   });
 
-  server.listen(PORT, () => {
+  server.listen(PORT, async () => {
     console.log(`Server listening on http://localhost:${PORT}`);
+    
+    const staleLobbies = Array.from(lobbies.entries()).filter(([, lobby]) => lobby.status === "in_match");
+    for (const [lobbyId] of staleLobbies) {
+      const timer = botTimers.get(lobbyId);
+      if (timer) {
+        clearTimeout(timer);
+        botTimers.delete(lobbyId);
+      }
+      matches.delete(lobbyId);
+      lobbies.delete(lobbyId);
+      await deleteLobby(lobbyId);
+    }
+    if (staleLobbies.length > 0) {
+      console.log(`Startup cleanup: removed ${staleLobbies.length} stale in-progress lobbies`);
+    }
   });
+
+  const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+  const FINISHED_MATCH_TTL_MS = 60 * 60 * 1000;
+
+  const getConnectedPlayerIds = (): Set<string> => {
+    const connected = new Set<string>();
+    for (const state of connections.values()) {
+      if (state.playerId) connected.add(state.playerId);
+    }
+    return connected;
+  };
+
+  const cleanupOrphanedLobbies = async () => {
+    const now = Date.now();
+    let cleanedCount = 0;
+    const connectedPlayers = getConnectedPlayerIds();
+
+    for (const [lobbyId, lobby] of lobbies.entries()) {
+      const match = matches.get(lobbyId);
+      let shouldDelete = false;
+
+      if (match?.status === "finished" && match.finishedAt) {
+        const age = now - match.finishedAt;
+        if (age > FINISHED_MATCH_TTL_MS) {
+          shouldDelete = true;
+        }
+      }
+
+      if (lobby.status === "in_match") {
+        const humanPlayers = lobby.players.filter(p => !p.isBot);
+        const hasConnectedPlayer = humanPlayers.some(p => connectedPlayers.has(p.id));
+        if (!hasConnectedPlayer) {
+          shouldDelete = true;
+        }
+      }
+
+      if (shouldDelete) {
+        const timer = botTimers.get(lobbyId);
+        if (timer) {
+          clearTimeout(timer);
+          botTimers.delete(lobbyId);
+        }
+        matches.delete(lobbyId);
+        lobbies.delete(lobbyId);
+        await deleteLobby(lobbyId);
+        cleanedCount++;
+      }
+    }
+
+    if (cleanedCount > 0) {
+      console.log(`Cleanup: removed ${cleanedCount} orphaned/finished lobbies`);
+      broadcast({ type: "lobbies", lobbies: Array.from(lobbies.values()).map(summarizeLobby) });
+    }
+  };
+
+  setInterval(() => {
+    cleanupOrphanedLobbies().catch(err => console.error("Cleanup error:", err));
+  }, CLEANUP_INTERVAL_MS);
 };
 
 startServer().catch((error) => {

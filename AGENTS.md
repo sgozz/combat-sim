@@ -60,8 +60,9 @@ Setup file: `src/test/setup.ts` (imports `@testing-library/jest-dom`).
 src/
   components/
     arena/      # Three.js scene (HexGrid, Combatant, ArenaScene)
-    game/       # Game UI (GameHUD, CombatLog, InitiativeTracker)
-    ui/         # Modals, editors
+    game/       # Game UI (GameHUD, CombatLog, InitiativeTracker, ActionBar)
+    ui/         # Modals, editors, CharacterEditor
+  data/         # Static data (characterTemplates.ts)
   hooks/        # useGameSocket, etc.
   utils/        # Hex math, helpers
 shared/
@@ -71,6 +72,48 @@ shared/
 server/
   src/          # WebSocket server, match logic
 ```
+
+## UI Architecture
+
+### Responsive Layout
+The game has **two separate UI systems** for desktop and mobile:
+
+| Viewport | Component | Location |
+|----------|-----------|----------|
+| Desktop (>768px) | `GameActionPanel` | `src/components/game/GameHUD.tsx` |
+| Mobile (<768px) | `ActionBar` | `src/components/game/ActionBar.tsx` |
+
+Both are rendered by `GameScreen.tsx`; CSS media queries control visibility.
+
+### Desktop UI (`GameHUD.tsx`)
+- **Left panel** (`GameStatusPanel`): HP/FP bars, participant list
+- **Right panel** (`GameActionPanel`): Maneuver selection, action buttons, combat log
+- Maneuvers shown as a grid with tooltips and keyboard shortcuts (1-7)
+- Attack preview with hit probability when target selected
+
+### Mobile UI (`ActionBar.tsx`)
+- Fixed bottom bar with compact buttons
+- HP bar integrated into action bar
+- Maneuver picker opens as overlay when tapped
+- Same functionality as desktop but touch-optimized
+
+### Key UI Components
+| Component | Purpose |
+|-----------|---------|
+| `GameScreen` | Main game container, keyboard handling, renders both UIs |
+| `TurnStepper` | Step-by-step turn guidance ("STEP 1: Choose maneuver") |
+| `InitiativeTracker` | Shows turn order at top of screen |
+| `CombatToast` | Floating combat log messages |
+| `CombatLog` | Full scrollable log in right panel (desktop only) |
+| `MiniMap` | Top-down hex grid overview |
+| `ArenaScene` | Three.js 3D scene with hex grid and combatants |
+
+### Adding Actions to Both UIs
+When adding new action buttons, update **both**:
+1. `GameHUD.tsx` → `GameActionPanel` → `renderContent()` → action buttons section
+2. `ActionBar.tsx` → main return block with action buttons
+
+Example: "Give Up" button exists in both files with identical `onAction('surrender', ...)` call.
 
 ## Architecture
 - Client connects to `ws://127.0.0.1:8080`

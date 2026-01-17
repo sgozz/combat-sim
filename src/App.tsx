@@ -145,7 +145,7 @@ function AppRoutes() {
 
   const handleLeaveLobby = useCallback(() => {
     sendMessage({ type: 'leave_lobby' })
-    navigate('/lobby')
+    setTimeout(() => navigate('/lobby'), 0)
   }, [sendMessage, navigate])
 
   const handleLogout = useCallback(() => {
