@@ -7,7 +7,7 @@ import { ReadyPanel } from '../ui/ReadyPanel'
 import { PostureControls } from '../ui/PostureControls'
 import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant, ReadyAction, EquipmentSlot, WaitTrigger } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
-import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
+import { getRangePenalty, getHitLocationPenalty, calculateEncumbrance } from '../../../shared/rules'
 
 const PROBABILITY_TABLE: Record<number, number> = {
   3: 0.5, 4: 1.9, 5: 4.6, 6: 9.3, 7: 16.2, 8: 25.9, 9: 37.5,
@@ -39,6 +39,7 @@ export const GameStatusPanel = ({
   const [collapsed, setCollapsed] = useState(false)
   const activeCombatant = matchState?.combatants.find((combatant) => combatant.playerId === player?.id) ?? null
   const character = matchState?.characters.find((c) => c.id === activeCombatant?.characterId) ?? null
+  const encumbrance = character ? calculateEncumbrance(character.attributes.strength, character.equipment) : null
   
   const hpMax = character?.derived.hitPoints ?? 10
   const fpMax = character?.derived.fatiguePoints ?? 10
@@ -88,6 +89,13 @@ export const GameStatusPanel = ({
                 <span className="shock-icon">⚡</span>
                 <span className="shock-value">-{activeCombatant.shockPenalty}</span>
                 <span className="shock-label">Shock</span>
+              </div>
+            )}
+            
+            {encumbrance && encumbrance.level > 0 && (
+              <div className="encumbrance-indicator">
+                <span>Enc: <span style={{ color: encumbrance.level === 1 ? '#ff4' : encumbrance.level === 2 ? '#f80' : '#f44', fontWeight: 'bold' }}>{encumbrance.name}</span></span>
+                <span className="encumbrance-effects">{encumbrance.movePenalty} Move, {encumbrance.dodgePenalty} Dodge</span>
               </div>
             )}
             

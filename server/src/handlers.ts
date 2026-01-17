@@ -47,6 +47,7 @@ import {
   getRotationCost,
   getHitLocationPenalty,
   getHitLocationWoundingMultiplier,
+  calculateEncumbrance,
 } from "../../shared/rules";
 import type { HexPosition, MovementState } from "../../shared/rules";
 import type { Lobby, PlayerRow } from "./types";
@@ -551,7 +552,12 @@ const handleCombatAction = async (
     logMsg += '.';
     
     const actorCharacter = getCharacterById(match, actorCombatant.characterId);
-    const basicMove = actorCharacter?.derived.basicMove ?? 5;
+    const baseMove = actorCharacter?.derived.basicMove ?? 5;
+    const encumbrance = calculateEncumbrance(
+      actorCharacter?.attributes.strength ?? 10, 
+      actorCharacter?.equipment ?? []
+    );
+    const basicMove = Math.max(1, baseMove + encumbrance.movePenalty);
     
     const turnMovement = initializeTurnMovement(
       gridToHex(actorCombatant.position),
@@ -1141,7 +1147,12 @@ const handleAttackAction = async (
   const isDefenderBot = targetPlayer?.isBot ?? false;
 
   if (isDefenderBot) {
-    const defenseOptions = getDefenseOptions(targetCharacter, targetCharacter.derived.dodge);
+    const targetEncumbrance = calculateEncumbrance(
+      targetCharacter.attributes.strength,
+      targetCharacter.equipment
+    );
+    const effectiveDodge = targetCharacter.derived.dodge + targetEncumbrance.dodgePenalty;
+    const defenseOptions = getDefenseOptions(targetCharacter, effectiveDodge);
     const targetWeapon = targetCharacter.equipment.find(e => e.type === 'melee');
     const targetShield = targetCharacter.equipment.find(e => e.type === 'shield');
     const inCloseCombat = distance === 0;
@@ -1419,7 +1430,12 @@ const resolveDefenseChoice = async (
     return;
   }
 
-  const defenseOptions = getDefenseOptions(defenderCharacter, defenderCharacter.derived.dodge);
+  const defenderEncumbrance = calculateEncumbrance(
+    defenderCharacter.attributes.strength,
+    defenderCharacter.equipment
+  );
+  const effectiveDefenderDodge = defenderCharacter.derived.dodge + defenderEncumbrance.dodgePenalty;
+  const defenseOptions = getDefenseOptions(defenderCharacter, effectiveDefenderDodge);
   const distance = calculateHexDistance(attackerCombatant.position, defenderCombatant.position);
   const inCloseCombat = distance === 0;
   const defenderWeapon = defenderCharacter.equipment.find(e => e.type === 'melee');

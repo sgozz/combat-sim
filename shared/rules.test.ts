@@ -14,6 +14,8 @@ import {
   getPostureModifiers,
   canChangePostureFree,
   getValidPostureChanges,
+  calculateBasicLift,
+  calculateEncumbrance,
   rollHTCheck,
   parseReach,
   canAttackAtDistance,
@@ -456,6 +458,76 @@ describe('GURPS Rules', () => {
         expect(toStanding?.isFree).toBe(false)
         expect(toCrouching?.isFree).toBe(false)
       })
+    })
+  })
+
+  describe('Encumbrance System', () => {
+    it('calculates basic lift from ST', () => {
+      expect(calculateBasicLift(10)).toBe(20)
+      expect(calculateBasicLift(12)).toBeCloseTo(28.8)
+      expect(calculateBasicLift(8)).toBeCloseTo(12.8)
+    })
+
+    it('no encumbrance when weight under BL', () => {
+      const equipment = [{ id: '1', name: 'Sword', type: 'melee' as const, weight: 3 }]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.level).toBe(0)
+      expect(enc.name).toBe('None')
+      expect(enc.movePenalty).toBe(0)
+      expect(enc.dodgePenalty).toBe(0)
+    })
+
+    it('light encumbrance when weight between BL and 2*BL', () => {
+      const equipment = [{ id: '1', name: 'Gear', type: 'other' as const, weight: 30 }]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.level).toBe(1)
+      expect(enc.name).toBe('Light')
+      expect(enc.movePenalty).toBe(-1)
+      expect(enc.dodgePenalty).toBe(-1)
+    })
+
+    it('medium encumbrance when weight between 2*BL and 3*BL', () => {
+      const equipment = [{ id: '1', name: 'Gear', type: 'other' as const, weight: 50 }]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.level).toBe(2)
+      expect(enc.name).toBe('Medium')
+      expect(enc.movePenalty).toBe(-2)
+    })
+
+    it('heavy encumbrance when weight between 3*BL and 6*BL', () => {
+      const equipment = [{ id: '1', name: 'Gear', type: 'other' as const, weight: 100 }]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.level).toBe(3)
+      expect(enc.name).toBe('Heavy')
+      expect(enc.movePenalty).toBe(-3)
+    })
+
+    it('extra-heavy encumbrance when weight between 6*BL and 10*BL', () => {
+      const equipment = [{ id: '1', name: 'Gear', type: 'other' as const, weight: 150 }]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.level).toBe(4)
+      expect(enc.name).toBe('Extra-Heavy')
+      expect(enc.movePenalty).toBe(-4)
+    })
+
+    it('sums weight from multiple items', () => {
+      const equipment = [
+        { id: '1', name: 'Sword', type: 'melee' as const, weight: 3 },
+        { id: '2', name: 'Armor', type: 'armor' as const, weight: 25 },
+        { id: '3', name: 'Shield', type: 'shield' as const, weight: 5 },
+      ]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.totalWeight).toBe(33)
+      expect(enc.level).toBe(1)
+    })
+
+    it('handles items with no weight as 0', () => {
+      const equipment = [
+        { id: '1', name: 'Sword', type: 'melee' as const },
+        { id: '2', name: 'Dagger', type: 'melee' as const, weight: 1 },
+      ]
+      const enc = calculateEncumbrance(10, equipment)
+      expect(enc.totalWeight).toBe(1)
     })
   })
 

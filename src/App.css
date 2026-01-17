@@ -183,3 +183,21 @@
 .confirm-wait-btn:hover {
   background: #3a5a3a;
 }
+
+/* Encumbrance Indicator */
+.encumbrance-indicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #ddd;
+}
+
+.encumbrance-effects {
+  opacity: 0.8;
+  font-size: 0.9em;
+}

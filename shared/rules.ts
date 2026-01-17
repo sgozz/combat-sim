@@ -373,6 +373,59 @@ export const getValidPostureChanges = (current: Posture): PostureChangeInfo[] =>
     }));
 };
 
+export type EncumbranceLevel = 0 | 1 | 2 | 3 | 4;
+
+export type EncumbranceInfo = {
+  level: EncumbranceLevel;
+  name: string;
+  movePenalty: number;
+  dodgePenalty: number;
+  totalWeight: number;
+  basicLift: number;
+};
+
+export const calculateBasicLift = (strength: number): number => {
+  return (strength * strength) / 5;
+};
+
+export const calculateEncumbrance = (
+  strength: number,
+  equipment: Equipment[]
+): EncumbranceInfo => {
+  const basicLift = calculateBasicLift(strength);
+  const totalWeight = equipment.reduce((sum, e) => sum + (e.weight ?? 0), 0);
+  
+  const thresholds = [
+    { max: basicLift, level: 0 as EncumbranceLevel, name: 'None', move: 0, dodge: 0 },
+    { max: basicLift * 2, level: 1 as EncumbranceLevel, name: 'Light', move: -1, dodge: -1 },
+    { max: basicLift * 3, level: 2 as EncumbranceLevel, name: 'Medium', move: -2, dodge: -2 },
+    { max: basicLift * 6, level: 3 as EncumbranceLevel, name: 'Heavy', move: -3, dodge: -3 },
+    { max: basicLift * 10, level: 4 as EncumbranceLevel, name: 'Extra-Heavy', move: -4, dodge: -4 },
+  ];
+  
+  for (const t of thresholds) {
+    if (totalWeight <= t.max) {
+      return {
+        level: t.level,
+        name: t.name,
+        movePenalty: t.move,
+        dodgePenalty: t.dodge,
+        totalWeight,
+        basicLift,
+      };
+    }
+  }
+  
+  return {
+    level: 4,
+    name: 'Extra-Heavy',
+    movePenalty: -4,
+    dodgePenalty: -4,
+    totalWeight,
+    basicLift,
+  };
+};
+
 export type HTCheckResult = {
   roll: number;
   target: number;
