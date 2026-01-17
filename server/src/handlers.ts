@@ -49,6 +49,10 @@ import {
   getHitLocationWoundingMultiplier,
   calculateEncumbrance,
   canChangePostureFree,
+  rollCriticalHitTable,
+  rollCriticalMissTable,
+  applyCriticalHitDamage,
+  getCriticalMissDescription,
 } from "../../shared/rules";
 import type { HexPosition, MovementState } from "../../shared/rules";
 import type { Lobby, PlayerRow } from "./types";
@@ -1080,7 +1084,21 @@ const handleAttackAction = async (
   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}${hitLocLabel} (${defenseDescription})`;
 
   if (!attackRoll.hit) {
-    logEntry += `: Miss. ${formatRoll(attackRoll.roll, 'Skill')}`;
+    let critMissEffect = '';
+    let updatedAttackerEffects = [...actorCombatant.statusEffects];
+    
+    if (attackRoll.criticalMiss) {
+      const critMiss = rollCriticalMissTable();
+      const critMissDesc = getCriticalMissDescription(critMiss.effect);
+      if (critMissDesc) {
+        critMissEffect = ` Critical miss (${critMiss.roll})! ${critMissDesc}`;
+      }
+      if (critMiss.effect.type === 'lost_balance' && !updatedAttackerEffects.includes('lost_balance')) {
+        updatedAttackerEffects.push('lost_balance');
+      }
+    }
+    
+    logEntry += `: Miss.${critMissEffect} ${formatRoll(attackRoll.roll, 'Skill')}`;
     sendToLobby(lobby, { 
       type: "visual_effect", 
       effect: { type: "miss", targetId: targetCombatant.playerId, position: targetCombatant.position } 
@@ -1093,7 +1111,7 @@ const handleAttackAction = async (
     
     if (remainingAttacks > 0) {
       const updatedCombatants = match.combatants.map(c => 
-        c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+        c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks, statusEffects: updatedAttackerEffects } : c
       );
       const updated: MatchState = {
         ...match,
@@ -1104,7 +1122,10 @@ const handleAttackAction = async (
       await upsertMatch(lobby.id, updated);
       sendToLobby(lobby, { type: "match_state", state: updated });
     } else {
-      let updated = advanceTurn({ ...match, log: [...match.log, logEntry] });
+      const combatantsWithEffects = match.combatants.map(c =>
+        c.playerId === player.id ? { ...c, statusEffects: updatedAttackerEffects } : c
+      );
+      let updated = advanceTurn({ ...match, combatants: combatantsWithEffects, log: [...match.log, logEntry] });
       updated = checkVictory(updated);
       state.matches.set(lobby.id, updated);
       await upsertMatch(lobby.id, updated);
@@ -1124,14 +1145,22 @@ const handleAttackAction = async (
       baseDamage += 2;
     }
     
+    let critHitStr = '';
+    let finalBaseDamage = baseDamage;
+    if (attackRoll.critical) {
+      const critHit = rollCriticalHitTable();
+      const critResult = applyCriticalHitDamage(baseDamage, critHit.effect, damageFormula);
+      finalBaseDamage = critResult.damage;
+      critHitStr = critResult.description ? `Critical hit (${critHit.roll})! ${critResult.description} ` : `Critical hit (${critHit.roll})! `;
+    }
+    
     const result = applyDamageToTarget(
-      match, targetCombatant.playerId, baseDamage, damageFormula, 
+      match, targetCombatant.playerId, finalBaseDamage, damageFormula, 
       damageType, hitLocation, dmg.rolls, dmg.modifier
     );
     
-    const critStr = attackRoll.critical ? 'Critical hit! ' : '';
     const noDefStr = !canDefend && !attackRoll.critical ? `${defenseDescription}. ` : '';
-    logEntry += `: ${critStr}${noDefStr}Hit for ${result.finalDamage} damage ${result.logEntry}. ${formatRoll(attackRoll.roll, 'Attack')}`;
+    logEntry += `: ${critHitStr}${noDefStr}Hit for ${result.finalDamage} damage ${result.logEntry}. ${formatRoll(attackRoll.roll, 'Attack')}`;
     if (result.fellUnconscious) {
       logEntry += ` ${targetCharacter.name} falls unconscious!`;
     }
@@ -1208,8 +1237,9 @@ const handleAttackAction = async (
     const dodgeAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_dodge') ? 2 : 0;
     const parryAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_parry') ? 2 : 0;
     const blockAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_block') ? 2 : 0;
+    const lostBalancePenalty = targetCombatant.statusEffects.includes('lost_balance') ? -2 : 0;
     
-    let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod + dodgeAodBonus;
+    let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod + dodgeAodBonus + lostBalancePenalty;
     let defenseUsed: DefenseType = 'dodge';
     let defenseLabel = "Dodge";
     let botParryWeaponName: string | null = null;
@@ -1221,7 +1251,7 @@ const handleAttackAction = async (
       const multiDefPenalty = isSameWeaponParry 
         ? (targetCombatant.defensesThisTurn > 1 ? -(targetCombatant.defensesThisTurn - 1) : 0)
         : -targetCombatant.defensesThisTurn;
-      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus + sameWeaponPenalty + multiDefPenalty;
+      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus + sameWeaponPenalty + multiDefPenalty + lostBalancePenalty;
       if (parryValue > bestDefense) {
         bestDefense = parryValue;
         defenseUsed = 'parry';
@@ -1230,7 +1260,7 @@ const handleAttackAction = async (
       }
     }
     if (ccDefMods.canBlock && defenseOptions.block) {
-      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus - targetCombatant.defensesThisTurn;
+      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus - targetCombatant.defensesThisTurn + lostBalancePenalty;
       if (blockValue > bestDefense) {
         bestDefense = blockValue;
         defenseUsed = 'block';
@@ -1562,6 +1592,7 @@ const resolveDefenseChoice = async (
     postureModifier: defenseMod,
     defenseType: choice.defenseType,
     sameWeaponParry,
+    lostBalance: defenderCombatant.statusEffects.includes('lost_balance'),
   });
   
   const defenseRoll = resolveDefenseRoll(finalDefenseValue);

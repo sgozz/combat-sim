@@ -44,8 +44,13 @@ import {
   resolveAttackRoll,
   resolveDefenseRoll,
   calculateDefenseValue,
+  rollCriticalHitTable,
+  rollCriticalMissTable,
+  applyCriticalHitDamage,
+  getCriticalMissDescription,
   type HexPosition,
   type MovementState,
+  type CriticalHitEffect,
 } from './rules'
 import type { CharacterSheet, MatchState, CombatantState, Player, Equipment } from './types'
 
@@ -87,6 +92,114 @@ describe('GURPS Rules', () => {
       expect(result.roll).toBe(18)
       expect(result.critical).toBe(true)
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe('Critical Hit Table', () => {
+    it('roll 3 gives triple max damage', () => {
+      const random = () => 0
+      const result = rollCriticalHitTable(random)
+      expect(result.roll).toBe(3)
+      expect(result.effect.type).toBe('triple_max_damage')
+    })
+
+    it('roll 4-5 gives double damage', () => {
+      const result = rollCriticalHitTable()
+      if (result.roll >= 4 && result.roll <= 5) {
+        expect(result.effect.type).toBe('double_damage')
+      }
+    })
+
+    it('roll 6 gives max damage', () => {
+      const result = rollCriticalHitTable()
+      if (result.roll === 6) {
+        expect(result.effect.type).toBe('max_damage')
+      }
+    })
+
+    it('roll 7 gives bonus damage dice', () => {
+      const result = rollCriticalHitTable()
+      if (result.roll === 7) {
+        expect(result.effect.type).toBe('bonus_damage')
+        if (result.effect.type === 'bonus_damage') {
+          expect(result.effect.dice).toBe(1)
+        }
+      }
+    })
+
+    it('roll 8+ gives normal damage', () => {
+      const random = () => 0.5
+      const result = rollCriticalHitTable(random)
+      expect(result.roll).toBeGreaterThanOrEqual(8)
+      expect(result.effect.type).toBe('normal')
+    })
+  })
+
+  describe('Critical Miss Table', () => {
+    it('roll 3-4 drops weapon', () => {
+      const random = () => 0
+      const result = rollCriticalMissTable(random)
+      expect(result.roll).toBe(3)
+      expect(result.effect.type).toBe('drop_weapon')
+    })
+
+    it('roll 5-6 breaks weapon', () => {
+      const result = rollCriticalMissTable()
+      if (result.roll >= 5 && result.roll <= 6) {
+        expect(result.effect.type).toBe('weapon_breaks')
+      }
+    })
+
+    it('roll 7-8 or 14 causes lost balance', () => {
+      const result = rollCriticalMissTable()
+      if ((result.roll >= 7 && result.roll <= 8) || result.roll === 14) {
+        expect(result.effect.type).toBe('lost_balance')
+      }
+    })
+
+    it('roll 9-13 is just a miss', () => {
+      const random = () => 0.5
+      const result = rollCriticalMissTable(random)
+      expect(result.roll).toBeGreaterThanOrEqual(9)
+      expect(result.roll).toBeLessThanOrEqual(13)
+      expect(result.effect.type).toBe('just_miss')
+    })
+
+    it('roll 17-18 hits self', () => {
+      const random = () => 0.99
+      const result = rollCriticalMissTable(random)
+      expect(result.roll).toBe(18)
+      expect(result.effect.type).toBe('hit_self')
+    })
+  })
+
+  describe('Apply Critical Hit Damage', () => {
+    it('triple max damage for 2d+1', () => {
+      const effect: CriticalHitEffect = { type: 'triple_max_damage' }
+      const result = applyCriticalHitDamage(7, effect, '2d+1')
+      expect(result.damage).toBe(39)
+      expect(result.description).toContain('Triple')
+    })
+
+    it('double damage', () => {
+      const effect: CriticalHitEffect = { type: 'double_damage' }
+      const result = applyCriticalHitDamage(7, effect, '2d+1')
+      expect(result.damage).toBe(14)
+      expect(result.description).toContain('Double')
+    })
+
+    it('max damage', () => {
+      const effect: CriticalHitEffect = { type: 'max_damage' }
+      const result = applyCriticalHitDamage(5, effect, '2d+1')
+      expect(result.damage).toBe(13)
+      expect(result.description).toContain('Maximum')
+    })
+
+    it('normal returns base damage', () => {
+      const effect: CriticalHitEffect = { type: 'normal' }
+      const result = applyCriticalHitDamage(7, effect, '2d+1')
+      expect(result.damage).toBe(7)
+      expect(result.description).toBe('')
     })
   })
 

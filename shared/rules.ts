@@ -159,7 +159,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
 
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
-      const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped');
+      const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped' && e !== 'lost_balance');
       return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
     }
     if (c.playerId === state.activeTurnPlayerId) {
@@ -193,6 +193,104 @@ export const isCriticalFailure = (roll: number, target: number): boolean => {
   if (roll === 17 && target <= 15) return true;
   if (roll === 16 && target <= 6) return true;
   return false;
+};
+
+export type CriticalHitEffect = 
+  | { type: 'triple_max_damage' }
+  | { type: 'double_damage' }
+  | { type: 'max_damage' }
+  | { type: 'bonus_damage'; dice: number }
+  | { type: 'normal' };
+
+export type CriticalMissEffect =
+  | { type: 'drop_weapon' }
+  | { type: 'weapon_breaks' }
+  | { type: 'lost_balance' }
+  | { type: 'just_miss' }
+  | { type: 'hit_self' };
+
+export const rollCriticalHitTable = (random: () => number = Math.random): { roll: number; effect: CriticalHitEffect } => {
+  const { total: roll } = roll3d6(random);
+  
+  let effect: CriticalHitEffect;
+  if (roll === 3) {
+    effect = { type: 'triple_max_damage' };
+  } else if (roll <= 5) {
+    effect = { type: 'double_damage' };
+  } else if (roll === 6) {
+    effect = { type: 'max_damage' };
+  } else if (roll === 7) {
+    effect = { type: 'bonus_damage', dice: 1 };
+  } else {
+    effect = { type: 'normal' };
+  }
+  
+  return { roll, effect };
+};
+
+export const rollCriticalMissTable = (random: () => number = Math.random): { roll: number; effect: CriticalMissEffect } => {
+  const { total: roll } = roll3d6(random);
+  
+  let effect: CriticalMissEffect;
+  if (roll <= 4) {
+    effect = { type: 'drop_weapon' };
+  } else if (roll <= 6) {
+    effect = { type: 'weapon_breaks' };
+  } else if (roll <= 8) {
+    effect = { type: 'lost_balance' };
+  } else if (roll <= 13) {
+    effect = { type: 'just_miss' };
+  } else if (roll === 14) {
+    effect = { type: 'lost_balance' };
+  } else if (roll <= 16) {
+    effect = { type: 'drop_weapon' };
+  } else {
+    effect = { type: 'hit_self' };
+  }
+  
+  return { roll, effect };
+};
+
+export const applyCriticalHitDamage = (
+  baseDamage: number,
+  effect: CriticalHitEffect,
+  formula: string,
+  random: () => number = Math.random
+): { damage: number; description: string } => {
+  const match = formula.trim().match(/(\d+)d([+-]\d+)?/i);
+  const diceCount = match ? Number(match[1]) : 1;
+  const modifier = match ? Number(match[2] ?? 0) : 0;
+  const maxRoll = diceCount * 6 + modifier;
+  
+  switch (effect.type) {
+    case 'triple_max_damage':
+      return { damage: maxRoll * 3, description: 'Triple maximum damage!' };
+    case 'double_damage':
+      return { damage: baseDamage * 2, description: 'Double damage!' };
+    case 'max_damage':
+      return { damage: maxRoll, description: 'Maximum damage!' };
+    case 'bonus_damage': {
+      const bonusDmg = rollDamage(`${effect.dice}d`, random);
+      return { damage: baseDamage + bonusDmg.total, description: `+${bonusDmg.total} bonus damage!` };
+    }
+    case 'normal':
+      return { damage: baseDamage, description: '' };
+  }
+};
+
+export const getCriticalMissDescription = (effect: CriticalMissEffect): string => {
+  switch (effect.type) {
+    case 'drop_weapon':
+      return 'Weapon dropped!';
+    case 'weapon_breaks':
+      return 'Weapon breaks!';
+    case 'lost_balance':
+      return 'Lost balance! -2 to defenses until next turn.';
+    case 'just_miss':
+      return '';
+    case 'hit_self':
+      return 'Hit self!';
+  }
 };
 
 export const rollDamage = (formula: string, random: () => number = Math.random): DamageRoll => {
@@ -591,6 +689,7 @@ export type AttackRollResult = {
   roll: RollResult;
   hit: boolean;
   critical: boolean;
+  criticalMiss: boolean;
   autoDefenseFails: boolean;
 };
 
@@ -600,10 +699,12 @@ export const resolveAttackRoll = (
 ): AttackRollResult => {
   const roll = skillCheck(skill, random);
   const critical = roll.critical && roll.success;
+  const criticalMiss = isCriticalFailure(roll.roll, roll.target);
   return {
     roll,
     hit: roll.success,
     critical,
+    criticalMiss,
     autoDefenseFails: critical,
   };
 };
@@ -641,6 +742,7 @@ export const calculateDefenseValue = (
     postureModifier: number;
     defenseType: 'dodge' | 'parry' | 'block';
     sameWeaponParry?: boolean;
+    lostBalance?: boolean;
   }
 ): number => {
   let value = baseDefense;
@@ -667,6 +769,10 @@ export const calculateDefenseValue = (
   
   value -= options.deceptivePenalty;
   value += options.postureModifier;
+  
+  if (options.lostBalance) {
+    value -= 2;
+  }
   
   return Math.max(3, value);
 };
