@@ -150,6 +150,29 @@ export type ManeuverType =
 
 export type AOAVariant = 'determined' | 'strong' | 'double' | 'feint';
 
+// Defense system types (B374-377)
+export type DefenseType = 'dodge' | 'parry' | 'block' | 'none';
+
+export type DefenseChoice = {
+  type: DefenseType;
+  retreat: boolean;
+  dodgeAndDrop: boolean; // +3 to Dodge but end up prone
+};
+
+/** Pending defense state - attack landed, waiting for defender to choose */
+export type PendingDefense = {
+  attackerId: Id;
+  defenderId: Id;
+  attackRoll: number;
+  attackMargin: number; // How much the attack succeeded by
+  hitLocation: HitLocation;
+  weapon: string;
+  damage: string; // Damage formula (e.g., "2d+1")
+  damageType: DamageType;
+  deceptivePenalty: number; // Defense penalty from deceptive attack
+  timestamp: number; // When the attack was made (for timeout)
+};
+
 export type CombatantState = {
   playerId: Id;
   characterId: Id;
@@ -171,6 +194,7 @@ export type CombatantState = {
   shockPenalty: number;
   attacksRemaining: number;
   retreatedThisTurn: boolean;
+  defensesThisTurn: number;
 };
 
 export type MatchState = {
@@ -186,6 +210,7 @@ export type MatchState = {
   finishedAt?: number;
   turnMovement?: TurnMovementState;
   reachableHexes?: ReachableHexInfo[];
+  pendingDefense?: PendingDefense;
 };
 
 export type LobbySummary = {
@@ -202,7 +227,7 @@ export type CombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant }
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation }
   | { type: "aim_target"; targetId: Id }
-  | { type: "defend" }
+  | { type: "defend"; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }
   | { type: "move"; position: GridPosition }
   | { type: "move_step"; to: HexCoord }
   | { type: "rotate"; facing: number }

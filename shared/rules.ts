@@ -160,7 +160,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
       const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped');
-      return { ...c, maneuver: null, aoaVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false };
+      return { ...c, maneuver: null, aoaVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0 };
     }
     return c;
   });
@@ -175,14 +175,14 @@ export const advanceTurn = (state: MatchState): MatchState => {
   };
 };
 
-const isCriticalSuccess = (roll: number, target: number): boolean => {
+export const isCriticalSuccess = (roll: number, target: number): boolean => {
   if (roll <= 4) return true;
   if (roll === 5 && target >= 15) return true;
   if (roll === 6 && target >= 16) return true;
   return false;
 };
 
-const isCriticalFailure = (roll: number, target: number): boolean => {
+export const isCriticalFailure = (roll: number, target: number): boolean => {
   if (roll === 18) return true;
   if (roll === 17 && target <= 15) return true;
   if (roll === 16 && target <= 6) return true;
@@ -468,6 +468,82 @@ export const getRetreatBonus = (inCloseCombat: boolean): RetreatBonus => {
     return { dodge: 1, parry: 1, block: 1 };
   }
   return { dodge: 3, parry: 1, block: 1 };
+};
+
+export type AttackRollResult = {
+  roll: RollResult;
+  hit: boolean;
+  critical: boolean;
+  autoDefenseFails: boolean;
+};
+
+export const resolveAttackRoll = (
+  skill: number,
+  random: () => number = Math.random
+): AttackRollResult => {
+  const roll = skillCheck(skill, random);
+  const critical = roll.critical && roll.success;
+  return {
+    roll,
+    hit: roll.success,
+    critical,
+    autoDefenseFails: critical,
+  };
+};
+
+export type DefenseRollResult = {
+  roll: RollResult;
+  defended: boolean;
+  criticalSuccess: boolean;
+  criticalFailure: boolean;
+};
+
+export const resolveDefenseRoll = (
+  defenseValue: number,
+  random: () => number = Math.random
+): DefenseRollResult => {
+  const roll = skillCheck(defenseValue, random);
+  const criticalFailure = isCriticalFailure(roll.roll, roll.target);
+  const criticalSuccess = isCriticalSuccess(roll.roll, roll.target);
+  return {
+    roll,
+    defended: roll.success && !criticalFailure,
+    criticalSuccess,
+    criticalFailure,
+  };
+};
+
+export const calculateDefenseValue = (
+  baseDefense: number,
+  options: {
+    retreat: boolean;
+    dodgeAndDrop: boolean;
+    inCloseCombat: boolean;
+    defensesThisTurn: number;
+    deceptivePenalty: number;
+    postureModifier: number;
+    defenseType: 'dodge' | 'parry' | 'block';
+  }
+): number => {
+  let value = baseDefense;
+  
+  if (options.retreat) {
+    const bonus = getRetreatBonus(options.inCloseCombat);
+    value += bonus[options.defenseType];
+  }
+  
+  if (options.dodgeAndDrop && options.defenseType === 'dodge') {
+    value += 3;
+  }
+  
+  if (options.defensesThisTurn > 0) {
+    value -= options.defensesThisTurn;
+  }
+  
+  value -= options.deceptivePenalty;
+  value += options.postureModifier;
+  
+  return Math.max(3, value);
 };
 
 export type QuickContestResult = {

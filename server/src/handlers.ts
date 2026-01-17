@@ -8,11 +8,18 @@ import type {
   Player,
   HexCoord,
   TurnMovementState,
+  PendingDefense,
+  DefenseType,
+  DamageType,
 } from "../../shared/types";
 import type { Reach } from "../../shared/types";
 import { 
   advanceTurn, 
   resolveAttack, 
+  resolveAttackRoll,
+  resolveDefenseRoll,
+  calculateDefenseValue,
+  rollDamage,
   getDefenseOptions, 
   getRangePenalty, 
   applyDamageMultiplier, 
@@ -66,6 +73,72 @@ import { ensureMinimumBots, scheduleBotTurn } from "./bot";
 
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
+
+const DEFENSE_TIMEOUT_MS = 15000;
+
+type ApplyDamageResult = {
+  updatedCombatants: MatchState['combatants'];
+  finalDamage: number;
+  logEntry: string;
+  fellUnconscious: boolean;
+};
+
+const applyDamageToTarget = (
+  match: MatchState,
+  targetPlayerId: string,
+  baseDamage: number,
+  damageFormula: string,
+  damageType: DamageType,
+  hitLocation: string,
+  damageRolls: number[],
+  damageModifier: number,
+): ApplyDamageResult => {
+  const targetCombatant = match.combatants.find(c => c.playerId === targetPlayerId);
+  const targetCharacter = match.characters.find(c => c.id === targetCombatant?.characterId);
+  
+  if (!targetCombatant || !targetCharacter) {
+    return { updatedCombatants: match.combatants, finalDamage: 0, logEntry: '', fellUnconscious: false };
+  }
+
+  const baseMultDamage = applyDamageMultiplier(baseDamage, damageType);
+  const hitLocMultiplier = getHitLocationWoundingMultiplier(hitLocation as Parameters<typeof getHitLocationWoundingMultiplier>[0], damageType);
+  const finalDamage = Math.floor(baseMultDamage * hitLocMultiplier);
+  
+  const rolls = damageRolls.join(',');
+  const mod = damageModifier !== 0 ? (damageModifier > 0 ? `+${damageModifier}` : `${damageModifier}`) : '';
+  const typeMultStr = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
+  const hitLocStr = hitLocMultiplier > 1 ? ` ${hitLocation} x${hitLocMultiplier}` : ` ${hitLocation}`;
+  const dmgDetail = typeMultStr 
+    ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${typeMultStr}${hitLocStr} = ${finalDamage})`
+    : `(${damageFormula}: [${rolls}]${mod} ${damageType}${hitLocStr} = ${finalDamage})`;
+
+  const targetMaxHP = targetCharacter.derived.hitPoints;
+  const targetHT = targetCharacter.attributes.health;
+  
+  let fellUnconscious = false;
+  const updatedCombatants = match.combatants.map((combatant) => {
+    if (combatant.playerId !== targetPlayerId) return combatant;
+    const newHP = combatant.currentHP - finalDamage;
+    const wasAboveZero = combatant.currentHP > 0;
+    const nowAtOrBelowZero = newHP <= 0;
+    
+    let effects = [...combatant.statusEffects];
+    
+    if (wasAboveZero && nowAtOrBelowZero && !effects.includes('unconscious')) {
+      const htCheck = rollHTCheck(targetHT, newHP, targetMaxHP);
+      if (!htCheck.success) {
+        effects = [...effects, 'unconscious'];
+        fellUnconscious = true;
+      }
+    }
+    
+    const newShock = finalDamage > 0 ? Math.min(4, combatant.shockPenalty + finalDamage) : combatant.shockPenalty;
+    
+    return { ...combatant, currentHP: newHP, statusEffects: effects, shockPenalty: newShock };
+  });
+
+  return { updatedCombatants, finalDamage, logEntry: dmgDetail, fellUnconscious };
+};
 
 export const handleMessage = async (
   socket: WebSocket,
@@ -631,6 +704,11 @@ const handleCombatAction = async (
   }
 
   if (payload.type === "defend") {
+    if (match.pendingDefense && match.pendingDefense.defenderId === player.id) {
+      await resolveDefenseChoice(lobby, match, payload);
+      return;
+    }
+    
     const updated = advanceTurn({
       ...match,
       combatants: match.combatants.map((combatant) =>
@@ -739,14 +817,12 @@ const handleAttackAction = async (
     skill = Math.min(skill - 4, 9);
   }
   
-  // Aim bonus: +Acc on first turn, +1 per additional turn up to +3 total (B364)
   if (actorCombatant.aimTurns > 0 && actorCombatant.aimTargetId === payload.targetId) {
     const weaponAcc = weapon?.accuracy ?? 0;
     const aimBonus = weaponAcc + Math.min(actorCombatant.aimTurns - 1, 2);
     skill += aimBonus;
   }
   
-  // Shock penalty: -1 per HP of damage taken this turn (max -4) B419
   if (actorCombatant.shockPenalty > 0) {
     skill -= actorCombatant.shockPenalty;
   }
@@ -762,7 +838,6 @@ const handleAttackAction = async (
   const attackDirection = calculateFacing(targetCombatant.position, actorCombatant.position);
   const relativeDir = (attackDirection - targetFacing + 6) % 6;
 
-  let defenseMod = 0;
   let canDefend = true;
   let defenseDescription = "normal";
 
@@ -770,174 +845,567 @@ const handleAttackAction = async (
     canDefend = false;
     defenseDescription = "backstab (no defense)";
   } else if (relativeDir === 2 || relativeDir === 4) {
-    defenseMod = -2;
     defenseDescription = "flank (-2)";
   }
 
   const targetManeuver = targetCombatant.maneuver;
   
-  // All-Out Defense: +2 to active defenses (B366)
   if (targetManeuver === 'all_out_defense') {
-    defenseMod += 2;
     defenseDescription += defenseDescription === "normal" ? "AoD (+2)" : " + AoD (+2)";
   }
   
-  // All-Out Attack: target cannot defend (B365)
   if (targetManeuver === 'all_out_attack') {
     canDefend = false;
     defenseDescription = "target in AoA (no defense)";
   }
   
   if (targetCombatant.statusEffects.includes('defending')) {
-    defenseMod += 1;
     defenseDescription += defenseDescription === "normal" ? "defensive (+1)" : " + defensive (+1)";
   }
 
-  const targetPosture = getPostureModifiers(targetCombatant.posture);
-  const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
-  if (postureDefBonus !== 0) {
-    defenseMod += postureDefBonus;
-    const sign = postureDefBonus > 0 ? '+' : '';
-    defenseDescription += defenseDescription === "normal" 
-      ? `${targetCombatant.posture} (${sign}${postureDefBonus})` 
-      : ` + ${targetCombatant.posture} (${sign}${postureDefBonus})`;
-  }
-
-  const defenseOptions = getDefenseOptions(targetCharacter, targetCharacter.derived.dodge);
-  const targetWeapon = targetCharacter.equipment.find(e => e.type === 'melee');
-  const targetShield = targetCharacter.equipment.find(e => e.type === 'shield');
-  const inCloseCombat = distance === 0;
-  const ccDefMods = getCloseCombatDefenseModifiers(
-    targetWeapon?.reach,
-    targetShield?.shieldSize,
-    inCloseCombat
-  );
-  
-  let bestDefense = defenseOptions.dodge + ccDefMods.dodge;
-  let defenseUsed = "Dodge";
-  
-  if (ccDefMods.canParry && defenseOptions.parry) {
-    const parryValue = defenseOptions.parry.value + ccDefMods.parry;
-    if (parryValue > bestDefense) {
-      bestDefense = parryValue;
-      defenseUsed = `Parry (${defenseOptions.parry.weapon})`;
-    }
-  }
-  if (ccDefMods.canBlock && defenseOptions.block) {
-    const blockValue = defenseOptions.block.value + ccDefMods.block;
-    if (blockValue > bestDefense) {
-      bestDefense = blockValue;
-      defenseUsed = `Block (${defenseOptions.block.shield})`;
-    }
-  }
-  
-  const effectiveDefense = canDefend ? bestDefense + defenseMod : undefined;
-  const damageFormula = attackerCharacter.equipment[0]?.damage ?? "1d";
-  const result = resolveAttack({ skill, defense: effectiveDefense, damage: damageFormula });
-
-  let updatedCombatants = match.combatants;
+  const attackRoll = resolveAttackRoll(skill);
   const hitLocLabel = hitLocation === 'torso' ? '' : ` [${hitLocation.replace('_', ' ')}]`;
   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}${hitLocLabel} (${defenseDescription})`;
 
-  if (result.outcome === "miss") {
-    logEntry += `: Miss. ${formatRoll(result.attack, 'Skill')}`;
+  if (!attackRoll.hit) {
+    logEntry += `: Miss. ${formatRoll(attackRoll.roll, 'Skill')}`;
     sendToLobby(lobby, { 
       type: "visual_effect", 
       effect: { type: "miss", targetId: targetCombatant.playerId, position: targetCombatant.position } 
     });
-  } else if (result.outcome === "defended") {
-    logEntry += `: ${defenseUsed}! ${formatRoll(result.attack, 'Attack')} -> ${formatRoll(result.defense!, defenseUsed)}`;
-    sendToLobby(lobby, { 
-      type: "visual_effect", 
-      effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
-    });
-  } else {
-    const dmg = result.damage!;
-    let baseDamage = dmg.total;
     
+    const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
+    const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+    
+    if (remainingAttacks > 0) {
+      const updatedCombatants = match.combatants.map(c => 
+        c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+      );
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+      };
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+    } else {
+      let updated = advanceTurn({ ...match, log: [...match.log, logEntry] });
+      updated = checkVictory(updated);
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+    }
+    return;
+  }
+
+  const damageFormula = weapon?.damage ?? "1d";
+  const damageType: DamageType = weapon?.damageType ?? 'crushing';
+
+  if (attackRoll.critical || !canDefend) {
+    const dmg = rollDamage(damageFormula);
+    let baseDamage = dmg.total;
     if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
       baseDamage += 2;
     }
     
-    const damageType = weapon?.damageType ?? 'crushing';
-    const baseMultDamage = applyDamageMultiplier(baseDamage, damageType);
-    const hitLocMultiplier = getHitLocationWoundingMultiplier(hitLocation, damageType);
-    const finalDamage = Math.floor(baseMultDamage * hitLocMultiplier);
-    const rolls = dmg.rolls.join(',');
-    const mod = dmg.modifier !== 0 ? (dmg.modifier > 0 ? `+${dmg.modifier}` : `${dmg.modifier}`) : '';
-    const typeMultStr = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
-    const hitLocStr = hitLocMultiplier > 1 ? ` ${hitLocation} x${hitLocMultiplier}` : ` ${hitLocation}`;
-    const dmgDetail = typeMultStr 
-      ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${typeMultStr}${hitLocStr} = ${finalDamage})`
-      : `(${damageFormula}: [${rolls}]${mod} ${damageType}${hitLocStr} = ${finalDamage})`;
-
-    const targetMaxHP = targetCharacter.derived.hitPoints;
-    const targetHT = targetCharacter.attributes.health;
-    
-    updatedCombatants = match.combatants.map((combatant) => {
-      if (combatant.playerId !== targetCombatant.playerId) return combatant;
-      const newHP = combatant.currentHP - finalDamage;
-      const wasAboveZero = combatant.currentHP > 0;
-      const nowAtOrBelowZero = newHP <= 0;
-      
-      let effects = [...combatant.statusEffects];
-      
-      if (wasAboveZero && nowAtOrBelowZero && !effects.includes('unconscious')) {
-        const htCheck = rollHTCheck(targetHT, newHP, targetMaxHP);
-        if (!htCheck.success) {
-          effects = [...effects, 'unconscious'];
-        }
-      }
-      
-      const newShock = finalDamage > 0 ? Math.min(4, combatant.shockPenalty + finalDamage) : combatant.shockPenalty;
-      
-      return { ...combatant, currentHP: newHP, statusEffects: effects, shockPenalty: newShock };
-    });
-    
-    const updatedTarget = updatedCombatants.find(c => c.playerId === targetCombatant.playerId);
-    const fellUnconscious = updatedTarget?.statusEffects.includes('unconscious') && !targetCombatant.statusEffects.includes('unconscious');
-    
-    logEntry += `: Hit for ${finalDamage} damage ${dmgDetail}. ${formatRoll(result.attack, 'Attack')}`;
-    if (fellUnconscious) {
-      logEntry += ` ${targetCharacter.name} falls unconscious!`;
-    }
-    sendToLobby(lobby, { 
-      type: "visual_effect", 
-      effect: { type: "damage", targetId: targetCombatant.playerId, value: finalDamage, position: targetCombatant.position } 
-    });
-  }
-
-  const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-  const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
-  
-  if (remainingAttacks > 0) {
-    updatedCombatants = updatedCombatants.map(c => 
-      c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+    const result = applyDamageToTarget(
+      match, targetCombatant.playerId, baseDamage, damageFormula, 
+      damageType, hitLocation, dmg.rolls, dmg.modifier
     );
     
-    const updated: MatchState = {
-      ...match,
-      combatants: updatedCombatants,
-      log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
-    };
-    const checkedUpdate = checkVictory(updated);
-    state.matches.set(lobby.id, checkedUpdate);
-    await upsertMatch(lobby.id, checkedUpdate);
-    sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
-    if (checkedUpdate.status === 'finished') {
-      scheduleBotTurn(lobby, checkedUpdate);
+    const critStr = attackRoll.critical ? 'Critical hit! ' : '';
+    const noDefStr = !canDefend && !attackRoll.critical ? `${defenseDescription}. ` : '';
+    logEntry += `: ${critStr}${noDefStr}Hit for ${result.finalDamage} damage ${result.logEntry}. ${formatRoll(attackRoll.roll, 'Attack')}`;
+    if (result.fellUnconscious) {
+      logEntry += ` ${targetCharacter.name} falls unconscious!`;
+    }
+    
+    sendToLobby(lobby, { 
+      type: "visual_effect", 
+      effect: { type: "damage", targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
+    });
+
+    const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
+    const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+    
+    if (remainingAttacks > 0) {
+      const updatedCombatants = result.updatedCombatants.map(c => 
+        c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+      );
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+      };
+      const checkedUpdate = checkVictory(updated);
+      state.matches.set(lobby.id, checkedUpdate);
+      await upsertMatch(lobby.id, checkedUpdate);
+      sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+      if (checkedUpdate.status === 'finished') {
+        scheduleBotTurn(lobby, checkedUpdate);
+      }
+    } else {
+      let updated = advanceTurn({
+        ...match,
+        combatants: result.updatedCombatants,
+        log: [...match.log, logEntry],
+      });
+      updated = checkVictory(updated);
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+    }
+    return;
+  }
+
+  const targetPlayer = lobby.players.find(p => p.id === targetCombatant.playerId);
+  const isDefenderBot = targetPlayer?.isBot ?? false;
+
+  if (isDefenderBot) {
+    const defenseOptions = getDefenseOptions(targetCharacter, targetCharacter.derived.dodge);
+    const targetWeapon = targetCharacter.equipment.find(e => e.type === 'melee');
+    const targetShield = targetCharacter.equipment.find(e => e.type === 'shield');
+    const inCloseCombat = distance === 0;
+    const ccDefMods = getCloseCombatDefenseModifiers(
+      targetWeapon?.reach,
+      targetShield?.shieldSize,
+      inCloseCombat
+    );
+    
+    let defenseMod = 0;
+    if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
+    if (targetManeuver === 'all_out_defense') defenseMod += 2;
+    if (targetCombatant.statusEffects.includes('defending')) defenseMod += 1;
+    
+    const targetPosture = getPostureModifiers(targetCombatant.posture);
+    const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
+    defenseMod += postureDefBonus;
+    
+    let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod;
+    let defenseUsed: DefenseType = 'dodge';
+    let defenseLabel = "Dodge";
+    
+    if (ccDefMods.canParry && defenseOptions.parry) {
+      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod;
+      if (parryValue > bestDefense) {
+        bestDefense = parryValue;
+        defenseUsed = 'parry';
+        defenseLabel = `Parry (${defenseOptions.parry.weapon})`;
+      }
+    }
+    if (ccDefMods.canBlock && defenseOptions.block) {
+      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod;
+      if (blockValue > bestDefense) {
+        bestDefense = blockValue;
+        defenseUsed = 'block';
+        defenseLabel = `Block (${defenseOptions.block.shield})`;
+      }
+    }
+    
+    const shouldRetreat = !targetCombatant.retreatedThisTurn;
+    const retreatBonus = shouldRetreat ? (defenseUsed === 'dodge' ? 3 : 1) : 0;
+    const finalDefenseValue = bestDefense + retreatBonus;
+    
+    const defenseRoll = resolveDefenseRoll(finalDefenseValue);
+    
+    if (defenseRoll.defended) {
+      const retreatStr = shouldRetreat ? ' (with retreat)' : '';
+      logEntry += `: ${defenseLabel}${retreatStr}! ${formatRoll(attackRoll.roll, 'Attack')} -> ${formatRoll(defenseRoll.roll, defenseLabel)}`;
+      sendToLobby(lobby, { 
+        type: "visual_effect", 
+        effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
+      });
+      
+      let updatedCombatants = match.combatants.map(c => 
+        c.playerId === targetCombatant.playerId 
+          ? { ...c, retreatedThisTurn: shouldRetreat || c.retreatedThisTurn, defensesThisTurn: c.defensesThisTurn + 1 } 
+          : c
+      );
+      
+      const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
+      const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+      
+      if (remainingAttacks > 0) {
+        updatedCombatants = updatedCombatants.map(c => 
+          c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+        );
+        const updated: MatchState = {
+          ...match,
+          combatants: updatedCombatants,
+          log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+        };
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+      } else {
+        let updated = advanceTurn({ ...match, combatants: updatedCombatants, log: [...match.log, logEntry] });
+        updated = checkVictory(updated);
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        scheduleBotTurn(lobby, updated);
+      }
+    } else {
+      const dmg = rollDamage(damageFormula);
+      let baseDamage = dmg.total;
+      if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
+        baseDamage += 2;
+      }
+      
+      const result = applyDamageToTarget(
+        match, targetCombatant.playerId, baseDamage, damageFormula,
+        damageType, hitLocation, dmg.rolls, dmg.modifier
+      );
+      
+      logEntry += `: Hit for ${result.finalDamage} damage ${result.logEntry}. ${formatRoll(attackRoll.roll, 'Attack')} -> ${formatRoll(defenseRoll.roll, defenseLabel)} Failed`;
+      if (result.fellUnconscious) {
+        logEntry += ` ${targetCharacter.name} falls unconscious!`;
+      }
+      
+      sendToLobby(lobby, { 
+        type: "visual_effect", 
+        effect: { type: "damage", targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
+      });
+
+      const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
+      const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+      
+      if (remainingAttacks > 0) {
+        const updatedCombatants = result.updatedCombatants.map(c => 
+          c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+        );
+        const updated: MatchState = {
+          ...match,
+          combatants: updatedCombatants,
+          log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+        };
+        const checkedUpdate = checkVictory(updated);
+        state.matches.set(lobby.id, checkedUpdate);
+        await upsertMatch(lobby.id, checkedUpdate);
+        sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+        if (checkedUpdate.status === 'finished') {
+          scheduleBotTurn(lobby, checkedUpdate);
+        }
+      } else {
+        let updated = advanceTurn({
+          ...match,
+          combatants: result.updatedCombatants,
+          log: [...match.log, logEntry],
+        });
+        updated = checkVictory(updated);
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        scheduleBotTurn(lobby, updated);
+      }
+    }
+    return;
+  }
+
+  const pendingDefense: PendingDefense = {
+    attackerId: player.id,
+    defenderId: targetCombatant.playerId,
+    attackRoll: attackRoll.roll.roll,
+    attackMargin: attackRoll.roll.margin,
+    hitLocation,
+    weapon: weapon?.name ?? 'Unarmed',
+    damage: damageFormula,
+    damageType,
+    deceptivePenalty: 0,
+    timestamp: Date.now(),
+  };
+
+  logEntry += `: ${formatRoll(attackRoll.roll, 'Attack')} - awaiting defense...`;
+
+  const updated: MatchState = {
+    ...match,
+    pendingDefense,
+    log: [...match.log, logEntry],
+  };
+  
+  state.matches.set(lobby.id, updated);
+  await upsertMatch(lobby.id, updated);
+  sendToLobby(lobby, { type: "match_state", state: updated });
+  
+  scheduleDefenseTimeout(lobby.id, pendingDefense, actorCombatant, attackerManeuver);
+};
+
+const defenseTimeouts = new Map<string, NodeJS.Timeout>();
+
+const scheduleDefenseTimeout = (
+  lobbyId: string,
+  pendingDefense: PendingDefense,
+  attackerCombatant: ReturnType<typeof getCombatantByPlayerId>,
+  attackerManeuver: string | null
+) => {
+  const existingTimer = defenseTimeouts.get(lobbyId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  
+  const timer = setTimeout(async () => {
+    defenseTimeouts.delete(lobbyId);
+    
+    const lobby = state.lobbies.get(lobbyId);
+    const match = state.matches.get(lobbyId);
+    if (!lobby || !match || !match.pendingDefense) return;
+    
+    await resolveDefenseChoice(lobby, match, {
+      type: 'defend',
+      defenseType: 'dodge',
+      retreat: false,
+      dodgeAndDrop: false,
+    });
+  }, DEFENSE_TIMEOUT_MS);
+  
+  defenseTimeouts.set(lobbyId, timer);
+};
+
+const resolveDefenseChoice = async (
+  lobby: Lobby,
+  match: MatchState,
+  choice: { type: 'defend'; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }
+): Promise<void> => {
+  const pending = match.pendingDefense;
+  if (!pending) return;
+  
+  const existingTimer = defenseTimeouts.get(lobby.id);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    defenseTimeouts.delete(lobby.id);
+  }
+  
+  const defenderCombatant = match.combatants.find(c => c.playerId === pending.defenderId);
+  const attackerCombatant = match.combatants.find(c => c.playerId === pending.attackerId);
+  const defenderCharacter = match.characters.find(c => c.id === defenderCombatant?.characterId);
+  const attackerCharacter = match.characters.find(c => c.id === attackerCombatant?.characterId);
+  
+  if (!defenderCombatant || !attackerCombatant || !defenderCharacter || !attackerCharacter) return;
+
+  if (choice.defenseType === 'none') {
+    const dmg = rollDamage(pending.damage);
+    let baseDamage = dmg.total;
+    if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
+      baseDamage += 2;
+    }
+    
+    const result = applyDamageToTarget(
+      match, pending.defenderId, baseDamage, pending.damage,
+      pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
+    );
+    
+    const logEntry = `${defenderCharacter.name} does not defend: Hit for ${result.finalDamage} damage ${result.logEntry}${result.fellUnconscious ? ` ${defenderCharacter.name} falls unconscious!` : ''}`;
+    
+    sendToLobby(lobby, { 
+      type: "visual_effect", 
+      effect: { type: "damage", targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
+    });
+
+    const isDoubleAttack = attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'double';
+    const remainingAttacks = isDoubleAttack ? attackerCombatant.attacksRemaining - 1 : 0;
+    
+    if (remainingAttacks > 0) {
+      const updatedCombatants = result.updatedCombatants.map(c => 
+        c.playerId === pending.attackerId ? { ...c, attacksRemaining: remainingAttacks } : c
+      );
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+      };
+      const checkedUpdate = checkVictory(updated);
+      state.matches.set(lobby.id, checkedUpdate);
+      await upsertMatch(lobby.id, checkedUpdate);
+      sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+    } else {
+      let updated = advanceTurn({
+        ...match,
+        combatants: result.updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry],
+      });
+      updated = checkVictory(updated);
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+    }
+    return;
+  }
+
+  const defenseOptions = getDefenseOptions(defenderCharacter, defenderCharacter.derived.dodge);
+  const distance = calculateHexDistance(attackerCombatant.position, defenderCombatant.position);
+  const inCloseCombat = distance === 0;
+  const defenderWeapon = defenderCharacter.equipment.find(e => e.type === 'melee');
+  const defenderShield = defenderCharacter.equipment.find(e => e.type === 'shield');
+  const ccDefMods = getCloseCombatDefenseModifiers(
+    defenderWeapon?.reach,
+    defenderShield?.shieldSize,
+    inCloseCombat
+  );
+  
+  let baseDefense = 0;
+  let defenseLabel = '';
+  
+  switch (choice.defenseType) {
+    case 'dodge':
+      baseDefense = defenseOptions.dodge + ccDefMods.dodge;
+      defenseLabel = 'Dodge';
+      break;
+    case 'parry':
+      if (!defenseOptions.parry || !ccDefMods.canParry) {
+        baseDefense = 3;
+        defenseLabel = 'Parry (unavailable)';
+      } else {
+        baseDefense = defenseOptions.parry.value + ccDefMods.parry;
+        defenseLabel = `Parry (${defenseOptions.parry.weapon})`;
+      }
+      break;
+    case 'block':
+      if (!defenseOptions.block || !ccDefMods.canBlock) {
+        baseDefense = 3;
+        defenseLabel = 'Block (unavailable)';
+      } else {
+        baseDefense = defenseOptions.block.value + ccDefMods.block;
+        defenseLabel = `Block (${defenseOptions.block.shield})`;
+      }
+      break;
+  }
+  
+  const attackerPos = attackerCombatant.position;
+  const defenderPos = defenderCombatant.position;
+  const attackDirection = calculateFacing(defenderPos, attackerPos);
+  const relativeDir = (attackDirection - defenderCombatant.facing + 6) % 6;
+  
+  let defenseMod = 0;
+  if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
+  if (defenderCombatant.maneuver === 'all_out_defense') defenseMod += 2;
+  if (defenderCombatant.statusEffects.includes('defending')) defenseMod += 1;
+  
+  const isRanged = attackerCharacter.equipment[0]?.type === 'ranged';
+  const defenderPosture = getPostureModifiers(defenderCombatant.posture);
+  defenseMod += isRanged ? defenderPosture.defenseVsRanged : defenderPosture.defenseVsMelee;
+  
+  const canRetreat = choice.retreat && !defenderCombatant.retreatedThisTurn;
+  
+  const finalDefenseValue = calculateDefenseValue(baseDefense, {
+    retreat: canRetreat,
+    dodgeAndDrop: choice.dodgeAndDrop && choice.defenseType === 'dodge',
+    inCloseCombat,
+    defensesThisTurn: defenderCombatant.defensesThisTurn,
+    deceptivePenalty: pending.deceptivePenalty,
+    postureModifier: defenseMod,
+    defenseType: choice.defenseType,
+  });
+  
+  const defenseRoll = resolveDefenseRoll(finalDefenseValue);
+  
+  if (defenseRoll.defended) {
+    const retreatStr = canRetreat ? ' (retreat)' : '';
+    const dropStr = choice.dodgeAndDrop ? ' (drop)' : '';
+    const logEntry = `${defenderCharacter.name} defends with ${defenseLabel}${retreatStr}${dropStr}: ${formatRoll(defenseRoll.roll, defenseLabel)} Success!`;
+    
+    sendToLobby(lobby, { 
+      type: "visual_effect", 
+      effect: { type: "defend", targetId: pending.defenderId, position: defenderCombatant.position } 
+    });
+    
+    let updatedCombatants = match.combatants.map(c => {
+      if (c.playerId !== pending.defenderId) return c;
+      return { 
+        ...c, 
+        retreatedThisTurn: canRetreat || c.retreatedThisTurn, 
+        defensesThisTurn: c.defensesThisTurn + 1,
+        posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
+      };
+    });
+    
+    const isDoubleAttack = attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'double';
+    const remainingAttacks = isDoubleAttack ? attackerCombatant.attacksRemaining - 1 : 0;
+    
+    if (remainingAttacks > 0) {
+      updatedCombatants = updatedCombatants.map(c => 
+        c.playerId === pending.attackerId ? { ...c, attacksRemaining: remainingAttacks } : c
+      );
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+      };
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+    } else {
+      let updated = advanceTurn({ ...match, combatants: updatedCombatants, pendingDefense: undefined, log: [...match.log, logEntry] });
+      updated = checkVictory(updated);
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
     }
   } else {
-    let updated = advanceTurn({
-      ...match,
-      combatants: updatedCombatants,
-      log: [...match.log, logEntry],
+    const dmg = rollDamage(pending.damage);
+    let baseDamage = dmg.total;
+    if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
+      baseDamage += 2;
+    }
+    
+    const result = applyDamageToTarget(
+      match, pending.defenderId, baseDamage, pending.damage,
+      pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
+    );
+    
+    const logEntry = `${defenderCharacter.name} fails ${defenseLabel}: ${formatRoll(defenseRoll.roll, defenseLabel)} Failed. Hit for ${result.finalDamage} damage ${result.logEntry}${result.fellUnconscious ? ` ${defenderCharacter.name} falls unconscious!` : ''}`;
+    
+    sendToLobby(lobby, { 
+      type: "visual_effect", 
+      effect: { type: "damage", targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
-    updated = checkVictory(updated);
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+
+    let updatedCombatants = result.updatedCombatants.map(c => {
+      if (c.playerId !== pending.defenderId) return c;
+      return { 
+        ...c, 
+        defensesThisTurn: c.defensesThisTurn + 1,
+        posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
+      };
+    });
+
+    const isDoubleAttack = attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'double';
+    const remainingAttacks = isDoubleAttack ? attackerCombatant.attacksRemaining - 1 : 0;
+    
+    if (remainingAttacks > 0) {
+      updatedCombatants = updatedCombatants.map(c => 
+        c.playerId === pending.attackerId ? { ...c, attacksRemaining: remainingAttacks } : c
+      );
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+      };
+      const checkedUpdate = checkVictory(updated);
+      state.matches.set(lobby.id, checkedUpdate);
+      await upsertMatch(lobby.id, checkedUpdate);
+      sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+    } else {
+      let updated = advanceTurn({
+        ...match,
+        combatants: updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry],
+      });
+      updated = checkVictory(updated);
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+    }
   }
 };
 
