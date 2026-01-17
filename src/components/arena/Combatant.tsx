@@ -114,8 +114,11 @@ function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; 
   )
 }
 
-const WALK_THRESHOLD = 0.01
-const RUN_THRESHOLD = 0.5
+const IDLE_THRESHOLD = 0.05
+const WALK_TO_RUN_DISTANCE = 2.0
+const RUN_TO_WALK_DISTANCE = 1.0
+const WALK_SPEED_MULTIPLIER = 0.5
+const ROTATION_SPEED = 8
 
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
   const emissive = isSelected ? '#ffff00' : '#000000'
@@ -126,33 +129,50 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const currentPos = useRef(new THREE.Vector3(targetX, 0, targetZ))
   const currentRot = useRef(targetRotation)
   const [animationState, setAnimationState] = useState<AnimationState>('idle')
+  const wasMovingRef = useRef(false)
+
+  const basicMove = character?.derived.basicMove ?? 5
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
 
-    const lerpFactor = 1 - Math.pow(0.001, delta)
+    const distanceToTarget = Math.sqrt(
+      Math.pow(targetX - currentPos.current.x, 2) + 
+      Math.pow(targetZ - currentPos.current.z, 2)
+    )
 
-    const prevX = currentPos.current.x
-    const prevZ = currentPos.current.z
+    let newState: AnimationState
+    let moveSpeed: number
 
-    currentPos.current.x = THREE.MathUtils.lerp(currentPos.current.x, targetX, lerpFactor)
-    currentPos.current.z = THREE.MathUtils.lerp(currentPos.current.z, targetZ, lerpFactor)
-
-    const moveSpeed = Math.sqrt(
-      Math.pow(currentPos.current.x - prevX, 2) + 
-      Math.pow(currentPos.current.z - prevZ, 2)
-    ) / delta
-
-    let newState: AnimationState = 'idle'
-    if (moveSpeed > RUN_THRESHOLD) newState = 'run'
-    else if (moveSpeed > WALK_THRESHOLD) newState = 'walk'
+    if (distanceToTarget < IDLE_THRESHOLD) {
+      newState = 'idle'
+      moveSpeed = 0
+      wasMovingRef.current = false
+    } else if (!wasMovingRef.current || distanceToTarget < RUN_TO_WALK_DISTANCE) {
+      newState = 'walk'
+      moveSpeed = basicMove * WALK_SPEED_MULTIPLIER
+      wasMovingRef.current = true
+    } else if (distanceToTarget > WALK_TO_RUN_DISTANCE) {
+      newState = 'run'
+      moveSpeed = basicMove
+    } else {
+      newState = animationState === 'idle' ? 'walk' : animationState
+      moveSpeed = newState === 'run' ? basicMove : basicMove * WALK_SPEED_MULTIPLIER
+    }
     
     if (newState !== animationState) setAnimationState(newState)
+
+    if (moveSpeed > 0 && distanceToTarget > IDLE_THRESHOLD) {
+      const moveDistance = moveSpeed * delta
+      const ratio = Math.min(moveDistance / distanceToTarget, 1)
+      currentPos.current.x += (targetX - currentPos.current.x) * ratio
+      currentPos.current.z += (targetZ - currentPos.current.z) * ratio
+    }
 
     let rotDiff = targetRotation - currentRot.current
     while (rotDiff > Math.PI) rotDiff -= Math.PI * 2
     while (rotDiff < -Math.PI) rotDiff += Math.PI * 2
-    currentRot.current += rotDiff * lerpFactor
+    currentRot.current += rotDiff * Math.min(ROTATION_SPEED * delta, 1)
 
     groupRef.current.position.x = currentPos.current.x
     groupRef.current.position.z = currentPos.current.z
