@@ -91,10 +91,11 @@ const getHexColor = (
   return isAlternate ? '#1a1a1a' : '#252525'
 }
 
-const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: { 
+const HexTile = ({ q, r, color, isInteractive, onClick, onHover, onUnhover }: { 
   q: number; 
   r: number; 
   color: string; 
+  isInteractive: boolean;
   onClick: () => void;
   onHover: () => void;
   onUnhover: () => void;
@@ -104,8 +105,16 @@ const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: {
     <mesh 
       position={[x, -0.05, z]} 
       onClick={(e) => { e.stopPropagation(); onClick() }}
-      onPointerOver={(e) => { e.stopPropagation(); onHover() }}
-      onPointerOut={(e) => { e.stopPropagation(); onUnhover() }}
+      onPointerOver={(e) => { 
+        e.stopPropagation()
+        if (isInteractive) document.body.style.cursor = 'pointer'
+        onHover() 
+      }}
+      onPointerOut={(e) => { 
+        e.stopPropagation()
+        document.body.style.cursor = 'default'
+        onUnhover() 
+      }}
     >
       <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 0.1, 6]} />
       <meshStandardMaterial color={color} />
@@ -136,16 +145,27 @@ export const HexGrid = ({ radius, playerPosition, attackRange, isPlayerTurn, ene
   }, [radius])
 
   const hoverInfo = useMemo(() => {
-    if (!hoveredHex || !playerPosition || !isPlayerTurn) return null
+    if (!hoveredHex || !isPlayerTurn) return null
     
+    const isEnemy = enemyPositions.some(pos => pos.x === hoveredHex.q && pos.z === hoveredHex.r)
+    const [x, z] = hexToWorld(hoveredHex.q, hoveredHex.r)
+    
+    if (isEnemy) {
+      return { 
+        displayText: 'Click to target', 
+        color: '#ffcc00', 
+        position: [x, 0.5, z] as [number, number, number] 
+      }
+    }
+    
+    if (!playerPosition) return null
     const reachable = reachableMap.get(`${hoveredHex.q},${hoveredHex.r}`)
     const dist = hexDistance(hoveredHex.q, hoveredHex.r, playerPosition.x, playerPosition.z)
     const color = reachable ? '#44ff44' : '#ff4444'
-    const [x, z] = hexToWorld(hoveredHex.q, hoveredHex.r)
     const displayText = reachable ? `${reachable.cost}` : `${dist}`
     
     return { displayText, color, position: [x, 0.5, z] as [number, number, number] }
-  }, [hoveredHex, playerPosition, isPlayerTurn, reachableMap])
+  }, [hoveredHex, playerPosition, isPlayerTurn, reachableMap, enemyPositions])
 
   return (
     <group>
@@ -177,12 +197,16 @@ export const HexGrid = ({ radius, playerPosition, attackRange, isPlayerTurn, ene
         }
         
         const color = getHexColor(q, r, playerPosition, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, arcType, isAlternate, isHovered, reachableHex)
+        const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
+        const isReachable = reachableHex !== undefined
+        const isInteractive = isPlayerTurn && (isEnemy || isReachable)
         return (
           <HexTile 
             key={`${q},${r}`} 
             q={q} 
             r={r} 
             color={color} 
+            isInteractive={isInteractive}
             onClick={() => onHexClick(q, r)}
             onHover={() => setHoveredHex({ q, r })}
             onUnhover={() => setHoveredHex(null)}
