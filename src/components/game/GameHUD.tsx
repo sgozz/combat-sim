@@ -153,6 +153,7 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string
   { type: 'evaluate', label: 'Evaluate', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
   { type: 'wait', label: 'Wait', icon: '⏳', desc: 'Prepare to react when triggered.', key: '8' },
   { type: 'ready', label: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '9' },
+  { type: 'change_posture', label: 'Change Posture', icon: '🧎', desc: 'Rise from kneeling/prone. Use for non-free posture changes.', key: '-' },
   { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '0' },
 ]
 
@@ -416,6 +417,8 @@ export const GameActionPanel = ({
           return { text: 'Draw, sheathe, or prepare equipment.', canAttack: false, canMove: false, isStep: true, canReady: true }
         case 'wait':
           return { text: 'Set a trigger condition to interrupt enemy turn.', canAttack: false, canMove: false, isStep: false }
+        case 'change_posture':
+          return { text: 'Use Posture Controls to change posture.', canAttack: false, canMove: false, isStep: false }
         case 'do_nothing':
           return { text: 'Recover from stun or pass turn.', canAttack: false, canMove: false, isStep: false }
         default:

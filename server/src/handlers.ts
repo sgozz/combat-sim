@@ -48,6 +48,7 @@ import {
   getHitLocationPenalty,
   getHitLocationWoundingMultiplier,
   calculateEncumbrance,
+  canChangePostureFree,
 } from "../../shared/rules";
 import type { HexPosition, MovementState } from "../../shared/rules";
 import type { Lobby, PlayerRow } from "./types";
@@ -754,18 +755,38 @@ const handleCombatAction = async (
       sendMessage(socket, { type: "error", message: "Already in that posture." });
       return;
     }
+    
+    const isFreeChange = canChangePostureFree(oldPosture, newPosture);
+    
+    if (!isFreeChange && actorCombatant.maneuver !== 'change_posture') {
+      sendMessage(socket, { type: "error", message: `Changing from ${oldPosture} to ${newPosture} requires Change Posture maneuver.` });
+      return;
+    }
+    
     const updatedCombatants = match.combatants.map((c) =>
       c.playerId === player.id ? { ...c, posture: newPosture } : c
     );
-    const updated = advanceTurn({
-      ...match,
-      combatants: updatedCombatants,
-      log: [...match.log, `${player.name} changes to ${newPosture} posture.`],
-    });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    
+    if (isFreeChange) {
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        log: [...match.log, `${player.name} changes to ${newPosture} posture (free action).`],
+      };
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+    } else {
+      const updated = advanceTurn({
+        ...match,
+        combatants: updatedCombatants,
+        log: [...match.log, `${player.name} changes to ${newPosture} posture.`],
+      });
+      state.matches.set(lobby.id, updated);
+      await upsertMatch(lobby.id, updated);
+      sendToLobby(lobby, { type: "match_state", state: updated });
+      scheduleBotTurn(lobby, updated);
+    }
     return;
   }
 

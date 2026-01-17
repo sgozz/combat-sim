@@ -15,6 +15,7 @@ const MANEUVER_LABELS: Record<ManeuverType, string> = {
   'evaluate': 'Evaluate',
   'ready': 'Ready',
   'wait': 'Wait',
+  'change_posture': 'Posture',
   'do_nothing': 'Pass',
 }
 

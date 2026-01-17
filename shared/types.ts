@@ -146,6 +146,7 @@ export type ManeuverType =
   | 'evaluate'
   | 'ready'
   | 'wait'
+  | 'change_posture'
   | 'attack' 
   | 'all_out_attack' 
   | 'all_out_defense' 
