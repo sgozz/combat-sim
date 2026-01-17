@@ -82,6 +82,7 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       attacksRemaining: 1,
       retreatedThisTurn: false,
       defensesThisTurn: 0,
+      parryWeaponsUsedThisTurn: [],
       waitTrigger: null,
     };
   });

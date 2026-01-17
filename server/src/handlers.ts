@@ -1178,21 +1178,30 @@ const handleAttackAction = async (
     let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod + dodgeAodBonus;
     let defenseUsed: DefenseType = 'dodge';
     let defenseLabel = "Dodge";
+    let botParryWeaponName: string | null = null;
     
     if (ccDefMods.canParry && defenseOptions.parry) {
-      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus;
+      const parryWeapon = defenseOptions.parry.weapon;
+      const isSameWeaponParry = targetCombatant.parryWeaponsUsedThisTurn.includes(parryWeapon);
+      const sameWeaponPenalty = isSameWeaponParry ? -4 : 0;
+      const multiDefPenalty = isSameWeaponParry 
+        ? (targetCombatant.defensesThisTurn > 1 ? -(targetCombatant.defensesThisTurn - 1) : 0)
+        : -targetCombatant.defensesThisTurn;
+      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus + sameWeaponPenalty + multiDefPenalty;
       if (parryValue > bestDefense) {
         bestDefense = parryValue;
         defenseUsed = 'parry';
-        defenseLabel = `Parry (${defenseOptions.parry.weapon})`;
+        defenseLabel = `Parry (${parryWeapon})`;
+        botParryWeaponName = parryWeapon;
       }
     }
     if (ccDefMods.canBlock && defenseOptions.block) {
-      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus;
+      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus - targetCombatant.defensesThisTurn;
       if (blockValue > bestDefense) {
         bestDefense = blockValue;
         defenseUsed = 'block';
         defenseLabel = `Block (${defenseOptions.block.shield})`;
+        botParryWeaponName = null;
       }
     }
     
@@ -1212,11 +1221,19 @@ const handleAttackAction = async (
         effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
       });
       
-      let updatedCombatants = match.combatants.map(c => 
-        c.playerId === targetCombatant.playerId 
-          ? { ...c, retreatedThisTurn: canRetreat || c.retreatedThisTurn, defensesThisTurn: c.defensesThisTurn + 1, position: retreatHex ?? c.position } 
-          : c
-      );
+      let updatedCombatants = match.combatants.map(c => {
+        if (c.playerId !== targetCombatant.playerId) return c;
+        const newParryWeapons = botParryWeaponName && !c.parryWeaponsUsedThisTurn.includes(botParryWeaponName)
+          ? [...c.parryWeaponsUsedThisTurn, botParryWeaponName]
+          : c.parryWeaponsUsedThisTurn;
+        return { 
+          ...c, 
+          retreatedThisTurn: canRetreat || c.retreatedThisTurn, 
+          defensesThisTurn: c.defensesThisTurn + 1, 
+          parryWeaponsUsedThisTurn: newParryWeapons,
+          position: retreatHex ?? c.position 
+        };
+      });
       
       const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
       const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
@@ -1449,6 +1466,9 @@ const resolveDefenseChoice = async (
   let baseDefense = 0;
   let defenseLabel = '';
   
+  let parryWeaponName: string | null = null;
+  let sameWeaponParry = false;
+  
   switch (choice.defenseType) {
     case 'dodge':
       baseDefense = defenseOptions.dodge + ccDefMods.dodge;
@@ -1461,6 +1481,8 @@ const resolveDefenseChoice = async (
       } else {
         baseDefense = defenseOptions.parry.value + ccDefMods.parry;
         defenseLabel = `Parry (${defenseOptions.parry.weapon})`;
+        parryWeaponName = defenseOptions.parry.weapon;
+        sameWeaponParry = defenderCombatant.parryWeaponsUsedThisTurn.includes(parryWeaponName);
       }
       break;
     case 'block':
@@ -1506,6 +1528,7 @@ const resolveDefenseChoice = async (
     deceptivePenalty: pending.deceptivePenalty,
     postureModifier: defenseMod,
     defenseType: choice.defenseType,
+    sameWeaponParry,
   });
   
   const defenseRoll = resolveDefenseRoll(finalDefenseValue);
@@ -1527,10 +1550,14 @@ const resolveDefenseChoice = async (
     
     let updatedCombatants = match.combatants.map(c => {
       if (c.playerId !== pending.defenderId) return c;
+      const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
+        ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
+        : c.parryWeaponsUsedThisTurn;
       return { 
         ...c, 
         retreatedThisTurn: (canRetreat && retreatHex !== null) || c.retreatedThisTurn, 
         defensesThisTurn: c.defensesThisTurn + 1,
+        parryWeaponsUsedThisTurn: newParryWeapons,
         posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
         position: retreatHex ?? c.position,
       };
@@ -1581,9 +1608,13 @@ const resolveDefenseChoice = async (
 
     let updatedCombatants = result.updatedCombatants.map(c => {
       if (c.playerId !== pending.defenderId) return c;
+      const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
+        ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
+        : c.parryWeaponsUsedThisTurn;
       return { 
         ...c, 
         defensesThisTurn: c.defensesThisTurn + 1,
+        parryWeaponsUsedThisTurn: newParryWeapons,
         posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
       };
     });

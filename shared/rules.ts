@@ -160,7 +160,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
       const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped');
-      return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null };
+      return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
     }
     if (c.playerId === state.activeTurnPlayerId) {
       const didAttack = c.maneuver === 'attack' || c.maneuver === 'all_out_attack' || c.maneuver === 'move_and_attack';
@@ -640,6 +640,7 @@ export const calculateDefenseValue = (
     deceptivePenalty: number;
     postureModifier: number;
     defenseType: 'dodge' | 'parry' | 'block';
+    sameWeaponParry?: boolean;
   }
 ): number => {
   let value = baseDefense;
@@ -654,7 +655,14 @@ export const calculateDefenseValue = (
   }
   
   if (options.defensesThisTurn > 0) {
-    value -= options.defensesThisTurn;
+    if (options.sameWeaponParry && options.defenseType === 'parry') {
+      value -= 4;
+      if (options.defensesThisTurn > 1) {
+        value -= (options.defensesThisTurn - 1);
+      }
+    } else {
+      value -= options.defensesThisTurn;
+    }
   }
   
   value -= options.deceptivePenalty;

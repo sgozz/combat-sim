@@ -230,6 +230,7 @@ export type CombatantState = {
   attacksRemaining: number;
   retreatedThisTurn: boolean;
   defensesThisTurn: number;
+  parryWeaponsUsedThisTurn: string[]; // Track weapons used for parry (same-weapon = -4 penalty)
   waitTrigger: WaitTrigger | null;
 };
 

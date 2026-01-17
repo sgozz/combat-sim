@@ -63,8 +63,11 @@ export default function DefenseModal({
   }, [character]);
 
   // Calculate final values based on current modifiers
-  const getFinalValue = (type: Exclude<DefenseType, 'none'>, base: number) => {
+  const getFinalValue = (type: Exclude<DefenseType, 'none'>, base: number, weaponName?: string) => {
     const postureMods = getPostureModifiers(combatant.posture);
+    const sameWeaponParry = type === 'parry' && weaponName 
+      ? (combatant.parryWeaponsUsedThisTurn ?? []).includes(weaponName)
+      : false;
     
     return calculateDefenseValue(base, {
       retreat,
@@ -73,12 +76,13 @@ export default function DefenseModal({
       defensesThisTurn: combatant.defensesThisTurn,
       deceptivePenalty: pendingDefense.deceptivePenalty,
       postureModifier: postureMods.defenseVsMelee,
-      defenseType: type
+      defenseType: type,
+      sameWeaponParry
     });
   };
 
   const dodgeValue = getFinalValue('dodge', baseOptions.dodge);
-  const parryValue = baseOptions.parry ? getFinalValue('parry', baseOptions.parry.value) : 0;
+  const parryValue = baseOptions.parry ? getFinalValue('parry', baseOptions.parry.value, baseOptions.parry.weapon) : 0;
   const blockValue = baseOptions.block ? getFinalValue('block', baseOptions.block.value) : 0;
 
   const handleDefend = (type: DefenseType) => {
@@ -218,11 +222,14 @@ export default function DefenseModal({
             </label>
           </div>
 
-          {combatant.defensesThisTurn > 0 && (
-            <div className="defense-penalty-alert">
-              ⚠️ Multiple Defenses: -{combatant.defensesThisTurn} cumulative penalty applied
-            </div>
-          )}
+        {combatant.defensesThisTurn > 0 && (
+          <div className="defense-penalty-alert">
+            ⚠️ Multiple Defenses: -{combatant.defensesThisTurn} cumulative penalty applied
+            {baseOptions.parry && combatant.parryWeaponsUsedThisTurn?.includes(baseOptions.parry.weapon) && (
+              <span className="same-weapon-warning"> (Parry with same weapon: -4 instead of -1)</span>
+            )}
+          </div>
+        )}
         </div>
 
         <div className="defense-footer">
