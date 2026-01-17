@@ -315,6 +315,64 @@ export const getPostureModifiers = (posture: Posture): PostureModifiers => {
   }
 };
 
+/**
+ * GURPS B364: Posture change rules
+ * - Dropping down (standing→crouch/kneel, crouch→kneel/prone, kneel→prone) is free (step)
+ * - Standing ↔ Crouching is free (step)
+ * - Rising from kneeling/prone requires Change Posture maneuver
+ */
+export type PostureChangeInfo = {
+  from: Posture;
+  to: Posture;
+  isFree: boolean;
+  description: string;
+};
+
+const POSTURE_ORDER: Posture[] = ['standing', 'crouching', 'kneeling', 'prone'];
+
+/**
+ * Check if a posture change can be done as a free action (step)
+ * Free changes: dropping down one level OR standing ↔ crouching
+ */
+export const canChangePostureFree = (from: Posture, to: Posture): boolean => {
+  if (from === to) return true;
+  
+  const fromIndex = POSTURE_ORDER.indexOf(from);
+  const toIndex = POSTURE_ORDER.indexOf(to);
+  
+  // Special case: standing ↔ crouching is always free
+  if ((from === 'standing' && to === 'crouching') || 
+      (from === 'crouching' && to === 'standing')) {
+    return true;
+  }
+  
+  // Dropping down one level is free (higher index = lower posture)
+  if (toIndex === fromIndex + 1) {
+    return true;
+  }
+  
+  // Everything else requires Change Posture maneuver
+  return false;
+};
+
+/**
+ * Get all valid posture changes from the current posture with free/maneuver info
+ */
+export const getValidPostureChanges = (current: Posture): PostureChangeInfo[] => {
+  const postures: Posture[] = ['standing', 'crouching', 'kneeling', 'prone'];
+  
+  return postures
+    .filter(p => p !== current)
+    .map(to => ({
+      from: current,
+      to,
+      isFree: canChangePostureFree(current, to),
+      description: canChangePostureFree(current, to) 
+        ? 'Free (step)' 
+        : 'Requires Change Posture'
+    }));
+};
+
 export type HTCheckResult = {
   roll: number;
   target: number;

@@ -3,6 +3,7 @@ import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
 import HitLocationPicker from '../ui/HitLocationPicker'
 import { ReadyPanel } from '../ui/ReadyPanel'
+import { PostureControls } from '../ui/PostureControls'
 import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant, ReadyAction, EquipmentSlot } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
@@ -23,12 +24,16 @@ type GamePanelProps = {
   player: Player | null
   lobbyPlayers: Player[]
   lobbyId: string | null
+  isMyTurn: boolean
+  onAction: (action: string, payload?: CombatActionPayload) => void
 }
 
 export const GameStatusPanel = ({ 
   matchState, 
   player, 
-  lobbyPlayers
+  lobbyPlayers,
+  isMyTurn,
+  onAction
 }: GamePanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const activeCombatant = matchState?.combatants.find((combatant) => combatant.playerId === player?.id) ?? null
@@ -84,6 +89,14 @@ export const GameStatusPanel = ({
                 <span className="shock-label">Shock</span>
               </div>
             )}
+            
+            <PostureControls
+              currentPosture={activeCombatant.posture}
+              basicMove={character.derived.basicMove}
+              basicDodge={character.derived.dodge}
+              isMyTurn={isMyTurn}
+              onChangePosture={(payload) => onAction('action', payload)}
+            />
           </div>
         )}
 

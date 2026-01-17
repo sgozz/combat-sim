@@ -126,6 +126,8 @@ export const GameScreen = ({
         player={player}
         lobbyPlayers={lobbyPlayers}
         lobbyId={lobbyId}
+        isMyTurn={isPlayerTurn}
+        onAction={onAction}
       />
 
       <main className="canvas-container">

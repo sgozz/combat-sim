@@ -12,6 +12,8 @@ import {
   getDamageMultiplier,
   applyDamageMultiplier,
   getPostureModifiers,
+  canChangePostureFree,
+  getValidPostureChanges,
   rollHTCheck,
   parseReach,
   canAttackAtDistance,
@@ -379,6 +381,81 @@ describe('GURPS Rules', () => {
       expect(mods.defenseVsRanged).toBe(4)
       expect(mods.defenseVsMelee).toBe(-3)
       expect(mods.moveMultiplier).toBe(0)
+    })
+  })
+
+  describe('Posture Changes', () => {
+    describe('canChangePostureFree', () => {
+      it('standing to crouching is free', () => {
+        expect(canChangePostureFree('standing', 'crouching')).toBe(true)
+      })
+
+      it('crouching to standing is free', () => {
+        expect(canChangePostureFree('crouching', 'standing')).toBe(true)
+      })
+
+      it('standing to kneeling is free (dropping down one level)', () => {
+        expect(canChangePostureFree('standing', 'kneeling')).toBe(false)
+        expect(canChangePostureFree('crouching', 'kneeling')).toBe(true)
+      })
+
+      it('crouching to prone is free (dropping down one level)', () => {
+        expect(canChangePostureFree('crouching', 'prone')).toBe(false)
+        expect(canChangePostureFree('kneeling', 'prone')).toBe(true)
+      })
+
+      it('standing to prone requires Change Posture', () => {
+        expect(canChangePostureFree('standing', 'prone')).toBe(false)
+      })
+
+      it('prone to kneeling requires Change Posture', () => {
+        expect(canChangePostureFree('prone', 'kneeling')).toBe(false)
+      })
+
+      it('kneeling to standing requires Change Posture', () => {
+        expect(canChangePostureFree('kneeling', 'standing')).toBe(false)
+      })
+
+      it('prone to standing requires Change Posture', () => {
+        expect(canChangePostureFree('prone', 'standing')).toBe(false)
+      })
+
+      it('same posture is always free', () => {
+        expect(canChangePostureFree('standing', 'standing')).toBe(true)
+        expect(canChangePostureFree('prone', 'prone')).toBe(true)
+      })
+    })
+
+    describe('getValidPostureChanges', () => {
+      it('returns all other postures with free/maneuver info', () => {
+        const changes = getValidPostureChanges('standing')
+        expect(changes).toHaveLength(3)
+        
+        const toCrouching = changes.find(c => c.to === 'crouching')
+        expect(toCrouching?.isFree).toBe(true)
+        
+        const toKneeling = changes.find(c => c.to === 'kneeling')
+        expect(toKneeling?.isFree).toBe(false)
+        
+        const toProne = changes.find(c => c.to === 'prone')
+        expect(toProne?.isFree).toBe(false)
+      })
+
+      it('from prone, all rises require maneuver', () => {
+        const changes = getValidPostureChanges('prone')
+        expect(changes.every(c => !c.isFree)).toBe(true)
+      })
+
+      it('from kneeling, only prone is free', () => {
+        const changes = getValidPostureChanges('kneeling')
+        const toProne = changes.find(c => c.to === 'prone')
+        const toStanding = changes.find(c => c.to === 'standing')
+        const toCrouching = changes.find(c => c.to === 'crouching')
+        
+        expect(toProne?.isFree).toBe(true)
+        expect(toStanding?.isFree).toBe(false)
+        expect(toCrouching?.isFree).toBe(false)
+      })
     })
   })
 
