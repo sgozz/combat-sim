@@ -390,6 +390,26 @@ export const GameActionPanel = ({
             </>
           )}
 
+          {!activeCombatant?.inCloseCombatWith && (
+            <div className="facing-controls">
+              <button 
+                className="action-btn small"
+                onClick={() => onAction('turn_left', { type: 'turn_left' })}
+                title="Turn Left"
+              >
+                <span className="btn-icon">↶</span>
+              </button>
+              <span className="facing-label">Facing</span>
+              <button 
+                className="action-btn small"
+                onClick={() => onAction('turn_right', { type: 'turn_right' })}
+                title="Turn Right"
+              >
+                <span className="btn-icon">↷</span>
+              </button>
+            </div>
+          )}
+
           <button 
             className="action-btn end-turn"
             onClick={() => onAction('end_turn', { type: 'end_turn' })}

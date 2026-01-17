@@ -25,6 +25,8 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string }[] = [
   { type: 'move_and_attack', label: 'M&A', icon: '🤸' },
 ]
 
+const CLOSE_COMBAT_MANEUVERS: ManeuverType[] = ['attack', 'all_out_attack', 'all_out_defense']
+
 export const ActionBar = ({ 
   isMyTurn, 
   currentManeuver, 
@@ -53,6 +55,10 @@ export const ActionBar = ({
   const currentHP = playerCombatant?.currentHP ?? 0
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
   const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
+  const inCloseCombat = !!playerCombatant?.inCloseCombatWith
+  const availableManeuvers = inCloseCombat 
+    ? MANEUVERS.filter(m => CLOSE_COMBAT_MANEUVERS.includes(m.type))
+    : MANEUVERS
 
   if (!matchState) {
     if (inLobbyButNoMatch) {
@@ -113,27 +119,31 @@ export const ActionBar = ({
   const canAttack = currentManeuver === 'attack' || currentManeuver === 'all_out_attack' || currentManeuver === 'move_and_attack'
   const canMove = currentManeuver === 'move' || currentManeuver === 'attack' || currentManeuver === 'move_and_attack'
 
-  const selectedTarget = selectedTargetId ? matchState.combatants.find(c => c.playerId === selectedTargetId) : null
-  const selectedTargetName = selectedTarget 
-    ? matchState.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Enemy'
+  const closeCombatTargetId = inCloseCombat ? playerCombatant?.inCloseCombatWith : null
+  const effectiveTargetId = closeCombatTargetId ?? selectedTargetId
+  
+  const targetCombatant = effectiveTargetId ? matchState.combatants.find(c => c.playerId === effectiveTargetId) : null
+  const targetName = targetCombatant 
+    ? matchState.characters.find(c => c.id === targetCombatant.characterId)?.name ?? 'Enemy'
     : null
 
   const getHint = () => {
     if (!currentManeuver) return 'Select maneuver ↓'
-    if (canAttack && !selectedTargetId) return 'Tap enemy to target'
-    if (canMove && !moveTarget && !selectedTargetId) return 'Tap hex to move'
+    if (inCloseCombat && canAttack) return null
+    if (canAttack && !effectiveTargetId) return 'Tap enemy to target'
+    if (canMove && !moveTarget && !effectiveTargetId) return 'Tap hex to move'
     return null
   }
   const hint = getHint()
   
-  const canShowAttackBtn = canAttack && selectedTargetId
+  const canShowAttackBtn = canAttack && effectiveTargetId
   const canShowMoveBtn = moveTarget !== null
 
   return (
     <>
       {showManeuvers && (
         <div className="action-bar-maneuvers">
-          {MANEUVERS.map(m => (
+          {availableManeuvers.map(m => (
             <button
               key={m.type}
               className={`action-bar-maneuver-btn ${currentManeuver === m.type ? 'active' : ''}`}
@@ -164,6 +174,11 @@ export const ActionBar = ({
             <span className="action-bar-hp-text">{currentHP}/{maxHP}</span>
           </div>
         )}
+        
+        {inCloseCombat && (
+          <div className="action-bar-cc-indicator">⚔️ CC</div>
+        )}
+        
         <button 
           className={`action-bar-btn ${!currentManeuver ? 'highlight' : ''}`}
           onClick={() => setShowManeuvers(!showManeuvers)}
@@ -176,17 +191,17 @@ export const ActionBar = ({
           <div className="action-bar-hint">{hint}</div>
         )}
         
-        {canShowAttackBtn && (
+        {canShowAttackBtn && effectiveTargetId && (
           <button
             className="action-bar-btn primary"
-            onClick={() => onAction('attack', { type: 'attack', targetId: selectedTargetId })}
+            onClick={() => onAction('attack', { type: 'attack', targetId: effectiveTargetId })}
           >
             <span className="action-bar-icon">⚔️</span>
-            <span className="action-bar-label">{selectedTargetName}</span>
+            <span className="action-bar-label">{targetName}</span>
           </button>
         )}
 
-        {canShowMoveBtn && (
+        {canShowMoveBtn && !inCloseCombat && (
           <button
             className="action-bar-btn primary"
             onClick={() => onAction('move_click')}
@@ -194,6 +209,44 @@ export const ActionBar = ({
             <span className="action-bar-icon">✓</span>
             <span className="action-bar-label">Move</span>
           </button>
+        )}
+
+        {inCloseCombat && (
+          <>
+            <button
+              className="action-bar-btn"
+              onClick={() => onAction('grapple', { type: 'grapple', targetId: playerCombatant!.inCloseCombatWith!, action: 'grab' })}
+            >
+              <span className="action-bar-icon">🤼</span>
+              <span className="action-bar-label">Grapple</span>
+            </button>
+            <button
+              className="action-bar-btn warning"
+              onClick={() => onAction('exit_close_combat', { type: 'exit_close_combat' })}
+            >
+              <span className="action-bar-icon">🚪</span>
+              <span className="action-bar-label">Exit</span>
+            </button>
+          </>
+        )}
+
+        {!inCloseCombat && (
+          <div className="action-bar-facing">
+            <button
+              className="action-bar-btn small"
+              onClick={() => onAction('turn_left', { type: 'turn_left' })}
+              title="Turn Left"
+            >
+              <span className="action-bar-icon">↶</span>
+            </button>
+            <button
+              className="action-bar-btn small"
+              onClick={() => onAction('turn_right', { type: 'turn_right' })}
+              title="Turn Right"
+            >
+              <span className="action-bar-icon">↷</span>
+            </button>
+          </div>
         )}
 
         <button

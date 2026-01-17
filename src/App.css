@@ -392,6 +392,28 @@
   touch-action: manipulation;
 }
 
+.action-btn.small {
+  min-height: 36px;
+  min-width: 36px;
+  padding: 0.4rem 0.6rem;
+}
+
+.facing-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.facing-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
 /* Floating Status Overlay */
 .floating-status {
   position: absolute;
@@ -646,6 +668,39 @@
     font-size: 0.6rem;
     color: #aaa;
     font-family: monospace;
+  }
+
+  .action-bar-facing {
+    display: flex;
+    gap: 4px;
+  }
+
+  .action-bar-btn.small {
+    min-width: 36px;
+    padding: 0.4rem;
+  }
+
+  .action-bar-btn.small .action-bar-icon {
+    font-size: 1.2rem;
+  }
+
+  .action-bar-cc-indicator {
+    background: #b33;
+    color: white;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+  }
+
+  .action-bar-btn.warning {
+    background: #a50;
+    border-color: #c70;
+  }
+
+  .action-bar-btn.warning:hover {
+    background: #c70;
   }
 
   .floating-status {

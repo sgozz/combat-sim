@@ -110,6 +110,12 @@ function AppRoutes() {
     if (matchState.status === 'finished') return
     const currentCombatant = matchState.combatants.find((c) => c.playerId === player.id)
     if (!currentCombatant) return
+    
+    if (currentCombatant.inCloseCombatWith) {
+      setLogs((prev) => [...prev, 'Cannot move while in close combat. Use Exit Close Combat first.'])
+      return
+    }
+    
     const character = matchState.characters.find((c) => c.id === currentCombatant.characterId)
     const maxMove = character?.derived.basicMove ?? 5
     const distance = hexDistance(position.x, position.z, currentCombatant.position.x, currentCombatant.position.z)
@@ -200,7 +206,7 @@ function AppRoutes() {
               onCombatantClick={handleCombatantClick}
               onAction={handleGameAction}
               onPendingActionResponse={(response) => {
-                sendMessage({ type: 'action', payload: { type: 'respond_exit', response } })
+                sendMessage({ type: 'action', action: 'respond_exit', payload: { type: 'respond_exit', response } })
                 setPendingAction(null)
               }}
               onLeaveLobby={handleLeaveLobby}

@@ -17,8 +17,9 @@ type CombatToastProps = {
 
 const getToastType = (message: string): ToastType => {
   if (message.includes('killed') || message.includes('dies') || message.includes('unconscious')) return 'death'
-  if (message.includes('parries') || message.includes('blocks') || message.includes('dodges')) return 'defend'
-  if (message.includes('damage') || message.includes('hits for')) return 'damage'
+  if (message.includes('Parry') || message.includes('Block') || message.includes('Dodge')) return 'defend'
+  if (message.includes('Hit for') || message.includes('damage')) return 'damage'
+  if (message.includes('Miss')) return 'info'
   if (message.includes('attacks') || message.includes('shoots')) return 'attack'
   return 'info'
 }
@@ -47,14 +48,18 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
       const importantLogs = newLogs.filter(log => 
         log.includes('attacks') || 
         log.includes('hits') || 
+        log.includes('Hit for') ||
         log.includes('damage') ||
         log.includes('parries') ||
         log.includes('blocks') ||
         log.includes('dodges') ||
+        log.includes('Dodge') ||
+        log.includes('Parry') ||
+        log.includes('Block') ||
         log.includes('killed') ||
         log.includes('dies') ||
         log.includes('unconscious') ||
-        log.includes('misses') ||
+        log.includes('Miss') ||
         log.includes('Critical')
       )
       

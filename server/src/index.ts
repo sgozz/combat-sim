@@ -566,6 +566,15 @@ const getHexNeighbors = (q: number, r: number): GridPosition[] => {
   return directions.map((d) => ({ x: q + d.q, y: 0, z: r + d.r }));
 };
 
+const findFreeAdjacentHex = (pos: GridPosition, combatants: CombatantState[]): GridPosition | null => {
+  const neighbors = getHexNeighbors(pos.x, pos.z);
+  for (const hex of neighbors) {
+    const occupied = combatants.some(c => c.position.x === hex.x && c.position.z === hex.z);
+    if (!occupied) return hex;
+  }
+  return null;
+};
+
 const calculateFacing = (from: GridPosition, to: GridPosition): number => {
   const dq = to.x - from.x;
   const dr = to.z - from.z;
@@ -680,21 +689,32 @@ const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
 
       let updatedCombatants = currentMatch.combatants;
       let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}`;
+      
+      const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
+        `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
       if (result.outcome === "miss") {
-        logEntry += ": miss.";
+        logEntry += `: Miss. ${formatRoll(result.attack, 'Skill')}`;
       } else if (result.outcome === "defended") {
-        logEntry += ": defended.";
+        logEntry += `: Dodge! ${formatRoll(result.attack, 'Attack')} -> ${formatRoll(result.defense!, 'Dodge')}`;
       } else {
-        const baseDamage = result.damage?.total ?? 0;
+        const dmg = result.damage!;
+        const baseDamage = dmg.total;
         const damageType = weapon?.damageType ?? 'crushing';
         const finalDamage = applyDamageMultiplier(baseDamage, damageType);
+        const rolls = dmg.rolls.join(',');
+        const mod = dmg.modifier !== 0 ? (dmg.modifier > 0 ? `+${dmg.modifier}` : `${dmg.modifier}`) : '';
+        const multiplier = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
+        const dmgDetail = multiplier 
+          ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${multiplier} = ${finalDamage})`
+          : `(${damageFormula}: [${rolls}]${mod} ${damageType})`;
+        
         updatedCombatants = currentMatch.combatants.map((combatant) => {
           if (combatant.playerId !== target.playerId) return combatant;
           const nextHp = Math.max(combatant.currentHP - finalDamage, 0);
           return { ...combatant, currentHP: nextHp };
         });
-        logEntry += `: hit for ${finalDamage} ${damageType} damage.`;
+        logEntry += `: Hit for ${finalDamage} damage ${dmgDetail}. ${formatRoll(result.attack, 'Attack')}`;
       }
 
       let updated = advanceTurn({
@@ -921,13 +941,82 @@ const startServer = async () => {
             sendMessage(socket, { type: "error", message: "Match is over." });
             return;
           }
-          if (match.activeTurnPlayerId !== player.id) {
-            sendMessage(socket, { type: "error", message: "Not your turn." });
-            return;
-          }
+          
           const payload = message.payload as CombatActionPayload | undefined;
           if (!payload || payload.type !== message.action) {
             sendMessage(socket, { type: "error", message: "Invalid action payload." });
+            return;
+          }
+          
+          if (payload.type === "respond_exit") {
+            const actorCombatant = getCombatantByPlayerId(match, player.id);
+            if (!actorCombatant) {
+              sendMessage(socket, { type: "error", message: "Combatant not found." });
+              return;
+            }
+            
+            const pendingExit = match.combatants.find(c => c.inCloseCombatWith === player.id);
+            if (!pendingExit) {
+              sendMessage(socket, { type: "error", message: "No pending exit." });
+              return;
+            }
+            
+            const actorChar = getCharacterById(match, actorCombatant.characterId);
+            const exitingChar = getCharacterById(match, pendingExit.characterId);
+            const exitHex = findFreeAdjacentHex(pendingExit.position, match.combatants);
+            
+            if (payload.response === 'let_go') {
+              const updatedCombatants = match.combatants.map(c => {
+                if (c.playerId === pendingExit.playerId) {
+                  return { ...c, inCloseCombatWith: null, closeCombatPosition: null, position: exitHex ?? c.position };
+                }
+                if (c.playerId === player.id) {
+                  return { ...c, inCloseCombatWith: null, closeCombatPosition: null };
+                }
+                return c;
+              });
+              
+              const updated: MatchState = {
+                ...match,
+                combatants: updatedCombatants,
+                log: [...match.log, `${actorChar?.name} lets ${exitingChar?.name} exit close combat.`],
+              };
+              matches.set(lobby.id, updated);
+              await upsertMatch(lobby.id, updated);
+              sendToLobby(lobby, { type: "match_state", state: updated });
+            } else if (payload.response === 'follow') {
+              const updated: MatchState = {
+                ...match,
+                log: [...match.log, `${actorChar?.name} follows ${exitingChar?.name}, maintaining close combat.`],
+              };
+              matches.set(lobby.id, updated);
+              await upsertMatch(lobby.id, updated);
+              sendToLobby(lobby, { type: "match_state", state: updated });
+            } else if (payload.response === 'attack') {
+              const updatedCombatants = match.combatants.map(c => {
+                if (c.playerId === player.id) {
+                  return { ...c, usedReaction: true, inCloseCombatWith: null, closeCombatPosition: null };
+                }
+                if (c.playerId === pendingExit.playerId) {
+                  return { ...c, inCloseCombatWith: null, closeCombatPosition: null, position: exitHex ?? c.position };
+                }
+                return c;
+              });
+              
+              const updated: MatchState = {
+                ...match,
+                combatants: updatedCombatants,
+                log: [...match.log, `${actorChar?.name} makes a free attack as ${exitingChar?.name} exits close combat!`],
+              };
+              matches.set(lobby.id, updated);
+              await upsertMatch(lobby.id, updated);
+              sendToLobby(lobby, { type: "match_state", state: updated });
+            }
+            return;
+          }
+          
+          if (match.activeTurnPlayerId !== player.id) {
+            sendMessage(socket, { type: "error", message: "Not your turn." });
             return;
           }
           const actorCombatant = getCombatantByPlayerId(match, player.id);
@@ -984,6 +1073,10 @@ const startServer = async () => {
           }
 
           if (payload.type === "turn_left" || payload.type === "turn_right") {
+            if (actorCombatant.inCloseCombatWith) {
+              sendMessage(socket, { type: "error", message: "Cannot turn while in close combat." });
+              return;
+            }
             const delta = payload.type === "turn_right" ? 1 : -1;
             const newFacing = (actorCombatant.facing + delta + 6) % 6;
             const updatedCombatants = match.combatants.map((c) =>
@@ -1064,11 +1157,27 @@ const startServer = async () => {
           }
 
           if (payload.type === "move") {
+            if (actorCombatant.inCloseCombatWith) {
+              sendMessage(socket, { type: "error", message: "Cannot move while in close combat. Use Exit Close Combat first." });
+              return;
+            }
+            
             const actorCharacter = getCharacterById(match, actorCombatant.characterId);
             if (!actorCharacter) {
               sendMessage(socket, { type: "error", message: "Character not found." });
               return;
             }
+            
+            const occupant = match.combatants.find(c => 
+              c.playerId !== player.id && 
+              c.position.x === payload.position.x && 
+              c.position.z === payload.position.z
+            );
+            if (occupant) {
+              sendMessage(socket, { type: "error", message: "Hex is occupied. Use Enter Close Combat to share hex." });
+              return;
+            }
+            
             const distance = calculateHexDistance(actorCombatant.position, payload.position);
             const postureMods = getPostureModifiers(actorCombatant.posture);
             
@@ -1152,6 +1261,11 @@ const startServer = async () => {
           }
 
           if (payload.type === "attack") {
+            if (actorCombatant.inCloseCombatWith && actorCombatant.inCloseCombatWith !== payload.targetId) {
+              sendMessage(socket, { type: "error", message: "In close combat - can only attack your close combat opponent." });
+              return;
+            }
+            
             const targetCombatant = match.combatants.find(
               (combatant) => combatant.playerId === payload.targetId
             );
@@ -1369,9 +1483,19 @@ const startServer = async () => {
           }
 
           if (payload.type === "enter_close_combat") {
+            if (actorCombatant.inCloseCombatWith) {
+              sendMessage(socket, { type: "error", message: "Already in close combat." });
+              return;
+            }
+            
             const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
             if (!targetCombatant) {
               sendMessage(socket, { type: "error", message: "Target not found." });
+              return;
+            }
+            
+            if (targetCombatant.inCloseCombatWith && targetCombatant.inCloseCombatWith !== player.id) {
+              sendMessage(socket, { type: "error", message: "Target is already in close combat with someone else." });
               return;
             }
             
@@ -1393,6 +1517,9 @@ const startServer = async () => {
             
             const contest = quickContest(attackerSkill, defenderSkill);
             
+            const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
+              `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
+            
             if (contest.attackerWins) {
               const updatedCombatants = match.combatants.map(c => {
                 if (c.playerId === player.id) {
@@ -1404,10 +1531,12 @@ const startServer = async () => {
                 return c;
               });
               
+              const logEntry = `${attackerCharacter.name} enters close combat with ${targetCharacter.name}! ${formatRoll(contest.attacker, 'Skill')} vs ${formatRoll(contest.defender, 'Resist')}`;
+              
               const updated = advanceTurn({
                 ...match,
                 combatants: updatedCombatants,
-                log: [...match.log, `${attackerCharacter.name} enters close combat with ${targetCharacter.name}!`],
+                log: [...match.log, logEntry],
               });
               matches.set(lobby.id, updated);
               await upsertMatch(lobby.id, updated);
@@ -1418,9 +1547,11 @@ const startServer = async () => {
               sendToLobby(lobby, { type: "match_state", state: updated });
               scheduleBotTurn(lobby, updated);
             } else {
+              const logEntry = `${attackerCharacter.name} fails to enter close combat with ${targetCharacter.name}. ${formatRoll(contest.attacker, 'Skill')} vs ${formatRoll(contest.defender, 'Resist')}`;
+              
               const updated = advanceTurn({
                 ...match,
-                log: [...match.log, `${attackerCharacter.name} fails to enter close combat with ${targetCharacter.name}.`],
+                log: [...match.log, logEntry],
               });
               matches.set(lobby.id, updated);
               await upsertMatch(lobby.id, updated);
@@ -1438,9 +1569,19 @@ const startServer = async () => {
             
             const opponentId = actorCombatant.inCloseCombatWith;
             const opponent = match.combatants.find(c => c.playerId === opponentId);
+            
+            const exitHex = findFreeAdjacentHex(actorCombatant.position, match.combatants);
+            if (!exitHex) {
+              sendMessage(socket, { type: "error", message: "No free hex to exit to." });
+              return;
+            }
+            
             if (!opponent || opponent.usedReaction) {
               const updatedCombatants = match.combatants.map(c => {
-                if (c.playerId === player.id || c.playerId === opponentId) {
+                if (c.playerId === player.id) {
+                  return { ...c, inCloseCombatWith: null, closeCombatPosition: null, position: exitHex };
+                }
+                if (c.playerId === opponentId) {
                   return { ...c, inCloseCombatWith: null, closeCombatPosition: null };
                 }
                 return c;
@@ -1457,67 +1598,35 @@ const startServer = async () => {
               sendToLobby(lobby, { type: "match_state", state: updated });
               scheduleBotTurn(lobby, updated);
             } else {
-              sendToLobby(lobby, { 
-                type: "pending_action", 
-                action: { type: 'exit_close_combat_request', exitingId: player.id, targetId: opponentId }
-              });
-            }
-            return;
-          }
-
-          if (payload.type === "respond_exit") {
-            const pendingExit = match.combatants.find(c => c.inCloseCombatWith === player.id);
-            if (!pendingExit) {
-              sendMessage(socket, { type: "error", message: "No pending exit." });
-              return;
-            }
-            
-            const actorChar = getCharacterById(match, actorCombatant.characterId);
-            const exitingChar = getCharacterById(match, pendingExit.characterId);
-            
-            if (payload.response === 'let_go') {
-              const updatedCombatants = match.combatants.map(c => {
-                if (c.playerId === pendingExit.playerId || c.playerId === player.id) {
-                  return { ...c, inCloseCombatWith: null, closeCombatPosition: null };
-                }
-                return c;
-              });
-              
-              const updated: MatchState = {
-                ...match,
-                combatants: updatedCombatants,
-                log: [...match.log, `${actorChar?.name} lets ${exitingChar?.name} exit close combat.`],
-              };
-              matches.set(lobby.id, updated);
-              await upsertMatch(lobby.id, updated);
-              sendToLobby(lobby, { type: "match_state", state: updated });
-            } else if (payload.response === 'follow') {
-              const updated: MatchState = {
-                ...match,
-                log: [...match.log, `${actorChar?.name} follows ${exitingChar?.name}, maintaining close combat.`],
-              };
-              matches.set(lobby.id, updated);
-              await upsertMatch(lobby.id, updated);
-              sendToLobby(lobby, { type: "match_state", state: updated });
-            } else if (payload.response === 'attack') {
-              const updatedCombatants = match.combatants.map(c => {
-                if (c.playerId === player.id) {
-                  return { ...c, usedReaction: true };
-                }
-                if (c.playerId === pendingExit.playerId || c.playerId === player.id) {
-                  return { ...c, inCloseCombatWith: null, closeCombatPosition: null };
-                }
-                return c;
-              });
-              
-              const updated: MatchState = {
-                ...match,
-                combatants: updatedCombatants,
-                log: [...match.log, `${actorChar?.name} makes a free attack as ${exitingChar?.name} exits close combat!`],
-              };
-              matches.set(lobby.id, updated);
-              await upsertMatch(lobby.id, updated);
-              sendToLobby(lobby, { type: "match_state", state: updated });
+              const opponentPlayer = match.players.find(p => p.id === opponentId);
+              if (opponentPlayer?.isBot) {
+                const updatedCombatants = match.combatants.map(c => {
+                  if (c.playerId === player.id) {
+                    return { ...c, inCloseCombatWith: null, closeCombatPosition: null, position: exitHex };
+                  }
+                  if (c.playerId === opponentId) {
+                    return { ...c, inCloseCombatWith: null, closeCombatPosition: null };
+                  }
+                  return c;
+                });
+                
+                const actorChar = getCharacterById(match, actorCombatant.characterId);
+                const opponentChar = getCharacterById(match, opponent.characterId);
+                const updated = advanceTurn({
+                  ...match,
+                  combatants: updatedCombatants,
+                  log: [...match.log, `${actorChar?.name} exits close combat. ${opponentChar?.name} lets them go.`],
+                });
+                matches.set(lobby.id, updated);
+                await upsertMatch(lobby.id, updated);
+                sendToLobby(lobby, { type: "match_state", state: updated });
+                scheduleBotTurn(lobby, updated);
+              } else {
+                sendToLobby(lobby, { 
+                  type: "pending_action", 
+                  action: { type: 'exit_close_combat_request', exitingId: player.id, targetId: opponentId }
+                });
+              }
             }
             return;
           }
@@ -1543,12 +1652,16 @@ const startServer = async () => {
             }
             
             if (payload.action === 'grab') {
+              const wrestlingSkill = attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.dexterity;
               const grappleResult = resolveGrappleAttempt(
                 attackerCharacter.attributes.dexterity,
-                attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.dexterity,
+                wrestlingSkill,
                 targetCharacter.attributes.dexterity,
                 true
               );
+              
+              const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
+                `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
               
               if (grappleResult.success) {
                 const cp = grappleResult.controlPoints;
@@ -1573,10 +1686,15 @@ const startServer = async () => {
                   return c;
                 });
                 
+                let logEntry = `${attackerCharacter.name} grapples ${targetCharacter.name}! (${cp} CP) ${formatRoll(grappleResult.attack, 'Wrestling')}`;
+                if (grappleResult.defense) {
+                  logEntry += ` -> ${formatRoll(grappleResult.defense, 'Defend')}`;
+                }
+                
                 const updated = advanceTurn({
                   ...match,
                   combatants: updatedCombatants,
-                  log: [...match.log, `${attackerCharacter.name} grapples ${targetCharacter.name}! (${cp} CP)`],
+                  log: [...match.log, logEntry],
                 });
                 matches.set(lobby.id, updated);
                 await upsertMatch(lobby.id, updated);
@@ -1587,9 +1705,14 @@ const startServer = async () => {
                 sendToLobby(lobby, { type: "match_state", state: updated });
                 scheduleBotTurn(lobby, updated);
               } else {
+                let logEntry = `${attackerCharacter.name} fails to grapple ${targetCharacter.name}. ${formatRoll(grappleResult.attack, 'Wrestling')}`;
+                if (grappleResult.defense) {
+                  logEntry += ` -> ${formatRoll(grappleResult.defense, 'Defend')}`;
+                }
+                
                 const updated = advanceTurn({
                   ...match,
-                  log: [...match.log, `${attackerCharacter.name} fails to grapple ${targetCharacter.name}.`],
+                  log: [...match.log, logEntry],
                 });
                 matches.set(lobby.id, updated);
                 await upsertMatch(lobby.id, updated);
@@ -1705,11 +1828,16 @@ const startServer = async () => {
               return;
             }
             
+            const wrestlingSkill = attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.strength;
+            const cpPenalty = actorCombatant.grapple.cpReceived;
             const breakResult = resolveBreakFree(
               attackerCharacter.attributes.strength,
-              attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.strength,
-              actorCombatant.grapple.cpReceived
+              wrestlingSkill,
+              cpPenalty
             );
+            
+            const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
+              `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
             
             if (breakResult.success) {
               const updatedCombatants = match.combatants.map(c => {
@@ -1724,19 +1852,23 @@ const startServer = async () => {
                 return c;
               });
               
+              const logEntry = `${attackerCharacter.name} breaks free from ${grapplerCharacter?.name ?? 'grapple'}! ${formatRoll(breakResult.roll, `ST/Skill-${cpPenalty}CP`)}`;
+              
               const updated = advanceTurn({
                 ...match,
                 combatants: updatedCombatants,
-                log: [...match.log, `${attackerCharacter.name} breaks free from ${grapplerCharacter?.name ?? 'grapple'}!`],
+                log: [...match.log, logEntry],
               });
               matches.set(lobby.id, updated);
               await upsertMatch(lobby.id, updated);
               sendToLobby(lobby, { type: "match_state", state: updated });
               scheduleBotTurn(lobby, updated);
             } else {
+              const logEntry = `${attackerCharacter.name} fails to break free. ${formatRoll(breakResult.roll, `ST/Skill-${cpPenalty}CP`)}`;
+              
               const updated = advanceTurn({
                 ...match,
-                log: [...match.log, `${attackerCharacter.name} fails to break free.`],
+                log: [...match.log, logEntry],
               });
               matches.set(lobby.id, updated);
               await upsertMatch(lobby.id, updated);
