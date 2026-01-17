@@ -11,9 +11,13 @@ const CENTER = MAP_SIZE / 2
 const GRID_RADIUS = 10
 
 const hexToPixel = (q: number, r: number) => {
-  const x = CENTER + HEX_SIZE * 1.5 * q
-  const y = CENTER + HEX_SIZE * Math.sqrt(3) * (r + q / 2)
+  const x = CENTER + HEX_SIZE * Math.sqrt(3) * (q + r / 2)
+  const y = CENTER + HEX_SIZE * 1.5 * r
   return { x, y }
+}
+
+const facingToAngle = (facing: number) => {
+  return facing * 60
 }
 
 const GRID_HEXES = (() => {
@@ -56,16 +60,18 @@ export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
           const pos = hexToPixel(q, r)
           const isPlayer = combatant.playerId === playerId
           const isActive = matchState.activeTurnPlayerId === combatant.playerId
+          const angle = facingToAngle(combatant.facing)
+          const color = isPlayer ? '#4f4' : '#f44'
           
           return (
-            <g key={combatant.characterId}>
+            <g key={combatant.characterId} transform={`translate(${pos.x}, ${pos.y})`}>
               {isActive && (
                 <circle
-                  cx={pos.x}
-                  cy={pos.y}
+                  cx={0}
+                  cy={0}
                   r={HEX_SIZE * 1.5}
                   fill="none"
-                  stroke={isPlayer ? '#4f4' : '#f44'}
+                  stroke={color}
                   strokeWidth="1"
                   className="pulsing-indicator"
                 >
@@ -83,14 +89,22 @@ export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
                   />
                 </circle>
               )}
-              <circle
-                cx={pos.x}
-                cy={pos.y}
-                r={HEX_SIZE * 0.8}
-                fill={isPlayer ? '#4f4' : '#f44'}
-                stroke="#000"
-                strokeWidth="1"
-              />
+              <g transform={`rotate(${angle})`}>
+                <circle
+                  cx={0}
+                  cy={0}
+                  r={HEX_SIZE * 0.8}
+                  fill={color}
+                  stroke="#000"
+                  strokeWidth="1"
+                />
+                <polygon
+                  points={`${HEX_SIZE * 1.2},0 ${HEX_SIZE * 0.4},-${HEX_SIZE * 0.4} ${HEX_SIZE * 0.4},${HEX_SIZE * 0.4}`}
+                  fill={color}
+                  stroke="#000"
+                  strokeWidth="0.5"
+                />
+              </g>
             </g>
           )
         })}
@@ -102,10 +116,10 @@ export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
 function getHexPoints(x: number, y: number, size: number) {
   const points = []
   for (let i = 0; i < 6; i++) {
-    const angle_deg = 60 * i
-    const angle_rad = (Math.PI / 180) * angle_deg
-    const px = x + size * Math.cos(angle_rad)
-    const py = y + size * Math.sin(angle_rad)
+    const angleDeg = 60 * i + 30
+    const angleRad = (Math.PI / 180) * angleDeg
+    const px = x + size * Math.cos(angleRad)
+    const py = y + size * Math.sin(angleRad)
     points.push(`${px},${py}`)
   }
   return points.join(' ')

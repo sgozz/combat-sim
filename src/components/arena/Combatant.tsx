@@ -25,12 +25,60 @@ const STATUS_ICONS: Record<string, string> = {
   close_combat: '⚔️',
 }
 
+function StickFigure({ color, emissive }: { color: string; emissive: string }) {
+  return (
+    <group>
+      {/* Head */}
+      <mesh position={[0, 1.55, 0]}>
+        <sphereGeometry args={[0.18, 12, 12]} />
+        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Torso */}
+      <mesh position={[0, 1.05, 0]}>
+        <capsuleGeometry args={[0.12, 0.5, 4, 8]} />
+        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Left Arm */}
+      <mesh position={[0, 1.1, -0.22]} rotation={[0.2, 0, 0]}>
+        <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Right Arm */}
+      <mesh position={[0, 1.1, 0.22]} rotation={[-0.2, 0, 0]}>
+        <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Left Leg */}
+      <mesh position={[0, 0.4, -0.1]} rotation={[0.1, 0, 0]}>
+        <capsuleGeometry args={[0.06, 0.45, 4, 8]} />
+        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Right Leg */}
+      <mesh position={[0, 0.4, 0.1]} rotation={[-0.1, 0, 0]}>
+        <capsuleGeometry args={[0.06, 0.45, 4, 8]} />
+        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Direction indicator */}
+      <mesh position={[0.22, 1.55, 0]} rotation={[0, 0, -Math.PI / 2]}>
+        <coneGeometry args={[0.08, 0.15, 6]} />
+        <meshStandardMaterial color="#ffffff" />
+      </mesh>
+    </group>
+  )
+}
+
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
   const color = isPlayer ? '#646cff' : '#ff4444'
   const emissive = isSelected ? '#ffff00' : '#000000'
   const [targetX, targetZ] = hexToWorld(combatant.position.x, combatant.position.z)
   const targetRotation = -combatant.facing * (Math.PI / 3)
-  
+
   const groupRef = useRef<THREE.Group>(null)
   const currentPos = useRef(new THREE.Vector3(targetX, 0, targetZ))
   const currentRot = useRef(targetRotation)
@@ -83,14 +131,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
 
   return (
     <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>
-      <mesh position={[0, 1, 0]}>
-        <capsuleGeometry args={[0.4, 0.8, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      <mesh position={[0.4, 1.5, 0]} rotation={[0, 0, -Math.PI / 2]}>
-        <coneGeometry args={[0.2, 0.5, 8]} />
-        <meshStandardMaterial color="#eeeeee" />
-      </mesh>
+      <StickFigure color={color} emissive={emissive} />
       
       {isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -148,4 +189,3 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
     </group>
   )
 }
-
