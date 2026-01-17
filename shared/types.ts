@@ -144,10 +144,21 @@ export type ManeuverType =
   | 'move' 
   | 'aim' 
   | 'evaluate'
+  | 'ready'
   | 'attack' 
   | 'all_out_attack' 
   | 'all_out_defense' 
   | 'move_and_attack';
+
+export type EquipmentSlot = 'right_hand' | 'left_hand' | 'back' | 'belt' | 'quiver';
+
+export type EquippedItem = {
+  equipmentId: Id;
+  slot: EquipmentSlot;
+  ready: boolean;
+};
+
+export type ReadyAction = 'draw' | 'sheathe' | 'pickup' | 'reload' | 'prepare';
 
 export type AOAVariant = 'determined' | 'strong' | 'double' | 'feint';
 
@@ -195,11 +206,11 @@ export type CombatantState = {
   aimTargetId: Id | null;
   evaluateBonus: number;
   evaluateTargetId: Id | null;
+  equipped: EquippedItem[];
   inCloseCombatWith: Id | null;
   closeCombatPosition: CloseCombatPosition | null;
   grapple: GrappleState | null;
   usedReaction: boolean;
-  /** Shock penalty from damage taken this turn (0-4, clears at turn start) */
   shockPenalty: number;
   attacksRemaining: number;
   retreatedThisTurn: boolean;
@@ -237,6 +248,7 @@ export type CombatActionPayload =
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation; deceptiveLevel?: 0 | 1 | 2 }
   | { type: "aim_target"; targetId: Id }
   | { type: "evaluate_target"; targetId: Id }
+  | { type: "ready_action"; action: ReadyAction; itemId: Id; targetSlot?: EquipmentSlot }
   | { type: "defend"; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }
   | { type: "move"; position: GridPosition }
   | { type: "move_step"; to: HexCoord }

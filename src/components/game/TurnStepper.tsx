@@ -13,6 +13,7 @@ const MANEUVER_LABELS: Record<ManeuverType, string> = {
   'move_and_attack': 'Rush',
   'aim': 'Aim',
   'evaluate': 'Evaluate',
+  'ready': 'Ready',
   'do_nothing': 'Wait',
 }
 

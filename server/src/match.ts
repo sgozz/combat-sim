@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, Player } from "../../shared/types";
+import type { CharacterSheet, CombatantState, MatchState, EquippedItem } from "../../shared/types";
 import type { Lobby } from "./types";
 import { state } from "./state";
 import { calculateDerivedStats } from "../../shared/rules";
@@ -45,6 +45,18 @@ export const createMatchState = (lobby: Lobby): MatchState => {
     const q = isBot ? 6 : -2;
     const r = index;
     const facing = isBot ? 3 : 0;
+    
+    const equipped: EquippedItem[] = [];
+    const primaryWeapon = character.equipment.find(e => e.type === 'melee' || e.type === 'ranged');
+    const shield = character.equipment.find(e => e.type === 'shield');
+    
+    if (primaryWeapon) {
+      equipped.push({ equipmentId: primaryWeapon.id, slot: 'right_hand', ready: true });
+    }
+    if (shield) {
+      equipped.push({ equipmentId: shield.id, slot: 'left_hand', ready: true });
+    }
+    
     return {
       playerId: player?.id ?? character.id,
       characterId: character.id,
@@ -61,6 +73,7 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       aimTargetId: null,
       evaluateBonus: 0,
       evaluateTargetId: null,
+      equipped,
       inCloseCombatWith: null,
       closeCombatPosition: null,
       grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
 import HitLocationPicker from '../ui/HitLocationPicker'
-import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant } from '../../../shared/types'
+import { ReadyPanel } from '../ui/ReadyPanel'
+import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant, ReadyAction, EquipmentSlot } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
 
@@ -128,7 +129,8 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string
   { type: 'move_and_attack', label: 'Move & Attack', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.', key: '5' },
   { type: 'aim', label: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.', key: '6' },
   { type: 'evaluate', label: 'Evaluate', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
-  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '8' },
+  { type: 'ready', label: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '8' },
+  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '9' },
 ]
 
 export const GameActionPanel = ({ 
@@ -387,6 +389,8 @@ export const GameActionPanel = ({
           return { text: 'Aiming. You gain +Acc bonus next turn.', canAttack: false, canMove: false, isStep: false }
         case 'evaluate':
           return { text: 'Click enemy to study. +1 to hit (max +3).', canAttack: false, canMove: false, isStep: false, canEvaluate: true }
+        case 'ready':
+          return { text: 'Draw, sheathe, or prepare equipment.', canAttack: false, canMove: false, isStep: true, canReady: true }
         case 'do_nothing':
           return { text: 'Waiting. Click End Turn.', canAttack: false, canMove: false, isStep: false }
         default:
@@ -499,6 +503,16 @@ export const GameActionPanel = ({
               </button>
             </div>
           </div>
+        )}
+
+        {currentManeuver === 'ready' && activeCombatant && activeCharacter && (
+          <ReadyPanel
+            equipped={activeCombatant.equipped}
+            equipment={activeCharacter.equipment}
+            onReadyAction={(action: ReadyAction, itemId: string, targetSlot?: EquipmentSlot) => {
+              onAction('ready_action', { type: 'ready_action', action, itemId, targetSlot })
+            }}
+          />
         )}
 
         <div className="action-buttons">
