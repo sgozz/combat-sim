@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
 import HitLocationPicker from '../ui/HitLocationPicker'
-import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant } from '../../../shared/types'
+import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
 
@@ -147,6 +147,7 @@ export const GameActionPanel = ({
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
+  const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
@@ -269,6 +270,42 @@ export const GameActionPanel = ({
           </>
         )
       }
+
+      if (showAODVariantPicker) {
+        const AOD_VARIANTS: { variant: AODVariant; label: string; desc: string }[] = [
+          { variant: 'increased_dodge', label: 'Increased Dodge', desc: '+2 to Dodge' },
+          { variant: 'increased_parry', label: 'Increased Parry', desc: '+2 to Parry' },
+          { variant: 'increased_block', label: 'Increased Block', desc: '+2 to Block' },
+          { variant: 'double', label: 'Double Defense', desc: 'Two different defenses vs same attack' },
+        ]
+        return (
+          <>
+            <div className="aoa-variant-header">
+              <button className="action-btn small" onClick={() => setShowAODVariantPicker(false)}>
+                <span className="btn-icon">←</span> Back
+              </button>
+              <span className="aoa-variant-title">All-Out Defense Variant</span>
+            </div>
+            <div className="aoa-variant-grid">
+              {AOD_VARIANTS.map(v => (
+                <Tooltip key={v.variant} content={v.desc} position="top">
+                  <button 
+                    className={`aoa-variant-btn ${v.variant === 'double' ? 'disabled' : ''}`}
+                    disabled={v.variant === 'double'}
+                    onClick={() => {
+                      setShowAODVariantPicker(false)
+                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant })
+                    }}
+                  >
+                    <span className="aoa-variant-label">{v.label}</span>
+                    <span className="aoa-variant-desc">{v.desc}</span>
+                  </button>
+                </Tooltip>
+              ))}
+            </div>
+          </>
+        )
+      }
       
       return (
         <>
@@ -280,6 +317,8 @@ export const GameActionPanel = ({
                   onClick={() => {
                     if (m.type === 'all_out_attack') {
                       setShowAOAVariantPicker(true)
+                    } else if (m.type === 'all_out_defense') {
+                      setShowAODVariantPicker(true)
                     } else {
                       onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
                     }

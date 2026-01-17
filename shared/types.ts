@@ -150,6 +150,11 @@ export type ManeuverType =
 
 export type AOAVariant = 'determined' | 'strong' | 'double' | 'feint';
 
+// All-Out Defense variants (B366)
+// - increased_dodge/parry/block: +2 to that specific defense
+// - double: Can use two different defenses against the same attack
+export type AODVariant = 'increased_dodge' | 'increased_parry' | 'increased_block' | 'double';
+
 // Defense system types (B374-377)
 export type DefenseType = 'dodge' | 'parry' | 'block' | 'none';
 
@@ -181,6 +186,7 @@ export type CombatantState = {
   posture: Posture;
   maneuver: ManeuverType | null;
   aoaVariant: AOAVariant | null;
+  aodVariant: AODVariant | null;
   currentHP: number;
   currentFP: number;
   statusEffects: string[];
@@ -224,7 +230,7 @@ export type LobbySummary = {
 export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'release';
 
 export type CombatActionPayload =
-  | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant }
+  | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant; aodVariant?: AODVariant }
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation }
   | { type: "aim_target"; targetId: Id }
   | { type: "defend"; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }

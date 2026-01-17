@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice } from '../../../shared/types'
+import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant } from '../../../shared/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers } from '../../../shared/rules'
 
 type ActionBarProps = {
@@ -57,6 +57,8 @@ export const ActionBar = ({
   onJoinLobby
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
+  const [showAOAVariants, setShowAOAVariants] = useState(false)
+  const [showAODVariants, setShowAODVariants] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
   const [defenseTimeLeft, setDefenseTimeLeft] = useState(0)
@@ -314,6 +316,58 @@ export const ActionBar = ({
 
   return (
     <>
+      {showAOAVariants && (
+        <div className="action-bar-maneuvers">
+          <div className="variant-header">All-Out Attack Variant</div>
+          {([
+            { variant: 'determined' as AOAVariant, label: 'Determined', desc: '+4 to hit' },
+            { variant: 'strong' as AOAVariant, label: 'Strong', desc: '+2 damage' },
+            { variant: 'double' as AOAVariant, label: 'Double', desc: '2 attacks' },
+          ]).map(v => (
+            <button
+              key={v.variant}
+              className="action-bar-maneuver-btn"
+              onClick={() => {
+                onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant })
+                setShowAOAVariants(false)
+              }}
+            >
+              <span className="action-bar-icon">😡</span>
+              <span className="action-bar-label">{v.label}</span>
+            </button>
+          ))}
+          <button className="action-bar-maneuver-btn close" onClick={() => setShowAOAVariants(false)}>
+            <span className="action-bar-icon">←</span>
+            <span className="action-bar-label">Back</span>
+          </button>
+        </div>
+      )}
+      {showAODVariants && (
+        <div className="action-bar-maneuvers">
+          <div className="variant-header">All-Out Defense Variant</div>
+          {([
+            { variant: 'increased_dodge' as AODVariant, label: '+2 Dodge', desc: '+2 to Dodge' },
+            { variant: 'increased_parry' as AODVariant, label: '+2 Parry', desc: '+2 to Parry' },
+            { variant: 'increased_block' as AODVariant, label: '+2 Block', desc: '+2 to Block' },
+          ]).map(v => (
+            <button
+              key={v.variant}
+              className="action-bar-maneuver-btn"
+              onClick={() => {
+                onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant })
+                setShowAODVariants(false)
+              }}
+            >
+              <span className="action-bar-icon">🛡️</span>
+              <span className="action-bar-label">{v.label}</span>
+            </button>
+          ))}
+          <button className="action-bar-maneuver-btn close" onClick={() => setShowAODVariants(false)}>
+            <span className="action-bar-icon">←</span>
+            <span className="action-bar-label">Back</span>
+          </button>
+        </div>
+      )}
       {showManeuvers && (
         <div className="action-bar-maneuvers">
           {availableManeuvers.map(m => (
@@ -321,8 +375,16 @@ export const ActionBar = ({
               key={m.type}
               className={`action-bar-maneuver-btn ${currentManeuver === m.type ? 'active' : ''}`}
               onClick={() => {
-                onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
-                setShowManeuvers(false)
+                if (m.type === 'all_out_attack') {
+                  setShowManeuvers(false)
+                  setShowAOAVariants(true)
+                } else if (m.type === 'all_out_defense') {
+                  setShowManeuvers(false)
+                  setShowAODVariants(true)
+                } else {
+                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
+                  setShowManeuvers(false)
+                }
               }}
             >
               <span className="action-bar-icon">{m.icon}</span>

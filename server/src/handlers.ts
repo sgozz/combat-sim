@@ -433,9 +433,15 @@ const handleCombatAction = async (
     const previousManeuver = actorCombatant.maneuver;
     const newManeuver = payload.maneuver;
     const aoaVariant = payload.aoaVariant ?? null;
+    const aodVariant = payload.aodVariant ?? null;
     
     if (newManeuver === 'all_out_attack' && !aoaVariant) {
       sendMessage(socket, { type: "error", message: "All-Out Attack requires a variant (determined/strong/double/feint)." });
+      return;
+    }
+    
+    if (newManeuver === 'all_out_defense' && !aodVariant) {
+      sendMessage(socket, { type: "error", message: "All-Out Defense requires a variant (increased_dodge/increased_parry/increased_block/double)." });
       return;
     }
     
@@ -458,12 +464,15 @@ const handleCombatAction = async (
       
       const attacksRemaining = (newManeuver === 'all_out_attack' && aoaVariant === 'double') ? 2 : 1;
       
-      return { ...c, maneuver: newManeuver, aoaVariant, aimTurns, aimTargetId, attacksRemaining };
+      return { ...c, maneuver: newManeuver, aoaVariant, aodVariant, aimTurns, aimTargetId, attacksRemaining };
     });
     
     let logMsg = `${player.name} chooses ${newManeuver.replace(/_/g, " ")}`;
     if (newManeuver === 'all_out_attack' && aoaVariant) {
       logMsg += ` (${aoaVariant})`;
+    }
+    if (newManeuver === 'all_out_defense' && aodVariant) {
+      logMsg += ` (${aodVariant.replace(/_/g, ' ')})`;
     }
     const updatedActor = updatedCombatants.find(c => c.playerId === player.id);
     if (newManeuver === 'aim' && updatedActor && updatedActor.aimTurns > 1) {
@@ -851,8 +860,9 @@ const handleAttackAction = async (
 
   const targetManeuver = targetCombatant.maneuver;
   
-  if (targetManeuver === 'all_out_defense') {
-    defenseDescription += defenseDescription === "normal" ? "AoD (+2)" : " + AoD (+2)";
+  if (targetManeuver === 'all_out_defense' && targetCombatant.aodVariant) {
+    const variantLabel = targetCombatant.aodVariant.replace('increased_', '+2 ').replace('_', ' ');
+    defenseDescription += defenseDescription === "normal" ? `AoD (${variantLabel})` : ` + AoD (${variantLabel})`;
   }
   
   if (targetManeuver === 'all_out_attack') {
@@ -978,19 +988,23 @@ const handleAttackAction = async (
     
     let defenseMod = 0;
     if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
-    if (targetManeuver === 'all_out_defense') defenseMod += 2;
     if (targetCombatant.statusEffects.includes('defending')) defenseMod += 1;
     
     const targetPosture = getPostureModifiers(targetCombatant.posture);
     const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
     defenseMod += postureDefBonus;
     
-    let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod;
+    const aodVariant = targetCombatant.aodVariant;
+    const dodgeAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_dodge') ? 2 : 0;
+    const parryAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_parry') ? 2 : 0;
+    const blockAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_block') ? 2 : 0;
+    
+    let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod + dodgeAodBonus;
     let defenseUsed: DefenseType = 'dodge';
     let defenseLabel = "Dodge";
     
     if (ccDefMods.canParry && defenseOptions.parry) {
-      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod;
+      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus;
       if (parryValue > bestDefense) {
         bestDefense = parryValue;
         defenseUsed = 'parry';
@@ -998,7 +1012,7 @@ const handleAttackAction = async (
       }
     }
     if (ccDefMods.canBlock && defenseOptions.block) {
-      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod;
+      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus;
       if (blockValue > bestDefense) {
         bestDefense = blockValue;
         defenseUsed = 'block';
@@ -1286,8 +1300,16 @@ const resolveDefenseChoice = async (
   
   let defenseMod = 0;
   if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
-  if (defenderCombatant.maneuver === 'all_out_defense') defenseMod += 2;
   if (defenderCombatant.statusEffects.includes('defending')) defenseMod += 1;
+  
+  const aodVariant = defenderCombatant.aodVariant;
+  if (defenderCombatant.maneuver === 'all_out_defense' && aodVariant) {
+    if ((aodVariant === 'increased_dodge' && choice.defenseType === 'dodge') ||
+        (aodVariant === 'increased_parry' && choice.defenseType === 'parry') ||
+        (aodVariant === 'increased_block' && choice.defenseType === 'block')) {
+      defenseMod += 2;
+    }
+  }
   
   const isRanged = attackerCharacter.equipment[0]?.type === 'ranged';
   const defenderPosture = getPostureModifiers(defenderCombatant.posture);
