@@ -28,44 +28,44 @@ const STATUS_ICONS: Record<string, string> = {
 function StickFigure({ color, emissive }: { color: string; emissive: string }) {
   return (
     <group>
-      {/* Head */}
-      <mesh position={[0, 1.55, 0]}>
+      {/* Head - top at 1.80m */}
+      <mesh position={[0, 1.62, 0]}>
         <sphereGeometry args={[0.18, 12, 12]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       
       {/* Torso */}
-      <mesh position={[0, 1.05, 0]}>
-        <capsuleGeometry args={[0.12, 0.5, 4, 8]} />
+      <mesh position={[0, 1.1, 0]}>
+        <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       
       {/* Left Arm */}
-      <mesh position={[0, 1.1, -0.22]} rotation={[0.2, 0, 0]}>
-        <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+      <mesh position={[0, 1.15, -0.22]} rotation={[0.2, 0, 0]}>
+        <capsuleGeometry args={[0.05, 0.4, 4, 8]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       
       {/* Right Arm */}
-      <mesh position={[0, 1.1, 0.22]} rotation={[-0.2, 0, 0]}>
-        <capsuleGeometry args={[0.05, 0.35, 4, 8]} />
+      <mesh position={[0, 1.15, 0.22]} rotation={[-0.2, 0, 0]}>
+        <capsuleGeometry args={[0.05, 0.4, 4, 8]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       
       {/* Left Leg */}
-      <mesh position={[0, 0.4, -0.1]} rotation={[0.1, 0, 0]}>
-        <capsuleGeometry args={[0.06, 0.45, 4, 8]} />
+      <mesh position={[0, 0.42, -0.1]} rotation={[0.1, 0, 0]}>
+        <capsuleGeometry args={[0.06, 0.5, 4, 8]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       
       {/* Right Leg */}
-      <mesh position={[0, 0.4, 0.1]} rotation={[-0.1, 0, 0]}>
-        <capsuleGeometry args={[0.06, 0.45, 4, 8]} />
+      <mesh position={[0, 0.42, 0.1]} rotation={[-0.1, 0, 0]}>
+        <capsuleGeometry args={[0.06, 0.5, 4, 8]} />
         <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
       </mesh>
       
       {/* Direction indicator */}
-      <mesh position={[0.22, 1.55, 0]} rotation={[0, 0, -Math.PI / 2]}>
+      <mesh position={[0.22, 1.62, 0]} rotation={[0, 0, -Math.PI / 2]}>
         <coneGeometry args={[0.08, 0.15, 6]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
