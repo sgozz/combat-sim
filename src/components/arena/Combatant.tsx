@@ -6,6 +6,8 @@ import type { CombatantState, CharacterSheet } from '../../../shared/types'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
+type AnimationState = 'idle' | 'walk' | 'run' | 'death' | 'jump' | 'punch' | 'working'
+
 type CombatantProps = {
   combatant: CombatantState
   character: CharacterSheet | undefined
@@ -35,8 +37,10 @@ const INDICATOR_DISTANCE = 0.7
 const INDICATOR_HEIGHT = 0.05
 const INDICATOR_LATERAL_OFFSET = Math.PI / 2
 
-function HumanModel({ emissive, isPlayer }: { emissive: string; isPlayer: boolean }) {
-  const { scene } = useGLTF('/models/human.glb')
+function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; isPlayer: boolean; animationState: AnimationState }) {
+  const { scene, animations } = useGLTF('/models/human.glb')
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
+  const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
 
   const clonedScene = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
@@ -62,8 +66,36 @@ function HumanModel({ emissive, isPlayer }: { emissive: string; isPlayer: boolea
       }
     })
 
+    const mixer = new THREE.AnimationMixer(clone)
+    mixerRef.current = mixer
+    actionsRef.current = {}
+    animations.forEach(clip => {
+      actionsRef.current[clip.name] = mixer.clipAction(clip)
+    })
+
     return clone
-  }, [scene, isPlayer, emissive])
+  }, [scene, animations, isPlayer, emissive])
+
+  useFrame((_, delta) => {
+    mixerRef.current?.update(delta)
+  })
+
+  useEffect(() => {
+    const animationMap: Record<AnimationState, string> = {
+      idle: 'Human Armature|Idle',
+      walk: 'Human Armature|Walk',
+      run: 'Human Armature|Run',
+      death: 'Human Armature|Death',
+      jump: 'Human Armature|Jump',
+      punch: 'Human Armature|Punch',
+      working: 'Human Armature|Working'
+    }
+    const action = actionsRef.current[animationMap[animationState]]
+    if (action) {
+      Object.values(actionsRef.current).forEach(a => a?.fadeOut(0.2))
+      action.reset().fadeIn(0.2).play()
+    }
+  }, [animationState, clonedScene])
 
   return (
     <group rotation={[0, MODEL_ROTATION_OFFSET, 0]}>
@@ -82,6 +114,9 @@ function HumanModel({ emissive, isPlayer }: { emissive: string; isPlayer: boolea
   )
 }
 
+const WALK_THRESHOLD = 0.01
+const RUN_THRESHOLD = 0.5
+
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
   const emissive = isSelected ? '#ffff00' : '#000000'
   const [targetX, targetZ] = hexToWorld(combatant.position.x, combatant.position.z)
@@ -90,14 +125,29 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const groupRef = useRef<THREE.Group>(null)
   const currentPos = useRef(new THREE.Vector3(targetX, 0, targetZ))
   const currentRot = useRef(targetRotation)
+  const [animationState, setAnimationState] = useState<AnimationState>('idle')
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
 
     const lerpFactor = 1 - Math.pow(0.001, delta)
 
+    const prevX = currentPos.current.x
+    const prevZ = currentPos.current.z
+
     currentPos.current.x = THREE.MathUtils.lerp(currentPos.current.x, targetX, lerpFactor)
     currentPos.current.z = THREE.MathUtils.lerp(currentPos.current.z, targetZ, lerpFactor)
+
+    const moveSpeed = Math.sqrt(
+      Math.pow(currentPos.current.x - prevX, 2) + 
+      Math.pow(currentPos.current.z - prevZ, 2)
+    ) / delta
+
+    let newState: AnimationState = 'idle'
+    if (moveSpeed > RUN_THRESHOLD) newState = 'run'
+    else if (moveSpeed > WALK_THRESHOLD) newState = 'walk'
+    
+    if (newState !== animationState) setAnimationState(newState)
 
     let rotDiff = targetRotation - currentRot.current
     while (rotDiff > Math.PI) rotDiff -= Math.PI * 2
@@ -139,7 +189,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
 
   return (
     <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>
-      <HumanModel emissive={emissive} isPlayer={isPlayer} />
+      <HumanModel emissive={emissive} isPlayer={isPlayer} animationState={animationState} />
 
       {isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
