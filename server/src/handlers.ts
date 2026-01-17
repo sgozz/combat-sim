@@ -733,9 +733,9 @@ const handleAttackAction = async (
     skill += aimBonus;
   }
   
-  const shockPenalty = actorCombatant.statusEffects.filter(e => e === 'shock').length;
-  if (shockPenalty > 0) {
-    skill -= Math.min(shockPenalty, 4);
+  // Shock penalty: -1 per HP of damage taken this turn (max -4) B419
+  if (actorCombatant.shockPenalty > 0) {
+    skill -= actorCombatant.shockPenalty;
   }
   
   const attackerPosture = getPostureModifiers(actorCombatant.posture);
@@ -862,7 +862,7 @@ const handleAttackAction = async (
       const wasAboveZero = combatant.currentHP > 0;
       const nowAtOrBelowZero = newHP <= 0;
       
-      let effects = finalDamage > 0 ? [...combatant.statusEffects, "shock"] : [...combatant.statusEffects];
+      let effects = [...combatant.statusEffects];
       
       if (wasAboveZero && nowAtOrBelowZero && !effects.includes('unconscious')) {
         const htCheck = rollHTCheck(targetHT, newHP, targetMaxHP);
@@ -871,7 +871,9 @@ const handleAttackAction = async (
         }
       }
       
-      return { ...combatant, currentHP: newHP, statusEffects: effects };
+      const newShock = finalDamage > 0 ? Math.min(4, combatant.shockPenalty + finalDamage) : combatant.shockPenalty;
+      
+      return { ...combatant, currentHP: newHP, statusEffects: effects, shockPenalty: newShock };
     });
     
     const updatedTarget = updatedCombatants.find(c => c.playerId === targetCombatant.playerId);

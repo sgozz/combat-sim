@@ -1724,6 +1724,34 @@
   color: #ddd;
 }
 
+.shock-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, rgba(255, 200, 0, 0.2), rgba(255, 100, 0, 0.15));
+  border: 1px solid rgba(255, 150, 0, 0.4);
+  border-radius: 6px;
+}
+
+.shock-icon {
+  font-size: 14px;
+}
+
+.shock-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffaa00;
+  font-family: monospace;
+}
+
+.shock-label {
+  font-size: 11px;
+  color: #cc8800;
+  text-transform: uppercase;
+}
+
 /* Tooltips */
 .tooltip-wrapper {
   position: relative;

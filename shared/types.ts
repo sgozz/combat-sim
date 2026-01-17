@@ -164,6 +164,8 @@ export type CombatantState = {
   closeCombatPosition: CloseCombatPosition | null;
   grapple: GrappleState | null;
   usedReaction: boolean;
+  /** Shock penalty from damage taken this turn (0-4, clears at turn start) */
+  shockPenalty: number;
 };
 
 export type MatchState = {

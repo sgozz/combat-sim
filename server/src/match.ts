@@ -61,6 +61,7 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       closeCombatPosition: null,
       grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },
       usedReaction: false,
+      shockPenalty: 0,
     };
   });
 

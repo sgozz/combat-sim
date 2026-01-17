@@ -76,6 +76,13 @@ export const GameStatusPanel = ({
                 ))}
               </div>
             )}
+            {activeCombatant.shockPenalty > 0 && (
+              <div className="shock-indicator">
+                <span className="shock-icon">⚡</span>
+                <span className="shock-value">-{activeCombatant.shockPenalty}</span>
+                <span className="shock-label">Shock</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -176,7 +183,8 @@ export const GameActionPanel = ({
 
     const rangeMod = getRangePenalty(dist)
     const hitLocMod = getHitLocationPenalty(selectedHitLocation)
-    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod
+    const shockMod = activeCombatant.shockPenalty > 0 ? -activeCombatant.shockPenalty : 0
+    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod
     const prob = getHitProbability(effectiveSkill)
     
     let color = '#ff4444'
@@ -189,6 +197,7 @@ export const GameActionPanel = ({
       skillName,
       rangeMod,
       hitLocMod,
+      shockMod,
       effectiveSkill,
       prob,
       color
@@ -368,6 +377,7 @@ export const GameActionPanel = ({
               {hitChanceInfo.skillName}: {hitChanceInfo.baseSkillLevel}
               {hitChanceInfo.rangeMod < 0 && ` (${hitChanceInfo.rangeMod} range)`}
               {hitChanceInfo.hitLocMod < 0 && ` (${hitChanceInfo.hitLocMod} ${selectedHitLocation.replace('_', ' ')})`}
+              {hitChanceInfo.shockMod < 0 && ` (${hitChanceInfo.shockMod} shock)`}
               {' → '}<strong>{hitChanceInfo.effectiveSkill}</strong>
             </div>
             <div className="hit-chance-value" style={{ color: hitChanceInfo.color }}>

@@ -197,8 +197,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -214,8 +214,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -227,21 +227,21 @@ describe('GURPS Rules', () => {
       expect(next.round).toBe(2)
     })
 
-    it('clears shock and defending status on new turn', () => {
+    it('clears shockPenalty and defending status on new turn', () => {
       const players: Player[] = [
         { id: 'p1', name: 'Player 1', isBot: false, characterId: 'c1' },
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['shock', 'defending', 'stunned'], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['defending', 'stunned'], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3 },
       ]
       
       const match = createTestMatch(players, combatants)
       const next = advanceTurn(match)
       
       const p2Combatant = next.combatants.find(c => c.playerId === 'p2')
-      expect(p2Combatant?.statusEffects).not.toContain('shock')
+      expect(p2Combatant?.shockPenalty).toBe(0)
       expect(p2Combatant?.statusEffects).not.toContain('defending')
       expect(p2Combatant?.statusEffects).toContain('stunned')
     })
@@ -252,8 +252,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -261,6 +261,57 @@ describe('GURPS Rules', () => {
       
       const p2Combatant = next.combatants.find(c => c.playerId === 'p2')
       expect(p2Combatant?.maneuver).toBeNull()
+    })
+
+    it('shockPenalty is capped at 4', () => {
+      const players: Player[] = [
+        { id: 'p1', name: 'Player 1', isBot: false, characterId: 'c1' },
+        { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
+      ]
+      const combatants: CombatantState[] = [
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+      ]
+      
+      const match = createTestMatch(players, combatants)
+      const p1 = match.combatants.find(c => c.playerId === 'p1')!
+      
+      const newShock = Math.min(4, p1.shockPenalty + 5)
+      expect(newShock).toBe(4)
+    })
+
+    it('shockPenalty accumulates within turn up to cap', () => {
+      const players: Player[] = [
+        { id: 'p1', name: 'Player 1', isBot: false, characterId: 'c1' },
+        { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
+      ]
+      const combatants: CombatantState[] = [
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 2 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+      ]
+      
+      const match = createTestMatch(players, combatants)
+      const p1 = match.combatants.find(c => c.playerId === 'p1')!
+      
+      const newShock = Math.min(4, p1.shockPenalty + 1)
+      expect(newShock).toBe(3)
+    })
+
+    it('shockPenalty clears on advanceTurn', () => {
+      const players: Player[] = [
+        { id: 'p1', name: 'Player 1', isBot: false, characterId: 'c1' },
+        { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
+      ]
+      const combatants: CombatantState[] = [
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0 },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 4 },
+      ]
+      
+      const match = createTestMatch(players, combatants)
+      const next = advanceTurn(match)
+      
+      const p2Combatant = next.combatants.find(c => c.playerId === 'p2')
+      expect(p2Combatant?.shockPenalty).toBe(0)
     })
   })
 
