@@ -147,10 +147,12 @@ const checkWaitTriggers = (
 };
 
 type ApplyDamageResult = {
-  updatedCombatants: MatchState['combatants'];
+  updatedCombatants: CombatantState[];
   finalDamage: number;
   logEntry: string;
   fellUnconscious: boolean;
+  majorWound: boolean;
+  majorWoundStunned: boolean;
 };
 
 const applyDamageToTarget = (
@@ -167,7 +169,7 @@ const applyDamageToTarget = (
   const targetCharacter = match.characters.find(c => c.id === targetCombatant?.characterId);
   
   if (!targetCombatant || !targetCharacter) {
-    return { updatedCombatants: match.combatants, finalDamage: 0, logEntry: '', fellUnconscious: false };
+    return { updatedCombatants: match.combatants, finalDamage: 0, logEntry: '', fellUnconscious: false, majorWound: false, majorWoundStunned: false };
   }
 
   const baseMultDamage = applyDamageMultiplier(baseDamage, damageType);
@@ -184,8 +186,12 @@ const applyDamageToTarget = (
 
   const targetMaxHP = targetCharacter.derived.hitPoints;
   const targetHT = targetCharacter.attributes.health;
+  const majorWoundThreshold = Math.floor(targetMaxHP / 2);
+  const isMajorWound = finalDamage > majorWoundThreshold;
   
   let fellUnconscious = false;
+  let majorWoundStunned = false;
+  
   const updatedCombatants = match.combatants.map((combatant) => {
     if (combatant.playerId !== targetPlayerId) return combatant;
     const newHP = combatant.currentHP - finalDamage;
@@ -193,6 +199,14 @@ const applyDamageToTarget = (
     const nowAtOrBelowZero = newHP <= 0;
     
     let effects = [...combatant.statusEffects];
+    
+    if (isMajorWound && !effects.includes('stunned')) {
+      const htCheck = rollHTCheck(targetHT, combatant.currentHP, targetMaxHP);
+      if (!htCheck.success) {
+        effects = [...effects, 'stunned'];
+        majorWoundStunned = true;
+      }
+    }
     
     if (wasAboveZero && nowAtOrBelowZero && !effects.includes('unconscious')) {
       const htCheck = rollHTCheck(targetHT, newHP, targetMaxHP);
@@ -207,7 +221,7 @@ const applyDamageToTarget = (
     return { ...combatant, currentHP: newHP, statusEffects: effects, shockPenalty: newShock };
   });
 
-  return { updatedCombatants, finalDamage, logEntry: dmgDetail, fellUnconscious };
+  return { updatedCombatants, finalDamage, logEntry: dmgDetail, fellUnconscious, majorWound: isMajorWound, majorWoundStunned };
 };
 
 export const handleMessage = async (
@@ -1161,6 +1175,9 @@ const handleAttackAction = async (
     
     const noDefStr = !canDefend && !attackRoll.critical ? `${defenseDescription}. ` : '';
     logEntry += `: ${critHitStr}${noDefStr}Hit for ${result.finalDamage} damage ${result.logEntry}. ${formatRoll(attackRoll.roll, 'Attack')}`;
+    if (result.majorWoundStunned) {
+      logEntry += ` Major wound! ${targetCharacter.name} is stunned!`;
+    }
     if (result.fellUnconscious) {
       logEntry += ` ${targetCharacter.name} falls unconscious!`;
     }
@@ -1338,6 +1355,9 @@ const handleAttackAction = async (
       if (result.fellUnconscious) {
         logEntry += ` ${targetCharacter.name} falls unconscious!`;
       }
+      if (result.majorWoundStunned) {
+        logEntry += ` Major wound! ${targetCharacter.name} is stunned!`;
+      }
       
       sendToLobby(lobby, { 
         type: "visual_effect", 
@@ -1471,7 +1491,13 @@ const resolveDefenseChoice = async (
       pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
     );
     
-    const logEntry = `${defenderCharacter.name} does not defend: Hit for ${result.finalDamage} damage ${result.logEntry}${result.fellUnconscious ? ` ${defenderCharacter.name} falls unconscious!` : ''}`;
+    let logEntry = `${defenderCharacter.name} does not defend: Hit for ${result.finalDamage} damage ${result.logEntry}`;
+    if (result.fellUnconscious) {
+      logEntry += ` ${defenderCharacter.name} falls unconscious!`;
+    }
+    if (result.majorWoundStunned) {
+      logEntry += ` Major wound! ${defenderCharacter.name} is stunned!`;
+    }
     
     sendToLobby(lobby, { 
       type: "visual_effect", 
@@ -1663,7 +1689,13 @@ const resolveDefenseChoice = async (
       pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
     );
     
-    const logEntry = `${defenderCharacter.name} fails ${defenseLabel}: ${formatRoll(defenseRoll.roll, defenseLabel)} Failed. Hit for ${result.finalDamage} damage ${result.logEntry}${result.fellUnconscious ? ` ${defenderCharacter.name} falls unconscious!` : ''}`;
+    let logEntry = `${defenderCharacter.name} fails ${defenseLabel}: ${formatRoll(defenseRoll.roll, defenseLabel)} Failed. Hit for ${result.finalDamage} damage ${result.logEntry}`;
+    if (result.fellUnconscious) {
+      logEntry += ` ${defenderCharacter.name} falls unconscious!`;
+    }
+    if (result.majorWoundStunned) {
+      logEntry += ` Major wound! ${defenderCharacter.name} is stunned!`;
+    }
     
     sendToLobby(lobby, { 
       type: "visual_effect", 

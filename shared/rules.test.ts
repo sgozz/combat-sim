@@ -47,7 +47,6 @@ import {
   rollCriticalHitTable,
   rollCriticalMissTable,
   applyCriticalHitDamage,
-  getCriticalMissDescription,
   type HexPosition,
   type MovementState,
   type CriticalHitEffect,
@@ -318,8 +317,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -335,8 +334,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -348,14 +347,14 @@ describe('GURPS Rules', () => {
       expect(next.round).toBe(2)
     })
 
-    it('clears shockPenalty and defending status on new turn', () => {
+    it('clears shockPenalty, defending and stunned status on new turn', () => {
       const players: Player[] = [
         { id: 'p1', name: 'Player 1', isBot: false, characterId: 'c1' },
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['defending', 'stunned'], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['defending', 'stunned'], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -364,7 +363,7 @@ describe('GURPS Rules', () => {
       const p2Combatant = next.combatants.find(c => c.playerId === 'p2')
       expect(p2Combatant?.shockPenalty).toBe(0)
       expect(p2Combatant?.statusEffects).not.toContain('defending')
-      expect(p2Combatant?.statusEffects).toContain('stunned')
+      expect(p2Combatant?.statusEffects).not.toContain('stunned')
     })
 
     it('resets maneuver for incoming player', () => {
@@ -373,8 +372,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -390,8 +389,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -407,8 +406,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 2, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 2, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -424,8 +423,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 4, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, waitTrigger: null },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, evaluateBonus: 0, evaluateTargetId: null, equipped: [], inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 4, aoaVariant: null, aodVariant: null, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null },
       ]
       
       const match = createTestMatch(players, combatants)
