@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Html, useGLTF } from '@react-three/drei'
 import { hexToWorld } from '../../utils/hex'
 import type { CombatantState, CharacterSheet } from '../../../shared/types'
 import * as THREE from 'three'
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 type CombatantProps = {
   combatant: CombatantState
@@ -25,56 +26,63 @@ const STATUS_ICONS: Record<string, string> = {
   close_combat: '⚔️',
 }
 
-function StickFigure({ color, emissive }: { color: string; emissive: string }) {
+useGLTF.preload('/models/human.glb')
+
+const MODEL_ROTATION_OFFSET = Math.PI / 2
+const MODEL_SCALE = 0.342
+
+const INDICATOR_DISTANCE = 0.7
+const INDICATOR_HEIGHT = 0.05
+const INDICATOR_LATERAL_OFFSET = Math.PI / 2
+
+function HumanModel({ emissive, isPlayer }: { emissive: string; isPlayer: boolean }) {
+  const { scene } = useGLTF('/models/human.glb')
+
+  const clonedScene = useMemo(() => {
+    const clone = SkeletonUtils.clone(scene)
+
+    clone.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.material) {
+        const material = child.material.clone()
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.color.multiplyScalar(isPlayer ? 1.2 : 0.9)
+          if (isPlayer) {
+            material.emissive.setHex(0x2244ff)
+            material.emissiveIntensity = 0.15
+          } else {
+            material.emissive.setHex(0xff2222)
+            material.emissiveIntensity = 0.15
+          }
+          if (emissive !== '#000000') {
+            material.emissive.setHex(0xffff00)
+            material.emissiveIntensity = 0.4
+          }
+        }
+        child.material = material
+      }
+    })
+
+    return clone
+  }, [scene, isPlayer, emissive])
+
   return (
-    <group>
-      {/* Head - top at 1.80m */}
-      <mesh position={[0, 1.62, 0]}>
-        <sphereGeometry args={[0.18, 12, 12]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      
-      {/* Torso */}
-      <mesh position={[0, 1.1, 0]}>
-        <capsuleGeometry args={[0.12, 0.55, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      
-      {/* Left Arm */}
-      <mesh position={[0, 1.15, -0.22]} rotation={[0.2, 0, 0]}>
-        <capsuleGeometry args={[0.05, 0.4, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      
-      {/* Right Arm */}
-      <mesh position={[0, 1.15, 0.22]} rotation={[-0.2, 0, 0]}>
-        <capsuleGeometry args={[0.05, 0.4, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      
-      {/* Left Leg */}
-      <mesh position={[0, 0.42, -0.1]} rotation={[0.1, 0, 0]}>
-        <capsuleGeometry args={[0.06, 0.5, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      
-      {/* Right Leg */}
-      <mesh position={[0, 0.42, 0.1]} rotation={[-0.1, 0, 0]}>
-        <capsuleGeometry args={[0.06, 0.5, 4, 8]} />
-        <meshStandardMaterial color={color} emissive={emissive} emissiveIntensity={0.5} />
-      </mesh>
-      
-      {/* Direction indicator */}
-      <mesh position={[0.22, 1.62, 0]} rotation={[0, 0, -Math.PI / 2]}>
-        <coneGeometry args={[0.08, 0.15, 6]} />
-        <meshStandardMaterial color="#ffffff" />
+    <group rotation={[0, MODEL_ROTATION_OFFSET, 0]}>
+      <primitive object={clonedScene} scale={MODEL_SCALE} />
+      <mesh 
+        position={[
+          INDICATOR_DISTANCE * Math.cos(INDICATOR_LATERAL_OFFSET), 
+          INDICATOR_HEIGHT, 
+          INDICATOR_DISTANCE * Math.sin(INDICATOR_LATERAL_OFFSET)
+        ]} 
+        rotation={[Math.PI / 2, -INDICATOR_LATERAL_OFFSET, 0]}>
+        <coneGeometry args={[0.1, 0.25, 6]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
       </mesh>
     </group>
   )
 }
 
 export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
-  const color = isPlayer ? '#646cff' : '#ff4444'
   const emissive = isSelected ? '#ffff00' : '#000000'
   const [targetX, targetZ] = hexToWorld(combatant.position.x, combatant.position.z)
   const targetRotation = -combatant.facing * (Math.PI / 3)
@@ -82,28 +90,28 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const groupRef = useRef<THREE.Group>(null)
   const currentPos = useRef(new THREE.Vector3(targetX, 0, targetZ))
   const currentRot = useRef(targetRotation)
-  
+
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    
+
     const lerpFactor = 1 - Math.pow(0.001, delta)
-    
+
     currentPos.current.x = THREE.MathUtils.lerp(currentPos.current.x, targetX, lerpFactor)
     currentPos.current.z = THREE.MathUtils.lerp(currentPos.current.z, targetZ, lerpFactor)
-    
+
     let rotDiff = targetRotation - currentRot.current
     while (rotDiff > Math.PI) rotDiff -= Math.PI * 2
     while (rotDiff < -Math.PI) rotDiff += Math.PI * 2
     currentRot.current += rotDiff * lerpFactor
-    
+
     groupRef.current.position.x = currentPos.current.x
     groupRef.current.position.z = currentPos.current.z
     groupRef.current.rotation.y = currentRot.current
   })
-  
+
   const maxHP = character?.derived.hitPoints ?? 10
   const hpPercent = Math.max(0, Math.min(100, (combatant.currentHP / maxHP) * 100))
-  
+
   const [isFlashing, setIsFlashing] = useState(false)
   const prevHpRef = useRef(combatant.currentHP)
 
@@ -124,22 +132,22 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   } else if (hpPercent <= 50) {
     hpColor = '#ff4'
   }
-  
+
   const isGrappling = combatant.grapple?.grappling != null
   const isGrappled = combatant.grapple?.grappledBy != null
   const inCloseCombat = combatant.inCloseCombatWith != null
 
   return (
     <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>
-      <StickFigure color={color} emissive={emissive} />
-      
+      <HumanModel emissive={emissive} isPlayer={isPlayer} />
+
       {isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.5, 0.65, 6]} />
           <meshBasicMaterial color="#ff0" transparent opacity={0.8} />
         </mesh>
       )}
-      
+
       {inCloseCombat && !isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.45, 0.55, 6]} />
@@ -151,9 +159,9 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
         <div className={`hp-bar-compact ${isFlashing ? 'flash' : ''}`}>
           <div className="hp-bar-name-compact">{character?.name ?? '?'}</div>
           <div className="hp-bar-track-compact">
-            <div 
+            <div
               className="hp-bar-fill-compact"
-              style={{ width: `${hpPercent}%`, backgroundColor: hpColor }} 
+              style={{ width: `${hpPercent}%`, backgroundColor: hpColor }}
             />
           </div>
           {(combatant.statusEffects.length > 0 || inCloseCombat) && (
