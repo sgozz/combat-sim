@@ -65,6 +65,7 @@ import {
   getCharacterById,
   calculateFacing,
   findFreeAdjacentHex,
+  findRetreatHex,
   checkVictory,
 } from "./helpers";
 import { broadcastLobbies, leaveLobby } from "./lobby";
@@ -1005,14 +1006,16 @@ const handleAttackAction = async (
       }
     }
     
-    const shouldRetreat = !targetCombatant.retreatedThisTurn;
-    const retreatBonus = shouldRetreat ? (defenseUsed === 'dodge' ? 3 : 1) : 0;
+    const wantsRetreat = !targetCombatant.retreatedThisTurn;
+    const retreatHex = wantsRetreat ? findRetreatHex(targetCombatant.position, actorCombatant.position, match.combatants) : null;
+    const canRetreat = wantsRetreat && retreatHex !== null;
+    const retreatBonus = canRetreat ? (defenseUsed === 'dodge' ? 3 : 1) : 0;
     const finalDefenseValue = bestDefense + retreatBonus;
     
     const defenseRoll = resolveDefenseRoll(finalDefenseValue);
     
     if (defenseRoll.defended) {
-      const retreatStr = shouldRetreat ? ' (with retreat)' : '';
+      const retreatStr = canRetreat ? ' (with retreat)' : '';
       logEntry += `: ${defenseLabel}${retreatStr}! ${formatRoll(attackRoll.roll, 'Attack')} -> ${formatRoll(defenseRoll.roll, defenseLabel)}`;
       sendToLobby(lobby, { 
         type: "visual_effect", 
@@ -1021,7 +1024,7 @@ const handleAttackAction = async (
       
       let updatedCombatants = match.combatants.map(c => 
         c.playerId === targetCombatant.playerId 
-          ? { ...c, retreatedThisTurn: shouldRetreat || c.retreatedThisTurn, defensesThisTurn: c.defensesThisTurn + 1 } 
+          ? { ...c, retreatedThisTurn: canRetreat || c.retreatedThisTurn, defensesThisTurn: c.defensesThisTurn + 1, position: retreatHex ?? c.position } 
           : c
       );
       
@@ -1305,7 +1308,12 @@ const resolveDefenseChoice = async (
   const defenseRoll = resolveDefenseRoll(finalDefenseValue);
   
   if (defenseRoll.defended) {
-    const retreatStr = canRetreat ? ' (retreat)' : '';
+    let retreatHex: { x: number; y: number; z: number } | null = null;
+    if (canRetreat) {
+      retreatHex = findRetreatHex(defenderCombatant.position, attackerCombatant.position, match.combatants);
+    }
+    
+    const retreatStr = canRetreat && retreatHex ? ' (retreat)' : '';
     const dropStr = choice.dodgeAndDrop ? ' (drop)' : '';
     const logEntry = `${defenderCharacter.name} defends with ${defenseLabel}${retreatStr}${dropStr}: ${formatRoll(defenseRoll.roll, defenseLabel)} Success!`;
     
@@ -1318,9 +1326,10 @@ const resolveDefenseChoice = async (
       if (c.playerId !== pending.defenderId) return c;
       return { 
         ...c, 
-        retreatedThisTurn: canRetreat || c.retreatedThisTurn, 
+        retreatedThisTurn: (canRetreat && retreatHex !== null) || c.retreatedThisTurn, 
         defensesThisTurn: c.defensesThisTurn + 1,
         posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
+        position: retreatHex ?? c.position,
       };
     });
     

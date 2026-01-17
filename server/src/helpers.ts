@@ -83,6 +83,26 @@ export const findFreeAdjacentHex = (pos: GridPosition, combatants: CombatantStat
   return null;
 };
 
+export const findRetreatHex = (
+  defenderPos: GridPosition,
+  attackerPos: GridPosition,
+  combatants: CombatantState[]
+): GridPosition | null => {
+  const neighbors = getHexNeighbors(defenderPos.x, defenderPos.z);
+  const currentDist = calculateHexDistance(defenderPos, attackerPos);
+  
+  const validRetreats = neighbors
+    .filter(hex => {
+      const occupied = combatants.some(c => c.position.x === hex.x && c.position.z === hex.z);
+      if (occupied) return false;
+      const newDist = calculateHexDistance(hex, attackerPos);
+      return newDist > currentDist;
+    })
+    .sort((a, b) => calculateHexDistance(b, attackerPos) - calculateHexDistance(a, attackerPos));
+  
+  return validRetreats[0] ?? null;
+};
+
 export const calculateFacing = (from: GridPosition, to: GridPosition): number => {
   const dq = to.x - from.x;
   const dr = to.z - from.z;
