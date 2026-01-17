@@ -67,11 +67,11 @@ const getHexColor = (
     if (isPlayerTurn && reachableHex) {
       const cost = reachableHex.cost
       if (cost <= 2) {
-        return isHovered ? '#44aa44' : '#224422'
+        return isHovered ? '#66ff66' : '#2a5a2a'
       } else if (cost <= 4) {
-        return isHovered ? '#aa8844' : '#443322'
+        return isHovered ? '#ffdd44' : '#5a4a1a'
       } else {
-        return isHovered ? '#aa4422' : '#442222'
+        return isHovered ? '#ff8844' : '#5a2a1a'
       }
     }
   }

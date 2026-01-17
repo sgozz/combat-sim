@@ -676,12 +676,13 @@
   }
 
   .action-bar-btn.small {
-    min-width: 36px;
-    padding: 0.4rem;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0.5rem;
   }
 
   .action-bar-btn.small .action-bar-icon {
-    font-size: 1.2rem;
+    font-size: 1.4rem;
   }
 
   .action-bar-cc-indicator {
@@ -2447,4 +2448,50 @@
 
 .pending-action-buttons button:last-child {
   background: #423;
+}
+
+/* Movement Phase Panel */
+.movement-phase-panel {
+  background: linear-gradient(135deg, #1a2a1a 0%, #0a150a 100%);
+  border: 1px solid #4f4;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.movement-points {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.mp-icon {
+  font-size: 1.5rem;
+}
+
+.mp-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #4f4;
+  text-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+}
+
+.mp-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #8f8;
+  text-transform: uppercase;
+}
+
+.movement-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.movement-buttons .action-btn {
+  flex: 1;
+  margin: 0;
 }

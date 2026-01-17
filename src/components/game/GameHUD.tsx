@@ -297,6 +297,8 @@ export const GameActionPanel = ({
     const turnMovement = matchState?.turnMovement
     const inMovementPhase = turnMovement?.phase === 'moving'
     const movePointsRemaining = turnMovement?.movePointsRemaining ?? 0
+    const freeRotationUsed = turnMovement?.freeRotationUsed ?? false
+    const rotationCost = freeRotationUsed ? 1 : 0
 
     return (
       <div className="action-section">
@@ -306,20 +308,18 @@ export const GameActionPanel = ({
               <span className="maneuver-icon-small">{maneuverLabel.icon}</span>
               <span className="maneuver-name">{maneuverLabel.label}</span>
             </div>
-            <div className="maneuver-instructions">{instructions.text}</div>
+            {!inMovementPhase && (
+              <div className="maneuver-instructions">{instructions.text}</div>
+            )}
           </>
         )}
 
         {inMovementPhase && (
           <div className="movement-phase-panel">
             <div className="movement-points">
+              <span className="mp-icon">🏃</span>
               <span className="mp-value">{movePointsRemaining}</span>
               <span className="mp-label">MP</span>
-            </div>
-            <div className="movement-hint">
-              {movePointsRemaining > 0 
-                ? 'Click a reachable hex to move.'
-                : 'Movement complete.'}
             </div>
             <div className="movement-buttons">
               <button 
@@ -442,21 +442,23 @@ export const GameActionPanel = ({
 
           {!activeCombatant?.inCloseCombatWith && (
             <div className="facing-controls">
-              <button 
-                className="action-btn small"
-                onClick={() => onAction('turn_left', { type: 'turn_left' })}
-                title="Turn Left"
-              >
-                <span className="btn-icon">↶</span>
-              </button>
+              <Tooltip content={inMovementPhase ? `Turn Left (${rotationCost} MP)` : 'Turn Left'} position="top">
+                <button 
+                  className="action-btn small"
+                  onClick={() => onAction('turn_left', { type: 'turn_left' })}
+                >
+                  <span className="btn-icon">↶</span>
+                </button>
+              </Tooltip>
               <span className="facing-label">Facing</span>
-              <button 
-                className="action-btn small"
-                onClick={() => onAction('turn_right', { type: 'turn_right' })}
-                title="Turn Right"
-              >
-                <span className="btn-icon">↷</span>
-              </button>
+              <Tooltip content={inMovementPhase ? `Turn Right (${rotationCost} MP)` : 'Turn Right'} position="top">
+                <button 
+                  className="action-btn small"
+                  onClick={() => onAction('turn_right', { type: 'turn_right' })}
+                >
+                  <span className="btn-icon">↷</span>
+                </button>
+              </Tooltip>
             </div>
           )}
 

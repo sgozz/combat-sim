@@ -96,6 +96,13 @@ function AppRoutes() {
     }
     
     if (matchState.turnMovement?.phase === 'moving') {
+      const reachable = matchState.reachableHexes?.some(
+        (hex) => hex.q === position.x && hex.r === position.z
+      )
+      if (!reachable) {
+        setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
+        return
+      }
       const payload: CombatActionPayload = { type: 'move_step', to: { q: position.x, r: position.z } }
       sendMessage({ type: 'action', action: payload.type, payload })
       setMoveTarget(null)
