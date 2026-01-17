@@ -16,6 +16,7 @@ type ArenaSceneProps = {
   selectedTargetId: string | null
   isPlayerTurn: boolean
   playerMoveRange: number
+  showMoveRange: boolean
   visualEffects: (VisualEffect & { id: string })[]
   cameraMode: CameraMode
   onGridClick: (position: GridPosition) => void
@@ -54,7 +55,7 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, showMoveRange, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null
   
@@ -94,15 +95,24 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     return maxRange
   }, [playerCombatant, characters])
 
-  const frontArcHexes = useMemo(() => {
-    if (!playerCombatant?.position) return []
+  const facingArcs = useMemo(() => {
+    if (!playerCombatant?.position) return { front: [], side: [], rear: [] }
     const { x: q, z: r } = playerCombatant.position
     const f = playerCombatant.facing ?? 0
-    return [
-      getHexInDirection(q, r, f),
-      getHexInDirection(q, r, f - 1),
-      getHexInDirection(q, r, f + 1),
-    ]
+    return {
+      front: [
+        getHexInDirection(q, r, -f),
+        getHexInDirection(q, r, -f - 1),
+        getHexInDirection(q, r, -f + 1),
+      ],
+      side: [
+        getHexInDirection(q, r, -f + 2),
+        getHexInDirection(q, r, -f - 2),
+      ],
+      rear: [
+        getHexInDirection(q, r, -f + 3),
+      ],
+    }
   }, [playerCombatant])
 
   return (
@@ -113,13 +123,13 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
       <HexGrid 
         radius={10} 
         playerPosition={isPlayerTurn ? playerPosition : null}
-        moveRange={isPlayerTurn ? playerMoveRange : 0}
+        moveRange={isPlayerTurn && showMoveRange ? playerMoveRange : 0}
         attackRange={attackRange}
         isPlayerTurn={isPlayerTurn}
         enemyPositions={enemyPositions}
         selectedTargetPosition={selectedTargetPosition}
         moveTargetPosition={moveTarget}
-        frontArcHexes={frontArcHexes}
+        facingArcs={facingArcs}
         onHexClick={(q, r) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {

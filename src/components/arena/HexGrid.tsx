@@ -3,6 +3,12 @@ import { Text, Billboard } from '@react-three/drei'
 import { HEX_SIZE, hexToWorld, hexDistance } from '../../utils/hex'
 import type { GridPosition } from '../../../shared/types'
 
+type FacingArcs = {
+  front: { q: number; r: number }[]
+  side: { q: number; r: number }[]
+  rear: { q: number; r: number }[]
+}
+
 type HexGridProps = {
   radius: number
   playerPosition: GridPosition | null
@@ -12,9 +18,11 @@ type HexGridProps = {
   enemyPositions: GridPosition[]
   selectedTargetPosition: GridPosition | null
   moveTargetPosition: GridPosition | null
-  frontArcHexes: { q: number; r: number }[]
+  facingArcs: FacingArcs
   onHexClick: (q: number, r: number) => void
 }
+
+type ArcType = 'front' | 'side' | 'rear' | 'none'
 
 const getHexColor = (
   q: number,
@@ -26,7 +34,7 @@ const getHexColor = (
   enemyPositions: GridPosition[],
   selectedTargetPosition: GridPosition | null,
   moveTargetPosition: GridPosition | null,
-  isFrontArc: boolean,
+  arcType: ArcType,
   isAlternate: boolean,
   isHovered: boolean
 ): string => {
@@ -60,9 +68,15 @@ const getHexColor = (
 
     if (isPlayerTurn) {
       if (distance <= moveRange) {
+        if (arcType === 'front') {
+          return isHovered ? '#448866' : '#224433'
+        } else if (arcType === 'side') {
+          return isHovered ? '#886644' : '#443322'
+        } else if (arcType === 'rear') {
+          return isHovered ? '#884444' : '#442222'
+        }
         return isHovered ? '#448844' : '#224422'
       } else {
-        // Out of move range - dim it
         return isHovered ? '#333333' : '#1a1a1a'
       }
     }
@@ -72,8 +86,12 @@ const getHexColor = (
     return '#444444'
   }
 
-  if (isFrontArc) {
-    return isAlternate ? '#2a2a2a' : '#333333'
+  if (arcType === 'front') {
+    return isAlternate ? '#1a2a1a' : '#253525'
+  } else if (arcType === 'side') {
+    return isAlternate ? '#2a2a1a' : '#353525'
+  } else if (arcType === 'rear') {
+    return isAlternate ? '#2a1a1a' : '#352525'
   }
   
   return isAlternate ? '#1a1a1a' : '#252525'
@@ -101,7 +119,7 @@ const HexTile = ({ q, r, color, onClick, onHover, onUnhover }: {
   )
 }
 
-export const HexGrid = ({ radius, playerPosition, moveRange, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, frontArcHexes, onHexClick }: HexGridProps) => {
+export const HexGrid = ({ radius, playerPosition, moveRange, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, facingArcs, onHexClick }: HexGridProps) => {
   const [hoveredHex, setHoveredHex] = useState<{q: number, r: number} | null>(null)
 
   const tiles = useMemo(() => {
@@ -144,8 +162,17 @@ export const HexGrid = ({ radius, playerPosition, moveRange, attackRange, isPlay
       {tiles.map(({ q, r }) => {
         const isAlternate = (q + r) % 2 === 0
         const isHovered = hoveredHex?.q === q && hoveredHex?.r === r
-        const isFrontArc = frontArcHexes.some(h => h.q === q && h.r === r)
-        const color = getHexColor(q, r, playerPosition, moveRange, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, isFrontArc, isAlternate, isHovered)
+        
+        let arcType: ArcType = 'none'
+        if (facingArcs.front.some(h => h.q === q && h.r === r)) {
+          arcType = 'front'
+        } else if (facingArcs.side.some(h => h.q === q && h.r === r)) {
+          arcType = 'side'
+        } else if (facingArcs.rear.some(h => h.q === q && h.r === r)) {
+          arcType = 'rear'
+        }
+        
+        const color = getHexColor(q, r, playerPosition, moveRange, attackRange, isPlayerTurn, enemyPositions, selectedTargetPosition, moveTargetPosition, arcType, isAlternate, isHovered)
         return (
           <HexTile 
             key={`${q},${r}`} 

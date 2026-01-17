@@ -161,6 +161,7 @@ export const GameScreen = ({
             selectedTargetId={selectedTargetId}
             isPlayerTurn={isPlayerTurn}
             playerMoveRange={playerMoveRange}
+            showMoveRange={currentManeuver === 'move' || currentManeuver === 'attack' || currentManeuver === 'move_and_attack'}
             visualEffects={visualEffects}
             cameraMode={cameraMode}
             onGridClick={onGridClick}
