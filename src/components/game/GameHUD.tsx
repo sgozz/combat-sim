@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
 import HitLocationPicker from '../ui/HitLocationPicker'
-import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation } from '../../../shared/types'
+import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
 
@@ -146,6 +146,7 @@ export const GameActionPanel = ({
 }: GameActionPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
+  const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
@@ -233,6 +234,42 @@ export const GameActionPanel = ({
     }
 
     if (isMyTurn && !currentManeuver) {
+      if (showAOAVariantPicker) {
+        const AOA_VARIANTS: { variant: AOAVariant; label: string; desc: string }[] = [
+          { variant: 'determined', label: 'Determined', desc: '+4 to hit' },
+          { variant: 'strong', label: 'Strong', desc: '+2 damage' },
+          { variant: 'double', label: 'Double', desc: 'Two attacks at full skill' },
+          { variant: 'feint', label: 'Feint', desc: 'Attack + Feint (not implemented)' },
+        ]
+        return (
+          <>
+            <div className="aoa-variant-header">
+              <button className="action-btn small" onClick={() => setShowAOAVariantPicker(false)}>
+                <span className="btn-icon">←</span> Back
+              </button>
+              <span className="aoa-variant-title">All-Out Attack Variant</span>
+            </div>
+            <div className="aoa-variant-grid">
+              {AOA_VARIANTS.map(v => (
+                <Tooltip key={v.variant} content={v.desc} position="top">
+                  <button 
+                    className={`aoa-variant-btn ${v.variant === 'feint' ? 'disabled' : ''}`}
+                    disabled={v.variant === 'feint'}
+                    onClick={() => {
+                      setShowAOAVariantPicker(false)
+                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant })
+                    }}
+                  >
+                    <span className="aoa-variant-label">{v.label}</span>
+                    <span className="aoa-variant-desc">{v.desc}</span>
+                  </button>
+                </Tooltip>
+              ))}
+            </div>
+          </>
+        )
+      }
+      
       return (
         <>
           <div className="maneuver-grid">
@@ -240,7 +277,13 @@ export const GameActionPanel = ({
               <Tooltip key={m.type} content={m.desc} position="top">
                 <button 
                   className="maneuver-btn"
-                  onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })}
+                  onClick={() => {
+                    if (m.type === 'all_out_attack') {
+                      setShowAOAVariantPicker(true)
+                    } else {
+                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
+                    }
+                  }}
                 >
                   <span className="maneuver-icon">{m.icon}</span>
                   <span className="maneuver-label">{m.label}</span>

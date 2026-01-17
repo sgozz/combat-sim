@@ -1412,6 +1412,70 @@
   gap: 4px;
 }
 
+.aoa-variant-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.aoa-variant-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ff8844;
+}
+
+.aoa-variant-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aoa-variant-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #3a2020, #2a1515);
+  border: 1px solid #663333;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #ddd;
+  text-align: left;
+  width: 100%;
+}
+
+.aoa-variant-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4a2828, #3a2020);
+  border-color: #ff6644;
+  transform: translateX(4px);
+}
+
+.aoa-variant-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.aoa-variant-btn.disabled,
+.aoa-variant-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.aoa-variant-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffaa77;
+}
+
+.aoa-variant-desc {
+  font-size: 0.75rem;
+  color: #999;
+}
+
 .maneuver-btn {
   display: flex;
   align-items: center;

@@ -160,7 +160,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
       const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped');
-      return { ...c, maneuver: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0 };
+      return { ...c, maneuver: null, aoaVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1 };
     }
     return c;
   });

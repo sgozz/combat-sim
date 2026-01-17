@@ -52,6 +52,7 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       facing,
       posture: 'standing' as const,
       maneuver: null,
+      aoaVariant: null,
       currentHP: character.derived.hitPoints,
       currentFP: character.derived.fatiguePoints,
       statusEffects: [],
@@ -62,6 +63,7 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },
       usedReaction: false,
       shockPenalty: 0,
+      attacksRemaining: 1,
     };
   });
 

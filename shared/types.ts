@@ -148,6 +148,8 @@ export type ManeuverType =
   | 'all_out_defense' 
   | 'move_and_attack';
 
+export type AOAVariant = 'determined' | 'strong' | 'double' | 'feint';
+
 export type CombatantState = {
   playerId: Id;
   characterId: Id;
@@ -155,6 +157,7 @@ export type CombatantState = {
   facing: number;
   posture: Posture;
   maneuver: ManeuverType | null;
+  aoaVariant: AOAVariant | null;
   currentHP: number;
   currentFP: number;
   statusEffects: string[];
@@ -166,6 +169,7 @@ export type CombatantState = {
   usedReaction: boolean;
   /** Shock penalty from damage taken this turn (0-4, clears at turn start) */
   shockPenalty: number;
+  attacksRemaining: number;
 };
 
 export type MatchState = {
@@ -194,7 +198,7 @@ export type LobbySummary = {
 export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'release';
 
 export type CombatActionPayload =
-  | { type: "select_maneuver"; maneuver: ManeuverType }
+  | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant }
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation }
   | { type: "aim_target"; targetId: Id }
   | { type: "defend" }

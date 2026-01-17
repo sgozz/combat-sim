@@ -358,6 +358,12 @@ const handleCombatAction = async (
   if (payload.type === "select_maneuver") {
     const previousManeuver = actorCombatant.maneuver;
     const newManeuver = payload.maneuver;
+    const aoaVariant = payload.aoaVariant ?? null;
+    
+    if (newManeuver === 'all_out_attack' && !aoaVariant) {
+      sendMessage(socket, { type: "error", message: "All-Out Attack requires a variant (determined/strong/double/feint)." });
+      return;
+    }
     
     const updatedCombatants = match.combatants.map((c) => {
       if (c.playerId !== player.id) return c;
@@ -376,10 +382,15 @@ const handleCombatAction = async (
         aimTargetId = null;
       }
       
-      return { ...c, maneuver: newManeuver, aimTurns, aimTargetId };
+      const attacksRemaining = (newManeuver === 'all_out_attack' && aoaVariant === 'double') ? 2 : 1;
+      
+      return { ...c, maneuver: newManeuver, aoaVariant, aimTurns, aimTargetId, attacksRemaining };
     });
     
     let logMsg = `${player.name} chooses ${newManeuver.replace(/_/g, " ")}`;
+    if (newManeuver === 'all_out_attack' && aoaVariant) {
+      logMsg += ` (${aoaVariant})`;
+    }
     const updatedActor = updatedCombatants.find(c => c.playerId === player.id);
     if (newManeuver === 'aim' && updatedActor && updatedActor.aimTurns > 1) {
       logMsg += ` (turn ${updatedActor.aimTurns})`;
@@ -721,7 +732,9 @@ const handleAttackAction = async (
   skill += closeCombatMods.toHit;
   
   if (attackerManeuver === 'all_out_attack') {
-    skill += 4;
+    if (actorCombatant.aoaVariant === 'determined') {
+      skill += 4;
+    }
   } else if (attackerManeuver === 'move_and_attack') {
     skill = Math.min(skill - 4, 9);
   }
@@ -840,7 +853,12 @@ const handleAttackAction = async (
     });
   } else {
     const dmg = result.damage!;
-    const baseDamage = dmg.total;
+    let baseDamage = dmg.total;
+    
+    if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
+      baseDamage += 2;
+    }
+    
     const damageType = weapon?.damageType ?? 'crushing';
     const baseMultDamage = applyDamageMultiplier(baseDamage, damageType);
     const hitLocMultiplier = getHitLocationWoundingMultiplier(hitLocation, damageType);
@@ -889,16 +907,38 @@ const handleAttackAction = async (
     });
   }
 
-  let updated = advanceTurn({
-    ...match,
-    combatants: updatedCombatants,
-    log: [...match.log, logEntry],
-  });
-  updated = checkVictory(updated);
-  state.matches.set(lobby.id, updated);
-  await upsertMatch(lobby.id, updated);
-  sendToLobby(lobby, { type: "match_state", state: updated });
-  scheduleBotTurn(lobby, updated);
+  const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
+  const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+  
+  if (remainingAttacks > 0) {
+    updatedCombatants = updatedCombatants.map(c => 
+      c.playerId === player.id ? { ...c, attacksRemaining: remainingAttacks } : c
+    );
+    
+    const updated: MatchState = {
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+    };
+    const checkedUpdate = checkVictory(updated);
+    state.matches.set(lobby.id, checkedUpdate);
+    await upsertMatch(lobby.id, checkedUpdate);
+    sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+    if (checkedUpdate.status === 'finished') {
+      scheduleBotTurn(lobby, checkedUpdate);
+    }
+  } else {
+    let updated = advanceTurn({
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, logEntry],
+    });
+    updated = checkVictory(updated);
+    state.matches.set(lobby.id, updated);
+    await upsertMatch(lobby.id, updated);
+    sendToLobby(lobby, { type: "match_state", state: updated });
+    scheduleBotTurn(lobby, updated);
+  }
 };
 
 const handleEnterCloseCombat = async (
