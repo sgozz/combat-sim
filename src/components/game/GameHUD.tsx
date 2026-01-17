@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
-import type { MatchState, Player, CombatActionPayload, ManeuverType } from '../../../shared/types'
+import HitLocationPicker from '../ui/HitLocationPicker'
+import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
-import { getRangePenalty } from '../../../shared/rules'
+import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
 
 const PROBABILITY_TABLE: Record<number, number> = {
   3: 0.5, 4: 1.9, 5: 4.6, 6: 9.3, 7: 16.2, 8: 25.9, 9: 37.5,
@@ -137,6 +138,7 @@ export const GameActionPanel = ({
   inLobbyButNoMatch
 }: GameActionPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
+  const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
@@ -173,7 +175,8 @@ export const GameActionPanel = ({
     }
 
     const rangeMod = getRangePenalty(dist)
-    const effectiveSkill = baseSkillLevel + rangeMod
+    const hitLocMod = getHitLocationPenalty(selectedHitLocation)
+    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod
     const prob = getHitProbability(effectiveSkill)
     
     let color = '#ff4444'
@@ -185,6 +188,7 @@ export const GameActionPanel = ({
       baseSkillLevel,
       skillName,
       rangeMod,
+      hitLocMod,
       effectiveSkill,
       prob,
       color
@@ -344,6 +348,16 @@ export const GameActionPanel = ({
           </div>
         )}
         
+        {instructions.canAttack && (
+          <div className="hit-location-section">
+            <HitLocationPicker
+              selectedLocation={selectedHitLocation}
+              onSelect={setSelectedHitLocation}
+              disabled={!selectedTargetId}
+            />
+          </div>
+        )}
+
         {hitChanceInfo && instructions.canAttack && (
           <div className="hit-chance-preview">
             <div className="hit-chance-header">
@@ -353,6 +367,7 @@ export const GameActionPanel = ({
             <div className="hit-chance-calc">
               {hitChanceInfo.skillName}: {hitChanceInfo.baseSkillLevel}
               {hitChanceInfo.rangeMod < 0 && ` (${hitChanceInfo.rangeMod} range)`}
+              {hitChanceInfo.hitLocMod < 0 && ` (${hitChanceInfo.hitLocMod} ${selectedHitLocation.replace('_', ' ')})`}
               {' → '}<strong>{hitChanceInfo.effectiveSkill}</strong>
             </div>
             <div className="hit-chance-value" style={{ color: hitChanceInfo.color }}>
@@ -366,10 +381,10 @@ export const GameActionPanel = ({
             <button 
               className="action-btn primary"
               disabled={!selectedTargetId}
-              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId })}
+              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: selectedHitLocation })}
             >
               <span className="btn-icon">⚔️</span>
-              {selectedTargetId ? `Attack ${selectedTargetName}` : 'Select a target on map'}
+              {selectedTargetId ? `Attack ${selectedTargetName} [${selectedHitLocation.replace('_', ' ')}]` : 'Select a target on map'}
             </button>
           )}
           

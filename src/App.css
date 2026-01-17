@@ -1994,8 +1994,104 @@
   color: #fff;
 }
 
-.tutorial-btn.primary:hover {
-  background: #535bf2;
+
+/* Hit Location Picker */
+.hit-location-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #111;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #333;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.hit-location-svg {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+.hit-location-part {
+  fill: #2a2a2a;
+  stroke: #444;
+  stroke-width: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.hit-location-part:hover {
+  fill: #3a3a3a;
+  stroke: #666;
+  filter: brightness(1.2);
+}
+
+.hit-location-part.selected {
+  fill: #2a4a2a;
+  stroke: #4f4;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px rgba(68, 255, 68, 0.3));
+}
+
+.hit-location-part.disabled {
+  fill: #1a1a1a;
+  stroke: #222;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.hit-location-label-group {
+  pointer-events: none;
+}
+
+.hit-location-text {
+  fill: #888;
+  font-size: 10px;
+  font-family: monospace;
+  text-anchor: middle;
+  pointer-events: none;
+  font-weight: bold;
+}
+
+.hit-location-penalty {
+  fill: #aaa;
+  font-size: 8px;
+  font-family: monospace;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.hit-location-part:hover + .hit-location-label-group .hit-location-text,
+.hit-location-part.selected + .hit-location-label-group .hit-location-text {
+  fill: #fff;
+}
+
+.hit-location-part:hover + .hit-location-label-group .hit-location-penalty,
+.hit-location-part.selected + .hit-location-label-group .hit-location-penalty {
+  fill: #4f4;
+}
+
+.hit-location-header {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #ccc;
+  text-align: center;
+  width: 100%;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+}
+
+.hit-location-tooltip {
+  margin-top: 0.5rem;
+  height: 20px;
+  font-size: 0.85rem;
+  color: #4f4;
+  text-align: center;
+  font-weight: bold;
 }
 
 .tutorial-btn.secondary {
