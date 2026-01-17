@@ -170,6 +170,8 @@ export const advanceTurn = (state: MatchState): MatchState => {
     combatants,
     activeTurnPlayerId: nextPlayerId,
     round,
+    turnMovement: undefined,
+    reachableHexes: undefined,
   };
 };
 
@@ -502,6 +504,290 @@ export type GrappleTechniqueResult = {
   effect: string;
 };
 
+// ============ HEX MOVEMENT (GURPS B386-388) ============
+
+export type HexPosition = {
+  q: number;
+  r: number;
+};
+
+export type MovementState = {
+  position: HexPosition;
+  facing: number;
+  movePointsRemaining: number;
+  freeRotationUsed: boolean;
+  movedBackward: boolean;
+};
+
+export type MovementCost = {
+  total: number;
+  rotationCost: number;
+  movementCost: number;
+  isBackward: boolean;
+  path: HexPosition[];
+};
+
+const HEX_DIRECTIONS: HexPosition[] = [
+  { q: 1, r: 0 },   // 0: East
+  { q: 1, r: -1 },  // 1: NE
+  { q: 0, r: -1 },  // 2: NW
+  { q: -1, r: 0 },  // 3: West
+  { q: -1, r: 1 },  // 4: SW
+  { q: 0, r: 1 },   // 5: SE
+];
+
+export const getHexNeighbor = (pos: HexPosition, direction: number): HexPosition => {
+  const dir = HEX_DIRECTIONS[(direction % 6 + 6) % 6];
+  return { q: pos.q + dir.q, r: pos.r + dir.r };
+};
+
+export const hexDistance = (a: HexPosition, b: HexPosition): number => {
+  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
+};
+
+export const getDirectionToHex = (from: HexPosition, to: HexPosition): number | null => {
+  const dq = to.q - from.q;
+  const dr = to.r - from.r;
+  
+  for (let i = 0; i < 6; i++) {
+    if (HEX_DIRECTIONS[i].q === dq && HEX_DIRECTIONS[i].r === dr) {
+      return i;
+    }
+  }
+  return null;
+};
+
+export const getRelativeDirection = (facing: number, moveDirection: number): 'front' | 'front-side' | 'rear-side' | 'rear' => {
+  const diff = ((moveDirection - facing) % 6 + 6) % 6;
+  if (diff === 0) return 'front';
+  if (diff === 1 || diff === 5) return 'front-side';
+  if (diff === 2 || diff === 4) return 'rear-side';
+  return 'rear';
+};
+
+export const getRotationCost = (fromFacing: number, toFacing: number, freeRotationUsed: boolean): number => {
+  let diff = ((toFacing - fromFacing) % 6 + 6) % 6;
+  if (diff > 3) diff = 6 - diff;
+  
+  if (diff === 0) return 0;
+  if (!freeRotationUsed) return Math.max(0, diff - 1);
+  return diff;
+};
+
+export const getMovementCostToAdjacent = (
+  from: HexPosition,
+  to: HexPosition,
+  facing: number
+): { cost: number; isBackward: boolean } => {
+  const direction = getDirectionToHex(from, to);
+  if (direction === null) return { cost: Infinity, isBackward: false };
+  
+  const relDir = getRelativeDirection(facing, direction);
+  
+  if (relDir === 'rear') {
+    return { cost: 2, isBackward: true };
+  }
+  return { cost: 1, isBackward: false };
+};
+
+export type ReachableHex = {
+  position: HexPosition;
+  cost: number;
+  path: HexPosition[];
+  finalFacing: number;
+  requiresBackwardMove: boolean;
+};
+
+type DijkstraState = {
+  position: HexPosition;
+  facing: number;
+  cost: number;
+  path: HexPosition[];
+  freeRotationUsed: boolean;
+  movedBackward: boolean;
+};
+
+export const getReachableHexes = (
+  startPos: HexPosition,
+  startFacing: number,
+  basicMove: number,
+  freeRotationUsed: boolean = false,
+  occupiedHexes: HexPosition[] = []
+): Map<string, ReachableHex> => {
+  const results = new Map<string, ReachableHex>();
+  const visited = new Map<string, number>();
+  const queue: DijkstraState[] = [];
+  
+  const posKey = (p: HexPosition, f: number) => `${p.q},${p.r},${f}`;
+  const hexKey = (p: HexPosition) => `${p.q},${p.r}`;
+  const isOccupied = (p: HexPosition) => occupiedHexes.some(o => o.q === p.q && o.r === p.r);
+  
+  queue.push({
+    position: startPos,
+    facing: startFacing,
+    cost: 0,
+    path: [startPos],
+    freeRotationUsed,
+    movedBackward: false,
+  });
+  
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift()!;
+    
+    const key = posKey(current.position, current.facing);
+    if (visited.has(key) && visited.get(key)! <= current.cost) continue;
+    visited.set(key, current.cost);
+    
+    const hKey = hexKey(current.position);
+    if (!results.has(hKey) || results.get(hKey)!.cost > current.cost) {
+      results.set(hKey, {
+        position: current.position,
+        cost: current.cost,
+        path: current.path,
+        finalFacing: current.facing,
+        requiresBackwardMove: current.movedBackward,
+      });
+    }
+    
+    if (current.cost >= basicMove) continue;
+    
+    for (let newFacing = 0; newFacing < 6; newFacing++) {
+      if (newFacing !== current.facing) {
+        const rotCost = getRotationCost(current.facing, newFacing, current.freeRotationUsed);
+        const newCost = current.cost + rotCost;
+        
+        if (newCost <= basicMove) {
+          queue.push({
+            position: current.position,
+            facing: newFacing,
+            cost: newCost,
+            path: current.path,
+            freeRotationUsed: current.freeRotationUsed || rotCost < ((newFacing - current.facing + 6) % 6 > 3 ? 6 - ((newFacing - current.facing + 6) % 6) : (newFacing - current.facing + 6) % 6),
+            movedBackward: current.movedBackward,
+          });
+        }
+      }
+    }
+    
+    for (let dir = 0; dir < 6; dir++) {
+      const neighbor = getHexNeighbor(current.position, dir);
+      
+      if (isOccupied(neighbor)) continue;
+      
+      const { cost: moveCost, isBackward } = getMovementCostToAdjacent(
+        current.position,
+        neighbor,
+        current.facing
+      );
+      
+      if (moveCost === Infinity) continue;
+      
+      const newCost = current.cost + moveCost;
+      if (newCost > basicMove) continue;
+      
+      queue.push({
+        position: neighbor,
+        facing: current.facing,
+        cost: newCost,
+        path: [...current.path, neighbor],
+        freeRotationUsed: current.freeRotationUsed,
+        movedBackward: current.movedBackward || isBackward,
+      });
+    }
+  }
+  
+  results.delete(hexKey(startPos));
+  
+  return results;
+};
+
+export const calculateMovementCost = (
+  from: HexPosition,
+  to: HexPosition,
+  fromFacing: number,
+  basicMove: number,
+  freeRotationUsed: boolean = false,
+  occupiedHexes: HexPosition[] = []
+): MovementCost | null => {
+  const reachable = getReachableHexes(from, fromFacing, basicMove, freeRotationUsed, occupiedHexes);
+  const key = `${to.q},${to.r}`;
+  
+  const result = reachable.get(key);
+  if (!result) return null;
+  
+  return {
+    total: result.cost,
+    rotationCost: 0,
+    movementCost: result.cost,
+    isBackward: result.requiresBackwardMove,
+    path: result.path,
+  };
+};
+
+export const canMoveTo = (
+  from: HexPosition,
+  to: HexPosition,
+  fromFacing: number,
+  movePointsRemaining: number,
+  freeRotationUsed: boolean = false,
+  occupiedHexes: HexPosition[] = []
+): boolean => {
+  const cost = calculateMovementCost(from, to, fromFacing, movePointsRemaining, freeRotationUsed, occupiedHexes);
+  return cost !== null && cost.total <= movePointsRemaining;
+};
+
+export const executeMove = (
+  state: MovementState,
+  to: HexPosition,
+  occupiedHexes: HexPosition[] = []
+): MovementState | null => {
+  const cost = calculateMovementCost(
+    state.position,
+    to,
+    state.facing,
+    state.movePointsRemaining,
+    state.freeRotationUsed,
+    occupiedHexes
+  );
+  
+  if (!cost || cost.total > state.movePointsRemaining) return null;
+  
+  const reachable = getReachableHexes(
+    state.position,
+    state.facing,
+    state.movePointsRemaining,
+    state.freeRotationUsed,
+    occupiedHexes
+  );
+  const result = reachable.get(`${to.q},${to.r}`);
+  if (!result) return null;
+  
+  return {
+    position: to,
+    facing: result.finalFacing,
+    movePointsRemaining: state.movePointsRemaining - cost.total,
+    freeRotationUsed: true,
+    movedBackward: state.movedBackward || cost.isBackward,
+  };
+};
+
+export const executeRotation = (
+  state: MovementState,
+  newFacing: number
+): MovementState | null => {
+  const cost = getRotationCost(state.facing, newFacing, state.freeRotationUsed);
+  
+  if (cost > state.movePointsRemaining) return null;
+  
+  return {
+    ...state,
+    facing: newFacing,
+    movePointsRemaining: state.movePointsRemaining - cost,
+    freeRotationUsed: state.freeRotationUsed || cost === 0,
+  };
+};
+
 export const resolveGrappleTechnique = (
   technique: 'throw' | 'lock' | 'choke' | 'pin',
   skill: number,
@@ -534,3 +820,89 @@ export const resolveGrappleTechnique = (
     }
   }
 };
+
+import type { ManeuverType, TurnMovementState, HexCoord, ReachableHexInfo } from './types';
+
+export const getMovePointsForManeuver = (
+  maneuver: ManeuverType | null,
+  basicMove: number,
+  posture: Posture
+): number => {
+  const postureMods = getPostureModifiers(posture);
+  const baseMove = Math.floor(basicMove * postureMods.moveMultiplier);
+  
+  switch (maneuver) {
+    case 'do_nothing':
+      return 0;
+    case 'move':
+      return baseMove;
+    case 'all_out_defense':
+      return Math.min(baseMove, 1);
+    case 'attack':
+    case 'aim':
+      return 1;
+    case 'all_out_attack':
+      return Math.floor(basicMove / 2);
+    case 'move_and_attack':
+      return baseMove;
+    default:
+      return 0;
+  }
+};
+
+export const initializeTurnMovement = (
+  position: HexCoord,
+  facing: number,
+  maneuver: ManeuverType | null,
+  basicMove: number,
+  posture: Posture
+): TurnMovementState => {
+  const movePoints = getMovePointsForManeuver(maneuver, basicMove, posture);
+  
+  return {
+    startPosition: { ...position },
+    startFacing: facing,
+    currentPosition: { ...position },
+    currentFacing: facing,
+    movePointsRemaining: movePoints,
+    freeRotationUsed: false,
+    movedBackward: false,
+    phase: movePoints > 0 ? 'moving' : 'completed',
+  };
+};
+
+export const calculateReachableHexesInfo = (
+  state: TurnMovementState,
+  occupiedHexes: HexCoord[]
+): ReachableHexInfo[] => {
+  const reachable = getReachableHexes(
+    state.currentPosition,
+    state.currentFacing,
+    state.movePointsRemaining,
+    state.freeRotationUsed,
+    occupiedHexes
+  );
+  
+  const result: ReachableHexInfo[] = [];
+  reachable.forEach((hex) => {
+    result.push({
+      q: hex.position.q,
+      r: hex.position.r,
+      cost: hex.cost,
+      finalFacing: hex.finalFacing,
+    });
+  });
+  
+  return result;
+};
+
+export const gridToHex = (pos: { x: number; z: number }): HexCoord => ({
+  q: pos.x,
+  r: pos.z,
+});
+
+export const hexToGrid = (hex: HexCoord): { x: number; y: number; z: number } => ({
+  x: hex.q,
+  y: 0,
+  z: hex.r,
+});

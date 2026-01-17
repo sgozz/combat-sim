@@ -23,6 +23,17 @@ import {
   resolveGrappleAttempt,
   resolveBreakFree,
   resolveGrappleTechnique,
+  getRotationCost,
+  getRelativeDirection,
+  getMovementCostToAdjacent,
+  getReachableHexes,
+  canMoveTo,
+  executeMove,
+  executeRotation,
+  getHexNeighbor,
+  hexDistance,
+  type HexPosition,
+  type MovementState,
 } from './rules'
 import type { CharacterSheet, MatchState, CombatantState, Player, Equipment } from './types'
 
@@ -625,6 +636,280 @@ describe('GURPS Rules', () => {
       const withCP = resolveGrappleTechnique('throw', 10, 12, 8, medRoll)
       expect(withCP.success).toBe(true)
       expect(withoutCP.success).toBe(false)
+    })
+  })
+
+  describe('Hex Movement', () => {
+    describe('hexDistance', () => {
+      it('returns 0 for same hex', () => {
+        expect(hexDistance({ q: 0, r: 0 }, { q: 0, r: 0 })).toBe(0)
+      })
+
+      it('returns 1 for adjacent hexes', () => {
+        expect(hexDistance({ q: 0, r: 0 }, { q: 1, r: 0 })).toBe(1)
+        expect(hexDistance({ q: 0, r: 0 }, { q: 0, r: 1 })).toBe(1)
+        expect(hexDistance({ q: 0, r: 0 }, { q: -1, r: 1 })).toBe(1)
+      })
+
+      it('returns correct distance for far hexes', () => {
+        expect(hexDistance({ q: 0, r: 0 }, { q: 3, r: 0 })).toBe(3)
+        expect(hexDistance({ q: 0, r: 0 }, { q: 2, r: 2 })).toBe(4)
+      })
+    })
+
+    describe('getHexNeighbor', () => {
+      it('returns correct neighbor for each direction', () => {
+        const center: HexPosition = { q: 0, r: 0 }
+        expect(getHexNeighbor(center, 0)).toEqual({ q: 1, r: 0 })
+        expect(getHexNeighbor(center, 1)).toEqual({ q: 1, r: -1 })
+        expect(getHexNeighbor(center, 2)).toEqual({ q: 0, r: -1 })
+        expect(getHexNeighbor(center, 3)).toEqual({ q: -1, r: 0 })
+        expect(getHexNeighbor(center, 4)).toEqual({ q: -1, r: 1 })
+        expect(getHexNeighbor(center, 5)).toEqual({ q: 0, r: 1 })
+      })
+    })
+
+    describe('getRotationCost', () => {
+      it('no cost to stay in same facing', () => {
+        expect(getRotationCost(0, 0, false)).toBe(0)
+        expect(getRotationCost(0, 0, true)).toBe(0)
+      })
+
+      it('first 60° rotation is free', () => {
+        expect(getRotationCost(0, 1, false)).toBe(0)
+        expect(getRotationCost(0, 5, false)).toBe(0)
+      })
+
+      it('subsequent rotations cost 1 each', () => {
+        expect(getRotationCost(0, 2, false)).toBe(1)
+        expect(getRotationCost(0, 3, false)).toBe(2)
+      })
+
+      it('after free rotation used, all rotations cost', () => {
+        expect(getRotationCost(0, 1, true)).toBe(1)
+        expect(getRotationCost(0, 2, true)).toBe(2)
+      })
+
+      it('takes shortest path for rotation', () => {
+        expect(getRotationCost(0, 4, false)).toBe(1)
+        expect(getRotationCost(0, 5, false)).toBe(0)
+      })
+    })
+
+    describe('getRelativeDirection', () => {
+      it('identifies front direction', () => {
+        expect(getRelativeDirection(0, 0)).toBe('front')
+      })
+
+      it('identifies front-side directions', () => {
+        expect(getRelativeDirection(0, 1)).toBe('front-side')
+        expect(getRelativeDirection(0, 5)).toBe('front-side')
+      })
+
+      it('identifies rear-side directions', () => {
+        expect(getRelativeDirection(0, 2)).toBe('rear-side')
+        expect(getRelativeDirection(0, 4)).toBe('rear-side')
+      })
+
+      it('identifies rear direction', () => {
+        expect(getRelativeDirection(0, 3)).toBe('rear')
+      })
+    })
+
+    describe('getMovementCostToAdjacent', () => {
+      it('costs 1 to move forward', () => {
+        const from: HexPosition = { q: 0, r: 0 }
+        const to = getHexNeighbor(from, 0)
+        const result = getMovementCostToAdjacent(from, to, 0)
+        expect(result.cost).toBe(1)
+        expect(result.isBackward).toBe(false)
+      })
+
+      it('costs 1 to move to sides', () => {
+        const from: HexPosition = { q: 0, r: 0 }
+        const toLeft = getHexNeighbor(from, 1)
+        const toRight = getHexNeighbor(from, 5)
+        expect(getMovementCostToAdjacent(from, toLeft, 0).cost).toBe(1)
+        expect(getMovementCostToAdjacent(from, toRight, 0).cost).toBe(1)
+      })
+
+      it('costs 2 to move backward', () => {
+        const from: HexPosition = { q: 0, r: 0 }
+        const to = getHexNeighbor(from, 3)
+        const result = getMovementCostToAdjacent(from, to, 0)
+        expect(result.cost).toBe(2)
+        expect(result.isBackward).toBe(true)
+      })
+    })
+
+    describe('getReachableHexes', () => {
+      it('with Move 1, can reach 6 adjacent hexes', () => {
+        const start: HexPosition = { q: 0, r: 0 }
+        const reachable = getReachableHexes(start, 0, 1, false, [])
+        expect(reachable.size).toBe(6)
+      })
+
+      it('backward hex reachable with Move 1 via free rotation', () => {
+        const start: HexPosition = { q: 0, r: 0 }
+        const reachable = getReachableHexes(start, 0, 1, false, [])
+        const backward = getHexNeighbor(start, 3)
+        const backwardKey = `${backward.q},${backward.r}`
+        expect(reachable.has(backwardKey)).toBe(true)
+        expect(reachable.get(backwardKey)!.cost).toBe(1)
+      })
+
+      it('far backward hex not reachable with Move 1', () => {
+        const start: HexPosition = { q: 0, r: 0 }
+        const reachable = getReachableHexes(start, 0, 1, false, [])
+        const farBackward: HexPosition = { q: -2, r: 0 }
+        const backwardKey = `${farBackward.q},${farBackward.r}`
+        expect(reachable.has(backwardKey)).toBe(false)
+      })
+
+      it('backward hex reachable with Move 2 via rotation', () => {
+        const start: HexPosition = { q: 0, r: 0 }
+        const reachable = getReachableHexes(start, 0, 2, false, [])
+        const backward = getHexNeighbor(start, 3)
+        const backwardKey = `${backward.q},${backward.r}`
+        expect(reachable.has(backwardKey)).toBe(true)
+        expect(reachable.get(backwardKey)!.cost).toBe(1)
+        expect(reachable.get(backwardKey)!.requiresBackwardMove).toBe(false)
+      })
+
+      it('respects occupied hexes', () => {
+        const start: HexPosition = { q: 0, r: 0 }
+        const blocked = getHexNeighbor(start, 0)
+        const reachable = getReachableHexes(start, 0, 5, false, [blocked])
+        const blockedKey = `${blocked.q},${blocked.r}`
+        expect(reachable.has(blockedKey)).toBe(false)
+      })
+
+      it('with Move 5, can reach many hexes', () => {
+        const start: HexPosition = { q: 0, r: 0 }
+        const reachable = getReachableHexes(start, 0, 5, false, [])
+        expect(reachable.size).toBeGreaterThan(20)
+      })
+    })
+
+    describe('canMoveTo', () => {
+      it('returns true for reachable hex', () => {
+        const from: HexPosition = { q: 0, r: 0 }
+        const to = getHexNeighbor(from, 0)
+        expect(canMoveTo(from, to, 0, 5, false, [])).toBe(true)
+      })
+
+      it('returns false for hex too far', () => {
+        const from: HexPosition = { q: 0, r: 0 }
+        const to: HexPosition = { q: 10, r: 0 }
+        expect(canMoveTo(from, to, 0, 5, false, [])).toBe(false)
+      })
+
+      it('returns false for occupied hex', () => {
+        const from: HexPosition = { q: 0, r: 0 }
+        const to = getHexNeighbor(from, 0)
+        expect(canMoveTo(from, to, 0, 5, false, [to])).toBe(false)
+      })
+    })
+
+    describe('executeMove', () => {
+      it('updates position and reduces move points', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 5,
+          freeRotationUsed: false,
+          movedBackward: false,
+        }
+        const to = getHexNeighbor(state.position, 0)
+        const result = executeMove(state, to, [])
+        expect(result).not.toBeNull()
+        expect(result!.position).toEqual(to)
+        expect(result!.movePointsRemaining).toBe(4)
+      })
+
+      it('returns null if not enough move points', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 1,
+          freeRotationUsed: false,
+          movedBackward: false,
+        }
+        const far: HexPosition = { q: 5, r: 0 }
+        const result = executeMove(state, far, [])
+        expect(result).toBeNull()
+      })
+
+      it('uses optimal path via rotation instead of backward move', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 5,
+          freeRotationUsed: false,
+          movedBackward: false,
+        }
+        const backward = getHexNeighbor(state.position, 3)
+        const result = executeMove(state, backward, [])
+        expect(result).not.toBeNull()
+        expect(result!.movedBackward).toBe(false)
+        expect(result!.movePointsRemaining).toBe(4)
+      })
+
+      it('marks backward movement when rotation already used', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 5,
+          freeRotationUsed: true,
+          movedBackward: false,
+        }
+        const backward = getHexNeighbor(state.position, 3)
+        const result = executeMove(state, backward, [])
+        expect(result).not.toBeNull()
+        expect(result!.movePointsRemaining).toBe(3)
+      })
+    })
+
+    describe('executeRotation', () => {
+      it('first rotation is free', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 5,
+          freeRotationUsed: false,
+          movedBackward: false,
+        }
+        const result = executeRotation(state, 1)
+        expect(result).not.toBeNull()
+        expect(result!.facing).toBe(1)
+        expect(result!.movePointsRemaining).toBe(5)
+      })
+
+      it('subsequent rotations cost move points', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 5,
+          freeRotationUsed: true,
+          movedBackward: false,
+        }
+        const result = executeRotation(state, 2)
+        expect(result).not.toBeNull()
+        expect(result!.facing).toBe(2)
+        expect(result!.movePointsRemaining).toBe(3)
+      })
+
+      it('returns null if not enough move points', () => {
+        const state: MovementState = {
+          position: { q: 0, r: 0 },
+          facing: 0,
+          movePointsRemaining: 1,
+          freeRotationUsed: true,
+          movedBackward: false,
+        }
+        const result = executeRotation(state, 3)
+        expect(result).toBeNull()
+      })
     })
   })
 })

@@ -96,6 +96,32 @@ export type GridPosition = {
   z: number;
 };
 
+// Hex position for movement calculations (axial coordinates)
+export type HexCoord = {
+  q: number;
+  r: number;
+};
+
+// Turn movement state - tracks incremental movement during a turn
+export type TurnMovementState = {
+  startPosition: HexCoord;
+  startFacing: number;
+  currentPosition: HexCoord;
+  currentFacing: number;
+  movePointsRemaining: number;
+  freeRotationUsed: boolean;
+  movedBackward: boolean;
+  phase: 'not_started' | 'moving' | 'completed';
+};
+
+// Reachable hex info sent to client
+export type ReachableHexInfo = {
+  q: number;
+  r: number;
+  cost: number;
+  finalFacing: number;
+};
+
 export type ManeuverType = 
   | 'do_nothing' 
   | 'move' 
@@ -134,6 +160,8 @@ export type MatchState = {
   winnerId?: Id;
   status: "active" | "finished";
   finishedAt?: number;
+  turnMovement?: TurnMovementState;
+  reachableHexes?: ReachableHexInfo[];
 };
 
 export type LobbySummary = {
@@ -152,6 +180,11 @@ export type CombatActionPayload =
   | { type: "aim_target"; targetId: Id }
   | { type: "defend" }
   | { type: "move"; position: GridPosition }
+  | { type: "move_step"; to: HexCoord }
+  | { type: "rotate"; facing: number }
+  | { type: "undo_movement" }
+  | { type: "confirm_movement" }
+  | { type: "skip_movement" }
   | { type: "turn_left" }
   | { type: "turn_right" }
   | { type: "change_posture"; posture: Posture }

@@ -22,7 +22,6 @@ type GameScreenProps = {
   moveTarget: GridPosition | null
   selectedTargetId: string | null
   isPlayerTurn: boolean
-  playerMoveRange: number
   pendingAction: PendingAction | null
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
@@ -56,7 +55,6 @@ export const GameScreen = ({
   moveTarget,
   selectedTargetId,
   isPlayerTurn,
-  playerMoveRange,
   pendingAction,
   onGridClick,
   onCombatantClick,
@@ -173,8 +171,7 @@ export const GameScreen = ({
             moveTarget={moveTarget}
             selectedTargetId={selectedTargetId}
             isPlayerTurn={isPlayerTurn}
-            playerMoveRange={playerMoveRange}
-            showMoveRange={currentManeuver === 'move' || currentManeuver === 'attack' || currentManeuver === 'move_and_attack'}
+            reachableHexes={matchState?.reachableHexes ?? []}
             visualEffects={visualEffects}
             cameraMode={cameraMode}
             onGridClick={onGridClick}
@@ -186,7 +183,6 @@ export const GameScreen = ({
       <GameActionPanel
         matchState={matchState}
         logs={logs}
-        moveTarget={moveTarget}
         selectedTargetId={selectedTargetId}
         currentManeuver={currentManeuver}
         isMyTurn={isPlayerTurn}
@@ -220,7 +216,6 @@ export const GameScreen = ({
         currentManeuver={currentManeuver}
         selectedTargetId={selectedTargetId}
         matchState={matchState}
-        moveTarget={moveTarget}
         inLobbyButNoMatch={inLobbyButNoMatch}
         playerId={player?.id ?? null}
         onAction={onAction}

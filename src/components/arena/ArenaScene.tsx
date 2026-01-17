@@ -4,7 +4,7 @@ import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
 import { CameraControls, type CameraMode } from './CameraControls'
 import { hexToWorld, getHexInDirection } from '../../utils/hex'
-import type { CombatantState, CharacterSheet, GridPosition, VisualEffect } from '../../../shared/types'
+import type { CombatantState, CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo } from '../../../shared/types'
 import { useMemo } from 'react'
 
 type ArenaSceneProps = {
@@ -15,8 +15,7 @@ type ArenaSceneProps = {
   moveTarget: GridPosition | null
   selectedTargetId: string | null
   isPlayerTurn: boolean
-  playerMoveRange: number
-  showMoveRange: boolean
+  reachableHexes: ReachableHexInfo[]
   visualEffects: (VisualEffect & { id: string })[]
   cameraMode: CameraMode
   onGridClick: (position: GridPosition) => void
@@ -55,7 +54,7 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, playerMoveRange, showMoveRange, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null
   
@@ -123,13 +122,13 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
       <HexGrid 
         radius={10} 
         playerPosition={isPlayerTurn ? playerPosition : null}
-        moveRange={isPlayerTurn && showMoveRange ? playerMoveRange : 0}
         attackRange={attackRange}
         isPlayerTurn={isPlayerTurn}
         enemyPositions={enemyPositions}
         selectedTargetPosition={selectedTargetPosition}
         moveTargetPosition={moveTarget}
         facingArcs={facingArcs}
+        reachableHexes={reachableHexes}
         onHexClick={(q, r) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {

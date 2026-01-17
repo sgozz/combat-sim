@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
 import { WelcomeScreen } from './components/WelcomeScreen'
@@ -9,7 +9,6 @@ import { JoinLobbyModal } from './components/ui/JoinLobbyModal'
 
 import { applyAccessibilitySettings } from './components/ui/SettingsPanel'
 import type { GridPosition, CharacterSheet, CombatActionPayload } from '../shared/types'
-import { hexDistance } from './utils/hex'
 import './App.css'
 
 function AppRoutes() {
@@ -62,11 +61,6 @@ function AppRoutes() {
     }
   }, [lobbyId, navigate, location.pathname])
 
-  const activeCombatant = useMemo(() => {
-    if (!matchState || !player) return null
-    return matchState.combatants.find((combatant) => combatant.playerId === player.id) ?? null
-  }, [matchState, player])
-
   const handleWelcomeComplete = (nickname: string) => {
     window.localStorage.setItem('gurps.nickname', nickname)
     setScreen('lobby')
@@ -84,27 +78,11 @@ function AppRoutes() {
     sendMessage({ type: 'list_lobbies' })
   }
 
-  const handleGameAction = useCallback((action: string, payload?: CombatActionPayload) => {
-    if (action === 'move_click') {
-      if (!moveTarget) {
-        setLogs((prev) => [...prev, 'Click on the grid to select destination.'])
-      } else {
-        const movePayload: CombatActionPayload = { type: 'move', position: moveTarget }
-        sendMessage({ type: 'action', action: movePayload.type, payload: movePayload })
-        setMoveTarget(null)
-      }
-      return
-    }
-    
-    if (action === 'cancel_move') {
-      setMoveTarget(null)
-      return
-    }
-
+  const handleGameAction = useCallback((_action: string, payload?: CombatActionPayload) => {
     if (payload) {
       sendMessage({ type: 'action', action: payload.type, payload })
     }
-  }, [moveTarget, sendMessage, setLogs])
+  }, [sendMessage])
 
   const handleGridClick = useCallback((position: GridPosition) => {
     if (!matchState || matchState.activeTurnPlayerId !== player?.id) return
@@ -117,23 +95,15 @@ function AppRoutes() {
       return
     }
     
-    const character = matchState.characters.find((c) => c.id === currentCombatant.characterId)
-    const maxMove = character?.derived.basicMove ?? 5
-    const distance = hexDistance(position.x, position.z, currentCombatant.position.x, currentCombatant.position.z)
-    
-    if (distance > maxMove) {
-      setLogs((prev) => [...prev, `Too far! Max move: ${maxMove}, distance: ${distance} hexes.`])
-      return
-    }
-    
-    if (moveTarget && moveTarget.x === position.x && moveTarget.z === position.z) {
-      const payload: CombatActionPayload = { type: 'move', position }
+    if (matchState.turnMovement?.phase === 'moving') {
+      const payload: CombatActionPayload = { type: 'move_step', to: { q: position.x, r: position.z } }
       sendMessage({ type: 'action', action: payload.type, payload })
       setMoveTarget(null)
       return
     }
+    
     setMoveTarget(position)
-  }, [matchState, player, moveTarget, sendMessage, setLogs])
+  }, [matchState, player, sendMessage, setLogs])
 
   const handleCombatantClick = useCallback((targetPlayerId: string) => {
     if (!matchState || !player) return
@@ -201,7 +171,6 @@ function AppRoutes() {
               moveTarget={moveTarget}
               selectedTargetId={selectedTargetId}
               isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}
-              playerMoveRange={activeCombatant ? (matchState?.characters.find(c => c.id === activeCombatant.characterId)?.derived.basicMove ?? 5) : 5}
               pendingAction={pendingAction}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}

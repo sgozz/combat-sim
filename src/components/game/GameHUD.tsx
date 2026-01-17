@@ -100,7 +100,6 @@ export const GameStatusPanel = ({
 type GameActionPanelProps = {
   matchState: MatchState | null
   logs: string[]
-  moveTarget: unknown
   selectedTargetId: string | null
   currentManeuver: ManeuverType | null
   isMyTurn: boolean
@@ -126,7 +125,6 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string
 export const GameActionPanel = ({ 
   matchState, 
   logs, 
-  moveTarget, 
   selectedTargetId,
   currentManeuver,
   isMyTurn,
@@ -296,8 +294,9 @@ export const GameActionPanel = ({
     }
 
     const instructions = getManeuverInstructions()
-    const hasStepped = activeCombatant?.statusEffects.includes('has_stepped') ?? false
-    const canStillMove = instructions.canMove && !(instructions.isStep && hasStepped)
+    const turnMovement = matchState?.turnMovement
+    const inMovementPhase = turnMovement?.phase === 'moving'
+    const movePointsRemaining = turnMovement?.movePointsRemaining ?? 0
 
     return (
       <div className="action-section">
@@ -309,6 +308,40 @@ export const GameActionPanel = ({
             </div>
             <div className="maneuver-instructions">{instructions.text}</div>
           </>
+        )}
+
+        {inMovementPhase && (
+          <div className="movement-phase-panel">
+            <div className="movement-points">
+              <span className="mp-value">{movePointsRemaining}</span>
+              <span className="mp-label">MP</span>
+            </div>
+            <div className="movement-hint">
+              {movePointsRemaining > 0 
+                ? 'Click a reachable hex to move.'
+                : 'Movement complete.'}
+            </div>
+            <div className="movement-buttons">
+              <button 
+                className="action-btn"
+                onClick={() => onAction('undo_movement', { type: 'undo_movement' })}
+              >
+                <span className="btn-icon">↩</span> Undo
+              </button>
+              <button 
+                className="action-btn"
+                onClick={() => onAction('skip_movement', { type: 'skip_movement' })}
+              >
+                <span className="btn-icon">⏭</span> Skip
+              </button>
+              <button 
+                className="action-btn primary"
+                onClick={() => onAction('confirm_movement', { type: 'confirm_movement' })}
+              >
+                <span className="btn-icon">✓</span> Confirm
+              </button>
+            </div>
+          </div>
         )}
         
         {hitChanceInfo && instructions.canAttack && (
@@ -405,22 +438,7 @@ export const GameActionPanel = ({
             </button>
           )}
           
-          {canStillMove && (
-            <>
-              {moveTarget ? (
-                <>
-                  <button className="action-btn" onClick={() => onAction('move_click')}>
-                    <span className="btn-icon">✓</span> {instructions.isStep ? 'Step (1 hex)' : 'Confirm Move'}
-                  </button>
-                  <button className="action-btn danger" onClick={() => onAction('cancel_move')}>
-                    <span className="btn-icon">✕</span> Cancel
-                  </button>
-                </>
-              ) : (
-                <div className="action-hint">{instructions.isStep ? 'Click adjacent hex to step (optional)' : 'Click a hex on the map to move'}</div>
-              )}
-            </>
-          )}
+
 
           {!activeCombatant?.inCloseCombatWith && (
             <div className="facing-controls">

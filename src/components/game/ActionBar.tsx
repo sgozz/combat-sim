@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import type { ManeuverType, CombatActionPayload, MatchState, GridPosition } from '../../../shared/types'
+import type { ManeuverType, CombatActionPayload, MatchState } from '../../../shared/types'
 
 type ActionBarProps = {
   isMyTurn: boolean
   currentManeuver: ManeuverType | null
   selectedTargetId: string | null
   matchState: MatchState | null
-  moveTarget: GridPosition | null
   inLobbyButNoMatch: boolean
   playerId: string | null
   onAction: (action: string, payload?: CombatActionPayload) => void
@@ -32,7 +31,6 @@ export const ActionBar = ({
   currentManeuver, 
   selectedTargetId,
   matchState,
-  moveTarget,
   inLobbyButNoMatch,
   playerId,
   onAction,
@@ -117,10 +115,13 @@ export const ActionBar = ({
   }
 
   const canAttack = currentManeuver === 'attack' || currentManeuver === 'all_out_attack' || currentManeuver === 'move_and_attack'
-  const canMove = currentManeuver === 'move' || currentManeuver === 'attack' || currentManeuver === 'move_and_attack'
 
   const closeCombatTargetId = inCloseCombat ? playerCombatant?.inCloseCombatWith : null
   const effectiveTargetId = closeCombatTargetId ?? selectedTargetId
+  
+  const turnMovement = matchState?.turnMovement
+  const inMovementPhase = turnMovement?.phase === 'moving'
+  const movePointsRemaining = turnMovement?.movePointsRemaining ?? 0
   
   const targetCombatant = effectiveTargetId ? matchState.combatants.find(c => c.playerId === effectiveTargetId) : null
   const targetName = targetCombatant 
@@ -129,15 +130,14 @@ export const ActionBar = ({
 
   const getHint = () => {
     if (!currentManeuver) return 'Select maneuver ↓'
+    if (inMovementPhase && movePointsRemaining > 0) return `${movePointsRemaining} MP - Tap hex`
     if (inCloseCombat && canAttack) return null
     if (canAttack && !effectiveTargetId) return 'Tap enemy to target'
-    if (canMove && !moveTarget && !effectiveTargetId) return 'Tap hex to move'
     return null
   }
   const hint = getHint()
   
-  const canShowAttackBtn = canAttack && effectiveTargetId
-  const canShowMoveBtn = moveTarget !== null
+  const canShowAttackBtn = canAttack && effectiveTargetId && !inMovementPhase
 
   return (
     <>
@@ -201,14 +201,30 @@ export const ActionBar = ({
           </button>
         )}
 
-        {canShowMoveBtn && !inCloseCombat && (
-          <button
-            className="action-bar-btn primary"
-            onClick={() => onAction('move_click')}
-          >
-            <span className="action-bar-icon">✓</span>
-            <span className="action-bar-label">Move</span>
-          </button>
+        {inMovementPhase && !inCloseCombat && (
+          <>
+            <button
+              className="action-bar-btn small"
+              onClick={() => onAction('undo_movement', { type: 'undo_movement' })}
+              title="Undo Movement"
+            >
+              <span className="action-bar-icon">↩</span>
+            </button>
+            <button
+              className="action-bar-btn small"
+              onClick={() => onAction('skip_movement', { type: 'skip_movement' })}
+              title="Skip Movement"
+            >
+              <span className="action-bar-icon">⏭</span>
+            </button>
+            <button
+              className="action-bar-btn primary small"
+              onClick={() => onAction('confirm_movement', { type: 'confirm_movement' })}
+              title="Confirm Movement"
+            >
+              <span className="action-bar-icon">✓</span>
+            </button>
+          </>
         )}
 
         {inCloseCombat && (
