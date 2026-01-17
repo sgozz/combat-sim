@@ -1,4 +1,4 @@
-import type { Attributes, DerivedStats, MatchState, CharacterSheet, DamageType, Posture, Reach, Equipment, ShieldSize, CloseCombatPosition } from "./types";
+import type { Attributes, DerivedStats, MatchState, CharacterSheet, DamageType, Posture, Reach, Equipment, ShieldSize, CloseCombatPosition, HitLocation } from "./types";
 
 export type RollResult = {
   roll: number;
@@ -227,6 +227,64 @@ export const applyDamageMultiplier = (
 ): number => {
   const multiplier = getDamageMultiplier(damageType);
   return Math.floor(baseDamage * multiplier);
+};
+
+export type HitLocationData = {
+  penalty: number;
+  damageMultiplier: number;
+  woundingMultiplierTypes: DamageType[];
+  cripplingThreshold: number | null;
+};
+
+export const HIT_LOCATION_DATA: Record<HitLocation, HitLocationData> = {
+  eye:        { penalty: -9, damageMultiplier: 4, woundingMultiplierTypes: ['impaling', 'piercing'], cripplingThreshold: null },
+  skull:      { penalty: -7, damageMultiplier: 4, woundingMultiplierTypes: ['crushing', 'cutting', 'impaling', 'piercing'], cripplingThreshold: null },
+  face:       { penalty: -5, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: null },
+  neck:       { penalty: -5, damageMultiplier: 2, woundingMultiplierTypes: ['cutting'], cripplingThreshold: null },
+  torso:      { penalty: 0,  damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: null },
+  vitals:     { penalty: -3, damageMultiplier: 3, woundingMultiplierTypes: ['impaling', 'piercing'], cripplingThreshold: null },
+  groin:      { penalty: -3, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: null },
+  arm_right:  { penalty: -2, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.5 },
+  arm_left:   { penalty: -2, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.5 },
+  hand_right: { penalty: -4, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.33 },
+  hand_left:  { penalty: -4, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.33 },
+  leg_right:  { penalty: -2, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.5 },
+  leg_left:   { penalty: -2, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.5 },
+  foot_right: { penalty: -4, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.33 },
+  foot_left:  { penalty: -4, damageMultiplier: 1, woundingMultiplierTypes: [], cripplingThreshold: 0.33 },
+};
+
+export const getHitLocationPenalty = (location: HitLocation): number => {
+  return HIT_LOCATION_DATA[location].penalty;
+};
+
+export const getHitLocationWoundingMultiplier = (
+  location: HitLocation,
+  damageType: DamageType
+): number => {
+  const data = HIT_LOCATION_DATA[location];
+  if (data.woundingMultiplierTypes.includes(damageType)) {
+    return data.damageMultiplier;
+  }
+  if (location === 'skull' || location === 'eye') {
+    return data.damageMultiplier;
+  }
+  return 1;
+};
+
+export const rollRandomHitLocation = (random: () => number = Math.random): HitLocation => {
+  const { total } = roll3d6(random);
+  if (total === 3 || total === 4) return 'skull';
+  if (total === 5) return 'face';
+  if (total === 6 || total === 7) return 'leg_right';
+  if (total === 8) return 'arm_right';
+  if (total >= 9 && total <= 11) return 'torso';
+  if (total === 12) return 'groin';
+  if (total === 13) return 'arm_left';
+  if (total === 14 || total === 15) return 'leg_left';
+  if (total === 16) return 'hand_left';
+  if (total === 17 || total === 18) return 'foot_left';
+  return 'torso';
 };
 
 export type PostureModifiers = {

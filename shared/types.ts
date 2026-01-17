@@ -39,6 +39,23 @@ export type DamageType = 'crushing' | 'cutting' | 'impaling' | 'piercing';
 
 export type Posture = 'standing' | 'crouching' | 'kneeling' | 'prone';
 
+export type HitLocation = 
+  | 'eye'
+  | 'skull'
+  | 'face'
+  | 'neck'
+  | 'torso'
+  | 'vitals'
+  | 'groin'
+  | 'arm_right'
+  | 'arm_left'
+  | 'hand_right'
+  | 'hand_left'
+  | 'leg_right'
+  | 'leg_left'
+  | 'foot_right'
+  | 'foot_left';
+
 // Reach: "C" = close combat only, "1" = 1 hex, "C,1" = both, "1,2" = 1 or 2 hexes
 export type Reach = 'C' | '1' | '2' | '3' | 'C,1' | '1,2' | '2,3';
 
@@ -176,7 +193,7 @@ export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'relea
 
 export type CombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType }
-  | { type: "attack"; targetId: Id }
+  | { type: "attack"; targetId: Id; hitLocation?: HitLocation }
   | { type: "aim_target"; targetId: Id }
   | { type: "defend" }
   | { type: "move"; position: GridPosition }

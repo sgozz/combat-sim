@@ -32,6 +32,10 @@ import {
   executeRotation,
   getHexNeighbor,
   hexDistance,
+  HIT_LOCATION_DATA,
+  getHitLocationPenalty,
+  getHitLocationWoundingMultiplier,
+  rollRandomHitLocation,
   type HexPosition,
   type MovementState,
 } from './rules'
@@ -909,6 +913,126 @@ describe('GURPS Rules', () => {
         }
         const result = executeRotation(state, 3)
         expect(result).toBeNull()
+      })
+    })
+  })
+
+  describe('Hit Location System', () => {
+    describe('HIT_LOCATION_DATA', () => {
+      it('has correct penalty for torso (no penalty)', () => {
+        expect(HIT_LOCATION_DATA.torso.penalty).toBe(0)
+      })
+
+      it('has correct penalty for skull (-7)', () => {
+        expect(HIT_LOCATION_DATA.skull.penalty).toBe(-7)
+      })
+
+      it('has correct penalty for eye (-9)', () => {
+        expect(HIT_LOCATION_DATA.eye.penalty).toBe(-9)
+      })
+
+      it('has correct penalty for vitals (-3)', () => {
+        expect(HIT_LOCATION_DATA.vitals.penalty).toBe(-3)
+      })
+
+      it('has correct penalty for arm (-2)', () => {
+        expect(HIT_LOCATION_DATA.arm_right.penalty).toBe(-2)
+        expect(HIT_LOCATION_DATA.arm_left.penalty).toBe(-2)
+      })
+
+      it('has correct penalty for hand (-4)', () => {
+        expect(HIT_LOCATION_DATA.hand_right.penalty).toBe(-4)
+        expect(HIT_LOCATION_DATA.hand_left.penalty).toBe(-4)
+      })
+
+      it('skull has x4 damage multiplier', () => {
+        expect(HIT_LOCATION_DATA.skull.damageMultiplier).toBe(4)
+      })
+
+      it('vitals has x3 damage multiplier for impaling', () => {
+        expect(HIT_LOCATION_DATA.vitals.damageMultiplier).toBe(3)
+        expect(HIT_LOCATION_DATA.vitals.woundingMultiplierTypes).toContain('impaling')
+      })
+
+      it('limbs have crippling thresholds', () => {
+        expect(HIT_LOCATION_DATA.arm_right.cripplingThreshold).toBe(0.5)
+        expect(HIT_LOCATION_DATA.hand_right.cripplingThreshold).toBe(0.33)
+        expect(HIT_LOCATION_DATA.leg_right.cripplingThreshold).toBe(0.5)
+        expect(HIT_LOCATION_DATA.foot_right.cripplingThreshold).toBe(0.33)
+      })
+    })
+
+    describe('getHitLocationPenalty', () => {
+      it('returns correct penalties', () => {
+        expect(getHitLocationPenalty('torso')).toBe(0)
+        expect(getHitLocationPenalty('skull')).toBe(-7)
+        expect(getHitLocationPenalty('eye')).toBe(-9)
+        expect(getHitLocationPenalty('vitals')).toBe(-3)
+        expect(getHitLocationPenalty('neck')).toBe(-5)
+        expect(getHitLocationPenalty('face')).toBe(-5)
+        expect(getHitLocationPenalty('groin')).toBe(-3)
+      })
+    })
+
+    describe('getHitLocationWoundingMultiplier', () => {
+      it('returns x4 for skull with any damage type', () => {
+        expect(getHitLocationWoundingMultiplier('skull', 'crushing')).toBe(4)
+        expect(getHitLocationWoundingMultiplier('skull', 'cutting')).toBe(4)
+        expect(getHitLocationWoundingMultiplier('skull', 'impaling')).toBe(4)
+      })
+
+      it('returns x3 for vitals with impaling', () => {
+        expect(getHitLocationWoundingMultiplier('vitals', 'impaling')).toBe(3)
+      })
+
+      it('returns x1 for vitals with crushing', () => {
+        expect(getHitLocationWoundingMultiplier('vitals', 'crushing')).toBe(1)
+      })
+
+      it('returns x2 for neck with cutting', () => {
+        expect(getHitLocationWoundingMultiplier('neck', 'cutting')).toBe(2)
+      })
+
+      it('returns x1 for neck with crushing', () => {
+        expect(getHitLocationWoundingMultiplier('neck', 'crushing')).toBe(1)
+      })
+
+      it('returns x1 for torso with any damage type', () => {
+        expect(getHitLocationWoundingMultiplier('torso', 'crushing')).toBe(1)
+        expect(getHitLocationWoundingMultiplier('torso', 'cutting')).toBe(1)
+        expect(getHitLocationWoundingMultiplier('torso', 'impaling')).toBe(1)
+      })
+
+      it('returns x4 for eye with impaling', () => {
+        expect(getHitLocationWoundingMultiplier('eye', 'impaling')).toBe(4)
+      })
+    })
+
+    describe('rollRandomHitLocation', () => {
+      it('returns skull for roll of 3 or 4', () => {
+        const rollThree = () => 0
+        expect(rollRandomHitLocation(rollThree)).toBe('skull')
+      })
+
+      it('returns face for roll of 5', () => {
+        let call = 0
+        const rollFive = () => {
+          call++
+          if (call === 1) return 0
+          if (call === 2) return 0
+          return 0.4
+        }
+        expect(rollRandomHitLocation(rollFive)).toBe('face')
+      })
+
+      it('returns torso for roll of 9-11', () => {
+        const rollNine = () => 0.4
+        expect(rollRandomHitLocation(rollNine)).toBe('torso')
+      })
+
+      it('returns groin for roll of 12', () => {
+        const rollTwelve = () => 0.6
+        expect(rollRandomHitLocation(rollTwelve)).toBe('groin')
       })
     })
   })

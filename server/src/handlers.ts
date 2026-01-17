@@ -33,6 +33,8 @@ import {
   executeMove,
   executeRotation,
   getRotationCost,
+  getHitLocationPenalty,
+  getHitLocationWoundingMultiplier,
 } from "../../shared/rules";
 import type { HexPosition, MovementState } from "../../shared/rules";
 import type { Lobby, PlayerRow } from "./types";
@@ -739,6 +741,10 @@ const handleAttackAction = async (
   const attackerPosture = getPostureModifiers(actorCombatant.posture);
   skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
   
+  const hitLocation = payload.hitLocation ?? 'torso';
+  const hitLocationPenalty = getHitLocationPenalty(hitLocation);
+  skill += hitLocationPenalty;
+  
   const targetFacing = targetCombatant.facing;
   const attackDirection = calculateFacing(targetCombatant.position, actorCombatant.position);
   const relativeDir = (attackDirection - targetFacing + 6) % 6;
@@ -817,7 +823,8 @@ const handleAttackAction = async (
   const result = resolveAttack({ skill, defense: effectiveDefense, damage: damageFormula });
 
   let updatedCombatants = match.combatants;
-  let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} (${defenseDescription})`;
+  const hitLocLabel = hitLocation === 'torso' ? '' : ` [${hitLocation.replace('_', ' ')}]`;
+  let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}${hitLocLabel} (${defenseDescription})`;
 
   if (result.outcome === "miss") {
     logEntry += `: Miss. ${formatRoll(result.attack, 'Skill')}`;
@@ -835,13 +842,16 @@ const handleAttackAction = async (
     const dmg = result.damage!;
     const baseDamage = dmg.total;
     const damageType = weapon?.damageType ?? 'crushing';
-    const finalDamage = applyDamageMultiplier(baseDamage, damageType);
+    const baseMultDamage = applyDamageMultiplier(baseDamage, damageType);
+    const hitLocMultiplier = getHitLocationWoundingMultiplier(hitLocation, damageType);
+    const finalDamage = Math.floor(baseMultDamage * hitLocMultiplier);
     const rolls = dmg.rolls.join(',');
     const mod = dmg.modifier !== 0 ? (dmg.modifier > 0 ? `+${dmg.modifier}` : `${dmg.modifier}`) : '';
-    const multiplier = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
-    const dmgDetail = multiplier 
-      ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${multiplier} = ${finalDamage})`
-      : `(${damageFormula}: [${rolls}]${mod} ${damageType})`;
+    const typeMultStr = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
+    const hitLocStr = hitLocMultiplier > 1 ? ` ${hitLocation} x${hitLocMultiplier}` : ` ${hitLocation}`;
+    const dmgDetail = typeMultStr 
+      ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${typeMultStr}${hitLocStr} = ${finalDamage})`
+      : `(${damageFormula}: [${rolls}]${mod} ${damageType}${hitLocStr} = ${finalDamage})`;
 
     const targetMaxHP = targetCharacter.derived.hitPoints;
     const targetHT = targetCharacter.attributes.health;
