@@ -24,6 +24,7 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string }[] = [
   { type: 'all_out_attack', label: 'All-Out', icon: '😡' },
   { type: 'all_out_defense', label: 'Defend', icon: '🛡️' },
   { type: 'move_and_attack', label: 'M&A', icon: '🤸' },
+  { type: 'evaluate', label: 'Eval', icon: '🔍' },
 ]
 
 const CLOSE_COMBAT_MANEUVERS: ManeuverType[] = ['attack', 'all_out_attack', 'all_out_defense']

@@ -450,6 +450,8 @@ const handleCombatAction = async (
       
       let aimTurns = c.aimTurns;
       let aimTargetId = c.aimTargetId;
+      let evaluateBonus = c.evaluateBonus;
+      let evaluateTargetId = c.evaluateTargetId;
       
       if (newManeuver === 'aim') {
         if (previousManeuver === 'aim') {
@@ -462,9 +464,14 @@ const handleCombatAction = async (
         aimTargetId = null;
       }
       
+      if (newManeuver !== 'evaluate' && newManeuver !== 'attack' && newManeuver !== 'all_out_attack' && newManeuver !== 'move_and_attack') {
+        evaluateBonus = 0;
+        evaluateTargetId = null;
+      }
+      
       const attacksRemaining = (newManeuver === 'all_out_attack' && aoaVariant === 'double') ? 2 : 1;
       
-      return { ...c, maneuver: newManeuver, aoaVariant, aodVariant, aimTurns, aimTargetId, attacksRemaining };
+      return { ...c, maneuver: newManeuver, aoaVariant, aodVariant, aimTurns, aimTargetId, evaluateBonus, evaluateTargetId, attacksRemaining };
     });
     
     let logMsg = `${player.name} chooses ${newManeuver.replace(/_/g, " ")}`;
@@ -584,6 +591,40 @@ const handleCombatAction = async (
       ...match,
       combatants: updatedCombatants,
       log: [...match.log, `${player.name} aims at ${targetPlayer?.name ?? 'target'}.`],
+    });
+    state.matches.set(lobby.id, updated);
+    await upsertMatch(lobby.id, updated);
+    sendToLobby(lobby, { type: "match_state", state: updated });
+    scheduleBotTurn(lobby, updated);
+    return;
+  }
+
+  if (payload.type === "evaluate_target") {
+    if (actorCombatant.maneuver !== 'evaluate') {
+      sendMessage(socket, { type: "error", message: "Must select Evaluate maneuver first." });
+      return;
+    }
+    const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
+    if (!targetCombatant) {
+      sendMessage(socket, { type: "error", message: "Target not found." });
+      return;
+    }
+    const targetPlayer = match.players.find(p => p.id === payload.targetId);
+    
+    const isSameTarget = actorCombatant.evaluateTargetId === payload.targetId;
+    const newBonus = isSameTarget ? Math.min(3, actorCombatant.evaluateBonus + 1) : 1;
+    
+    const updatedCombatants = match.combatants.map((c) =>
+      c.playerId === player.id 
+        ? { ...c, evaluateTargetId: payload.targetId, evaluateBonus: newBonus } 
+        : c
+    );
+    
+    const bonusStr = newBonus > 1 ? ` (+${newBonus})` : ' (+1)';
+    const updated = advanceTurn({
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, `${player.name} evaluates ${targetPlayer?.name ?? 'target'}${bonusStr}.`],
     });
     state.matches.set(lobby.id, updated);
     await upsertMatch(lobby.id, updated);
@@ -831,6 +872,10 @@ const handleAttackAction = async (
     const weaponAcc = weapon?.accuracy ?? 0;
     const aimBonus = weaponAcc + Math.min(actorCombatant.aimTurns - 1, 2);
     skill += aimBonus;
+  }
+  
+  if (actorCombatant.evaluateBonus > 0 && actorCombatant.evaluateTargetId === payload.targetId) {
+    skill += actorCombatant.evaluateBonus;
   }
   
   if (actorCombatant.shockPenalty > 0) {

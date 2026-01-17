@@ -143,6 +143,7 @@ export type ManeuverType =
   | 'do_nothing' 
   | 'move' 
   | 'aim' 
+  | 'evaluate'
   | 'attack' 
   | 'all_out_attack' 
   | 'all_out_defense' 
@@ -192,6 +193,8 @@ export type CombatantState = {
   statusEffects: string[];
   aimTurns: number;
   aimTargetId: Id | null;
+  evaluateBonus: number;
+  evaluateTargetId: Id | null;
   inCloseCombatWith: Id | null;
   closeCombatPosition: CloseCombatPosition | null;
   grapple: GrappleState | null;
@@ -233,6 +236,7 @@ export type CombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant; aodVariant?: AODVariant }
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation }
   | { type: "aim_target"; targetId: Id }
+  | { type: "evaluate_target"; targetId: Id }
   | { type: "defend"; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }
   | { type: "move"; position: GridPosition }
   | { type: "move_step"; to: HexCoord }

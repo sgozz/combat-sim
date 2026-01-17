@@ -12,6 +12,7 @@ const MANEUVER_LABELS: Record<ManeuverType, string> = {
   'all_out_defense': 'Defend',
   'move_and_attack': 'Rush',
   'aim': 'Aim',
+  'evaluate': 'Evaluate',
   'do_nothing': 'Wait',
 }
 

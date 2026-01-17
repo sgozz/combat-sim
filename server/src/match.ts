@@ -59,6 +59,8 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       statusEffects: [],
       aimTurns: 0,
       aimTargetId: null,
+      evaluateBonus: 0,
+      evaluateTargetId: null,
       inCloseCombatWith: null,
       closeCombatPosition: null,
       grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },

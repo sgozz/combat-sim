@@ -127,7 +127,8 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string
   { type: 'all_out_defense', label: 'All-Out Defense', icon: '🛡️', desc: 'Bonus to defense (+2). Step allowed. No attack.', key: '4' },
   { type: 'move_and_attack', label: 'Move & Attack', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.', key: '5' },
   { type: 'aim', label: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.', key: '6' },
-  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '7' },
+  { type: 'evaluate', label: 'Evaluate', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
+  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '8' },
 ]
 
 export const GameActionPanel = ({ 
@@ -381,6 +382,8 @@ export const GameActionPanel = ({
           return { text: 'Move then attack (-4 to hit, max skill 9).', canAttack: true, canMove: true, isStep: false }
         case 'aim':
           return { text: 'Aiming. You gain +Acc bonus next turn.', canAttack: false, canMove: false, isStep: false }
+        case 'evaluate':
+          return { text: 'Click enemy to study. +1 to hit (max +3).', canAttack: false, canMove: false, isStep: false, canEvaluate: true }
         case 'do_nothing':
           return { text: 'Waiting. Click End Turn.', canAttack: false, canMove: false, isStep: false }
         default:
@@ -477,6 +480,17 @@ export const GameActionPanel = ({
             >
               <span className="btn-icon">⚔️</span>
               {selectedTargetId ? `Attack ${selectedTargetName} [${selectedHitLocation.replace('_', ' ')}]` : 'Select a target on map'}
+            </button>
+          )}
+
+          {currentManeuver === 'evaluate' && (
+            <button 
+              className="action-btn primary"
+              disabled={!selectedTargetId}
+              onClick={() => selectedTargetId && onAction('evaluate_target', { type: 'evaluate_target', targetId: selectedTargetId })}
+            >
+              <span className="btn-icon">🔍</span>
+              {selectedTargetId ? `Evaluate ${selectedTargetName}` : 'Select a target on map'}
             </button>
           )}
           
