@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant } from '../../../shared/types'
+import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger } from '../../../shared/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers } from '../../../shared/rules'
+import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
 
 type ActionBarProps = {
   isMyTurn: boolean
@@ -25,6 +26,7 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string }[] = [
   { type: 'all_out_defense', label: 'Defend', icon: '🛡️' },
   { type: 'move_and_attack', label: 'M&A', icon: '🤸' },
   { type: 'evaluate', label: 'Eval', icon: '🔍' },
+  { type: 'wait', label: 'Wait', icon: '⏳' },
   { type: 'ready', label: 'Ready', icon: '🗡️' },
 ]
 
@@ -59,6 +61,7 @@ export const ActionBar = ({
   onJoinLobby
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
+  const [showWaitPicker, setShowWaitPicker] = useState(false)
   const [showAOAVariants, setShowAOAVariants] = useState(false)
   const [showAODVariants, setShowAODVariants] = useState(false)
   const [retreat, setRetreat] = useState(false)
@@ -370,6 +373,24 @@ export const ActionBar = ({
           </button>
         </div>
       )}
+      {showWaitPicker && (
+        <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '60vh', overflowY: 'auto', alignItems: 'stretch' }}>
+          <WaitTriggerPicker
+            enemies={matchState?.combatants
+              .filter(c => c.playerId !== playerId)
+              .map(c => {
+                const char = matchState?.characters.find(ch => ch.id === c.characterId)
+                return { id: c.playerId, name: char?.name ?? 'Unknown' }
+              }) ?? []
+            }
+            onSetTrigger={(trigger: WaitTrigger) => {
+              onAction('set_wait_trigger', { type: 'set_wait_trigger', trigger })
+              setShowWaitPicker(false)
+            }}
+            onCancel={() => setShowWaitPicker(false)}
+          />
+        </div>
+      )}
       {showManeuvers && (
         <div className="action-bar-maneuvers">
           {availableManeuvers.map(m => (
@@ -383,6 +404,10 @@ export const ActionBar = ({
                 } else if (m.type === 'all_out_defense') {
                   setShowManeuvers(false)
                   setShowAODVariants(true)
+                } else if (m.type === 'wait') {
+                  setShowManeuvers(false)
+                  setShowWaitPicker(true)
+                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'wait' })
                 } else {
                   onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
                   setShowManeuvers(false)

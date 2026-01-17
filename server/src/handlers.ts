@@ -14,6 +14,8 @@ import type {
   EquippedItem,
   EquipmentSlot,
   ReadyAction,
+  WaitTrigger,
+  CombatantState,
 } from "../../shared/types";
 import type { Reach } from "../../shared/types";
 import { 
@@ -79,6 +81,64 @@ const formatRoll = (r: { target: number, roll: number, success: boolean, margin:
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
 const DEFENSE_TIMEOUT_MS = 15000;
+
+type WaitTriggerResult = {
+  triggered: boolean;
+  waiter: CombatantState | null;
+  waiterId: string | null;
+};
+
+const checkWaitTriggers = (
+  match: MatchState,
+  actingPlayerId: string,
+  triggerType: 'move' | 'attack',
+  newPosition?: { x: number; y: number; z: number },
+  attackTargetId?: string
+): WaitTriggerResult => {
+  const actingCombatant = match.combatants.find(c => c.playerId === actingPlayerId);
+  if (!actingCombatant) return { triggered: false, waiter: null, waiterId: null };
+  
+  for (const combatant of match.combatants) {
+    if (combatant.playerId === actingPlayerId) continue;
+    if (!combatant.waitTrigger) continue;
+    
+    const trigger = combatant.waitTrigger;
+    const waiterPos = combatant.position;
+    const actorPos = newPosition ?? actingCombatant.position;
+    const distance = calculateHexDistance(waiterPos, actorPos);
+    
+    let shouldTrigger = false;
+    
+    switch (trigger.condition) {
+      case 'enemy_moves_adjacent':
+        if (triggerType === 'move' && distance <= 1) {
+          shouldTrigger = true;
+        }
+        break;
+      case 'enemy_enters_reach':
+        if (triggerType === 'move' && distance <= 2) {
+          shouldTrigger = true;
+        }
+        break;
+      case 'enemy_attacks_me':
+        if (triggerType === 'attack' && attackTargetId === combatant.playerId) {
+          shouldTrigger = true;
+        }
+        break;
+      case 'enemy_attacks_ally':
+        if (triggerType === 'attack' && attackTargetId !== combatant.playerId) {
+          shouldTrigger = true;
+        }
+        break;
+    }
+    
+    if (shouldTrigger) {
+      return { triggered: true, waiter: combatant, waiterId: combatant.playerId };
+    }
+  }
+  
+  return { triggered: false, waiter: null, waiterId: null };
+};
 
 type ApplyDamageResult = {
   updatedCombatants: MatchState['combatants'];
@@ -636,6 +696,39 @@ const handleCombatAction = async (
     return;
   }
 
+  if (payload.type === "set_wait_trigger") {
+    if (actorCombatant.maneuver !== 'wait') {
+      sendMessage(socket, { type: "error", message: "Must select Wait maneuver first." });
+      return;
+    }
+    const trigger = payload.trigger;
+    
+    const conditionDesc: Record<string, string> = {
+      'enemy_moves_adjacent': 'an enemy moves adjacent',
+      'enemy_attacks_me': 'an enemy attacks them',
+      'enemy_attacks_ally': 'an enemy attacks an ally',
+      'enemy_enters_reach': 'an enemy enters weapon reach',
+    };
+    const actionDesc = trigger.action === 'attack' ? 'attack' : trigger.action === 'move' ? 'move' : 'ready';
+    
+    const updatedCombatants = match.combatants.map((c) =>
+      c.playerId === player.id 
+        ? { ...c, waitTrigger: trigger } 
+        : c
+    );
+    
+    const updated = advanceTurn({
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, `${player.name} waits to ${actionDesc} when ${conditionDesc[trigger.condition] ?? trigger.condition}.`],
+    });
+    state.matches.set(lobby.id, updated);
+    await upsertMatch(lobby.id, updated);
+    sendToLobby(lobby, { type: "match_state", state: updated });
+    scheduleBotTurn(lobby, updated);
+    return;
+  }
+
   if (payload.type === "end_turn") {
     const updated = advanceTurn({
       ...match,
@@ -842,9 +935,23 @@ const handleAttackAction = async (
     return;
   }
   
-  const weapon = attackerCharacter.equipment[0];
-  const isRanged = weapon?.type === 'ranged';
-  const weaponReach: Reach = weapon?.reach ?? '1';
+  const readyWeapon = actorCombatant.equipped.find(e => e.ready && (e.slot === 'right_hand' || e.slot === 'left_hand'));
+  const weapon = readyWeapon 
+    ? attackerCharacter.equipment.find(eq => eq.id === readyWeapon.equipmentId)
+    : attackerCharacter.equipment[0];
+  
+  if (!weapon) {
+    sendMessage(socket, { type: "error", message: "No weapon available." });
+    return;
+  }
+  
+  if (readyWeapon === undefined && actorCombatant.equipped.length > 0) {
+    sendMessage(socket, { type: "error", message: "No ready weapon - use Ready maneuver to draw a weapon first." });
+    return;
+  }
+  
+  const isRanged = weapon.type === 'ranged';
+  const weaponReach: Reach = weapon.reach ?? '1';
   
   if (!isRanged && !canAttackAtDistance(weaponReach, distance)) {
     const { max } = parseReach(weaponReach);

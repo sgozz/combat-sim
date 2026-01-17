@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
 import HitLocationPicker from '../ui/HitLocationPicker'
+import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
 import { ReadyPanel } from '../ui/ReadyPanel'
 import { PostureControls } from '../ui/PostureControls'
-import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant, ReadyAction, EquipmentSlot } from '../../../shared/types'
+import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant, ReadyAction, EquipmentSlot, WaitTrigger } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../shared/rules'
 
@@ -142,8 +143,9 @@ const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string
   { type: 'move_and_attack', label: 'Move & Attack', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.', key: '5' },
   { type: 'aim', label: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.', key: '6' },
   { type: 'evaluate', label: 'Evaluate', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
-  { type: 'ready', label: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '8' },
-  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '9' },
+  { type: 'wait', label: 'Wait', icon: '⏳', desc: 'Prepare to react when triggered.', key: '8' },
+  { type: 'ready', label: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '9' },
+  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '0' },
 ]
 
 export const GameActionPanel = ({ 
@@ -404,8 +406,10 @@ export const GameActionPanel = ({
           return { text: 'Click enemy to study. +1 to hit (max +3).', canAttack: false, canMove: false, isStep: false, canEvaluate: true }
         case 'ready':
           return { text: 'Draw, sheathe, or prepare equipment.', canAttack: false, canMove: false, isStep: true, canReady: true }
+        case 'wait':
+          return { text: 'Set a trigger condition to interrupt enemy turn.', canAttack: false, canMove: false, isStep: false }
         case 'do_nothing':
-          return { text: 'Waiting. Click End Turn.', canAttack: false, canMove: false, isStep: false }
+          return { text: 'Recover from stun or pass turn.', canAttack: false, canMove: false, isStep: false }
         default:
           return { text: '', canAttack: false, canMove: false, isStep: false }
       }
@@ -515,6 +519,23 @@ export const GameActionPanel = ({
                 -4 hit / -2 def
               </button>
             </div>
+          </div>
+        )}
+
+        {currentManeuver === 'wait' && activeCombatant && (
+          <div className="wait-trigger-section" style={{ marginBottom: '1rem' }}>
+            <WaitTriggerPicker
+              enemies={matchState?.combatants
+                .filter(c => c.playerId !== matchState.activeTurnPlayerId)
+                .map(c => {
+                  const char = matchState.characters.find(ch => ch.id === c.characterId)
+                  return { id: c.playerId, name: char?.name ?? 'Unknown' }
+                }) ?? []
+              }
+              onSetTrigger={(trigger: WaitTrigger) => {
+                onAction('set_wait_trigger', { type: 'set_wait_trigger', trigger })
+              }}
+            />
           </div>
         )}
 

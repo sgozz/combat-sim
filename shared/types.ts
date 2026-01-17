@@ -145,10 +145,25 @@ export type ManeuverType =
   | 'aim' 
   | 'evaluate'
   | 'ready'
+  | 'wait'
   | 'attack' 
   | 'all_out_attack' 
   | 'all_out_defense' 
   | 'move_and_attack';
+
+export type WaitTriggerCondition = 
+  | 'enemy_moves_adjacent'
+  | 'enemy_attacks_me'
+  | 'enemy_attacks_ally'
+  | 'enemy_enters_reach';
+
+export type WaitTriggerAction = 'attack' | 'move' | 'ready';
+
+export type WaitTrigger = {
+  condition: WaitTriggerCondition;
+  targetId?: Id;
+  action: WaitTriggerAction;
+};
 
 export type EquipmentSlot = 'right_hand' | 'left_hand' | 'back' | 'belt' | 'quiver';
 
@@ -215,6 +230,7 @@ export type CombatantState = {
   attacksRemaining: number;
   retreatedThisTurn: boolean;
   defensesThisTurn: number;
+  waitTrigger: WaitTrigger | null;
 };
 
 export type MatchState = {
@@ -248,6 +264,7 @@ export type CombatActionPayload =
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation; deceptiveLevel?: 0 | 1 | 2 }
   | { type: "aim_target"; targetId: Id }
   | { type: "evaluate_target"; targetId: Id }
+  | { type: "set_wait_trigger"; trigger: WaitTrigger }
   | { type: "ready_action"; action: ReadyAction; itemId: Id; targetSlot?: EquipmentSlot }
   | { type: "defend"; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }
   | { type: "move"; position: GridPosition }

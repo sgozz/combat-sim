@@ -14,7 +14,8 @@ const MANEUVER_LABELS: Record<ManeuverType, string> = {
   'aim': 'Aim',
   'evaluate': 'Evaluate',
   'ready': 'Ready',
-  'do_nothing': 'Wait',
+  'wait': 'Wait',
+  'do_nothing': 'Pass',
 }
 
 export const TurnStepper = ({ isMyTurn, currentManeuver }: TurnStepperProps) => {
