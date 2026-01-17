@@ -174,6 +174,7 @@ export const GameActionPanel = ({
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
+  const [rapidStrike, setRapidStrike] = useState(false)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
@@ -215,7 +216,8 @@ export const GameActionPanel = ({
     const hitLocMod = getHitLocationPenalty(selectedHitLocation)
     const shockMod = activeCombatant.shockPenalty > 0 ? -activeCombatant.shockPenalty : 0
     const deceptiveMod = deceptiveLevel > 0 ? -(deceptiveLevel * 2) : 0
-    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod + deceptiveMod
+    const rapidStrikeMod = rapidStrike ? -6 : 0
+    const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod + deceptiveMod + rapidStrikeMod
     const prob = getHitProbability(effectiveSkill)
     
     let color = '#ff4444'
@@ -230,6 +232,7 @@ export const GameActionPanel = ({
       hitLocMod,
       shockMod,
       deceptiveMod,
+      rapidStrikeMod,
       effectiveSkill,
       prob,
       color
@@ -499,6 +502,7 @@ export const GameActionPanel = ({
               {hitChanceInfo.hitLocMod < 0 && ` (${hitChanceInfo.hitLocMod} ${selectedHitLocation.replace('_', ' ')})`}
               {hitChanceInfo.shockMod < 0 && ` (${hitChanceInfo.shockMod} shock)`}
               {hitChanceInfo.deceptiveMod < 0 && ` (${hitChanceInfo.deceptiveMod} deceptive)`}
+              {hitChanceInfo.rapidStrikeMod < 0 && ` (${hitChanceInfo.rapidStrikeMod} rapid)`}
               {' → '}<strong>{hitChanceInfo.effectiveSkill}</strong>
             </div>
             <div className="hit-chance-value" style={{ color: hitChanceInfo.color }}>
@@ -530,6 +534,19 @@ export const GameActionPanel = ({
                 -4 hit / -2 def
               </button>
             </div>
+          </div>
+        )}
+
+        {currentManeuver === 'attack' && selectedTargetId && (
+          <div className="rapid-strike-section">
+            <label className="rapid-strike-label">
+              <input
+                type="checkbox"
+                checked={rapidStrike}
+                onChange={(e) => setRapidStrike(e.target.checked)}
+              />
+              Rapid Strike (-6 for two attacks)
+            </label>
           </div>
         )}
 
@@ -565,7 +582,7 @@ export const GameActionPanel = ({
             <button 
               className="action-btn primary"
               disabled={!selectedTargetId}
-              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: selectedHitLocation, deceptiveLevel })}
+              onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: selectedHitLocation, deceptiveLevel, rapidStrike: currentManeuver === 'attack' && rapidStrike })}
             >
               <span className="btn-icon">⚔️</span>
               {selectedTargetId ? `Attack ${selectedTargetName} [${selectedHitLocation.replace('_', ' ')}]` : 'Select a target on map'}

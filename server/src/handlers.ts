@@ -1029,6 +1029,15 @@ const handleAttackAction = async (
     skill -= deceptiveLevel * 2;
   }
   
+  const rapidStrike = payload.rapidStrike ?? false;
+  if (rapidStrike) {
+    if (attackerManeuver !== 'attack') {
+      sendMessage(socket, { type: "error", message: "Rapid Strike only works with Attack maneuver." });
+      return;
+    }
+    skill -= 6;
+  }
+  
   const attackerPosture = getPostureModifiers(actorCombatant.posture);
   skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
   
@@ -1078,7 +1087,9 @@ const handleAttackAction = async (
     });
     
     const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-    const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+    const isMultiAttack = isDoubleAttack || rapidStrike;
+    const effectiveAttacksRemaining = rapidStrike && actorCombatant.attacksRemaining === 1 ? 2 : actorCombatant.attacksRemaining;
+    const remainingAttacks = isMultiAttack ? effectiveAttacksRemaining - 1 : 0;
     
     if (remainingAttacks > 0) {
       const updatedCombatants = match.combatants.map(c => 
@@ -1087,7 +1098,7 @@ const handleAttackAction = async (
       const updated: MatchState = {
         ...match,
         combatants: updatedCombatants,
-        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining (Rapid Strike).`],
       };
       state.matches.set(lobby.id, updated);
       await upsertMatch(lobby.id, updated);
@@ -1131,7 +1142,9 @@ const handleAttackAction = async (
     });
 
     const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-    const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+    const isMultiAttack = isDoubleAttack || rapidStrike;
+    const effectiveAttacksRemaining = rapidStrike && actorCombatant.attacksRemaining === 1 ? 2 : actorCombatant.attacksRemaining;
+    const remainingAttacks = isMultiAttack ? effectiveAttacksRemaining - 1 : 0;
     
     if (remainingAttacks > 0) {
       const updatedCombatants = result.updatedCombatants.map(c => 
@@ -1256,8 +1269,8 @@ const handleAttackAction = async (
         };
       });
       
-      const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-      const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+      const isMultiAttack = actorCombatant.attacksRemaining > 1;
+      const remainingAttacks = isMultiAttack ? actorCombatant.attacksRemaining - 1 : 0;
       
       if (remainingAttacks > 0) {
         updatedCombatants = updatedCombatants.map(c => 
@@ -1301,8 +1314,8 @@ const handleAttackAction = async (
         effect: { type: "damage", targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
       });
 
-      const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-      const remainingAttacks = isDoubleAttack ? actorCombatant.attacksRemaining - 1 : 0;
+      const isMultiAttack = actorCombatant.attacksRemaining > 1;
+      const remainingAttacks = isMultiAttack ? actorCombatant.attacksRemaining - 1 : 0;
       
       if (remainingAttacks > 0) {
         const updatedCombatants = result.updatedCombatants.map(c => 
@@ -1435,8 +1448,7 @@ const resolveDefenseChoice = async (
       effect: { type: "damage", targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
 
-    const isDoubleAttack = attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'double';
-    const remainingAttacks = isDoubleAttack ? attackerCombatant.attacksRemaining - 1 : 0;
+    const remainingAttacks = attackerCombatant.attacksRemaining - 1;
     
     if (remainingAttacks > 0) {
       const updatedCombatants = result.updatedCombatants.map(c => 
@@ -1584,8 +1596,8 @@ const resolveDefenseChoice = async (
       };
     });
     
-    const isDoubleAttack = attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'double';
-    const remainingAttacks = isDoubleAttack ? attackerCombatant.attacksRemaining - 1 : 0;
+    const isMultiAttack = attackerCombatant.attacksRemaining > 1;
+    const remainingAttacks = isMultiAttack ? attackerCombatant.attacksRemaining - 1 : 0;
     
     if (remainingAttacks > 0) {
       updatedCombatants = updatedCombatants.map(c => 
@@ -1640,8 +1652,7 @@ const resolveDefenseChoice = async (
       };
     });
 
-    const isDoubleAttack = attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'double';
-    const remainingAttacks = isDoubleAttack ? attackerCombatant.attacksRemaining - 1 : 0;
+    const remainingAttacks = attackerCombatant.attacksRemaining - 1;
     
     if (remainingAttacks > 0) {
       updatedCombatants = updatedCombatants.map(c => 
