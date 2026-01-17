@@ -255,6 +255,7 @@ export const GameScreen = ({
         inLobbyButNoMatch={inLobbyButNoMatch}
         playerId={player?.id ?? null}
         onAction={onAction}
+        onDefend={handleDefenseChoice}
         onLeaveLobby={onLeaveLobby}
         onStartMatch={onStartMatch}
         onOpenCharacterEditor={onOpenCharacterEditor}

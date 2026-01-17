@@ -381,3 +381,134 @@
     text-align: right;
   }
 }
+
+.action-bar-defense-overlay {
+  position: fixed;
+  bottom: 70px;
+  left: 0;
+  right: 0;
+  padding: 0.75rem;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(30,15,15,0.95));
+  border-top: 1px solid #ffaa00;
+  z-index: 99;
+}
+
+.defense-alert {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #ffaa00;
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  animation: pulse 1.5s infinite;
+}
+
+.defense-alert-icon {
+  font-size: 1.2rem;
+}
+
+.defense-options-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.defense-option-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.defense-option-toggle input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.defense-option-toggle input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-bar.defense-mode {
+  background: linear-gradient(to top, #1a1515, #111);
+  border-top: 2px solid #ff4444;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.action-bar-btn.defense-btn {
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  min-width: 60px;
+}
+
+.action-bar-btn.defense-btn .action-bar-icon {
+  font-size: 1.2rem;
+}
+
+.action-bar-btn.defense-btn .action-bar-label {
+  font-size: 0.65rem;
+}
+
+.action-bar-btn.defense-btn .defense-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1;
+}
+
+.action-bar-btn.defense-btn .defense-chance {
+  font-size: 0.65rem;
+  color: #888;
+  width: auto;
+  margin: 0;
+}
+
+.action-bar-btn.defense-btn.dodge .defense-value { color: #4f4; }
+.action-bar-btn.defense-btn.parry .defense-value { color: #48f; }
+.action-bar-btn.defense-btn.block .defense-value { color: #f84; }
+
+.action-bar-btn.defense-btn.dodge:hover:not(:disabled) { border-color: #4f4; }
+.action-bar-btn.defense-btn.parry:hover:not(:disabled) { border-color: #48f; }
+.action-bar-btn.defense-btn.block:hover:not(:disabled) { border-color: #f84; }
+
+.action-bar-btn.defense-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.action-bar-btn.defense-btn.none {
+  min-width: 50px;
+}
+
+.defense-timer-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 0 0.25rem;
+}
+
+.defense-timer-mobile .timer-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #ccc;
+  font-family: monospace;
+}
+
+.defense-timer-mobile .timer-value.urgent {
+  color: #ff4444;
+  animation: pulse 0.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
