@@ -36,6 +36,7 @@ import {
   getHitLocationPenalty,
   getHitLocationWoundingMultiplier,
   rollRandomHitLocation,
+  getRetreatBonus,
   type HexPosition,
   type MovementState,
 } from './rules'
@@ -197,8 +198,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -214,8 +215,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -233,8 +234,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['defending', 'stunned'], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: ['defending', 'stunned'], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -252,8 +253,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'all_out_defense', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -269,8 +270,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 3, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -286,8 +287,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 2, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 2, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -303,8 +304,8 @@ describe('GURPS Rules', () => {
         { id: 'p2', name: 'Player 2', isBot: false, characterId: 'c2' },
       ]
       const combatants: CombatantState[] = [
-        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1 },
-        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 4, aoaVariant: null, attacksRemaining: 1 },
+        { playerId: 'p1', characterId: 'c1', position: { x: 0, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: 'attack', currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 0, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
+        { playerId: 'p2', characterId: 'c2', position: { x: 1, y: 0, z: 0 }, facing: 0, posture: 'standing', maneuver: null, currentHP: 10, currentFP: 10, statusEffects: [], aimTurns: 0, aimTargetId: null, inCloseCombatWith: null, closeCombatPosition: null, grapple: null, usedReaction: false, shockPenalty: 4, aoaVariant: null, attacksRemaining: 1, retreatedThisTurn: false },
       ]
       
       const match = createTestMatch(players, combatants)
@@ -544,6 +545,22 @@ describe('GURPS Rules', () => {
     it('retreat bonus is reduced to +1 in close combat', () => {
       const result = getCloseCombatDefenseModifiers('1', undefined, true)
       expect(result.retreatBonus).toBe(1)
+    })
+  })
+
+  describe('Retreat Bonus (B377)', () => {
+    it('normal retreat gives +3 Dodge, +1 Parry/Block', () => {
+      const result = getRetreatBonus(false)
+      expect(result.dodge).toBe(3)
+      expect(result.parry).toBe(1)
+      expect(result.block).toBe(1)
+    })
+
+    it('close combat retreat gives +1 to all defenses', () => {
+      const result = getRetreatBonus(true)
+      expect(result.dodge).toBe(1)
+      expect(result.parry).toBe(1)
+      expect(result.block).toBe(1)
     })
   })
 

@@ -170,6 +170,7 @@ export type CombatantState = {
   /** Shock penalty from damage taken this turn (0-4, clears at turn start) */
   shockPenalty: number;
   attacksRemaining: number;
+  retreatedThisTurn: boolean;
 };
 
 export type MatchState = {

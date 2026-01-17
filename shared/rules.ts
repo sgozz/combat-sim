@@ -160,7 +160,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const combatants = state.combatants.map(c => {
     if (c.playerId === nextPlayerId) {
       const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped');
-      return { ...c, maneuver: null, aoaVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1 };
+      return { ...c, maneuver: null, aoaVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false };
     }
     return c;
   });
@@ -455,6 +455,19 @@ export const getCloseCombatDefenseModifiers = (
     canParry,
     canBlock,
   };
+};
+
+export type RetreatBonus = {
+  dodge: number;
+  parry: number;
+  block: number;
+};
+
+export const getRetreatBonus = (inCloseCombat: boolean): RetreatBonus => {
+  if (inCloseCombat) {
+    return { dodge: 1, parry: 1, block: 1 };
+  }
+  return { dodge: 3, parry: 1, block: 1 };
 };
 
 export type QuickContestResult = {

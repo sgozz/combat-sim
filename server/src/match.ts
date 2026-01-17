@@ -64,6 +64,7 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       usedReaction: false,
       shockPenalty: 0,
       attacksRemaining: 1,
+      retreatedThisTurn: false,
     };
   });
 
