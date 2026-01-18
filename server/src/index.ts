@@ -2,7 +2,7 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
-import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, buildMatchSummary, removeMatchMember } from "./db";
+import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, buildMatchSummary, removeMatchMember, updateMatchState } from "./db";
 import { sendMessage, sendToUser, sendToMatch } from "./helpers";
 import { handleMessage } from "./handlers";
 
@@ -58,6 +58,15 @@ const startServer = async () => {
             });
           } else if (matchRow.status === 'active' || matchRow.status === 'paused') {
             await updateMatchMemberConnection(matchRow.id, connState.userId, false);
+            
+            const match = state.matches.get(matchRow.id);
+            if (match && match.activeTurnPlayerId === connState.userId && match.status === 'active') {
+              const paused = { ...match, status: 'paused' as const, pausedForPlayerId: connState.userId };
+              state.matches.set(matchRow.id, paused);
+              await updateMatchState(matchRow.id, paused);
+              await sendToMatch(matchRow.id, { type: "match_state", state: paused });
+            }
+            
             await sendToMatch(matchRow.id, { 
               type: "player_disconnected", 
               matchId: matchRow.id, 

@@ -342,11 +342,9 @@ test.describe('Multiplayer Combat', () => {
       const otherPlayer = p1IsActive ? player2 : player1
       
       await activePlayer.close()
-      await otherPlayer.waitForTimeout(2000)
       
-      const pauseIndicator = await otherPlayer.getByText(/paused|waiting.*reconnect|disconnected/i).isVisible().catch(() => false)
-      
-      expect(pauseIndicator).toBe(true)
+      const pauseModal = otherPlayer.locator('.pause-modal')
+      await expect(pauseModal).toBeVisible({ timeout: 5000 })
       
     } finally {
       await context1.close()
