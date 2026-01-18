@@ -134,7 +134,7 @@ type GameActionPanelProps = {
   selectedTargetId: string | null
   currentManeuver: ManeuverType | null
   isMyTurn: boolean
-  lobbyId: string | null
+  matchCode: string | null
   lobbyPlayerCount: number
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
@@ -163,7 +163,7 @@ export const GameActionPanel = ({
   selectedTargetId,
   currentManeuver,
   isMyTurn,
-  lobbyId,
+  matchCode,
   lobbyPlayerCount,
   onAction,
   onLeaveLobby,
@@ -252,14 +252,14 @@ export const GameActionPanel = ({
                 <input 
                   type="text" 
                   readOnly 
-                  value={`${window.location.origin}?join=${lobbyId?.slice(0, 8)}`}
+                  value={`${window.location.origin}?join=${matchCode ?? ''}`}
                   className="invite-url-input"
                   onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
                 <button 
                   className="copy-btn"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}?join=${lobbyId?.slice(0, 8)}`)
+                    navigator.clipboard.writeText(`${window.location.origin}?join=${matchCode ?? ''}`)
                   }}
                   title="Copy invite link"
                 >

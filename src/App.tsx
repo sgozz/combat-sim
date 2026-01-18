@@ -213,6 +213,7 @@ function AppRoutes() {
               player={user ? { id: user.id, name: user.username, isBot: user.isBot, characterId: '' } : null}
               lobbyPlayers={lobbyPlayers}
               lobbyId={activeMatchId}
+              matchCode={currentMatch?.code ?? matchState?.code ?? null}
               logs={logs}
               visualEffects={visualEffects}
               moveTarget={moveTarget}

@@ -18,6 +18,7 @@ type GameScreenProps = {
   player: Player | null
   lobbyPlayers: Player[]
   lobbyId: string | null
+  matchCode: string | null
   logs: string[]
   visualEffects: (VisualEffect & { id: string })[]
   moveTarget: GridPosition | null
@@ -49,6 +50,7 @@ export const GameScreen = ({
   player,
   lobbyPlayers,
   lobbyId,
+  matchCode,
   logs,
   visualEffects,
   moveTarget,
@@ -195,7 +197,7 @@ export const GameScreen = ({
         selectedTargetId={selectedTargetId}
         currentManeuver={currentManeuver}
         isMyTurn={isPlayerTurn}
-        lobbyId={lobbyId}
+        matchCode={matchCode}
         lobbyPlayerCount={lobbyPlayers.length}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
