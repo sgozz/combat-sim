@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger } from '../../../shared/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../shared/rules'
 import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
@@ -32,6 +32,16 @@ export const ActionBar = ({
   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
+  
+  const closeAllPanels = useCallback(() => {
+    setShowManeuvers(false)
+    setShowCharacterSheet(false)
+    setShowAOAVariants(false)
+    setShowAODVariants(false)
+    setShowWaitPicker(false)
+  }, [])
+  
+  const hasOpenPanel = showManeuvers || showCharacterSheet || showAOAVariants || showAODVariants || showWaitPicker
   
   const playerCombatant = playerId && matchState 
     ? matchState.combatants.find(c => c.playerId === playerId) 
@@ -242,6 +252,12 @@ export const ActionBar = ({
 
   return (
     <>
+      {hasOpenPanel && (
+        <div 
+          className="action-bar-backdrop" 
+          onClick={closeAllPanels}
+        />
+      )}
       {showAOAVariants && (
         <div className="action-bar-maneuvers">
           <div className="variant-header">All-Out Attack Variant</div>
@@ -437,7 +453,15 @@ export const ActionBar = ({
       <div className="action-bar">
         <button 
           className={`action-bar-btn char-btn ${showCharacterSheet ? 'active' : ''}`}
-          onClick={() => setShowCharacterSheet(!showCharacterSheet)}
+          onClick={() => {
+            if (!showCharacterSheet) {
+              setShowManeuvers(false)
+              setShowAOAVariants(false)
+              setShowAODVariants(false)
+              setShowWaitPicker(false)
+            }
+            setShowCharacterSheet(!showCharacterSheet)
+          }}
         >
           <span className="action-bar-icon">👤</span>
           {playerCombatant ? (
@@ -462,7 +486,15 @@ export const ActionBar = ({
         {!inMovementPhase && (
           <button 
             className={`action-bar-btn ${!currentManeuver ? 'highlight' : ''}`}
-            onClick={() => setShowManeuvers(!showManeuvers)}
+            onClick={() => {
+              if (!showManeuvers) {
+                setShowCharacterSheet(false)
+                setShowAOAVariants(false)
+                setShowAODVariants(false)
+                setShowWaitPicker(false)
+              }
+              setShowManeuvers(!showManeuvers)
+            }}
           >
             <span className="action-bar-icon">{currentManeuver ? MANEUVERS.find(m => m.type === currentManeuver)?.icon ?? '📋' : '📋'}</span>
             <span className="action-bar-label">{currentManeuver ? 'Change' : 'Maneuver'}</span>
