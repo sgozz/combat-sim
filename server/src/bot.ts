@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, Player } from "../../shared/types";
+import type { CharacterSheet, CombatantState, MatchState, Player, DefenseType } from "../../shared/types";
 import type { Lobby } from "./types";
 import { state } from "./state";
 import { upsertCharacter, upsertPlayerProfile, upsertMatch } from "./db";
@@ -13,7 +13,7 @@ import {
   sendToLobby,
   checkVictory
 } from "./helpers";
-import { advanceTurn, calculateDerivedStats, resolveAttack, applyDamageMultiplier } from "../../shared/rules";
+import { advanceTurn, calculateDerivedStats, resolveAttack, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance } from "../../shared/rules";
 
 export const createBotCharacter = (name: string): CharacterSheet => {
   const attributes = {
@@ -215,4 +215,50 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
     scheduleBotTurn(lobby, updated);
   }, 1500);
   state.botTimers.set(lobby.id, timer);
+};
+
+/**
+ * Choose the best defense option for a bot based on available defenses.
+ * Bots prefer: block (if available) > parry (if available) > dodge
+ * This makes them slightly smarter than always dodging.
+ */
+export const chooseBotDefense = (
+  defenderCharacter: CharacterSheet,
+  defenderCombatant: CombatantState
+): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
+  const encumbrance = calculateEncumbrance(
+    defenderCharacter.attributes.strength,
+    defenderCharacter.equipment
+  );
+  const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
+  const options = getDefenseOptions(defenderCharacter, effectiveDodge);
+  
+  // Collect available defenses with their values
+  const defenses: { type: DefenseType; value: number }[] = [
+    { type: 'dodge', value: options.dodge }
+  ];
+  
+  if (options.block) {
+    defenses.push({ type: 'block', value: options.block.value });
+  }
+  
+  if (options.parry) {
+    // Check if this weapon was already used to parry this turn (cumulative -4 penalty)
+    const alreadyUsed = defenderCombatant.parryWeaponsUsedThisTurn.includes(options.parry.weapon);
+    const parryValue = alreadyUsed ? options.parry.value - 4 : options.parry.value;
+    defenses.push({ type: 'parry', value: parryValue });
+  }
+  
+  // Sort by value descending and pick the best
+  defenses.sort((a, b) => b.value - a.value);
+  const bestDefense = defenses[0];
+  
+  // Bots retreat if they haven't this turn (gives +3 to defense)
+  const canRetreat = !defenderCombatant.retreatedThisTurn;
+  
+  return {
+    defenseType: bestDefense.type,
+    retreat: canRetreat,
+    dodgeAndDrop: false, // Bots don't dodge and drop
+  };
 };

@@ -95,7 +95,8 @@ export const useGameSocket = () => {
   }, [])
 
   const createWebSocket = useCallback((onOpen: (ws: WebSocket) => void) => {
-    const ws = new WebSocket('ws://127.0.0.1:8080')
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8080'
+    const ws = new WebSocket(wsUrl)
     
     ws.onopen = () => {
       setLogs((prev) => [...prev, 'Connected to server.'])

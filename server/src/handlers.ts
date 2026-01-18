@@ -83,12 +83,10 @@ import {
 } from "./helpers";
 import { broadcastLobbies, leaveLobby } from "./lobby";
 import { createMatchState } from "./match";
-import { addBotToLobby, scheduleBotTurn } from "./bot";
+import { addBotToLobby, scheduleBotTurn, chooseBotDefense } from "./bot";
 
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
-
-const DEFENSE_TIMEOUT_MS = 15000;
 
 type ApplyDamageResult = {
   updatedCombatants: CombatantState[];
@@ -1459,25 +1457,39 @@ const handleAttackAction = async (
   
   const defenderPlayer = lobby.players.find(p => p.id === pendingDefense.defenderId);
   if (defenderPlayer?.isBot) {
-    scheduleDefenseTimeout(lobby.id);
+    scheduleBotDefense(lobby, updated, pendingDefense.defenderId);
   }
 };
 
-import { setDefenseTimeout, clearDefenseTimeout } from "./timers";
+import { clearDefenseTimeout } from "./timers";
 
-const scheduleDefenseTimeout = (lobbyId: string) => {
-  setDefenseTimeout(lobbyId, async () => {
-    const lobby = state.lobbies.get(lobbyId);
-    const match = state.matches.get(lobbyId);
-    if (!lobby || !match || !match.pendingDefense) return;
+const BOT_DEFENSE_DELAY_MS = 800;
+
+const scheduleBotDefense = (lobby: Lobby, match: MatchState, defenderId: string) => {
+  setTimeout(async () => {
+    const currentMatch = state.matches.get(lobby.id);
+    if (!currentMatch?.pendingDefense) return;
     
-    await resolveDefenseChoice(lobby, match, {
+    const defenderCombatant = currentMatch.combatants.find(c => c.playerId === defenderId);
+    const defenderCharacter = currentMatch.characters.find(c => c.id === defenderCombatant?.characterId);
+    
+    if (!defenderCombatant || !defenderCharacter) {
+      await resolveDefenseChoice(lobby, currentMatch, {
+        type: 'defend',
+        defenseType: 'dodge',
+        retreat: false,
+        dodgeAndDrop: false,
+      });
+      return;
+    }
+    
+    const choice = chooseBotDefense(defenderCharacter, defenderCombatant);
+    
+    await resolveDefenseChoice(lobby, currentMatch, {
       type: 'defend',
-      defenseType: 'dodge',
-      retreat: false,
-      dodgeAndDrop: false,
+      ...choice,
     });
-  }, DEFENSE_TIMEOUT_MS);
+  }, BOT_DEFENSE_DELAY_MS);
 };
 
 const resolveDefenseChoice = async (
