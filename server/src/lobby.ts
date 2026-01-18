@@ -3,6 +3,7 @@ import type { MatchState } from "../../shared/types";
 import { state } from "./state";
 import { deleteLobby, persistLobbyState, upsertPlayerProfile, upsertMatch, updateSessionLastSeen } from "./db";
 import { sendMessage, summarizeLobby, broadcast, sendToLobby } from "./helpers";
+import { clearDefenseTimeout } from "./timers";
 
 export const broadcastLobbies = (wss: { clients: Set<WebSocket> }) => {
   const lobbiesSummary = Array.from(state.lobbies.values()).map(summarizeLobby);
@@ -107,6 +108,7 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
       state.matches.set(lobbyId, pausedMatch);
       await upsertMatch(lobbyId, pausedMatch);
       cleanupBotTimer(lobbyId);
+      clearDefenseTimeout(lobbyId);
       sendToLobby(lobby, { type: "match_paused", playerId, playerName });
       sendToLobby(lobby, { type: "match_state", state: pausedMatch });
     } else {

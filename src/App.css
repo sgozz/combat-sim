@@ -2947,6 +2947,21 @@
   to { transform: rotate(360deg); }
 }
 
+.pause-leave-btn {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  background: transparent;
+  border: 1px solid #555;
+  color: #aaa;
+}
+
+.pause-leave-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #888;
+  color: #fff;
+}
+
 .lobby-setup {
   display: flex;
   flex-direction: column;
@@ -3088,4 +3103,451 @@
   color: #fff;
   min-width: 2.5rem;
   text-align: center;
+}
+
+/* Defense Modal */
+.defense-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.defense-modal {
+  background: linear-gradient(145deg, #1f1f1f, #151515);
+  border: 2px solid #f44;
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 95vw;
+  box-shadow: 0 0 40px rgba(255, 68, 68, 0.3), 0 20px 50px rgba(0, 0, 0, 0.7);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.defense-header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.warning-badge {
+  background: linear-gradient(90deg, #f44, #c22);
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.attack-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
+.attacker-name {
+  color: #f88;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.hit-location {
+  color: #ff8;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.weapon-detail {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.penalty-notice {
+  background: rgba(255, 136, 0, 0.15);
+  border: 1px solid #f80;
+  color: #f80;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.defense-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.defense-card {
+  background: #252525;
+  border: 2px solid #3a3a3a;
+  border-radius: 12px;
+  padding: 1rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.defense-card:hover:not(.disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.defense-card.dodge {
+  border-color: #4a9;
+}
+
+.defense-card.dodge:hover:not(.disabled) {
+  background: rgba(68, 170, 153, 0.15);
+  border-color: #5cb;
+}
+
+.defense-card.parry {
+  border-color: #59f;
+}
+
+.defense-card.parry:hover:not(.disabled) {
+  background: rgba(85, 153, 255, 0.15);
+  border-color: #6af;
+}
+
+.defense-card.block {
+  border-color: #f80;
+}
+
+.defense-card.block:hover:not(.disabled) {
+  background: rgba(255, 136, 0, 0.15);
+  border-color: #fa0;
+}
+
+.defense-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #333;
+}
+
+.defense-title {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #888;
+  letter-spacing: 0.05em;
+}
+
+.defense-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1;
+}
+
+.defense-chance {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chance-bar {
+  width: 100%;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.chance-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f4, #8f8);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.defense-chance span {
+  font-size: 0.8rem;
+  color: #8f8;
+}
+
+.defense-sub {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.defense-unavailable {
+  font-size: 1.5rem;
+  color: #555;
+  padding: 0.5rem 0;
+}
+
+.defense-options {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.option-checkbox:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.option-checkbox.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.option-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #4a9;
+}
+
+.option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.option-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.option-desc {
+  color: #888;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.option-warning {
+  color: #f80;
+  font-style: italic;
+}
+
+.defense-penalty-alert {
+  background: rgba(255, 136, 0, 0.1);
+  border: 1px solid #f80;
+  color: #f80;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.same-weapon-warning {
+  color: #f44;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.defense-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+}
+
+.defense-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timer-icon {
+  font-size: 1.2rem;
+}
+
+.timer-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-value.urgent {
+  color: #f44;
+  animation: urgentPulse 0.5s infinite;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.no-defense-btn {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+/* Mobile Defense Overlay (ActionBar) */
+.action-bar-defense-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 60px;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  z-index: 2500;
+}
+
+.defense-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(90deg, #f44, #c22);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  animation: pulse 1.5s infinite;
+}
+
+.defense-alert-icon {
+  font-size: 1.2rem;
+}
+
+.defense-options-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.defense-option-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.defense-option-toggle input {
+  accent-color: #4a9;
+}
+
+.action-bar.defense-mode {
+  background: linear-gradient(180deg, #2a1a1a, #1a1212);
+  border-color: #f44;
+}
+
+.defense-btn {
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  min-width: 70px;
+}
+
+.defense-btn .defense-value {
+  font-size: 1.5rem;
+}
+
+.defense-btn .defense-chance {
+  font-size: 0.75rem;
+  color: #8f8;
+}
+
+.defense-btn.dodge { border-color: #4a9; }
+.defense-btn.parry { border-color: #59f; }
+.defense-btn.block { border-color: #f80; }
+.defense-btn.none { border-color: #f44; }
+
+.defense-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.defense-timer-mobile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+}
+
+.defense-timer-mobile .timer-value {
+  font-size: 1.25rem;
+}
+
+/* Defense Modal Responsive */
+@media (max-width: 500px) {
+  .defense-modal {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  
+  .defense-cards {
+    gap: 0.5rem;
+  }
+  
+  .defense-card {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .defense-value {
+    font-size: 1.5rem;
+  }
+  
+  .warning-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.75rem;
+  }
 }

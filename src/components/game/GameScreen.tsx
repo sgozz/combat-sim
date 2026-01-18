@@ -254,6 +254,12 @@ export const GameScreen = ({
               Waiting for <strong>{matchState.players.find(p => p.id === matchState.pausedForPlayerId)?.name ?? 'player'}</strong> to reconnect...
             </p>
             <div className="pause-spinner"></div>
+            <button 
+              className="action-btn secondary pause-leave-btn"
+              onClick={onLeaveLobby}
+            >
+              ← Back to Lobby
+            </button>
           </div>
         </div>
       )}

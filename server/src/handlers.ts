@@ -1460,17 +1460,10 @@ const handleAttackAction = async (
   scheduleDefenseTimeout(lobby.id);
 };
 
-const defenseTimeouts = new Map<string, NodeJS.Timeout>();
+import { setDefenseTimeout, clearDefenseTimeout } from "./timers";
 
 const scheduleDefenseTimeout = (lobbyId: string) => {
-  const existingTimer = defenseTimeouts.get(lobbyId);
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-  }
-  
-  const timer = setTimeout(async () => {
-    defenseTimeouts.delete(lobbyId);
-    
+  setDefenseTimeout(lobbyId, async () => {
     const lobby = state.lobbies.get(lobbyId);
     const match = state.matches.get(lobbyId);
     if (!lobby || !match || !match.pendingDefense) return;
@@ -1482,8 +1475,6 @@ const scheduleDefenseTimeout = (lobbyId: string) => {
       dodgeAndDrop: false,
     });
   }, DEFENSE_TIMEOUT_MS);
-  
-  defenseTimeouts.set(lobbyId, timer);
 };
 
 const resolveDefenseChoice = async (
@@ -1494,11 +1485,7 @@ const resolveDefenseChoice = async (
   const pending = match.pendingDefense;
   if (!pending) return;
   
-  const existingTimer = defenseTimeouts.get(lobby.id);
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-    defenseTimeouts.delete(lobby.id);
-  }
+  clearDefenseTimeout(lobby.id);
   
   const defenderCombatant = match.combatants.find(c => c.playerId === pending.defenderId);
   const attackerCombatant = match.combatants.find(c => c.playerId === pending.attackerId);
