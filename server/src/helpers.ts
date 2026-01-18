@@ -15,13 +15,22 @@ export const broadcast = (wss: { clients: Set<WebSocket> }, message: ServerToCli
   }
 };
 
-export const summarizeLobby = (lobby: Lobby): LobbySummary => ({
-  id: lobby.id,
-  name: lobby.name,
-  playerCount: lobby.players.length,
-  maxPlayers: lobby.maxPlayers,
-  status: lobby.status,
-});
+export const summarizeLobby = (lobby: Lobby): LobbySummary => {
+  const match = state.matches.get(lobby.id);
+  const pausedPlayer = match?.pausedForPlayerId 
+    ? match.players.find(p => p.id === match.pausedForPlayerId)
+    : null;
+  
+  return {
+    id: lobby.id,
+    name: lobby.name,
+    playerCount: lobby.players.length,
+    maxPlayers: lobby.maxPlayers,
+    status: lobby.status,
+    matchPaused: match?.status === "paused",
+    pausedForPlayerName: pausedPlayer?.name,
+  };
+};
 
 export const sendToLobby = (lobby: Lobby, message: ServerToClientMessage) => {
   const lobbyPlayerIds = new Set(lobby.players.map((player) => player.id));

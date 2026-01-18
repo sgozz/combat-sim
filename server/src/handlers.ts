@@ -59,6 +59,13 @@ import {
   upsertMatch, 
   persistLobbyState,
   deleteLobby,
+  findUserByUsername,
+  findUserById,
+  createUser,
+  updateUserLastLogin,
+  findSessionByToken,
+  createSession,
+  updateSessionLastSeen,
 } from "./db";
 import { 
   sendMessage, 
@@ -75,7 +82,7 @@ import {
 } from "./helpers";
 import { broadcastLobbies, leaveLobby } from "./lobby";
 import { createMatchState } from "./match";
-import { ensureMinimumBots, scheduleBotTurn } from "./bot";
+import { addBotToLobby, scheduleBotTurn } from "./bot";
 
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
@@ -166,18 +173,60 @@ export const handleMessage = async (
   message: ClientToServerMessage
 ): Promise<void> => {
   switch (message.type) {
-    case "auth": {
-      const stored = await state.db.get<PlayerRow>(
-        "SELECT id, name, character_id, lobby_id, is_bot FROM players WHERE name = ?",
-        message.name
-      );
-      const playerId = stored?.id ?? randomUUID();
+    case "register": {
+      let user = await findUserByUsername(message.username);
+      
+      if (!user) {
+        user = await createUser(message.username);
+      } else {
+        await updateUserLastLogin(user.id);
+      }
+      
+      const session = await createSession(user.id);
+      
       const player: Player = {
-        id: playerId,
-        name: message.name,
+        id: user.id,
+        name: user.username,
+        isBot: false,
+        characterId: "",
+      };
+      
+      state.players.set(user.id, player);
+      state.connections.set(socket, { sessionToken: session.token, userId: user.id, playerId: user.id });
+      await upsertPlayerProfile(player, null);
+      
+      sendMessage(socket, { type: "auth_ok", player, sessionToken: session.token });
+      return;
+    }
+    
+    case "auth": {
+      const session = await findSessionByToken(message.sessionToken);
+      if (!session) {
+        sendMessage(socket, { type: "session_invalid" });
+        return;
+      }
+      
+      const user = await findUserById(session.userId);
+      if (!user) {
+        sendMessage(socket, { type: "session_invalid" });
+        return;
+      }
+      
+      await updateUserLastLogin(user.id);
+      await updateSessionLastSeen(session.token);
+      
+      const stored = await state.db.get<PlayerRow>(
+        "SELECT id, name, character_id, lobby_id, is_bot FROM players WHERE id = ?",
+        user.id
+      );
+      
+      const player: Player = {
+        id: user.id,
+        name: user.username,
         isBot: false,
         characterId: stored?.character_id ?? "",
       };
+      
       if (stored?.character_id) {
         const storedCharacter = await loadCharacterById(stored.character_id);
         if (storedCharacter) {
@@ -185,23 +234,41 @@ export const handleMessage = async (
           state.playerCharacters.set(player.id, storedCharacter);
         }
       }
-      state.players.set(playerId, player);
-      state.connections.set(socket, { playerId });
-      await upsertPlayerProfile(player, stored?.lobby_id ?? null);
-      sendMessage(socket, { type: "auth_ok", player });
+      
+      state.players.set(user.id, player);
+      state.connections.set(socket, { sessionToken: session.token, userId: user.id, playerId: user.id });
+      await upsertPlayerProfile(player, session.lobbyId);
+      
+      sendMessage(socket, { type: "auth_ok", player, sessionToken: session.token });
 
-      if (stored?.lobby_id) {
-        const lobby = state.lobbies.get(stored.lobby_id);
+      if (session.lobbyId) {
+        const lobby = state.lobbies.get(session.lobbyId);
         if (lobby) {
           if (!lobby.players.find((existing) => existing.id === player.id)) {
             lobby.players.push(player);
           }
-          state.connections.set(socket, { playerId: player.id, lobbyId: lobby.id });
+          state.connections.set(socket, { sessionToken: session.token, userId: user.id, playerId: player.id, lobbyId: lobby.id });
           await persistLobbyState(lobby);
           sendToLobby(lobby, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
+          
           const match = state.matches.get(lobby.id);
           if (match) {
-            sendMessage(socket, { type: "match_state", state: match });
+            if (match.status === "paused" && match.pausedForPlayerId === player.id) {
+              const resumedMatch: MatchState = {
+                ...match,
+                status: "active",
+                pausedForPlayerId: undefined,
+                log: [...match.log, `${player.name} reconnected. Match resumed.`],
+              };
+              state.matches.set(lobby.id, resumedMatch);
+              await upsertMatch(lobby.id, resumedMatch);
+              sendToLobby(lobby, { type: "match_resumed", playerId: player.id, playerName: player.name });
+              sendToLobby(lobby, { type: "match_state", state: resumedMatch });
+              scheduleBotTurn(lobby, resumedMatch);
+            } else {
+              sendToLobby(lobby, { type: "player_reconnected", playerId: player.id, playerName: player.name });
+              sendMessage(socket, { type: "match_state", state: match });
+            }
           }
         }
       }
@@ -214,6 +281,7 @@ export const handleMessage = async (
     case "create_lobby": {
       const player = requirePlayer(socket);
       if (!player) return;
+      const connState = state.connections.get(socket);
       const lobbyId = randomUUID();
       const lobby: Lobby = {
         id: lobbyId,
@@ -223,7 +291,10 @@ export const handleMessage = async (
         status: "open",
       };
       state.lobbies.set(lobbyId, lobby);
-      state.connections.set(socket, { playerId: player.id, lobbyId });
+      state.connections.set(socket, { ...connState, playerId: player.id, lobbyId });
+      if (connState?.sessionToken) {
+        await updateSessionLastSeen(connState.sessionToken, lobbyId);
+      }
       await persistLobbyState(lobby);
       broadcastLobbies(wss);
       sendToLobby(lobby, { type: "lobby_joined", lobbyId, players: lobby.players });
@@ -232,6 +303,7 @@ export const handleMessage = async (
     case "join_lobby": {
       const player = requirePlayer(socket);
       if (!player) return;
+      const connState = state.connections.get(socket);
       const lobby = state.lobbies.get(message.lobbyId);
       if (!lobby) {
         sendMessage(socket, { type: "error", message: "Lobby not available." });
@@ -243,13 +315,19 @@ export const handleMessage = async (
           return;
         }
         lobby.players.push(player);
-        state.connections.set(socket, { playerId: player.id, lobbyId: lobby.id });
+        state.connections.set(socket, { ...connState, playerId: player.id, lobbyId: lobby.id });
+        if (connState?.sessionToken) {
+          await updateSessionLastSeen(connState.sessionToken, lobby.id);
+        }
         await persistLobbyState(lobby);
         broadcastLobbies(wss);
         sendToLobby(lobby, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
         return;
       }
-      state.connections.set(socket, { playerId: player.id, lobbyId: lobby.id });
+      state.connections.set(socket, { ...connState, playerId: player.id, lobbyId: lobby.id });
+      if (connState?.sessionToken) {
+        await updateSessionLastSeen(connState.sessionToken, lobby.id);
+      }
       await upsertPlayerProfile(player, lobby.id);
       sendMessage(socket, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
       const match = state.matches.get(lobby.id);
@@ -303,7 +381,20 @@ export const handleMessage = async (
         sendMessage(socket, { type: "error", message: "Lobby not found." });
         return;
       }
-      await ensureMinimumBots(lobby);
+      
+      const requestedBots = message.botCount ?? 0;
+      const maxBots = lobby.maxPlayers - lobby.players.length;
+      const botsToAdd = Math.min(Math.max(0, requestedBots), maxBots);
+      
+      for (let i = 0; i < botsToAdd; i++) {
+        await addBotToLobby(lobby);
+      }
+      
+      if (lobby.players.length < 2) {
+        sendMessage(socket, { type: "error", message: "Need at least 2 players to start." });
+        return;
+      }
+      
       lobby.status = "in_match";
       const matchState = createMatchState(lobby);
       state.matches.set(lobby.id, matchState);

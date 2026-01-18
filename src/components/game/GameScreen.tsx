@@ -30,10 +30,8 @@ type GameScreenProps = {
   onAction: (action: string, payload?: CombatActionPayload) => void
   onPendingActionResponse: (response: string) => void
   onLeaveLobby: () => void
-  onStartMatch: () => void
+  onStartMatch: (botCount: number) => void
   onOpenCharacterEditor: () => void
-  onCreateLobby: () => void
-  onJoinLobby: () => void
   inLobbyButNoMatch: boolean
 }
 
@@ -65,8 +63,6 @@ export const GameScreen = ({
   onLeaveLobby,
   onStartMatch,
   onOpenCharacterEditor,
-  onCreateLobby,
-  onJoinLobby,
   inLobbyButNoMatch
 }: GameScreenProps) => {
   const [showSettings, setShowSettings] = useState(false)
@@ -212,12 +208,12 @@ export const GameScreen = ({
         selectedTargetId={selectedTargetId}
         currentManeuver={currentManeuver}
         isMyTurn={isPlayerTurn}
+        lobbyId={lobbyId}
+        lobbyPlayerCount={lobbyPlayers.length}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
         onStartMatch={onStartMatch}
         onOpenCharacterEditor={onOpenCharacterEditor}
-        onCreateLobby={onCreateLobby}
-        onJoinLobby={onJoinLobby}
         inLobbyButNoMatch={inLobbyButNoMatch}
       />
 
@@ -249,6 +245,19 @@ export const GameScreen = ({
         </div>
       )}
 
+      {matchState?.status === 'paused' && (
+        <div className="modal-overlay pause-overlay">
+          <div className="pause-modal">
+            <div className="pause-icon">⏸</div>
+            <h2>Match Paused</h2>
+            <p>
+              Waiting for <strong>{matchState.players.find(p => p.id === matchState.pausedForPlayerId)?.name ?? 'player'}</strong> to reconnect...
+            </p>
+            <div className="pause-spinner"></div>
+          </div>
+        </div>
+      )}
+
       <ActionBar
         isMyTurn={isPlayerTurn}
         currentManeuver={currentManeuver}
@@ -256,13 +265,12 @@ export const GameScreen = ({
         matchState={matchState}
         inLobbyButNoMatch={inLobbyButNoMatch}
         playerId={player?.id ?? null}
+        lobbyPlayerCount={lobbyPlayers.length}
         onAction={onAction}
         onDefend={handleDefenseChoice}
         onLeaveLobby={onLeaveLobby}
         onStartMatch={onStartMatch}
         onOpenCharacterEditor={onOpenCharacterEditor}
-        onCreateLobby={onCreateLobby}
-        onJoinLobby={onJoinLobby}
       />
     </div>
   )

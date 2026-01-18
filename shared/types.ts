@@ -244,7 +244,8 @@ export type MatchState = {
   round: number;
   log: string[];
   winnerId?: Id;
-  status: "active" | "finished";
+  status: "active" | "paused" | "finished";
+  pausedForPlayerId?: Id;
   finishedAt?: number;
   turnMovement?: TurnMovementState;
   reachableHexes?: ReachableHexInfo[];
@@ -257,6 +258,8 @@ export type LobbySummary = {
   playerCount: number;
   maxPlayers: number;
   status: "open" | "in_match";
+  matchPaused?: boolean;
+  pausedForPlayerName?: string;
 };
 
 export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'release';
@@ -288,13 +291,14 @@ export type CombatActionPayload =
   | { type: "surrender" };
 
 export type ClientToServerMessage =
-  | { type: "auth"; name: string }
+  | { type: "register"; username: string }
+  | { type: "auth"; sessionToken: string }
   | { type: "create_lobby"; name: string; maxPlayers: number }
   | { type: "join_lobby"; lobbyId: Id }
   | { type: "leave_lobby" }
   | { type: "delete_lobby"; lobbyId: Id }
   | { type: "list_lobbies" }
-  | { type: "start_match" }
+  | { type: "start_match"; botCount?: number }
   | { type: "select_character"; character: CharacterSheet }
   | { type: "action"; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
 
@@ -310,11 +314,16 @@ export type PendingAction =
   | { type: 'exit_close_combat_request'; exitingId: Id; targetId: Id };
 
 export type ServerToClientMessage =
-  | { type: "auth_ok"; player: Player }
+  | { type: "auth_ok"; player: Player; sessionToken: string }
+  | { type: "session_invalid" }
   | { type: "lobbies"; lobbies: LobbySummary[] }
   | { type: "lobby_joined"; lobbyId: Id; players: Player[] }
   | { type: "lobby_left" }
   | { type: "match_state"; state: MatchState }
+  | { type: "match_paused"; playerId: Id; playerName: string }
+  | { type: "match_resumed"; playerId: Id; playerName: string }
+  | { type: "player_disconnected"; playerId: Id; playerName: string }
+  | { type: "player_reconnected"; playerId: Id; playerName: string }
   | { type: "visual_effect"; effect: VisualEffect }
   | { type: "pending_action"; action: PendingAction }
   | { type: "error"; message: string };

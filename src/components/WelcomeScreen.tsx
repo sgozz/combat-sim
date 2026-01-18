@@ -4,12 +4,15 @@ import './WelcomeScreen.css'
 
 type WelcomeScreenProps = {
   onComplete: (nickname: string) => void
+  authError?: string | null
 }
 
-export const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({ onComplete, authError }: WelcomeScreenProps) => {
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
+  
+  const displayError = error || authError
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +60,7 @@ export const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               autoFocus
               maxLength={16}
             />
-            {error && <div className="welcome-error">{error}</div>}
+            {displayError && <div className="welcome-error">{displayError}</div>}
           </div>
           
           <div className="welcome-actions">

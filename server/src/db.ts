@@ -11,6 +11,20 @@ const DB_PATH = path.join(process.cwd(), "data.sqlite");
 export const initializeDatabase = async (): Promise<SqliteDatabase> => {
   const db = await open({ filename: DB_PATH, driver: sqlite3.Database });
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      created_at INTEGER DEFAULT (strftime('%s', 'now')),
+      last_login_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at INTEGER DEFAULT (strftime('%s', 'now')),
+      last_seen_at INTEGER,
+      lobby_id TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
       name TEXT UNIQUE,
@@ -54,6 +68,90 @@ export const initializeDatabase = async (): Promise<SqliteDatabase> => {
   }
 
   return db;
+};
+
+export type User = {
+  id: string;
+  username: string;
+  createdAt: number;
+  lastLoginAt: number | null;
+};
+
+export type Session = {
+  token: string;
+  userId: string;
+  createdAt: number;
+  lastSeenAt: number | null;
+  lobbyId: string | null;
+};
+
+export const findUserByUsername = async (username: string): Promise<User | null> => {
+  const row = await state.db.get<{ id: string; username: string; created_at: number; last_login_at: number | null }>(
+    "SELECT id, username, created_at, last_login_at FROM users WHERE username = ?",
+    username
+  );
+  if (!row) return null;
+  return { id: row.id, username: row.username, createdAt: row.created_at, lastLoginAt: row.last_login_at };
+};
+
+export const findUserById = async (userId: string): Promise<User | null> => {
+  const row = await state.db.get<{ id: string; username: string; created_at: number; last_login_at: number | null }>(
+    "SELECT id, username, created_at, last_login_at FROM users WHERE id = ?",
+    userId
+  );
+  if (!row) return null;
+  return { id: row.id, username: row.username, createdAt: row.created_at, lastLoginAt: row.last_login_at };
+};
+
+export const createUser = async (username: string): Promise<User> => {
+  const id = randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+  await state.db.run(
+    "INSERT INTO users (id, username, created_at, last_login_at) VALUES (?, ?, ?, ?)",
+    id, username, now, now
+  );
+  return { id, username, createdAt: now, lastLoginAt: now };
+};
+
+export const updateUserLastLogin = async (userId: string): Promise<void> => {
+  const now = Math.floor(Date.now() / 1000);
+  await state.db.run("UPDATE users SET last_login_at = ? WHERE id = ?", now, userId);
+};
+
+export const findSessionByToken = async (token: string): Promise<Session | null> => {
+  const row = await state.db.get<{ token: string; user_id: string; created_at: number; last_seen_at: number | null; lobby_id: string | null }>(
+    "SELECT token, user_id, created_at, last_seen_at, lobby_id FROM sessions WHERE token = ?",
+    token
+  );
+  if (!row) return null;
+  return { token: row.token, userId: row.user_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, lobbyId: row.lobby_id };
+};
+
+export const createSession = async (userId: string, lobbyId: string | null = null): Promise<Session> => {
+  const token = randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+  await state.db.run(
+    "INSERT INTO sessions (token, user_id, created_at, last_seen_at, lobby_id) VALUES (?, ?, ?, ?, ?)",
+    token, userId, now, now, lobbyId
+  );
+  return { token, userId, createdAt: now, lastSeenAt: now, lobbyId };
+};
+
+export const updateSessionLastSeen = async (token: string, lobbyId?: string | null): Promise<void> => {
+  const now = Math.floor(Date.now() / 1000);
+  if (lobbyId !== undefined) {
+    await state.db.run("UPDATE sessions SET last_seen_at = ?, lobby_id = ? WHERE token = ?", now, lobbyId, token);
+  } else {
+    await state.db.run("UPDATE sessions SET last_seen_at = ? WHERE token = ?", now, token);
+  }
+};
+
+export const deleteSession = async (token: string): Promise<void> => {
+  await state.db.run("DELETE FROM sessions WHERE token = ?", token);
+};
+
+export const deleteUserSessions = async (userId: string): Promise<void> => {
+  await state.db.run("DELETE FROM sessions WHERE user_id = ?", userId);
 };
 
 export const loadCharacterById = async (characterId: string): Promise<CharacterSheet | null> => {

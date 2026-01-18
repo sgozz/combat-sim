@@ -1,11 +1,10 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { LobbyBrowser } from './components/LobbyBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { CharacterEditor } from './components/ui/CharacterEditor'
-import { JoinLobbyModal } from './components/ui/JoinLobbyModal'
 
 import { applyAccessibilitySettings } from './components/ui/SettingsPanel'
 import type { GridPosition, CharacterSheet, CombatActionPayload } from '../shared/types'
@@ -16,6 +15,7 @@ function AppRoutes() {
   const location = useLocation()
   
   const {
+    connectionState,
     player,
     lobbies,
     lobbyPlayers,
@@ -24,48 +24,58 @@ function AppRoutes() {
     logs,
     visualEffects,
     pendingAction,
+    authError,
     setScreen,
     setLogs,
     setPendingAction,
-    initializeConnection,
-    sendMessage
+    register,
+    sendMessage,
+    logout
   } = useGameSocket()
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
   const [showCharacterModal, setShowCharacterModal] = useState(false)
-  const [showJoinModal, setShowJoinModal] = useState(false)
   const [editingCharacter, setEditingCharacter] = useState<CharacterSheet | null>(null)
+  
+  const pendingJoinLobbyIdRef = useRef<string | null>((() => {
+    const params = new URLSearchParams(window.location.search)
+    const joinId = params.get('join')
+    if (joinId) {
+      window.history.replaceState({}, '', window.location.pathname)
+      return joinId
+    }
+    return null
+  })())
 
   useEffect(() => {
     applyAccessibilitySettings()
   }, [])
 
   useEffect(() => {
-    const storedName = window.localStorage.getItem('gurps.nickname')?.trim()
-    if (storedName && storedName.length > 0) {
-      if (!player) {
-        initializeConnection(storedName)
-      }
-      if (location.pathname === '/') {
+    if (connectionState === 'connected' && player) {
+      if (pendingJoinLobbyIdRef.current && !lobbyId) {
+        sendMessage({ type: 'join_lobby', lobbyId: pendingJoinLobbyIdRef.current })
+        pendingJoinLobbyIdRef.current = null
+      } else if (location.pathname === '/') {
         navigate('/lobby', { replace: true })
       }
-    } else if (location.pathname !== '/') {
+    } else if (connectionState === 'disconnected' && location.pathname !== '/') {
       navigate('/', { replace: true })
     }
-  }, [initializeConnection, navigate, location.pathname, player])
+  }, [connectionState, player, navigate, location.pathname, lobbyId, sendMessage])
 
   useEffect(() => {
     if (lobbyId && location.pathname === '/lobby') {
       navigate('/game', { replace: true })
+    } else if (!lobbyId && location.pathname === '/game') {
+      navigate('/lobby', { replace: true })
     }
   }, [lobbyId, navigate, location.pathname])
 
-  const handleWelcomeComplete = (nickname: string) => {
-    window.localStorage.setItem('gurps.nickname', nickname)
+  const handleWelcomeComplete = (username: string) => {
     setScreen('lobby')
-    initializeConnection(nickname)
-    navigate('/lobby')
+    register(username)
   }
 
   const handleQuickMatch = () => {
@@ -127,39 +137,47 @@ function AppRoutes() {
   }, [sendMessage, navigate])
 
   const handleLogout = useCallback(() => {
-    window.localStorage.removeItem('gurps.nickname')
-    window.location.href = '/'
-  }, [])
+    logout()
+    navigate('/')
+  }, [logout, navigate])
+
+  if (connectionState === 'connecting') {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        color: 'white',
+        fontSize: '1.2em'
+      }}>
+        Connecting to server...
+      </div>
+    )
+  }
 
   return (
     <Routes>
-      <Route path="/" element={<WelcomeScreen onComplete={handleWelcomeComplete} />} />
+      <Route path="/" element={
+        connectionState === 'connected' ? (
+          <Navigate to="/lobby" replace />
+        ) : (
+          <WelcomeScreen onComplete={handleWelcomeComplete} authError={authError} />
+        )
+      } />
       
       <Route path="/lobby" element={
         !player ? (
-          <div style={{color: 'white', padding: '20px', textAlign: 'center'}}>Connecting to server...</div>
+          <Navigate to="/" replace />
         ) : (
-          <>
-            <LobbyBrowser
-              player={player}
-              lobbies={lobbies}
-              onQuickMatch={handleQuickMatch}
-              onJoinLobby={(id) => sendMessage({ type: 'join_lobby', lobbyId: id })}
-              onRefresh={handleRefreshLobbies}
-              onLogout={handleLogout}
-            />
-            {showJoinModal && (
-              <JoinLobbyModal 
-                lobbies={lobbies}
-                onJoin={(id) => {
-                  sendMessage({ type: 'join_lobby', lobbyId: id })
-                  setShowJoinModal(false)
-                }}
-                onDelete={(id) => sendMessage({ type: 'delete_lobby', lobbyId: id })}
-                onCancel={() => setShowJoinModal(false)}
-              />
-            )}
-          </>
+          <LobbyBrowser
+            player={player}
+            lobbies={lobbies}
+            onQuickMatch={handleQuickMatch}
+            onJoinLobby={(id) => sendMessage({ type: 'join_lobby', lobbyId: id })}
+            onRefresh={handleRefreshLobbies}
+            onLogout={handleLogout}
+          />
         )
       } />
       
@@ -187,15 +205,10 @@ function AppRoutes() {
                 setPendingAction(null)
               }}
               onLeaveLobby={handleLeaveLobby}
-              onStartMatch={() => sendMessage({ type: 'start_match' })}
+              onStartMatch={(botCount) => sendMessage({ type: 'start_match', botCount })}
               onOpenCharacterEditor={() => {
                 setShowCharacterModal(true)
               }}
-              onCreateLobby={() => {
-                 const name = window.prompt('Lobby name')?.trim() || `${player?.name}'s Lobby`
-                 sendMessage({ type: 'create_lobby', name, maxPlayers: 4 })
-              }}
-              onJoinLobby={() => setShowJoinModal(true)}
               inLobbyButNoMatch={!matchState && !!lobbyId}
             />
             

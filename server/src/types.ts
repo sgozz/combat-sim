@@ -13,6 +13,8 @@ export type Lobby = {
 };
 
 export type ConnectionState = {
+  sessionToken?: string;
+  userId?: string;
   playerId?: string;
   lobbyId?: string;
 };

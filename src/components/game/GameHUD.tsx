@@ -134,12 +134,12 @@ type GameActionPanelProps = {
   selectedTargetId: string | null
   currentManeuver: ManeuverType | null
   isMyTurn: boolean
+  lobbyId: string | null
+  lobbyPlayerCount: number
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
-  onStartMatch: () => void
+  onStartMatch: (botCount: number) => void
   onOpenCharacterEditor: () => void
-  onCreateLobby: () => void
-  onJoinLobby: () => void
   inLobbyButNoMatch: boolean
 }
 
@@ -163,12 +163,12 @@ export const GameActionPanel = ({
   selectedTargetId,
   currentManeuver,
   isMyTurn,
+  lobbyId,
+  lobbyPlayerCount,
   onAction,
   onLeaveLobby,
   onStartMatch,
   onOpenCharacterEditor,
-  onCreateLobby,
-  onJoinLobby,
   inLobbyButNoMatch
 }: GameActionPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
@@ -177,6 +177,7 @@ export const GameActionPanel = ({
   const [rapidStrike, setRapidStrike] = useState(false)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
+  const [botCount, setBotCount] = useState(1)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
@@ -242,19 +243,61 @@ export const GameActionPanel = ({
   const renderContent = () => {
     if (!matchState) {
       if (inLobbyButNoMatch) {
+        const maxBots = 4 - lobbyPlayerCount
         return (
-          <div className="action-grid">
-            <button className="action-btn" onClick={onOpenCharacterEditor}>Edit Character</button>
-            <button className="action-btn primary" onClick={onStartMatch}>Start Match</button>
-            <button className="action-btn danger" onClick={onLeaveLobby}>Leave Lobby</button>
+          <div className="lobby-setup">
+            <div className="lobby-invite">
+              <label>Invite Code:</label>
+              <div className="invite-code-row">
+                <code className="invite-code">{lobbyId?.slice(0, 8)}</code>
+                <button 
+                  className="copy-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.origin + '?join=' + lobbyId)
+                  }}
+                  title="Copy invite link"
+                >
+                  📋
+                </button>
+              </div>
+              <span className="invite-hint">Share with friends to join!</span>
+            </div>
+            
+            <div className="bot-selector">
+              <label>AI Opponents:</label>
+              <div className="bot-count-row">
+                <button 
+                  className="bot-btn"
+                  onClick={() => setBotCount(Math.max(0, botCount - 1))}
+                  disabled={botCount <= 0}
+                >−</button>
+                <span className="bot-count">{botCount}</span>
+                <button 
+                  className="bot-btn"
+                  onClick={() => setBotCount(Math.min(maxBots, botCount + 1))}
+                  disabled={botCount >= maxBots}
+                >+</button>
+              </div>
+              <span className="bot-hint">Total players: {lobbyPlayerCount + botCount}</span>
+            </div>
+
+            <div className="action-grid">
+              <button className="action-btn" onClick={onOpenCharacterEditor}>Edit Character</button>
+              <button 
+                className="action-btn primary" 
+                onClick={() => onStartMatch(botCount)}
+                disabled={lobbyPlayerCount + botCount < 2}
+              >
+                Start Match ({lobbyPlayerCount + botCount} players)
+              </button>
+              <button className="action-btn danger" onClick={onLeaveLobby}>Leave Lobby</button>
+            </div>
           </div>
         )
       }
       return (
         <div className="action-grid">
-          <button className="action-btn" onClick={onOpenCharacterEditor}>Edit Character</button>
-          <button className="action-btn primary" onClick={onCreateLobby}>Create Lobby</button>
-          <button className="action-btn" onClick={onJoinLobby}>Join Lobby</button>
+          <p style={{ color: '#888', textAlign: 'center' }}>Redirecting to lobby...</p>
         </div>
       )
     }
