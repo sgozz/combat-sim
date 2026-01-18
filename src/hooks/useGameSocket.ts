@@ -27,6 +27,7 @@ export const useGameSocket = () => {
   const reconnectAttemptRef = useRef(false)
   const pendingRejoinRef = useRef<string | null>(null)
   const reconnectDelayRef = useRef(1000)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleMessage = useCallback((message: ServerToClientMessage) => {
     switch (message.type) {
@@ -204,15 +205,6 @@ export const useGameSocket = () => {
       setConnectionState('disconnected')
       connectingRef.current = false
       reconnectAttemptRef.current = false
-      
-      const token = localStorage.getItem(SESSION_TOKEN_KEY)
-      if (token) {
-        setLogs(prev => [...prev, `Disconnected. Reconnecting in ${reconnectDelayRef.current / 1000}s...`])
-        setTimeout(() => {
-          tryReconnect()
-          reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000)
-        }, reconnectDelayRef.current)
-      }
     }
 
     setSocket(ws)
@@ -290,9 +282,38 @@ export const useGameSocket = () => {
   useEffect(() => {
     const token = localStorage.getItem(SESSION_TOKEN_KEY)
     if (token && !connectingRef.current) {
-      queueMicrotask(() => tryReconnect())
+      tryReconnect()
     }
-  }, [tryReconnect])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  
+  useEffect(() => {
+    if (connectionState !== 'disconnected') {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      return
+    }
+    
+    const token = localStorage.getItem(SESSION_TOKEN_KEY)
+    if (!token) return
+    
+    setLogs(prev => [...prev, `Disconnected. Reconnecting in ${reconnectDelayRef.current / 1000}s...`])
+    reconnectTimeoutRef.current = setTimeout(() => {
+      reconnectTimeoutRef.current = null
+      if (tryReconnect()) {
+        reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000)
+      }
+    }, reconnectDelayRef.current)
+    
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+    }
+  }, [connectionState, tryReconnect])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
