@@ -34,7 +34,7 @@ COPY server/ ./server/
 COPY shared/*.ts ./shared/
 RUN rm -f ./shared/*.test.ts
 WORKDIR /app/server
-RUN npm run build
+RUN mkdir -p dist && npm run build
 
 # ============================================
 # CLIENT RUNTIME (nginx)
@@ -56,4 +56,4 @@ COPY --from=server-deps /app/server/node_modules ./node_modules
 COPY server/package.json ./
 ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "dist/server/src/index.js"]
+CMD ["node", "dist/index.js"]
