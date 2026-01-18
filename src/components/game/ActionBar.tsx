@@ -535,7 +535,7 @@ export const ActionBar = ({
         )}
 
         {inMovementPhase && !inCloseCombat && (
-          <>
+          <div className="action-bar-movement-controls">
             <button
               className="action-bar-btn small"
               onClick={() => onAction('undo_movement', { type: 'undo_movement' })}
@@ -557,7 +557,7 @@ export const ActionBar = ({
             >
               <span className="action-bar-icon">✓</span>
             </button>
-          </>
+          </div>
         )}
 
         {inCloseCombat && (
