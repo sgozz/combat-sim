@@ -1,16 +1,16 @@
-# GURPS Combat Simulator - UI Redesign Proposal
+# Tactical Combat Combat Simulator - UI Redesign Proposal
 
 ## Executive Summary
 
-Analisi del gap tra le regole GURPS complete e l'UI attuale, con proposte di redesign per un simulatore completo.
+Analisi del gap tra le regole Tactical Combat complete e l'UI attuale, con proposte di redesign per un simulatore completo.
 
 ---
 
-## Gap Analysis: GURPS Rules vs Current UI
+## Gap Analysis: Tactical Combat Rules vs Current UI
 
 ### Maneuvers
 
-| Maneuver | GURPS Rule | Current Status | UI Needed |
+| Maneuver | Tactical Combat Rule | Current Status | UI Needed |
 |----------|------------|----------------|-----------|
 | Do Nothing | B364 | ✅ Implemented | OK |
 | Move | B364 | ✅ Implemented | OK |
@@ -27,7 +27,7 @@ Analisi del gap tra le regole GURPS complete e l'UI attuale, con proposte di red
 
 ### Attack Options
 
-| Feature | GURPS Rule | Current Status | UI Needed |
+| Feature | Tactical Combat Rule | Current Status | UI Needed |
 |---------|------------|----------------|-----------|
 | Basic Attack | B369 | ✅ | OK |
 | **Hit Location** | B398-400 | ❌ Missing | **Body diagram picker** |
@@ -38,7 +38,7 @@ Analisi del gap tra le regole GURPS complete e l'UI attuale, con proposte di red
 
 ### Defense Options
 
-| Feature | GURPS Rule | Current Status | UI Needed |
+| Feature | Tactical Combat Rule | Current Status | UI Needed |
 |---------|------------|----------------|-----------|
 | Dodge | B374 | ✅ Auto-resolved | **Add manual choice** |
 | Parry | B376 | ✅ Auto-resolved | **Add manual choice** |
@@ -49,7 +49,7 @@ Analisi del gap tra le regole GURPS complete e l'UI attuale, con proposte di red
 
 ### Status & Conditions
 
-| Feature | GURPS Rule | Current Status | UI Needed |
+| Feature | Tactical Combat Rule | Current Status | UI Needed |
 |---------|------------|----------------|-----------|
 | HP/FP Bars | - | ✅ | OK |
 | **Shock Penalty** | B419 | ❌ Missing | **Show -1 to -4 on DX/IQ** |
@@ -60,7 +60,7 @@ Analisi del gap tra le regole GURPS complete e l'UI attuale, con proposte di red
 
 ### Equipment Management
 
-| Feature | GURPS Rule | Current Status | UI Needed |
+| Feature | Tactical Combat Rule | Current Status | UI Needed |
 |---------|------------|----------------|-----------|
 | Equipped Weapon | - | ✅ (implicit) | Show explicitly |
 | **Weapon Ready State** | B382 | ❌ Missing | **Ready/unready indicator** |
@@ -545,7 +545,7 @@ Analisi del gap tra le regole GURPS complete e l'UI attuale, con proposte di red
 Choose Maneuver → Execute → End Turn
 ```
 
-### Proposed Flow (GURPS-Complete)
+### Proposed Flow (Tactical Combat-Complete)
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     COMPLETE TURN FLOW                           │
@@ -722,11 +722,11 @@ type ReadyPayload = {
 
 ## Conclusioni
 
-Per rendere il simulatore **GURPS-completo**, servono:
+Per rendere il simulatore **Tactical Combat-completo**, servono:
 
 1. **UI più ricca** ma con progressive disclosure
 2. **Più decisioni per il giocatore** (non tutto automatico)
 3. **Feedback visivo chiaro** su modificatori e probabilità
 4. **Mobile-friendly** con bottom sheet pattern
 
-Il redesign mantiene la semplicità dell'uso base ma permette accesso a tutte le opzioni tattiche di GURPS per chi le vuole usare.
+Il redesign mantiene la semplicità dell'uso base ma permette accesso a tutte le opzioni tattiche di Tactical Combat per chi le vuole usare.

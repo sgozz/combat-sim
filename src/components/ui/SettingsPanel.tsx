@@ -23,7 +23,7 @@ const FONT_SIZE_LABELS: Record<FontSize, string> = {
   'large': 'Large'
 }
 
-const STORAGE_KEY = 'gurps.accessibility'
+const STORAGE_KEY = 'tcs.accessibility'
 
 const loadSettings = (): Settings => {
   try {

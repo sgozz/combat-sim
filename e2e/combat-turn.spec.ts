@@ -10,7 +10,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   const page = await context.newPage()
   
   await page.addInitScript(() => {
-    localStorage.removeItem('gurps.nickname')
+    localStorage.removeItem('tcs.nickname')
   })
   
   await page.goto('/')
@@ -168,13 +168,13 @@ test.describe('Single Player Combat Flow', () => {
 test.describe('UI Elements', () => {
   test('welcome screen shows and accepts nickname', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     
-    const title = page.getByText(/GURPS Combat Simulator/i)
+    const title = page.getByText(/Tactical Combat Simulator/i)
     await expect(title).toBeVisible({ timeout: 5000 })
     
     const nameInput = page.getByPlaceholder('Enter your name')
@@ -191,7 +191,7 @@ test.describe('UI Elements', () => {
 
   test('tutorial can be opened from welcome screen', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
@@ -202,12 +202,12 @@ test.describe('UI Elements', () => {
     
     await tutorialButton.click()
     
-    await expect(page.getByText(/welcome to gurps|getting started|basics/i)).toBeVisible({ timeout: 3000 })
+    await expect(page.getByText(/welcome to tactical|getting started|basics/i)).toBeVisible({ timeout: 3000 })
   })
 
   test('lobby browser shows after login', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
@@ -227,7 +227,7 @@ test.describe('Mobile UI', () => {
     const page = await context.newPage()
     
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
@@ -266,7 +266,7 @@ test.describe('Mobile UI', () => {
     const page = await context.newPage()
     
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
@@ -310,7 +310,7 @@ test.describe('Mobile UI', () => {
     const page = await context.newPage()
     
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
@@ -369,7 +369,7 @@ test.describe('Mobile UI', () => {
     const page = await context.newPage()
     
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')
@@ -400,7 +400,7 @@ test.describe('Mobile UI', () => {
     const page = await context.newPage()
     
     await page.addInitScript(() => {
-      localStorage.removeItem('gurps.nickname')
+      localStorage.removeItem('tcs.nickname')
     })
     
     await page.goto('/')

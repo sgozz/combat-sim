@@ -53,7 +53,7 @@ import {
 } from './rules'
 import type { CharacterSheet, MatchState, CombatantState, Player, Equipment } from './types'
 
-describe('GURPS Rules', () => {
+describe('Combat Rules', () => {
   describe('Skill Check', () => {
     it('success when rolling under or equal to target', () => {
       // Mock math.random to return predictable values

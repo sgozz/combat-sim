@@ -39,7 +39,7 @@ export const WelcomeScreen = ({ onComplete, authError }: WelcomeScreenProps) => 
   return (
     <div className="welcome-screen">
       <div className="welcome-card">
-        <h1 className="welcome-title">🎲 GURPS Combat Simulator</h1>
+        <h1 className="welcome-title">Tactical Combat Simulator</h1>
         <p className="welcome-subtitle">Turn-Based Tactical Combat</p>
         
         <form onSubmit={handleSubmit} className="welcome-form">

@@ -25,7 +25,7 @@ export const LobbyBrowser = ({ player, lobbies, onQuickMatch, onJoinLobby, onRef
     <div className="lobby-browser">
       <header className="lobby-browser-header">
         <div className="lobby-browser-title">
-          <h1>GURPS Combat</h1>
+          <h1>Tactical Combat</h1>
           <span className="lobby-browser-subtitle">Battle Lobbies</span>
         </div>
         <div className="lobby-browser-user">

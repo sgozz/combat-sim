@@ -6,8 +6,8 @@ type TutorialProps = {
 
 const STEPS = [
   {
-    title: "Welcome to GURPS Combat!",
-    description: "This simulator lets you experience tactical turn-based combat using GURPS rules. You'll control a character on a hex grid, managing movement, attacks, and defenses.",
+    title: "Welcome to Tactical Combat!",
+    description: "This simulator lets you experience tactical turn-based combat. You'll control a character on a hex grid, managing movement, attacks, and defenses.",
   },
   {
     title: "Choose Your Maneuver",

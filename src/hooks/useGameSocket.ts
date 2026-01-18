@@ -4,7 +4,7 @@ import type { ServerToClientMessage, Player, LobbySummary, MatchState, VisualEff
 export type ScreenState = 'welcome' | 'lobby' | 'waiting' | 'match'
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected'
 
-const SESSION_TOKEN_KEY = 'gurps.sessionToken'
+const SESSION_TOKEN_KEY = 'tcs.sessionToken'
 
 export const useGameSocket = () => {
   const [socket, setSocket] = useState<WebSocket | null>(null)

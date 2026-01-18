@@ -1,7 +1,7 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
 /**
- * Comprehensive E2E tests for all implemented GURPS Combat Simulator features.
+ * Comprehensive E2E tests for all implemented Tactical Combat Simulator features.
  * 
  * Tests cover:
  * - Phase 1: Hit Location, Defense Modal, Retreat, Shock, AOA Variants

@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Overview
-GURPS combat simulator with React/Three.js client and Node.js WebSocket server.
+Tactical combat simulator with React/Three.js client and Node.js WebSocket server.
 
 | Layer | Stack | Location |
 |-------|-------|----------|
@@ -67,7 +67,7 @@ src/
   utils/        # Hex math, helpers
 shared/
   types.ts      # Message contracts, game state types
-  rules.ts      # GURPS rules (pure functions)
+  rules.ts      # Combat rules (pure functions)
   rules.test.ts # Unit tests for rules
 server/
   src/          # WebSocket server, match logic

@@ -1,4 +1,4 @@
-# GURPS Combat Simulator - Implementation Plan
+# Tactical Combat Combat Simulator - Implementation Plan
 
 ## Overview
 
@@ -11,7 +11,7 @@ Organizzato in 4 fasi con task atomici, dipendenze, file coinvolti e stime di ef
 
 ## Phase 1: Core Combat Completion
 
-**Obiettivo**: Rendere il combattimento base GURPS-compliant
+**Obiettivo**: Rendere il combattimento base Tactical Combat-compliant
 **Durata stimata**: 40-50 ore
 **Priorità**: CRITICA
 

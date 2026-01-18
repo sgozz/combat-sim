@@ -1,4 +1,4 @@
-# GURPS Combat Simulator - UI Schema
+# Tactical Combat Combat Simulator - UI Schema
 
 ## Responsive Breakpoints
 
@@ -501,4 +501,4 @@
 
 ---
 
-*Document generated for GURPS Combat Simulator project*
+*Document generated for Tactical Combat Combat Simulator project*

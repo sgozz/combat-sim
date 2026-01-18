@@ -306,7 +306,7 @@ export const rollDamage = (formula: string, random: () => number = Math.random):
 };
 
 /**
- * GURPS damage type multipliers (vs torso):
+ * Damage type multipliers (vs torso):
  * - Crushing (cr): x1
  * - Cutting (cut): x1.5 (round down)
  * - Impaling (imp): x2
@@ -414,7 +414,7 @@ export const getPostureModifiers = (posture: Posture): PostureModifiers => {
 };
 
 /**
- * GURPS B364: Posture change rules
+ * Posture change rules:
  * - Dropping down (standing→crouch/kneel, crouch→kneel/prone, kneel→prone) is free (step)
  * - Standing ↔ Crouching is free (step)
  * - Rising from kneeling/prone requires Change Posture maneuver
@@ -882,7 +882,7 @@ export type GrappleTechniqueResult = {
   effect: string;
 };
 
-// ============ HEX MOVEMENT (GURPS B386-388) ============
+// ============ HEX MOVEMENT ============
 
 export type HexPosition = {
   q: number;
