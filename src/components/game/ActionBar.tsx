@@ -448,6 +448,7 @@ export const ActionBar = ({
             onClick={() => {
               if (confirm('Surrender and end the match?')) {
                 onAction('surrender', { type: 'surrender' })
+                onLeaveLobby()
               }
             }}
           >
@@ -607,13 +608,15 @@ export const ActionBar = ({
           ) : null
         })()}
 
-        <button
-          className="action-bar-btn"
-          onClick={() => onAction('end_turn', { type: 'end_turn' })}
-        >
-          <span className="action-bar-icon">⌛</span>
-          <span className="action-bar-label">End</span>
-        </button>
+        {currentManeuver && (
+          <button
+            className="action-bar-btn"
+            onClick={() => onAction('end_turn', { type: 'end_turn' })}
+          >
+            <span className="action-bar-icon">⌛</span>
+            <span className="action-bar-label">End</span>
+          </button>
+        )}
 
       </div>
     </>
