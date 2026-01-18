@@ -336,7 +336,21 @@ export const handleMessage = async (
       sendMessage(socket, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
       const match = state.matches.get(lobby.id);
       if (match) {
-        sendMessage(socket, { type: "match_state", state: match });
+        if (match.status === "paused" && match.pausedForPlayerId === player.id) {
+          const resumedMatch: MatchState = {
+            ...match,
+            status: "active",
+            pausedForPlayerId: undefined,
+            log: [...match.log, `${player.name} reconnected. Match resumed.`],
+          };
+          state.matches.set(lobby.id, resumedMatch);
+          await upsertMatch(lobby.id, resumedMatch);
+          sendToLobby(lobby, { type: "match_resumed", playerId: player.id, playerName: player.name });
+          sendToLobby(lobby, { type: "match_state", state: resumedMatch });
+          scheduleBotTurn(lobby, resumedMatch);
+        } else {
+          sendMessage(socket, { type: "match_state", state: match });
+        }
       }
       return;
     }
@@ -517,7 +531,6 @@ const handleCombatAction = async (
     return;
   }
   
-  // Surrender can be done at any time, even when not your turn
   if (payload.type === "surrender") {
     const opponent = match.players.find(p => p.id !== player.id);
     const updated: MatchState = {
@@ -530,6 +543,11 @@ const handleCombatAction = async (
     state.matches.set(lobby.id, updated);
     await upsertMatch(lobby.id, updated);
     sendToLobby(lobby, { type: "match_state", state: updated });
+    return;
+  }
+
+  if (payload.type === "defend" && match.pendingDefense?.defenderId === player.id) {
+    await resolveDefenseChoice(lobby, match, payload);
     return;
   }
 
@@ -1146,7 +1164,7 @@ const handleAttackAction = async (
     logEntry += `: Miss.${critMissEffect} ${formatRoll(attackRoll.roll, 'Skill')}`;
     sendToLobby(lobby, { 
       type: "visual_effect", 
-      effect: { type: "miss", targetId: targetCombatant.playerId, position: targetCombatant.position } 
+      effect: { type: "miss", attackerId: player.id, targetId: targetCombatant.playerId, position: targetCombatant.position } 
     });
     
     const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
@@ -1215,7 +1233,7 @@ const handleAttackAction = async (
     
     sendToLobby(lobby, { 
       type: "visual_effect", 
-      effect: { type: "damage", targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
+      effect: { type: "damage", attackerId: player.id, targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
     });
 
     const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
@@ -1328,10 +1346,10 @@ const handleAttackAction = async (
     if (defenseRoll.defended) {
       const retreatStr = canRetreat ? ' (with retreat)' : '';
       logEntry += `: ${defenseLabel}${retreatStr}! ${formatRoll(attackRoll.roll, 'Attack')} -> ${formatRoll(defenseRoll.roll, defenseLabel)}`;
-      sendToLobby(lobby, { 
-        type: "visual_effect", 
-        effect: { type: "defend", targetId: targetCombatant.playerId, position: targetCombatant.position } 
-      });
+sendToLobby(lobby, { 
+      type: "visual_effect", 
+      effect: { type: "defend", attackerId: player.id, targetId: targetCombatant.playerId, position: targetCombatant.position } 
+    });
       
       let updatedCombatants = match.combatants.map(c => {
         if (c.playerId !== targetCombatant.playerId) return c;
@@ -1392,7 +1410,7 @@ const handleAttackAction = async (
       
       sendToLobby(lobby, { 
         type: "visual_effect", 
-        effect: { type: "damage", targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
+        effect: { type: "damage", attackerId: player.id, targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
       });
 
       const isMultiAttack = actorCombatant.attacksRemaining > 1;
@@ -1531,7 +1549,7 @@ const resolveDefenseChoice = async (
     
     sendToLobby(lobby, { 
       type: "visual_effect", 
-      effect: { type: "damage", targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
+      effect: { type: "damage", attackerId: pending.attackerId, targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
 
     const remainingAttacks = attackerCombatant.attacksRemaining - 1;
@@ -1665,7 +1683,7 @@ const resolveDefenseChoice = async (
     
     sendToLobby(lobby, { 
       type: "visual_effect", 
-      effect: { type: "defend", targetId: pending.defenderId, position: defenderCombatant.position } 
+      effect: { type: "defend", attackerId: pending.attackerId, targetId: pending.defenderId, position: defenderCombatant.position } 
     });
     
     let updatedCombatants = match.combatants.map(c => {
@@ -1729,7 +1747,7 @@ const resolveDefenseChoice = async (
     
     sendToLobby(lobby, { 
       type: "visual_effect", 
-      effect: { type: "damage", targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
+      effect: { type: "damage", attackerId: pending.attackerId, targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
 
     let updatedCombatants = result.updatedCombatants.map(c => {

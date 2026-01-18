@@ -44,10 +44,53 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
   const playerName = departingPlayer?.name ?? "Player";
   const match = state.matches.get(lobbyId);
   
-  const shouldRemovePlayer = explicit || lobby.status === "open";
+  const matchIsActive = match && match.status === "active";
+  const matchIsPaused = match && match.status === "paused";
+  const shouldPauseMatch = matchIsActive && !departingPlayer?.isBot;
+  const shouldEndPausedMatch = matchIsPaused && !departingPlayer?.isBot;
+  const shouldRemovePlayer = lobby.status === "open" || (explicit && !matchIsActive && !matchIsPaused);
   
-  if (shouldRemovePlayer) {
-    lobby.players = lobby.players.filter((player) => player.id !== playerId);
+  if (shouldPauseMatch) {
+    const pausedMatch: MatchState = {
+      ...match,
+      status: "paused",
+      pausedForPlayerId: playerId,
+      log: [...match.log, `${playerName} ${explicit ? 'left' : 'disconnected'}. Waiting for reconnection...`],
+    };
+    state.matches.set(lobbyId, pausedMatch);
+    await upsertMatch(lobbyId, pausedMatch);
+    cleanupBotTimer(lobbyId);
+    clearDefenseTimeout(lobbyId);
+    sendToLobby(lobby, { type: "match_paused", playerId, playerName });
+    sendToLobby(lobby, { type: "match_state", state: pausedMatch });
+    broadcastLobbies(wss);
+    
+    if (explicit) {
+      sendMessage(socket, { type: "lobby_left" });
+      state.connections.set(socket, { 
+        sessionToken: connState.sessionToken, 
+        userId: connState.userId, 
+        playerId 
+      });
+    }
+    return;
+  }
+  
+  if (shouldEndPausedMatch && match) {
+    const winnerId = match.pausedForPlayerId;
+    const winnerPlayer = lobby.players.find(p => p.id === winnerId);
+    const finishedMatch: MatchState = {
+      ...match,
+      status: "finished",
+      finishedAt: Date.now(),
+      winnerId,
+      pausedForPlayerId: undefined,
+      log: [...match.log, `${playerName} abandoned the match. ${winnerPlayer?.name ?? 'Opponent'} wins!`],
+    };
+    state.matches.set(lobbyId, finishedMatch);
+    await upsertMatch(lobbyId, finishedMatch);
+    
+    lobby.players = lobby.players.filter(p => p.id !== playerId);
     
     if (departingPlayer) {
       await upsertPlayerProfile({ ...departingPlayer, characterId: departingPlayer.characterId }, null);
@@ -57,19 +100,29 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
       await updateSessionLastSeen(connState.sessionToken, null);
     }
     
-    if (explicit && match && match.status !== "finished") {
-      const opponent = match.players.find(p => p.id !== playerId);
-      const finishedMatch: MatchState = {
-        ...match,
-        status: "finished",
-        finishedAt: Date.now(),
-        winnerId: opponent?.id,
-        log: [...match.log, `${playerName} left the game. ${opponent?.name ?? 'Opponent'} wins!`],
-      };
-      state.matches.set(lobbyId, finishedMatch);
-      await upsertMatch(lobbyId, finishedMatch);
-      cleanupBotTimer(lobbyId);
-      sendToLobby(lobby, { type: "match_state", state: finishedMatch });
+    sendToLobby(lobby, { type: "match_state", state: finishedMatch });
+    broadcastLobbies(wss);
+    
+    if (explicit) {
+      sendMessage(socket, { type: "lobby_left" });
+    }
+    state.connections.set(socket, { 
+      sessionToken: connState.sessionToken, 
+      userId: connState.userId, 
+      playerId 
+    });
+    return;
+  }
+  
+  if (shouldRemovePlayer) {
+    lobby.players = lobby.players.filter(p => p.id !== playerId);
+    
+    if (departingPlayer) {
+      await upsertPlayerProfile({ ...departingPlayer, characterId: departingPlayer.characterId }, null);
+    }
+    
+    if (connState.sessionToken) {
+      await updateSessionLastSeen(connState.sessionToken, null);
     }
     
     if (lobby.players.filter(p => !p.isBot).length === 0) {
@@ -94,25 +147,7 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
     return;
   }
   
-  if (match && match.status === "active") {
-    const isMyTurn = match.activeTurnPlayerId === playerId;
-    const isPendingDefense = match.pendingDefense?.defenderId === playerId;
-    
-    if (isMyTurn || isPendingDefense) {
-      const pausedMatch: MatchState = {
-        ...match,
-        status: "paused",
-        pausedForPlayerId: playerId,
-        log: [...match.log, `${playerName} disconnected. Waiting for reconnection...`],
-      };
-      state.matches.set(lobbyId, pausedMatch);
-      await upsertMatch(lobbyId, pausedMatch);
-      cleanupBotTimer(lobbyId);
-      clearDefenseTimeout(lobbyId);
-      sendToLobby(lobby, { type: "match_paused", playerId, playerName });
-      sendToLobby(lobby, { type: "match_state", state: pausedMatch });
-    } else {
-      sendToLobby(lobby, { type: "player_disconnected", playerId, playerName });
-    }
+  if (!explicit) {
+    sendToLobby(lobby, { type: "player_disconnected", playerId, playerName });
   }
 };

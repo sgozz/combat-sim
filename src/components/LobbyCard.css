@@ -29,6 +29,16 @@
   border-left-color: #f59e0b;
 }
 
+.lobby-card-paused {
+  border-left-color: #f59e0b;
+  background: #1f1a0a;
+}
+
+.lobby-card-finished {
+  border-left-color: #6366f1;
+  background: #1a1a2e;
+}
+
 .lobby-card-header {
   display: flex;
   justify-content: space-between;
@@ -96,6 +106,42 @@
   transform: translateX(4px);
 }
 
+.lobby-card-rejoin {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.lobby-card-rejoin:hover {
+  background: #d97706;
+  transform: translateX(4px);
+}
+
+.lobby-card-result {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.lobby-card-result:hover {
+  background: #4f46e5;
+  transform: translateX(4px);
+}
+
 .lobby-card-full {
   color: #888;
   font-size: 0.875rem;
@@ -152,13 +198,17 @@
   }
 
   .lobby-card-join,
+  .lobby-card-rejoin,
+  .lobby-card-result,
   .lobby-card-spectate {
     width: 100%;
     text-align: center;
     padding: 0.75rem 1rem;
   }
 
-  .lobby-card-join:hover {
+  .lobby-card-join:hover,
+  .lobby-card-rejoin:hover,
+  .lobby-card-result:hover {
     transform: none;
   }
 }

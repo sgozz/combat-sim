@@ -146,6 +146,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
           character={characters.find(c => c.id === combatant.characterId)}
           isPlayer={combatant.playerId === playerId}
           isSelected={combatant.playerId === selectedTargetId}
+          visualEffects={visualEffects}
           onClick={() => onCombatantClick(combatant.playerId)}
         />
       ))}

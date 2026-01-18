@@ -20,6 +20,9 @@ export const summarizeLobby = (lobby: Lobby): LobbySummary => {
   const pausedPlayer = match?.pausedForPlayerId 
     ? match.players.find(p => p.id === match.pausedForPlayerId)
     : null;
+  const winnerPlayer = match?.winnerId
+    ? match.players.find(p => p.id === match.winnerId)
+    : null;
   
   return {
     id: lobby.id,
@@ -29,6 +32,8 @@ export const summarizeLobby = (lobby: Lobby): LobbySummary => {
     status: lobby.status,
     matchPaused: match?.status === "paused",
     pausedForPlayerName: pausedPlayer?.name,
+    matchFinished: match?.status === "finished",
+    winnerName: winnerPlayer?.name,
   };
 };
 

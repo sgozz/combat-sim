@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, useGLTF } from '@react-three/drei'
 import { hexToWorld } from '../../utils/hex'
-import type { CombatantState, CharacterSheet } from '../../../shared/types'
+import type { CombatantState, CharacterSheet, VisualEffect } from '../../../shared/types'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -13,6 +13,7 @@ type CombatantProps = {
   character: CharacterSheet | undefined
   isPlayer: boolean
   isSelected: boolean
+  visualEffects: (VisualEffect & { id: string })[]
   onClick: () => void
 }
 
@@ -99,7 +100,12 @@ function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; 
     const action = actionsRef.current[animationMap[animationState]]
     if (action) {
       Object.values(actionsRef.current).forEach(a => a?.fadeOut(0.2))
-      action.reset().fadeIn(0.2).play()
+      action.reset().fadeIn(0.2)
+      if (animationState === 'death') {
+        action.setLoop(THREE.LoopOnce, 1)
+        action.clampWhenFinished = true
+      }
+      action.play()
     }
   }, [animationState, clonedScene])
 
@@ -126,7 +132,7 @@ const RUN_TO_WALK_DISTANCE = 1.0
 const WALK_SPEED_MULTIPLIER = 0.5
 const ROTATION_SPEED = 8
 
-export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick }: CombatantProps) => {
+export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEffects, onClick }: CombatantProps) => {
   const emissive = isSelected ? '#ffff00' : '#000000'
   const [targetX, targetZ] = hexToWorld(combatant.position.x, combatant.position.z)
   const targetRotation = -combatant.facing * (Math.PI / 3)
@@ -136,11 +142,40 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const currentRot = useRef(targetRotation)
   const [animationState, setAnimationState] = useState<AnimationState>('idle')
   const wasMovingRef = useRef(false)
+  const combatAnimationRef = useRef<{ type: 'punch' | 'jump'; until: number } | null>(null)
+  const processedEffectsRef = useRef<Set<string>>(new Set())
 
   const basicMove = character?.derived.basicMove ?? 5
+  const isDead = combatant.currentHP <= 0
+
+  useEffect(() => {
+    for (const effect of visualEffects) {
+      if (processedEffectsRef.current.has(effect.id)) continue
+      processedEffectsRef.current.add(effect.id)
+
+      if ((effect.type === 'damage' || effect.type === 'miss') && effect.attackerId === combatant.playerId) {
+        combatAnimationRef.current = { type: 'punch', until: Date.now() + 800 }
+      } else if (effect.type === 'defend' && effect.targetId === combatant.playerId) {
+        combatAnimationRef.current = { type: 'jump', until: Date.now() + 800 }
+      }
+    }
+  }, [visualEffects, combatant.playerId])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
+
+    if (isDead) {
+      if (animationState !== 'death') setAnimationState('death')
+      return
+    }
+
+    const combatAnim = combatAnimationRef.current
+    if (combatAnim && Date.now() < combatAnim.until) {
+      if (animationState !== combatAnim.type) setAnimationState(combatAnim.type)
+      return
+    } else if (combatAnim) {
+      combatAnimationRef.current = null
+    }
 
     const distanceToTarget = Math.sqrt(
       Math.pow(targetX - currentPos.current.x, 2) + 

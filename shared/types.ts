@@ -260,6 +260,8 @@ export type LobbySummary = {
   status: "open" | "in_match";
   matchPaused?: boolean;
   pausedForPlayerName?: string;
+  matchFinished?: boolean;
+  winnerName?: string;
 };
 
 export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'release';
@@ -303,9 +305,9 @@ export type ClientToServerMessage =
   | { type: "action"; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
 
 export type VisualEffect = 
-  | { type: 'damage'; targetId: Id; value: number; position: GridPosition }
-  | { type: 'miss'; targetId: Id; position: GridPosition }
-  | { type: 'defend'; targetId: Id; position: GridPosition }
+  | { type: 'damage'; attackerId: Id; targetId: Id; value: number; position: GridPosition }
+  | { type: 'miss'; attackerId: Id; targetId: Id; position: GridPosition }
+  | { type: 'defend'; attackerId: Id; targetId: Id; position: GridPosition }
   | { type: 'grapple'; attackerId: Id; targetId: Id; position: GridPosition }
   | { type: 'close_combat'; attackerId: Id; targetId: Id; position: GridPosition };
 

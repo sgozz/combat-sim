@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, Player, DefenseType } from "../../shared/types";
+import type { CharacterSheet, CombatantState, MatchState, Player, DefenseType, PendingDefense, DamageType } from "../../shared/types";
 import type { Lobby } from "./types";
 import { state } from "./state";
 import { upsertCharacter, upsertPlayerProfile, upsertMatch } from "./db";
@@ -13,7 +13,7 @@ import {
   sendToLobby,
   checkVictory
 } from "./helpers";
-import { advanceTurn, calculateDerivedStats, resolveAttack, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance } from "../../shared/rules";
+import { advanceTurn, calculateDerivedStats, resolveAttackRoll, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance, rollDamage } from "../../shared/rules";
 
 export const createBotCharacter = (name: string): CharacterSheet => {
   const attributes = {
@@ -148,38 +148,97 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
       }
 
       const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
-      const defense = targetCharacter.derived.dodge;
       const weapon = attackerCharacter.equipment[0];
       const damageFormula = weapon?.damage ?? "1d";
-      const result = resolveAttack({ skill, defense, damage: damageFormula });
-
-      let updatedCombatants = currentMatch.combatants;
+      const damageType: DamageType = weapon?.damageType ?? 'crushing';
+      const attackRoll = resolveAttackRoll(skill);
+      
       let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}`;
 
-      if (result.outcome === "miss") {
-        logEntry += `: Miss. ${formatRoll(result.attack, 'Skill')}`;
-      } else if (result.outcome === "defended") {
-        logEntry += `: Dodge! ${formatRoll(result.attack, 'Attack')} -> ${formatRoll(result.defense!, 'Dodge')}`;
-      } else {
-        const dmg = result.damage!;
-        const baseDamage = dmg.total;
-        const damageType = weapon?.damageType ?? 'crushing';
-        const finalDamage = applyDamageMultiplier(baseDamage, damageType);
-        const rolls = dmg.rolls.join(',');
-        const mod = dmg.modifier !== 0 ? (dmg.modifier > 0 ? `+${dmg.modifier}` : `${dmg.modifier}`) : '';
-        const multiplier = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
-        const dmgDetail = multiplier 
-          ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${multiplier} = ${finalDamage})`
-          : `(${damageFormula}: [${rolls}]${mod} ${damageType})`;
-        
-        updatedCombatants = currentMatch.combatants.map((combatant) => {
-          if (combatant.playerId !== target.playerId) return combatant;
-          const nextHp = Math.max(combatant.currentHP - finalDamage, 0);
-          return { ...combatant, currentHP: nextHp };
+      if (!attackRoll.hit) {
+        logEntry += `: Miss. ${formatRoll(attackRoll.roll, 'Skill')}`;
+        const updated = advanceTurn({
+          ...currentMatch,
+          log: [...currentMatch.log, logEntry],
         });
-        logEntry += `: Hit for ${finalDamage} damage ${dmgDetail}. ${formatRoll(result.attack, 'Attack')}`;
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        scheduleBotTurn(lobby, updated);
+        return;
       }
 
+      const targetPlayer = lobby.players.find(p => p.id === target.playerId);
+      const targetIsHuman = targetPlayer && !targetPlayer.isBot;
+      
+      if (attackRoll.critical) {
+        const dmg = rollDamage(damageFormula);
+        const finalDamage = applyDamageMultiplier(dmg.total, damageType);
+        const updatedCombatants = currentMatch.combatants.map((combatant) => {
+          if (combatant.playerId !== target.playerId) return combatant;
+          return { ...combatant, currentHP: Math.max(combatant.currentHP - finalDamage, 0) };
+        });
+        logEntry += `: Critical hit for ${finalDamage} damage! ${formatRoll(attackRoll.roll, 'Attack')}`;
+        let updated = advanceTurn({
+          ...currentMatch,
+          combatants: updatedCombatants,
+          log: [...currentMatch.log, logEntry],
+        });
+        updated = checkVictory(updated);
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        scheduleBotTurn(lobby, updated);
+        return;
+      }
+
+      if (targetIsHuman) {
+        const pendingDefense: PendingDefense = {
+          attackerId: activePlayer.id,
+          defenderId: target.playerId,
+          attackRoll: attackRoll.roll.roll,
+          attackMargin: attackRoll.roll.margin,
+          hitLocation: 'torso',
+          weapon: weapon?.name ?? 'Unarmed',
+          damage: damageFormula,
+          damageType,
+          deceptivePenalty: 0,
+          timestamp: Date.now(),
+        };
+        logEntry += `: ${formatRoll(attackRoll.roll, 'Attack')} - awaiting defense...`;
+        const updated: MatchState = {
+          ...currentMatch,
+          pendingDefense,
+          log: [...currentMatch.log, logEntry],
+        };
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        return;
+      }
+
+      const defense = targetCharacter.derived.dodge;
+      const defenseRoll = Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6) + Math.floor(Math.random() * 6) + 3;
+      if (defenseRoll <= defense) {
+        logEntry += `: Dodge! ${formatRoll(attackRoll.roll, 'Attack')}`;
+        const updated = advanceTurn({
+          ...currentMatch,
+          log: [...currentMatch.log, logEntry],
+        });
+        state.matches.set(lobby.id, updated);
+        await upsertMatch(lobby.id, updated);
+        sendToLobby(lobby, { type: "match_state", state: updated });
+        scheduleBotTurn(lobby, updated);
+        return;
+      }
+
+      const dmg = rollDamage(damageFormula);
+      const finalDamage = applyDamageMultiplier(dmg.total, damageType);
+      const updatedCombatants = currentMatch.combatants.map((combatant) => {
+        if (combatant.playerId !== target.playerId) return combatant;
+        return { ...combatant, currentHP: Math.max(combatant.currentHP - finalDamage, 0) };
+      });
+      logEntry += `: Hit for ${finalDamage} damage. ${formatRoll(attackRoll.roll, 'Attack')}`;
       let updated = advanceTurn({
         ...currentMatch,
         combatants: updatedCombatants,
