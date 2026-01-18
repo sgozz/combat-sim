@@ -268,6 +268,7 @@ export type MatchSummary = {
   id: Id;
   code: string;
   name: string;
+  creatorId: Id;
   playerCount: number;
   maxPlayers: number;
   status: MatchStatus;

@@ -219,6 +219,7 @@ function AppRoutes() {
               moveTarget={moveTarget}
               selectedTargetId={selectedTargetId}
               isPlayerTurn={isPlayerTurn}
+              isCreator={currentMatch?.creatorId === user?.id}
               pendingAction={pendingAction}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}

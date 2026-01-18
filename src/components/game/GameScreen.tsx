@@ -24,6 +24,7 @@ type GameScreenProps = {
   moveTarget: GridPosition | null
   selectedTargetId: string | null
   isPlayerTurn: boolean
+  isCreator: boolean
   pendingAction: PendingAction | null
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
@@ -56,6 +57,7 @@ export const GameScreen = ({
   moveTarget,
   selectedTargetId,
   isPlayerTurn,
+  isCreator,
   pendingAction,
   onGridClick,
   onCombatantClick,
@@ -199,6 +201,7 @@ export const GameScreen = ({
         isMyTurn={isPlayerTurn}
         matchCode={matchCode}
         lobbyPlayerCount={lobbyPlayers.length}
+        isCreator={isCreator}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
         onStartMatch={onStartMatch}

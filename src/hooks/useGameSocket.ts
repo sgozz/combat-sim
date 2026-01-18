@@ -175,6 +175,8 @@ export const useGameSocket = () => {
     connectingRef.current = true
     setAuthError(null)
     setConnectionState('connecting')
+    // Clear any existing session when registering a new user
+    localStorage.removeItem(SESSION_TOKEN_KEY)
     
     createWebSocket((ws) => {
       ws.send(JSON.stringify({ type: 'register', username }))

@@ -310,6 +310,7 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
     id: matchRow.id,
     code: matchRow.code,
     name: matchRow.name,
+    creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
     status: matchRow.status as MatchSummary["status"],

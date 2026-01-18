@@ -136,6 +136,7 @@ type GameActionPanelProps = {
   isMyTurn: boolean
   matchCode: string | null
   lobbyPlayerCount: number
+  isCreator: boolean
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
   onStartMatch: (botCount: number) => void
@@ -165,6 +166,7 @@ export const GameActionPanel = ({
   isMyTurn,
   matchCode,
   lobbyPlayerCount,
+  isCreator,
   onAction,
   onLeaveLobby,
   onStartMatch,
@@ -269,23 +271,25 @@ export const GameActionPanel = ({
               <span className="invite-hint">Share this link with friends!</span>
             </div>
             
-            <div className="bot-selector">
-              <label>AI Opponents:</label>
-              <div className="bot-count-row">
-                <button 
-                  className="bot-btn"
-                  onClick={() => setBotCount(Math.max(0, botCount - 1))}
-                  disabled={botCount <= 0}
-                >−</button>
-                <span className="bot-count">{botCount}</span>
-                <button 
-                  className="bot-btn"
-                  onClick={() => setBotCount(Math.min(maxBots, botCount + 1))}
-                  disabled={botCount >= maxBots}
-                >+</button>
+            {isCreator && (
+              <div className="bot-selector">
+                <label>AI Opponents:</label>
+                <div className="bot-count-row">
+                  <button 
+                    className="bot-btn"
+                    onClick={() => setBotCount(Math.max(0, botCount - 1))}
+                    disabled={botCount <= 0}
+                  >−</button>
+                  <span className="bot-count">{botCount}</span>
+                  <button 
+                    className="bot-btn"
+                    onClick={() => setBotCount(Math.min(maxBots, botCount + 1))}
+                    disabled={botCount >= maxBots}
+                  >+</button>
+                </div>
+                <span className="bot-hint">Total players: {lobbyPlayerCount + botCount}</span>
               </div>
-              <span className="bot-hint">Total players: {lobbyPlayerCount + botCount}</span>
-            </div>
+            )}
 
             <div className="action-grid">
               <button className="action-btn" onClick={onOpenCharacterEditor}>Edit Character</button>

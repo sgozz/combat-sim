@@ -173,13 +173,10 @@ export const handleMessage = async (
       await addMatchMember(matchRow.id, user.id, null);
       
       const members = await getMatchMembers(matchRow.id);
+      const newPlayer: Player = { id: user.id, name: user.username, isBot: false, characterId: "" };
       for (const member of members) {
         if (member.user_id !== user.id) {
-          const memberUser = await findUserById(member.user_id);
-          if (memberUser) {
-            const player: Player = { id: user.id, name: user.username, isBot: false, characterId: "" };
-            sendMessage(socket, { type: "player_joined", matchId: matchRow.id, player });
-          }
+          sendToUser(member.user_id, { type: "player_joined", matchId: matchRow.id, player: newPlayer });
         }
       }
       
