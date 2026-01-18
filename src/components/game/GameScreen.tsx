@@ -85,12 +85,14 @@ export const GameScreen = ({
     onAction('defend', { type: 'defend', defenseType: choice.type, retreat: choice.retreat, dodgeAndDrop: choice.dodgeAndDrop })
   }, [onAction])
 
+  const inMovementPhase = matchState?.turnMovement?.phase === 'moving'
+  
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isPlayerTurn) return
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
     
     const maneuver = MANEUVER_KEYS[e.key]
-    if (maneuver) {
+    if (maneuver && !inMovementPhase) {
       e.preventDefault()
       onAction('select_maneuver', { type: 'select_maneuver', maneuver })
       return
@@ -101,7 +103,7 @@ export const GameScreen = ({
       onAction('end_turn', { type: 'end_turn' })
       return
     }
-  }, [isPlayerTurn, onAction])
+  }, [isPlayerTurn, inMovementPhase, onAction])
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger } from '../../../shared/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../shared/rules'
 import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
+import { MANEUVERS, CLOSE_COMBAT_MANEUVERS, getSuccessChance } from './shared/useGameActions'
 
 type ActionBarProps = {
   isMyTurn: boolean
@@ -16,33 +17,6 @@ type ActionBarProps = {
   onLeaveLobby: () => void
   onStartMatch: (botCount: number) => void
   onOpenCharacterEditor: () => void
-}
-
-const MANEUVERS: { type: ManeuverType; label: string; icon: string }[] = [
-  { type: 'move', label: 'Move', icon: '🏃' },
-  { type: 'attack', label: 'Attack', icon: '⚔️' },
-  { type: 'all_out_attack', label: 'All-Out', icon: '😡' },
-  { type: 'all_out_defense', label: 'Defend', icon: '🛡️' },
-  { type: 'move_and_attack', label: 'M&A', icon: '🤸' },
-  { type: 'evaluate', label: 'Eval', icon: '🔍' },
-  { type: 'wait', label: 'Wait', icon: '⏳' },
-  { type: 'ready', label: 'Ready', icon: '🗡️' },
-  { type: 'change_posture', label: 'Posture', icon: '🧎' },
-]
-
-const CLOSE_COMBAT_MANEUVERS: ManeuverType[] = ['attack', 'all_out_attack', 'all_out_defense']
-
-// 3d6 probability of rolling <= N
-const SUCCESS_CHANCE: Record<number, number> = {
-  3: 0.5, 4: 1.9, 5: 4.6, 6: 9.3, 7: 16.2, 8: 25.9,
-  9: 37.5, 10: 50.0, 11: 62.5, 12: 74.1, 13: 83.8,
-  14: 90.7, 15: 95.4, 16: 98.1
-}
-
-const getSuccessChance = (target: number): number => {
-  if (target < 3) return 0
-  if (target >= 16) return 98.1
-  return SUCCESS_CHANCE[target] || 0
 }
 
 export const ActionBar = ({ 
@@ -340,10 +314,6 @@ export const ActionBar = ({
               <span className="action-bar-label">{v.label}</span>
             </button>
           ))}
-          <button className="action-bar-maneuver-btn close" onClick={() => setShowAOAVariants(false)}>
-            <span className="action-bar-icon">←</span>
-            <span className="action-bar-label">Back</span>
-          </button>
         </div>
       )}
       {showAODVariants && (
@@ -366,10 +336,6 @@ export const ActionBar = ({
               <span className="action-bar-label">{v.label}</span>
             </button>
           ))}
-          <button className="action-bar-maneuver-btn close" onClick={() => setShowAODVariants(false)}>
-            <span className="action-bar-icon">←</span>
-            <span className="action-bar-label">Back</span>
-          </button>
         </div>
       )}
       {showWaitPicker && (
@@ -476,9 +442,17 @@ export const ActionBar = ({
             </div>
           )}
 
-          <button className="action-bar-maneuver-btn close" onClick={() => setShowCharacterSheet(false)} style={{ marginTop: '1rem' }}>
-            <span className="action-bar-icon">✕</span>
-            <span className="action-bar-label">Close</span>
+          <button 
+            className="action-bar-maneuver-btn" 
+            style={{ marginTop: '1rem', background: '#4a2a2a', borderColor: '#f44' }}
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
+            }}
+          >
+            <span className="action-bar-icon">🏳️</span>
+            <span className="action-bar-label">Give Up</span>
           </button>
         </div>
       )}
@@ -506,47 +480,45 @@ export const ActionBar = ({
               }}
             >
               <span className="action-bar-icon">{m.icon}</span>
-              <span className="action-bar-label">{m.label}</span>
+              <span className="action-bar-label">{m.shortLabel}</span>
             </button>
           ))}
-          <button className="action-bar-maneuver-btn close" onClick={() => setShowManeuvers(false)}>
-            <span className="action-bar-icon">✕</span>
-            <span className="action-bar-label">Close</span>
-          </button>
         </div>
       )}
       <div className="action-bar">
         <button 
-          className={`action-bar-btn ${showCharacterSheet ? 'active' : ''}`}
+          className={`action-bar-btn char-btn ${showCharacterSheet ? 'active' : ''}`}
           onClick={() => setShowCharacterSheet(!showCharacterSheet)}
         >
           <span className="action-bar-icon">👤</span>
-          <span className="action-bar-label">Char</span>
-        </button>
-
-        {playerCombatant && (
-          <div className="action-bar-status">
-            <div className="action-bar-hp-bar">
-              <div 
-                className="action-bar-hp-fill" 
-                style={{ width: `${hpPercent}%`, background: hpColor }}
-              />
+          {playerCombatant ? (
+            <div className="char-btn-hp">
+              <div className="char-btn-hp-bar">
+                <div 
+                  className="char-btn-hp-fill" 
+                  style={{ width: `${hpPercent}%`, background: hpColor }}
+                />
+              </div>
+              <span className="char-btn-hp-text">{currentHP}/{maxHP}</span>
             </div>
-            <span className="action-bar-hp-text">{currentHP}/{maxHP}</span>
-          </div>
-        )}
+          ) : (
+            <span className="action-bar-label">Char</span>
+          )}
+        </button>
         
         {inCloseCombat && (
           <div className="action-bar-cc-indicator">⚔️ CC</div>
         )}
         
-        <button 
-          className={`action-bar-btn ${!currentManeuver ? 'highlight' : ''}`}
-          onClick={() => setShowManeuvers(!showManeuvers)}
-        >
-          <span className="action-bar-icon">{currentManeuver ? MANEUVERS.find(m => m.type === currentManeuver)?.icon ?? '📋' : '📋'}</span>
-          <span className="action-bar-label">{currentManeuver ? 'Change' : 'Maneuver'}</span>
-        </button>
+        {!inMovementPhase && (
+          <button 
+            className={`action-bar-btn ${!currentManeuver ? 'highlight' : ''}`}
+            onClick={() => setShowManeuvers(!showManeuvers)}
+          >
+            <span className="action-bar-icon">{currentManeuver ? MANEUVERS.find(m => m.type === currentManeuver)?.icon ?? '📋' : '📋'}</span>
+            <span className="action-bar-label">{currentManeuver ? 'Change' : 'Maneuver'}</span>
+          </button>
+        )}
 
         {hint && (
           <div className="action-bar-hint">{hint}</div>
@@ -607,24 +579,33 @@ export const ActionBar = ({
           </>
         )}
 
-        {!inCloseCombat && (
-          <div className="action-bar-facing">
-            <button
-              className="action-bar-btn small"
-              onClick={() => onAction('turn_left', { type: 'turn_left' })}
-              title="Turn Left"
-            >
-              <span className="action-bar-icon">↶</span>
-            </button>
-            <button
-              className="action-bar-btn small"
-              onClick={() => onAction('turn_right', { type: 'turn_right' })}
-              title="Turn Right"
-            >
-              <span className="action-bar-icon">↷</span>
-            </button>
-          </div>
-        )}
+        {(() => {
+          const maneuversAllowingStep: ManeuverType[] = ['move', 'attack', 'all_out_attack', 'all_out_defense', 'move_and_attack', 'aim', 'evaluate', 'ready']
+          const canRotate = isMyTurn 
+            && !inCloseCombat 
+            && currentManeuver 
+            && maneuversAllowingStep.includes(currentManeuver)
+            && (!inMovementPhase || movePointsRemaining > 0)
+          
+          return canRotate ? (
+            <div className="action-bar-facing">
+              <button
+                className="action-bar-btn small"
+                onClick={() => onAction('turn_left', { type: 'turn_left' })}
+                title="Turn Left"
+              >
+                <span className="action-bar-icon">↶</span>
+              </button>
+              <button
+                className="action-bar-btn small"
+                onClick={() => onAction('turn_right', { type: 'turn_right' })}
+                title="Turn Right"
+              >
+                <span className="action-bar-icon">↷</span>
+              </button>
+            </div>
+          ) : null
+        })()}
 
         <button
           className="action-bar-btn"
@@ -634,17 +615,6 @@ export const ActionBar = ({
           <span className="action-bar-label">End</span>
         </button>
 
-        <button
-          className="action-bar-btn danger"
-          onClick={() => {
-            if (confirm('Surrender and end the match?')) {
-              onAction('surrender', { type: 'surrender' })
-            }
-          }}
-        >
-          <span className="action-bar-icon">🏳️</span>
-          <span className="action-bar-label">Give Up</span>
-        </button>
       </div>
     </>
   )

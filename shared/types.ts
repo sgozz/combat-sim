@@ -312,6 +312,7 @@ export type ClientToServerMessage =
   | { type: "create_match"; name: string; maxPlayers: number }
   | { type: "join_match"; code: string }
   | { type: "leave_match"; matchId: Id }
+  | { type: "rejoin_match"; matchId: Id }
   | { type: "list_my_matches" }
   | { type: "list_public_matches" }
   | { type: "spectate_match"; matchId: Id }

@@ -5,20 +5,10 @@ import HitLocationPicker from '../ui/HitLocationPicker'
 import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
 import { ReadyPanel } from '../ui/ReadyPanel'
 import { PostureControls } from '../ui/PostureControls'
-import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, AOAVariant, AODVariant, ReadyAction, EquipmentSlot, WaitTrigger } from '../../../shared/types'
+import { MANEUVERS, AOA_VARIANTS, AOD_VARIANTS, getHitProbability } from './shared/useGameActions'
+import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, ReadyAction, EquipmentSlot, WaitTrigger } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty, calculateEncumbrance } from '../../../shared/rules'
-
-const PROBABILITY_TABLE: Record<number, number> = {
-  3: 0.5, 4: 1.9, 5: 4.6, 6: 9.3, 7: 16.2, 8: 25.9, 9: 37.5,
-  10: 50.0, 11: 62.5, 12: 74.1, 13: 83.8, 14: 90.7, 15: 95.4, 16: 98.1
-}
-
-const getHitProbability = (skill: number): number => {
-  if (skill <= 3) return 0.5
-  if (skill >= 17) return 99
-  return PROBABILITY_TABLE[skill] ?? 50
-}
 
 type GamePanelProps = {
   matchState: MatchState | null
@@ -224,19 +214,7 @@ type GameActionPanelProps = {
   inLobbyButNoMatch: boolean
 }
 
-const MANEUVERS: { type: ManeuverType; label: string; icon: string; desc: string; key: string }[] = [
-  { type: 'move', label: 'Move', icon: '🏃', desc: 'Full move. No attack. Active defense allowed.', key: '1' },
-  { type: 'attack', label: 'Attack', icon: '⚔️', desc: 'Standard attack. Step allowed. Active defense allowed.', key: '2' },
-  { type: 'all_out_attack', label: 'All-Out Attack', icon: '😡', desc: 'Bonus to hit or damage. Half move. NO DEFENSE.', key: '3' },
-  { type: 'all_out_defense', label: 'All-Out Defense', icon: '🛡️', desc: 'Bonus to defense (+2). Step allowed. No attack.', key: '4' },
-  { type: 'move_and_attack', label: 'Move & Attack', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.', key: '5' },
-  { type: 'aim', label: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.', key: '6' },
-  { type: 'evaluate', label: 'Evaluate', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
-  { type: 'wait', label: 'Wait', icon: '⏳', desc: 'Prepare to react when triggered.', key: '8' },
-  { type: 'ready', label: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '9' },
-  { type: 'change_posture', label: 'Change Posture', icon: '🧎', desc: 'Rise from kneeling/prone. Use for non-free posture changes.', key: '-' },
-  { type: 'do_nothing', label: 'Do Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '0' },
-]
+
 
 export const GameActionPanel = ({ 
   matchState, 
@@ -413,12 +391,6 @@ export const GameActionPanel = ({
 
     if (isMyTurn && !currentManeuver) {
       if (showAOAVariantPicker) {
-        const AOA_VARIANTS: { variant: AOAVariant; label: string; desc: string }[] = [
-          { variant: 'determined', label: 'Determined', desc: '+4 to hit' },
-          { variant: 'strong', label: 'Strong', desc: '+2 damage' },
-          { variant: 'double', label: 'Double', desc: 'Two attacks at full skill' },
-          { variant: 'feint', label: 'Feint', desc: 'Attack + Feint (not implemented)' },
-        ]
         return (
           <>
             <div className="aoa-variant-header">
@@ -449,12 +421,6 @@ export const GameActionPanel = ({
       }
 
       if (showAODVariantPicker) {
-        const AOD_VARIANTS: { variant: AODVariant; label: string; desc: string }[] = [
-          { variant: 'increased_dodge', label: 'Increased Dodge', desc: '+2 to Dodge' },
-          { variant: 'increased_parry', label: 'Increased Parry', desc: '+2 to Parry' },
-          { variant: 'increased_block', label: 'Increased Block', desc: '+2 to Block' },
-          { variant: 'double', label: 'Double Defense', desc: 'Two different defenses vs same attack' },
-        ]
         return (
           <>
             <div className="aoa-variant-header">

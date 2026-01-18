@@ -6,6 +6,8 @@ export type ScreenState = 'welcome' | 'matches' | 'waiting' | 'match'
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected'
 
 const SESSION_TOKEN_KEY = 'tcs.sessionToken'
+const SCREEN_STATE_KEY = 'tcs.screenState'
+const ACTIVE_MATCH_KEY = 'tcs.activeMatchId'
 
 export const useGameSocket = () => {
   const [socket, setSocket] = useState<WebSocket | null>(null)
@@ -23,16 +25,28 @@ export const useGameSocket = () => {
   const [spectatingMatchId, setSpectatingMatchId] = useState<string | null>(null)
   const connectingRef = useRef(false)
   const reconnectAttemptRef = useRef(false)
+  const pendingRejoinRef = useRef<string | null>(null)
 
   const handleMessage = useCallback((message: ServerToClientMessage) => {
     switch (message.type) {
-      case 'auth_ok':
+      case 'auth_ok': {
         setUser(message.user)
         localStorage.setItem(SESSION_TOKEN_KEY, message.sessionToken)
         setConnectionState('connected')
-        setScreen('matches')
         connectingRef.current = false
+        
+        const savedScreen = localStorage.getItem(SCREEN_STATE_KEY) as ScreenState | null
+        const savedMatchId = localStorage.getItem(ACTIVE_MATCH_KEY)
+        
+        if (savedMatchId && (savedScreen === 'match' || savedScreen === 'waiting')) {
+          setActiveMatchId(savedMatchId)
+          setScreen(savedScreen)
+          pendingRejoinRef.current = savedMatchId
+        } else {
+          setScreen('matches')
+        }
         break
+      }
       case 'session_invalid':
         localStorage.removeItem(SESSION_TOKEN_KEY)
         setConnectionState('disconnected')
@@ -285,6 +299,28 @@ export const useGameSocket = () => {
       socket?.close()
     }
   }, [socket])
+
+  useEffect(() => {
+    if (socket && socket.readyState === WebSocket.OPEN && pendingRejoinRef.current) {
+      const matchId = pendingRejoinRef.current
+      pendingRejoinRef.current = null
+      socket.send(JSON.stringify({ type: 'rejoin_match', matchId }))
+    }
+  }, [socket, connectionState])
+
+  useEffect(() => {
+    if (screen !== 'welcome') {
+      localStorage.setItem(SCREEN_STATE_KEY, screen)
+    }
+  }, [screen])
+
+  useEffect(() => {
+    if (activeMatchId) {
+      localStorage.setItem(ACTIVE_MATCH_KEY, activeMatchId)
+    } else {
+      localStorage.removeItem(ACTIVE_MATCH_KEY)
+    }
+  }, [activeMatchId])
 
   return {
     socket,

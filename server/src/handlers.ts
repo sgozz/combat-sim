@@ -35,6 +35,7 @@ import {
   buildMatchSummary,
   updateMatchState,
   updateMatchMemberCharacter,
+  updateMatchMemberConnection,
   removeMatchMember,
   getMatchMemberCount,
   getActiveMatches,
@@ -259,6 +260,54 @@ export const handleMessage = async (
       return;
     }
     
+    case "rejoin_match": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const matchRow = await findMatchById(message.matchId);
+      if (!matchRow) {
+        sendMessage(socket, { type: "error", message: "Match not found." });
+        return;
+      }
+      
+      const members = await getMatchMembers(matchRow.id);
+      const isMember = members.some(m => m.user_id === user.id);
+      if (!isMember) {
+        sendMessage(socket, { type: "error", message: "You are not a member of this match." });
+        return;
+      }
+      
+      let matchState = state.matches.get(matchRow.id);
+      if (!matchState && matchRow.state_json) {
+        matchState = JSON.parse(matchRow.state_json) as MatchState;
+        state.matches.set(matchRow.id, matchState);
+      }
+      
+      if (matchState) {
+        await updateMatchMemberConnection(matchRow.id, user.id, true);
+        sendMessage(socket, { type: "match_state", state: matchState });
+        
+        if (matchState.status === 'paused' && matchState.pausedForPlayerId === user.id) {
+          const resumed: MatchState = { ...matchState, status: 'active', pausedForPlayerId: undefined };
+          state.matches.set(matchRow.id, resumed);
+          await updateMatchState(matchRow.id, resumed);
+          await sendToMatch(matchRow.id, { type: "match_state", state: resumed });
+        }
+        
+        await sendToMatch(matchRow.id, { 
+          type: "player_reconnected", 
+          matchId: matchRow.id, 
+          playerId: user.id, 
+          playerName: user.username 
+        });
+      } else {
+        const summary = await buildMatchSummary(matchRow, user.id);
+        sendMessage(socket, { type: "match_created", match: summary });
+      }
+      
+      return;
+    }
+    
     case "select_character": {
       const user = requireUser(socket);
       if (!user) return;
@@ -451,6 +500,11 @@ const handleCombatAction = async (
   }
 
   if (payload.type === "select_maneuver") {
+    if (match.turnMovement?.phase === 'moving') {
+      sendMessage(socket, { type: "error", message: "Cannot change maneuver during movement." });
+      return;
+    }
+    
     const previousManeuver = actorCombatant.maneuver;
     const newManeuver = payload.maneuver;
     const aoaVariant = payload.aoaVariant ?? null;
