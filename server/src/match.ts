@@ -68,9 +68,15 @@ export const createMatchState = async (
   const combatants: CombatantState[] = characters.map((character, index) => {
     const player = players[index];
     const isBot = player?.isBot ?? false;
-    const q = isBot ? 6 : -2;
-    const r = index;
+    const spawnRow = Math.floor(index / 2);
+    const spawnOffset = index % 2 === 0 ? -1 : 1;
+    const q = isBot ? 6 + spawnOffset : -2 + spawnOffset;
+    const r = spawnRow;
     const facing = isBot ? 3 : 0;
+
+    const randomShift = Math.random() < 0.5 ? 0 : 1;
+    const finalQ = q + randomShift;
+    const finalR = r + (Math.random() < 0.5 ? 0 : 1);
     
     const equipped: EquippedItem[] = [];
     const primaryWeapon = character.equipment.find(e => e.type === 'melee' || e.type === 'ranged');
@@ -86,7 +92,7 @@ export const createMatchState = async (
     return {
       playerId: player?.id ?? character.id,
       characterId: character.id,
-      position: { x: q, y: 0, z: r },
+      position: { x: finalQ, y: 0, z: finalR },
       facing,
       posture: 'standing' as const,
       maneuver: null,

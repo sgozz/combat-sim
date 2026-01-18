@@ -25,6 +25,7 @@ type GameScreenProps = {
   selectedTargetId: string | null
   isPlayerTurn: boolean
   isCreator: boolean
+  isSpectating?: boolean
   pendingAction: PendingAction | null
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
@@ -58,6 +59,7 @@ export const GameScreen = ({
   selectedTargetId,
   isPlayerTurn,
   isCreator,
+  isSpectating = false,
   pendingAction,
   onGridClick,
   onCombatantClick,
@@ -142,7 +144,7 @@ export const GameScreen = ({
             }}
             title="Back to Lobby List"
           >
-            ← Lobbies
+            {isSpectating ? '← Stop Watching' : '← Lobbies'}
           </button>
           <button 
             className="settings-btn" 
@@ -168,6 +170,11 @@ export const GameScreen = ({
             onClick={() => setCameraMode('isometric')}
             title="Isometric"
           >◇</button>
+          <button 
+            className={`camera-btn-compact ${cameraMode === 'overview' ? 'active' : ''}`}
+            onClick={() => setCameraMode('overview')}
+            title="Overview"
+          >◎</button>
           <button 
             className={`camera-btn-compact ${cameraMode === 'free' ? 'active' : ''}`}
             onClick={() => setCameraMode('free')}

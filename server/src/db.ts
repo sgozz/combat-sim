@@ -361,3 +361,37 @@ export const loadPersistedData = async (): Promise<void> => {
   const botUsers = Array.from(state.users.values()).filter(u => u.isBot);
   state.botCount = botUsers.length + 1;
 };
+
+export const getActiveMatches = async (): Promise<MatchRow[]> => {
+  return state.db.all<MatchRow[]>(
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, created_at, finished_at FROM matches WHERE status IN ('active', 'paused')"
+  );
+};
+
+export const buildPublicMatchSummary = async (matchRow: MatchRow): Promise<MatchSummary> => {
+  const members = await getMatchMembers(matchRow.id);
+  const players: { id: string; name: string; isConnected: boolean }[] = [];
+  
+  for (const member of members) {
+    const user = await findUserById(member.user_id);
+    if (user) {
+      players.push({
+        id: user.id,
+        name: user.username,
+        isConnected: member.is_connected === 1
+      });
+    }
+  }
+  
+  return {
+    id: matchRow.id,
+    code: '',
+    name: matchRow.name,
+    creatorId: matchRow.created_by,
+    playerCount: members.length,
+    maxPlayers: matchRow.max_players,
+    status: matchRow.status as MatchSummary['status'],
+    players,
+    isMyTurn: false,
+  };
+};

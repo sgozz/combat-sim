@@ -173,7 +173,11 @@ export const ActionBar = ({
     }
     return (
       <div className="action-bar">
-        <span className="action-bar-label" style={{ color: '#888' }}>Redirecting...</span>
+        <span className="action-bar-label" style={{ color: '#888' }}>Loading...</span>
+        <button className="action-bar-btn danger" onClick={onLeaveLobby}>
+          <span className="action-bar-icon">🚪</span>
+          <span className="action-bar-label">Back</span>
+        </button>
       </div>
     )
   }

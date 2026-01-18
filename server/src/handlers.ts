@@ -37,10 +37,13 @@ import {
   updateMatchMemberCharacter,
   removeMatchMember,
   getMatchMemberCount,
+  getActiveMatches,
+  buildPublicMatchSummary,
 } from "./db";
 import { 
   sendMessage,
   sendToMatch,
+  sendToUser,
   requireUser,
   calculateHexDistance, 
   getCombatantByPlayerId, 
@@ -130,6 +133,43 @@ export const handleMessage = async (
       return;
     }
     
+    case "list_public_matches": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const activeMatches = await getActiveMatches();
+      const summaries = await Promise.all(
+        activeMatches.map(row => buildPublicMatchSummary(row))
+      );
+      sendMessage(socket, { type: "public_matches", matches: summaries });
+      return;
+    }
+    
+    case "spectate_match": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const match = state.matches.get(message.matchId);
+      if (!match) {
+        sendMessage(socket, { type: "error", message: "Match not found or not active." });
+        return;
+      }
+      
+      state.addSpectator(message.matchId, user.id);
+      sendMessage(socket, { type: "spectating", matchId: message.matchId });
+      sendMessage(socket, { type: "match_state", state: match });
+      return;
+    }
+    
+    case "stop_spectating": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      state.removeSpectator(message.matchId, user.id);
+      sendMessage(socket, { type: "stopped_spectating", matchId: message.matchId });
+      return;
+    }
+    
     case "create_match": {
       const user = requireUser(socket);
       if (!user) return;
@@ -181,6 +221,12 @@ export const handleMessage = async (
       }
       
       sendMessage(socket, { type: "match_joined", matchId: matchRow.id });
+      
+      const updatedMatchRow = await findMatchById(matchRow.id);
+      if (updatedMatchRow) {
+        const summary = await buildMatchSummary(updatedMatchRow, user.id);
+        sendMessage(socket, { type: "match_created", match: summary });
+      }
       
       const existingMatch = state.matches.get(matchRow.id);
       if (existingMatch) {

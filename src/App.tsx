@@ -19,12 +19,14 @@ function AppRoutes() {
     connectionState,
     user,
     myMatches,
+    publicMatches,
     activeMatchId,
     matchState,
     logs,
     visualEffects,
     pendingAction,
     authError,
+    spectatingMatchId,
     setScreen,
     setLogs,
     setActiveMatchId,
@@ -32,7 +34,10 @@ function AppRoutes() {
     register,
     sendMessage,
     logout,
-    refreshMyMatches
+    refreshMyMatches,
+    fetchPublicMatches,
+    spectateMatch,
+    stopSpectating
   } = useGameSocket()
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
@@ -160,7 +165,7 @@ function AppRoutes() {
     isBot: false, 
     characterId: '' 
   })) ?? []
-  const isPlayerTurn = matchState?.activeTurnPlayerId === user?.id
+  const isPlayerTurn = !!matchState && !spectatingMatchId && matchState.activeTurnPlayerId === user?.id
 
   if (connectionState === 'connecting') {
     return (
@@ -194,10 +199,13 @@ function AppRoutes() {
           <MatchBrowser
             user={user}
             matches={myMatches}
+            publicMatches={publicMatches}
             onCreateMatch={handleCreateMatch}
             onJoinByCode={handleJoinByCode}
             onSelectMatch={handleSelectMatch}
             onRefresh={refreshMyMatches}
+            onFetchPublicMatches={fetchPublicMatches}
+            onSpectate={spectateMatch}
             onLogout={handleLogout}
           />
         )
@@ -220,6 +228,7 @@ function AppRoutes() {
               selectedTargetId={selectedTargetId}
               isPlayerTurn={isPlayerTurn}
               isCreator={currentMatch?.creatorId === user?.id}
+              isSpectating={!!spectatingMatchId}
               pendingAction={pendingAction}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}
@@ -230,7 +239,7 @@ function AppRoutes() {
                 }
                 setPendingAction(null)
               }}
-              onLeaveLobby={handleLeaveMatch}
+              onLeaveLobby={spectatingMatchId ? () => stopSpectating(spectatingMatchId) : handleLeaveMatch}
               onStartMatch={(botCount) => {
                 if (activeMatchId) {
                   sendMessage({ type: 'start_combat', matchId: activeMatchId, botCount })

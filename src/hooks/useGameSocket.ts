@@ -19,6 +19,8 @@ export const useGameSocket = () => {
   const [visualEffects, setVisualEffects] = useState<(VisualEffect & { id: string })[]>([])
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [publicMatches, setPublicMatches] = useState<MatchSummary[]>([])
+  const [spectatingMatchId, setSpectatingMatchId] = useState<string | null>(null)
   const connectingRef = useRef(false)
   const reconnectAttemptRef = useRef(false)
 
@@ -29,11 +31,13 @@ export const useGameSocket = () => {
         localStorage.setItem(SESSION_TOKEN_KEY, message.sessionToken)
         setConnectionState('connected')
         setScreen('matches')
+        connectingRef.current = false
         break
       case 'session_invalid':
         localStorage.removeItem(SESSION_TOKEN_KEY)
         setConnectionState('disconnected')
         setScreen('welcome')
+        connectingRef.current = false
         break
       case 'my_matches':
         setMyMatches(message.matches)
@@ -138,6 +142,20 @@ export const useGameSocket = () => {
           connectingRef.current = false
         }
         break
+      case 'public_matches':
+        setPublicMatches(message.matches)
+        break
+      case 'spectating':
+        setSpectatingMatchId(message.matchId)
+        setActiveMatchId(message.matchId)
+        setScreen('match')
+        break
+      case 'stopped_spectating':
+        setSpectatingMatchId(null)
+        setActiveMatchId(null)
+        setMatchState(null)
+        setScreen('matches')
+        break
     }
   }, [activeMatchId])
 
@@ -160,28 +178,18 @@ export const useGameSocket = () => {
     }
 
     ws.onclose = () => {
-      setLogs(prev => [...prev, 'Disconnected from server.'])
+      setLogs(prev => [...prev, 'Disconnected from server. Attempting reconnect...'])
       setSocket(null)
       setConnectionState('disconnected')
       connectingRef.current = false
+      setTimeout(() => {
+        tryReconnect()
+      }, 1000)
     }
 
     setSocket(ws)
     return ws
   }, [handleMessage])
-
-  const register = useCallback((username: string) => {
-    if (connectingRef.current) return
-    connectingRef.current = true
-    setAuthError(null)
-    setConnectionState('connecting')
-    // Clear any existing session when registering a new user
-    localStorage.removeItem(SESSION_TOKEN_KEY)
-    
-    createWebSocket((ws) => {
-      ws.send(JSON.stringify({ type: 'register', username }))
-    })
-  }, [createWebSocket])
 
   const tryReconnect = useCallback(() => {
     const token = localStorage.getItem(SESSION_TOKEN_KEY)
@@ -191,12 +199,25 @@ export const useGameSocket = () => {
     connectingRef.current = true
     setConnectionState('connecting')
     
-    createWebSocket((ws) => {
+    createWebSocket((ws: WebSocket) => {
       ws.send(JSON.stringify({ type: 'auth', sessionToken: token }))
       reconnectAttemptRef.current = false
     })
     
     return true
+  }, [createWebSocket])
+
+  const register = useCallback((username: string) => {
+    if (connectingRef.current) return
+    connectingRef.current = true
+    setAuthError(null)
+    setConnectionState('connecting')
+    // Clear any existing session when registering a new user
+    localStorage.removeItem(SESSION_TOKEN_KEY)
+    
+    createWebSocket((ws: WebSocket) => {
+      ws.send(JSON.stringify({ type: 'register', username }))
+    })
   }, [createWebSocket])
 
   const sendMessage = useCallback((payload: unknown) => {
@@ -220,6 +241,22 @@ export const useGameSocket = () => {
 
   const refreshMyMatches = useCallback(() => {
     sendMessage({ type: 'list_my_matches' })
+  }, [sendMessage])
+
+  const fetchPublicMatches = useCallback(() => {
+    sendMessage({ type: 'list_public_matches' })
+  }, [sendMessage])
+
+  const spectateMatch = useCallback((matchId: string) => {
+    sendMessage({ type: 'spectate_match', matchId })
+  }, [sendMessage])
+
+  const stopSpectating = useCallback((matchId: string) => {
+    sendMessage({ type: 'stop_spectating', matchId })
+    setSpectatingMatchId(null)
+    setActiveMatchId(null)
+    setMatchState(null)
+    setScreen('matches')
   }, [sendMessage])
 
   useEffect(() => {
@@ -254,6 +291,7 @@ export const useGameSocket = () => {
     connectionState,
     user,
     myMatches,
+    publicMatches,
     activeMatchId,
     matchState,
     logs,
@@ -261,6 +299,7 @@ export const useGameSocket = () => {
     visualEffects,
     pendingAction,
     authError,
+    spectatingMatchId,
     setScreen,
     setLogs,
     setActiveMatchId,
@@ -270,5 +309,8 @@ export const useGameSocket = () => {
     sendMessage,
     logout,
     refreshMyMatches,
+    fetchPublicMatches,
+    spectateMatch,
+    stopSpectating,
   }
 }

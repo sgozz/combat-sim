@@ -27,6 +27,11 @@ export const sendToMatch = async (matchId: string, message: ServerToClientMessag
   for (const member of members) {
     sendToUser(member.user_id, message);
   }
+  
+  const spectators = state.getSpectators(matchId);
+  for (const specUserId of spectators) {
+    sendToUser(specUserId, message);
+  }
 };
 
 export const requireUser = (socket: WebSocket): User | null => {

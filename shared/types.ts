@@ -313,6 +313,9 @@ export type ClientToServerMessage =
   | { type: "join_match"; code: string }
   | { type: "leave_match"; matchId: Id }
   | { type: "list_my_matches" }
+  | { type: "list_public_matches" }
+  | { type: "spectate_match"; matchId: Id }
+  | { type: "stop_spectating"; matchId: Id }
   | { type: "start_combat"; matchId: Id; botCount?: number }
   | { type: "select_character"; matchId: Id; character: CharacterSheet }
   | { type: "action"; matchId: Id; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
@@ -332,10 +335,13 @@ export type ServerToClientMessage =
   | { type: "auth_ok"; user: User; sessionToken: string }
   | { type: "session_invalid" }
   | { type: "my_matches"; matches: MatchSummary[] }
+  | { type: "public_matches"; matches: MatchSummary[] }
   | { type: "match_created"; match: MatchSummary }
   | { type: "match_joined"; matchId: Id }
   | { type: "match_left"; matchId: Id }
   | { type: "match_state"; state: MatchState }
+  | { type: "spectating"; matchId: Id }
+  | { type: "stopped_spectating"; matchId: Id }
   | { type: "match_updated"; match: MatchSummary }
   | { type: "player_joined"; matchId: Id; player: Player }
   | { type: "player_left"; matchId: Id; playerId: Id; playerName: string }

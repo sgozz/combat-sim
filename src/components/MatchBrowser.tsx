@@ -1,29 +1,37 @@
 import { useEffect, useState } from 'react'
 import type { MatchSummary, User } from '../../shared/types'
 import { MatchCard } from './MatchCard'
+import { SpectateCard } from './SpectateCard'
 import './LobbyBrowser.css'
 
 type MatchBrowserProps = {
   user: User
   matches: MatchSummary[]
+  publicMatches: MatchSummary[]
   onCreateMatch: (name: string) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
   onRefresh: () => void
+  onFetchPublicMatches: () => void
+  onSpectate: (matchId: string) => void
   onLogout?: () => void
 }
 
 export const MatchBrowser = ({ 
   user, 
   matches, 
+  publicMatches,
   onCreateMatch, 
   onJoinByCode, 
   onSelectMatch, 
-  onRefresh, 
+  onRefresh,
+  onFetchPublicMatches,
+  onSpectate,
   onLogout 
 }: MatchBrowserProps) => {
   const [joinCode, setJoinCode] = useState('')
   const [showJoinInput, setShowJoinInput] = useState(false)
+  const [showSpectate, setShowSpectate] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -182,6 +190,35 @@ export const MatchBrowser = ({
         )}
 
         <div className="lobby-browser-list-header" style={{ marginTop: '2rem' }}>
+          <h2>👁️ Spectate</h2>
+          <button 
+            className="spectate-toggle-btn" 
+            onClick={() => {
+              setShowSpectate(!showSpectate)
+              if (!showSpectate) onFetchPublicMatches()
+            }}
+          >
+            {showSpectate ? 'Hide' : 'Watch Other Matches'}
+          </button>
+        </div>
+
+        {showSpectate && (
+          <div className="lobby-browser-list">
+            {publicMatches.length === 0 ? (
+              <p className="no-spectate-matches">No active matches to spectate</p>
+            ) : (
+              publicMatches.map((match) => (
+                <SpectateCard
+                  key={match.id}
+                  match={match}
+                  onSpectate={onSpectate}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        <div className="lobby-browser-list-header" style={{ marginTop: '1rem' }}>
           <button className="refresh-button" onClick={onRefresh}>
             Refresh Matches
           </button>

@@ -64,6 +64,8 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
   const enemyPositions = combatants
     .filter(c => c.playerId !== playerId)
     .map(c => c.position)
+
+  const focusPositions = combatants.map(c => c.position)
   
   const selectedTarget = combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetPosition = selectedTarget?.position ?? null
@@ -157,7 +159,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
 
       {moveTarget && <MoveMarker position={moveTarget} />}
 
-      <CameraControls targetPosition={activeCombatantPosition} mode={cameraMode} />
+      <CameraControls targetPosition={activeCombatantPosition} focusPositions={focusPositions} mode={cameraMode} />
       <OrbitControls makeDefault />
       
       <GizmoHelper alignment="bottom-right" margin={[80, 80]}>

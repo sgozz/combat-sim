@@ -341,9 +341,19 @@ export const GameActionPanel = ({
                 <button 
                   className="copy-btn"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}?join=${matchCode ?? ''}`)
+                    if (matchCode) {
+                      navigator.clipboard.writeText(`${window.location.origin}?join=${matchCode}`)
+                        .catch(() => {
+                          const input = document.querySelector('.invite-url-input') as HTMLInputElement
+                          if (input) {
+                            input.select()
+                            input.setSelectionRange(0, 99999)
+                          }
+                        })
+                    }
                   }}
-                  title="Copy invite link"
+                  disabled={!matchCode}
+                  title={matchCode ? "Copy invite link" : "No invite code available"}
                 >
                   📋
                 </button>
@@ -387,7 +397,8 @@ export const GameActionPanel = ({
       }
       return (
         <div className="action-grid">
-          <p style={{ color: '#888', textAlign: 'center' }}>Redirecting to lobby...</p>
+          <p style={{ color: '#888', textAlign: 'center' }}>Loading match...</p>
+          <button className="action-btn danger" onClick={onLeaveLobby}>Back to Matches</button>
         </div>
       )
     }
