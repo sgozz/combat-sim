@@ -79,6 +79,7 @@ import {
   findFreeAdjacentHex,
   findRetreatHex,
   checkVictory,
+  findLobbyByIdOrPrefix,
 } from "./helpers";
 import { broadcastLobbies, leaveLobby } from "./lobby";
 import { createMatchState } from "./match";
@@ -304,12 +305,17 @@ export const handleMessage = async (
       const player = requirePlayer(socket);
       if (!player) return;
       const connState = state.connections.get(socket);
-      const lobby = state.lobbies.get(message.lobbyId);
+      const lobby = findLobbyByIdOrPrefix(message.lobbyId);
       if (!lobby) {
         sendMessage(socket, { type: "error", message: "Lobby not available." });
         return;
       }
       if (lobby.status === "open") {
+        if (lobby.players.some(p => p.id === player.id)) {
+          state.connections.set(socket, { ...connState, playerId: player.id, lobbyId: lobby.id });
+          sendMessage(socket, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
+          return;
+        }
         if (lobby.players.length >= lobby.maxPlayers) {
           sendMessage(socket, { type: "error", message: "Lobby is full." });
           return;

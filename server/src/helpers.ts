@@ -159,6 +159,18 @@ export const computeHexMoveToward = (
   return current;
 };
 
+export const findLobbyByIdOrPrefix = (idOrPrefix: string): Lobby | null => {
+  const exact = state.lobbies.get(idOrPrefix);
+  if (exact) return exact;
+  
+  for (const [id, lobby] of state.lobbies) {
+    if (id.startsWith(idOrPrefix)) {
+      return lobby;
+    }
+  }
+  return null;
+};
+
 export const checkVictory = (match: MatchState): MatchState => {
   if (match.status === "finished") return match;
 

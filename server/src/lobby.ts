@@ -43,7 +43,9 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
   const playerName = departingPlayer?.name ?? "Player";
   const match = state.matches.get(lobbyId);
   
-  if (explicit) {
+  const shouldRemovePlayer = explicit || lobby.status === "open";
+  
+  if (shouldRemovePlayer) {
     lobby.players = lobby.players.filter((player) => player.id !== playerId);
     
     if (departingPlayer) {
@@ -54,7 +56,7 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
       await updateSessionLastSeen(connState.sessionToken, null);
     }
     
-    if (match && match.status !== "finished") {
+    if (explicit && match && match.status !== "finished") {
       const opponent = match.players.find(p => p.id !== playerId);
       const finishedMatch: MatchState = {
         ...match,
@@ -76,10 +78,13 @@ export const leaveLobby = async (socket: WebSocket, wss: { clients: Set<WebSocke
       await deleteLobby(lobbyId);
     } else {
       await persistLobbyState(lobby);
+      sendToLobby(lobby, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
     }
     
     broadcastLobbies(wss);
-    sendMessage(socket, { type: "lobby_left" });
+    if (explicit) {
+      sendMessage(socket, { type: "lobby_left" });
+    }
     state.connections.set(socket, { 
       sessionToken: connState.sessionToken, 
       userId: connState.userId, 
