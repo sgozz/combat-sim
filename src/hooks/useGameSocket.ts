@@ -41,11 +41,14 @@ export const useGameSocket = () => {
       case 'match_created':
         setMyMatches(prev => [message.match, ...prev])
         setActiveMatchId(message.match.id)
+        setMatchState(null)
+        setLogs(['Joined match.'])
         setScreen('waiting')
         break
       case 'match_joined':
         setActiveMatchId(message.matchId)
-        setLogs(prev => [...prev, 'Joined match.'])
+        setMatchState(null)
+        setLogs(['Joined match.'])
         setScreen('waiting')
         break
       case 'match_left':
@@ -68,21 +71,46 @@ export const useGameSocket = () => {
         setMyMatches(prev => prev.map(m => m.id === message.match.id ? message.match : m))
         break
       case 'player_joined':
+        setMyMatches(prev => prev.map(m => {
+          if (m.id === message.matchId) {
+            const newPlayer = { id: message.player.id, name: message.player.name, isConnected: true }
+            return { ...m, players: [...m.players, newPlayer], playerCount: m.playerCount + 1 }
+          }
+          return m
+        }))
         if (message.matchId === activeMatchId) {
           setLogs(prev => [...prev, `${message.player.name} joined.`])
         }
         break
       case 'player_left':
+        setMyMatches(prev => prev.map(m => {
+          if (m.id === message.matchId) {
+            return { ...m, players: m.players.filter(p => p.id !== message.playerId), playerCount: m.playerCount - 1 }
+          }
+          return m
+        }))
         if (message.matchId === activeMatchId) {
           setLogs(prev => [...prev, `${message.playerName} left.`])
         }
         break
       case 'player_disconnected':
+        setMyMatches(prev => prev.map(m => {
+          if (m.id === message.matchId) {
+            return { ...m, players: m.players.map(p => p.id === message.playerId ? { ...p, isConnected: false } : p) }
+          }
+          return m
+        }))
         if (message.matchId === activeMatchId) {
           setLogs(prev => [...prev, `${message.playerName} disconnected.`])
         }
         break
       case 'player_reconnected':
+        setMyMatches(prev => prev.map(m => {
+          if (m.id === message.matchId) {
+            return { ...m, players: m.players.map(p => p.id === message.playerId ? { ...p, isConnected: true } : p) }
+          }
+          return m
+        }))
         if (message.matchId === activeMatchId) {
           setLogs(prev => [...prev, `${message.playerName} reconnected.`])
         }
