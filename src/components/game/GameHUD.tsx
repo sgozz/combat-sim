@@ -247,20 +247,26 @@ export const GameActionPanel = ({
         return (
           <div className="lobby-setup">
             <div className="lobby-invite">
-              <label>Invite Code:</label>
-              <div className="invite-code-row">
-                <code className="invite-code">{lobbyId?.slice(0, 8)}</code>
+              <label>Invite Link:</label>
+              <div className="invite-url-row">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${window.location.origin}?join=${lobbyId?.slice(0, 8)}`}
+                  className="invite-url-input"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
                 <button 
                   className="copy-btn"
                   onClick={() => {
-                    navigator.clipboard.writeText(window.location.origin + '?join=' + lobbyId)
+                    navigator.clipboard.writeText(`${window.location.origin}?join=${lobbyId?.slice(0, 8)}`)
                   }}
                   title="Copy invite link"
                 >
                   📋
                 </button>
               </div>
-              <span className="invite-hint">Share with friends to join!</span>
+              <span className="invite-hint">Share this link with friends!</span>
             </div>
             
             <div className="bot-selector">

@@ -2982,7 +2982,8 @@
   margin-bottom: 0.5rem;
 }
 
-.invite-code-row {
+.invite-code-row,
+.invite-url-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2997,6 +2998,29 @@
   font-size: 1.1rem;
   color: #646cff;
   letter-spacing: 1px;
+}
+
+.invite-url-input {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #646cff;
+  cursor: text;
+  min-width: 0;
+}
+
+.invite-url-input:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+.invite-url-input::selection {
+  background: #646cff;
+  color: #fff;
 }
 
 .copy-btn {
