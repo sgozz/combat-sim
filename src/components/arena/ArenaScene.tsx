@@ -40,7 +40,7 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
   }
 
   return (
-    <Html position={[x, 3, z]} center style={{ pointerEvents: 'none' }}>
+    <Html position={[x, 3, z]} center zIndexRange={[0, 50]} style={{ pointerEvents: 'none' }}>
       <div style={{
         color,
         fontSize: '24px',

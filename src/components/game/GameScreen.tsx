@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnStepper } from './TurnStepper'
@@ -70,9 +70,33 @@ export const GameScreen = ({
   onOpenCharacterEditor,
   inLobbyButNoMatch
 }: GameScreenProps) => {
-  const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
+  const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
+  const hasSeenMatchStart = useRef(false)
   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
   const currentManeuver = currentCombatant?.maneuver ?? null
+
+  useEffect(() => {
+    if (matchState?.status === 'active' && !hasSeenMatchStart.current) {
+      hasSeenMatchStart.current = true
+      setCameraMode('overview')
+      
+      const timer = setTimeout(() => {
+        setCameraMode('follow')
+      }, 3000)
+      
+      return () => clearTimeout(timer)
+    }
+    
+    if (!matchState || matchState.status === 'finished') {
+      hasSeenMatchStart.current = false
+    }
+  }, [matchState?.status, matchState])
+
+  useEffect(() => {
+    if (hasSeenMatchStart.current && isPlayerTurn && cameraMode === 'overview') {
+      setCameraMode('follow')
+    }
+  }, [isPlayerTurn, cameraMode])
 
   const pendingDefense = matchState?.pendingDefense
   const isDefending = pendingDefense?.defenderId === player?.id

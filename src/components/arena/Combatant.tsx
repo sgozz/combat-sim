@@ -264,7 +264,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
         </mesh>
       )}
 
-      <Html position={[0, 2.5, 0]} center style={{ zIndex: 10, pointerEvents: 'none' }}>
+      <Html position={[0, 2.5, 0]} center zIndexRange={[0, 50]} style={{ pointerEvents: 'none' }}>
         <div key={flashKey} className="hp-bar-compact flash-on-mount">
           <div className="hp-bar-name-compact">{character?.name ?? '?'}</div>
           <div className="hp-bar-track-compact">

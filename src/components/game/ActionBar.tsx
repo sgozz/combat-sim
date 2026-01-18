@@ -392,7 +392,7 @@ export const ActionBar = ({
 
           <button 
             className="action-bar-maneuver-btn" 
-            style={{ marginTop: '1rem', background: '#4a2a2a', borderColor: '#f44' }}
+            style={{ marginTop: '1rem', background: '#4a2a2a', borderColor: '#f44', width: '100%' }}
             onClick={() => {
               if (confirm('Surrender and end the match?')) {
                 onAction('surrender', { type: 'surrender' })

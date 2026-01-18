@@ -12,7 +12,7 @@ type CombatToastProps = {
   logs: string[]
   activeTurnPlayerId?: string
   currentPlayerId?: string
-  players?: { id: string; name: string }[]
+  players?: { id: string; name: string; isBot?: boolean }[]
 }
 
 const getToastType = (message: string): ToastType => {
@@ -70,7 +70,7 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
       }))
       
       if (newToasts.length > 0) {
-        setToasts(prev => [...prev, ...newToasts])
+        setToasts(prev => [...newToasts.reverse(), ...prev])
       }
     }
     lastLogCount.current = logs.length
@@ -85,6 +85,7 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
     const activePlayer = players?.find(p => p.id === activeTurnPlayerId)
     
     if (!activePlayer) return
+    if (activePlayer.isBot) return
 
     const turnToast: Toast = {
       id: `turn-${Date.now()}`,
@@ -99,7 +100,7 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
     if (toasts.length === 0) return
     
     const timer = setTimeout(() => {
-      setToasts(prev => prev.slice(1))
+      setToasts(prev => prev.slice(0, -1))
     }, 3000)
     
     return () => clearTimeout(timer)

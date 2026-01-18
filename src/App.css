@@ -208,6 +208,9 @@
   background: rgba(20, 20, 20, 0.95);
   border-bottom: 1px solid #333;
   padding: 0.4rem 0.5rem;
+  padding-top: max(0.4rem, env(safe-area-inset-top));
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+  padding-right: max(0.5rem, env(safe-area-inset-right));
   gap: 0.5rem;
   z-index: 100;
   flex-shrink: 0;
