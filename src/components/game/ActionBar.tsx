@@ -9,14 +9,10 @@ type ActionBarProps = {
   currentManeuver: ManeuverType | null
   selectedTargetId: string | null
   matchState: MatchState | null
-  inLobbyButNoMatch: boolean
   playerId: string | null
-  lobbyPlayerCount: number
   onAction: (action: string, payload?: CombatActionPayload) => void
   onDefend: (choice: DefenseChoice) => void
   onLeaveLobby: () => void
-  onStartMatch: (botCount: number) => void
-  onOpenCharacterEditor: () => void
 }
 
 export const ActionBar = ({ 
@@ -24,14 +20,10 @@ export const ActionBar = ({
   currentManeuver, 
   selectedTargetId,
   matchState,
-  inLobbyButNoMatch,
   playerId,
-  lobbyPlayerCount,
   onAction,
   onDefend,
   onLeaveLobby,
-  onStartMatch,
-  onOpenCharacterEditor,
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)
@@ -40,7 +32,6 @@ export const ActionBar = ({
   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
-  const [botCount, setBotCount] = useState(1)
   
   const playerCombatant = playerId && matchState 
     ? matchState.combatants.find(c => c.playerId === playerId) 
@@ -110,50 +101,7 @@ export const ActionBar = ({
   }
 
   if (!matchState) {
-    if (inLobbyButNoMatch) {
-      const maxBots = 4 - lobbyPlayerCount
-      const totalPlayers = lobbyPlayerCount + botCount
-      return (
-        <div className="action-bar">
-          <button className="action-bar-btn" onClick={onOpenCharacterEditor}>
-            <span className="action-bar-icon">👤</span>
-          </button>
-          <div className="action-bar-bot-selector">
-            <button 
-              className="action-bar-btn small"
-              onClick={() => setBotCount(Math.max(0, botCount - 1))}
-              disabled={botCount <= 0}
-            >−</button>
-            <span className="bot-label">🤖 {botCount}</span>
-            <button 
-              className="action-bar-btn small"
-              onClick={() => setBotCount(Math.min(maxBots, botCount + 1))}
-              disabled={botCount >= maxBots}
-            >+</button>
-          </div>
-          <button 
-            className="action-bar-btn primary" 
-            onClick={() => onStartMatch(botCount)}
-            disabled={totalPlayers < 2}
-          >
-            <span className="action-bar-icon">▶️</span>
-            <span className="action-bar-label">Start ({totalPlayers})</span>
-          </button>
-          <button className="action-bar-btn danger" onClick={onLeaveLobby}>
-            <span className="action-bar-icon">🚪</span>
-          </button>
-        </div>
-      )
-    }
-    return (
-      <div className="action-bar">
-        <span className="action-bar-label" style={{ color: '#888' }}>Loading...</span>
-        <button className="action-bar-btn danger" onClick={onLeaveLobby}>
-          <span className="action-bar-icon">🚪</span>
-          <span className="action-bar-label">Back</span>
-        </button>
-      </div>
-    )
+    return null
   }
 
   if (matchState.status === 'finished') {

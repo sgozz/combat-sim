@@ -242,6 +242,17 @@ function AppRoutes() {
                 }
               }}
               onOpenCharacterEditor={() => {
+                setEditingCharacter({
+                  id: uuid(),
+                  name: user?.username ?? 'New Character',
+                  attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
+                  derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
+                  skills: [],
+                  advantages: [],
+                  disadvantages: [],
+                  equipment: [],
+                  pointsTotal: 100
+                })
                 setShowCharacterModal(true)
               }}
               inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}

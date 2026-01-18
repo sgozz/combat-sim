@@ -3959,3 +3959,186 @@
   min-width: 1.5rem;
   text-align: center;
 }
+
+.lobby-setup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.lobby-setup-modal {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.lobby-setup-modal h2 {
+  margin: 0 0 1.5rem 0;
+  color: #fff;
+  font-size: 1.5rem;
+}
+
+.setup-section {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.setup-section label {
+  display: block;
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.setup-invite-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.setup-invite-input {
+  flex: 1;
+  background: #252525;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.setup-copy-btn {
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.setup-copy-btn:hover {
+  background: #444;
+}
+
+.setup-btn {
+  width: 100%;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.setup-btn:hover {
+  background: #444;
+}
+
+.setup-btn.primary {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #22c55e;
+  font-weight: 600;
+}
+
+.setup-btn.primary:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.setup-btn.danger {
+  background: #4a2a2a;
+  border-color: #f44;
+}
+
+.setup-btn.danger:hover {
+  background: #5a3a3a;
+}
+
+.setup-bot-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.setup-bot-btn {
+  width: 44px;
+  height: 44px;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.setup-bot-btn:hover {
+  background: #444;
+}
+
+.bot-count-display {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  min-width: 3rem;
+  text-align: center;
+}
+
+.setup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 480px) {
+  .lobby-setup-modal {
+    padding: 1.5rem;
+  }
+  
+  .lobby-setup-modal h2 {
+    font-size: 1.25rem;
+  }
+}
+
+.setup-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.setup-player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.setup-player-icon {
+  font-size: 1.1rem;
+}
+
+.setup-player-name {
+  flex: 1;
+  color: #fff;
+  font-weight: 500;
+}
+
+.setup-player-you {
+  color: #888;
+  font-size: 0.8rem;
+}

@@ -209,15 +209,113 @@ export const GameScreen = ({
         selectedTargetId={selectedTargetId}
         currentManeuver={currentManeuver}
         isMyTurn={isPlayerTurn}
-        matchCode={matchCode}
-        lobbyPlayerCount={lobbyPlayers.length}
-        isCreator={isCreator}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
-        onStartMatch={onStartMatch}
-        onOpenCharacterEditor={onOpenCharacterEditor}
-        inLobbyButNoMatch={inLobbyButNoMatch}
       />
+
+      {inLobbyButNoMatch && (
+        <div className="lobby-setup-overlay">
+          <div className="lobby-setup-modal">
+            <h2>Match Setup</h2>
+            
+            <div className="setup-section">
+              <label>Players ({lobbyPlayers.length}/4)</label>
+              <div className="setup-players-list">
+                {lobbyPlayers.map(p => (
+                  <div key={p.id} className="setup-player-item">
+                    <span className="setup-player-icon">{p.id === player?.id ? '👤' : '🎮'}</span>
+                    <span className="setup-player-name">{p.name}</span>
+                    {p.id === player?.id && <span className="setup-player-you">(you)</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="setup-section">
+              <label>Invite Link</label>
+              <div className="setup-invite-row">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${window.location.origin}?join=${matchCode ?? ''}`}
+                  className="setup-invite-input"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <button 
+                  className="setup-copy-btn"
+                  onClick={() => {
+                    if (matchCode) {
+                      navigator.clipboard.writeText(`${window.location.origin}?join=${matchCode}`)
+                    }
+                  }}
+                  disabled={!matchCode}
+                >
+                  📋
+                </button>
+              </div>
+            </div>
+
+            <div className="setup-section">
+              <label>Your Character</label>
+              <button className="setup-btn" onClick={onOpenCharacterEditor}>
+                ✏️ Edit Character
+              </button>
+            </div>
+
+            {isCreator && (
+              <div className="setup-section">
+                <label>AI Opponents</label>
+                <div className="setup-bot-row">
+                  <button 
+                    className="setup-bot-btn"
+                    onClick={() => {
+                      const input = document.querySelector('.bot-count-display') as HTMLElement
+                      const currentBots = parseInt(input?.dataset.count ?? '1')
+                      const newCount = Math.max(0, currentBots - 1)
+                      if (input) {
+                        input.dataset.count = String(newCount)
+                        input.textContent = String(newCount)
+                      }
+                    }}
+                  >−</button>
+                  <span className="bot-count-display" data-count="1">1</span>
+                  <button 
+                    className="setup-bot-btn"
+                    onClick={() => {
+                      const current = lobbyPlayers.length
+                      const maxBots = 4 - current
+                      const input = document.querySelector('.bot-count-display') as HTMLElement
+                      const currentBots = parseInt(input?.dataset.count ?? '1')
+                      const newCount = Math.min(maxBots, currentBots + 1)
+                      if (input) {
+                        input.dataset.count = String(newCount)
+                        input.textContent = String(newCount)
+                      }
+                    }}
+                  >+</button>
+                </div>
+              </div>
+            )}
+
+            <div className="setup-actions">
+              <button 
+                className="setup-btn primary"
+                onClick={() => {
+                  const input = document.querySelector('.bot-count-display') as HTMLElement
+                  const botCount = parseInt(input?.dataset.count ?? '1')
+                  onStartMatch(botCount)
+                }}
+                disabled={lobbyPlayers.length < 1}
+              >
+                ▶️ Start Match
+              </button>
+              <button className="setup-btn danger" onClick={onLeaveLobby}>
+                🚪 Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isDefending && pendingDefense && defenderCharacter && currentCombatant && (
         <DefenseModal
@@ -268,14 +366,10 @@ export const GameScreen = ({
         currentManeuver={currentManeuver}
         selectedTargetId={selectedTargetId}
         matchState={matchState}
-        inLobbyButNoMatch={inLobbyButNoMatch}
         playerId={player?.id ?? null}
-        lobbyPlayerCount={lobbyPlayers.length}
         onAction={onAction}
         onDefend={handleDefenseChoice}
         onLeaveLobby={onLeaveLobby}
-        onStartMatch={onStartMatch}
-        onOpenCharacterEditor={onOpenCharacterEditor}
       />
     </div>
   )
