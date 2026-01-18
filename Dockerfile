@@ -56,4 +56,4 @@ COPY --from=server-deps /app/server/node_modules ./node_modules
 COPY server/package.json ./
 ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/server/src/index.js"]
