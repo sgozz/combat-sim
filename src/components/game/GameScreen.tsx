@@ -8,7 +8,7 @@ import { GameStatusPanel, GameActionPanel } from './GameHUD'
 import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
-import { SettingsPanel } from '../ui/SettingsPanel'
+
 import DefenseModal from '../ui/DefenseModal'
 import type { CameraMode } from '../arena/CameraControls'
 import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType, PendingAction, DefenseType } from '../../../shared/types'
@@ -70,7 +70,6 @@ export const GameScreen = ({
   onOpenCharacterEditor,
   inLobbyButNoMatch
 }: GameScreenProps) => {
-  const [showSettings, setShowSettings] = useState(false)
   const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
   const currentManeuver = currentCombatant?.maneuver ?? null
@@ -122,7 +121,55 @@ export const GameScreen = ({
       />
 
       <main className="canvas-container">
-        <InitiativeTracker matchState={matchState} />
+        <header className="game-header">
+          <div className="game-header-left">
+            <button 
+              className="header-btn back-btn" 
+              onClick={() => {
+                if (!matchState || matchState.status === 'finished' || confirm('Leave the current game?')) {
+                  onLeaveLobby()
+                }
+              }}
+              title="Back to Lobby List"
+            >
+              <span className="btn-icon">←</span>
+              <span className="btn-label">{isSpectating ? 'Stop' : 'Back'}</span>
+            </button>
+          </div>
+          
+          <InitiativeTracker matchState={matchState} />
+          
+          <div className="game-header-right">
+            <div className="camera-controls">
+              <button 
+                className={`header-btn camera-btn ${cameraMode === 'follow' ? 'active' : ''}`}
+                onClick={() => setCameraMode('follow')}
+                title="Follow Active"
+              >👁</button>
+              <button 
+                className={`header-btn camera-btn ${cameraMode === 'top' ? 'active' : ''}`}
+                onClick={() => setCameraMode('top')}
+                title="Top-Down"
+              >⬇</button>
+              <button 
+                className={`header-btn camera-btn ${cameraMode === 'isometric' ? 'active' : ''}`}
+                onClick={() => setCameraMode('isometric')}
+                title="Isometric"
+              >◇</button>
+              <button 
+                className={`header-btn camera-btn ${cameraMode === 'overview' ? 'active' : ''}`}
+                onClick={() => setCameraMode('overview')}
+                title="Overview"
+              >◎</button>
+              <button 
+                className={`header-btn camera-btn ${cameraMode === 'free' ? 'active' : ''}`}
+                onClick={() => setCameraMode('free')}
+                title="Free Camera"
+              >⟲</button>
+            </div>
+          </div>
+        </header>
+
         <CombatToast 
           logs={logs} 
           activeTurnPlayerId={matchState?.activeTurnPlayerId}
@@ -136,53 +183,7 @@ export const GameScreen = ({
           />
         )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
-        <div className="top-buttons">
-          <button 
-            className="back-btn" 
-            onClick={() => {
-              if (!matchState || matchState.status === 'finished' || confirm('Leave the current game?')) {
-                onLeaveLobby()
-              }
-            }}
-            title="Back to Lobby List"
-          >
-            {isSpectating ? '← Stop Watching' : '← Lobbies'}
-          </button>
-          <button 
-            className="settings-btn" 
-            onClick={() => setShowSettings(true)}
-            title="Accessibility Settings"
-          >
-            ⚙️
-          </button>
-        </div>
-        <div className="camera-controls-compact">
-          <button 
-            className={`camera-btn-compact ${cameraMode === 'follow' ? 'active' : ''}`}
-            onClick={() => setCameraMode('follow')}
-            title="Follow Active"
-          >👁</button>
-          <button 
-            className={`camera-btn-compact ${cameraMode === 'top' ? 'active' : ''}`}
-            onClick={() => setCameraMode('top')}
-            title="Top-Down"
-          >⬇</button>
-          <button 
-            className={`camera-btn-compact ${cameraMode === 'isometric' ? 'active' : ''}`}
-            onClick={() => setCameraMode('isometric')}
-            title="Isometric"
-          >◇</button>
-          <button 
-            className={`camera-btn-compact ${cameraMode === 'overview' ? 'active' : ''}`}
-            onClick={() => setCameraMode('overview')}
-            title="Overview"
-          >◎</button>
-          <button 
-            className={`camera-btn-compact ${cameraMode === 'free' ? 'active' : ''}`}
-            onClick={() => setCameraMode('free')}
-            title="Free Camera"
-          >⟲</button>
-        </div>
+        
         <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
           <color attach="background" args={['#111']} />
           <ArenaScene
@@ -217,8 +218,6 @@ export const GameScreen = ({
         onOpenCharacterEditor={onOpenCharacterEditor}
         inLobbyButNoMatch={inLobbyButNoMatch}
       />
-
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       {isDefending && pendingDefense && defenderCharacter && currentCombatant && (
         <DefenseModal

@@ -5,7 +5,7 @@ import { MoveMarker } from './MoveMarker'
 import { CameraControls, type CameraMode } from './CameraControls'
 import { hexToWorld, getHexInDirection } from '../../utils/hex'
 import type { CombatantState, CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo } from '../../../shared/types'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 type ArenaSceneProps = {
   combatants: CombatantState[]
@@ -55,6 +55,14 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
 }
 
 export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null
   
@@ -162,9 +170,11 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
       <CameraControls targetPosition={activeCombatantPosition} focusPositions={focusPositions} mode={cameraMode} />
       <OrbitControls makeDefault />
       
-      <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
-        <GizmoViewport axisColors={['#9d4b4b', '#2f7f4f', '#3b5b9d']} labelColor="white" />
-      </GizmoHelper>
+      {!isMobile && (
+        <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+          <GizmoViewport axisColors={['#9d4b4b', '#2f7f4f', '#3b5b9d']} labelColor="white" />
+        </GizmoHelper>
+      )}
       
       <Environment preset="city" />
     </>

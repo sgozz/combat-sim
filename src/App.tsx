@@ -7,7 +7,7 @@ import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { CharacterEditor } from './components/ui/CharacterEditor'
 
-import { applyAccessibilitySettings } from './components/ui/SettingsPanel'
+
 import type { GridPosition, CharacterSheet, CombatActionPayload } from '../shared/types'
 import './App.css'
 
@@ -54,10 +54,6 @@ function AppRoutes() {
     }
     return null
   })())
-
-  useEffect(() => {
-    applyAccessibilitySettings()
-  }, [])
 
   useEffect(() => {
     if (connectionState === 'connected' && user) {
