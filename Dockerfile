@@ -13,6 +13,7 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 COPY vite.config.ts ./
 COPY index.html ./
+COPY public/ ./public/
 COPY src/ ./src/
 COPY shared/ ./shared/
 ARG VITE_WS_URL

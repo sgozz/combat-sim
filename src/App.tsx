@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
+import { uuid } from './utils/uuid'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { LobbyBrowser } from './components/LobbyBrowser'
 import { GameScreen } from './components/game/GameScreen'
@@ -215,7 +216,7 @@ function AppRoutes() {
             {showCharacterModal && (
               <CharacterEditor 
                 character={editingCharacter || {
-                   id: crypto.randomUUID(),
+                   id: uuid(),
                    name: player?.name ?? 'New Character',
                    attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
                    derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },

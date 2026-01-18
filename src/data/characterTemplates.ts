@@ -1,5 +1,6 @@
 import type { CharacterSheet } from '../../shared/types'
 import { calculateDerivedStats } from '../../shared/rules'
+import { uuid } from '../utils/uuid'
 
 const createTemplate = (
   name: string,
@@ -12,10 +13,10 @@ const createTemplate = (
   name,
   attributes,
   derived: calculateDerivedStats(attributes),
-  skills: skills.map(s => ({ id: crypto.randomUUID(), ...s })),
-  equipment: equipment.map(e => ({ id: crypto.randomUUID(), type: 'melee' as const, ...e })),
-  advantages: advantages.map(a => ({ id: crypto.randomUUID(), ...a })),
-  disadvantages: disadvantages.map(d => ({ id: crypto.randomUUID(), ...d })),
+  skills: skills.map(s => ({ id: uuid(), ...s })),
+  equipment: equipment.map(e => ({ id: uuid(), type: 'melee' as const, ...e })),
+  advantages: advantages.map(a => ({ id: uuid(), ...a })),
+  disadvantages: disadvantages.map(d => ({ id: uuid(), ...d })),
   pointsTotal: 100,
 })
 

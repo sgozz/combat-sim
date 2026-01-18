@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { ServerToClientMessage, Player, LobbySummary, MatchState, VisualEffect, PendingAction } from '../../shared/types'
+import { uuid } from '../utils/uuid'
 
 export type ScreenState = 'welcome' | 'lobby' | 'waiting' | 'match'
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected'
@@ -72,7 +73,7 @@ export const useGameSocket = () => {
         setLogs((prev) => [...prev, `${message.playerName} reconnected.`])
         break
       case 'visual_effect': {
-        const id = crypto.randomUUID()
+        const id = uuid()
         const effect = { ...message.effect, id }
         setVisualEffects(prev => [...prev, effect])
         setTimeout(() => {

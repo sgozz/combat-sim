@@ -2,6 +2,7 @@ import { Tooltip } from './Tooltip'
 import type { CharacterSheet, Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType } from '../../../shared/types'
 import { calculateDerivedStats, calculateTotalPoints } from '../../../shared/rules'
 import { CHARACTER_TEMPLATES, TEMPLATE_NAMES } from '../../data/characterTemplates'
+import { uuid } from '../../utils/uuid'
 
 type CharacterEditorProps = {
   character: CharacterSheet
@@ -17,10 +18,10 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
       setCharacter({
         ...template,
         id: character.id,
-        skills: template.skills.map(s => ({ ...s, id: crypto.randomUUID() })),
-        equipment: template.equipment.map(e => ({ ...e, id: crypto.randomUUID() })),
-        advantages: template.advantages.map(a => ({ ...a, id: crypto.randomUUID() })),
-        disadvantages: template.disadvantages.map(d => ({ ...d, id: crypto.randomUUID() })),
+        skills: template.skills.map(s => ({ ...s, id: uuid() })),
+        equipment: template.equipment.map(e => ({ ...e, id: uuid() })),
+        advantages: template.advantages.map(a => ({ ...a, id: uuid() })),
+        disadvantages: template.disadvantages.map(d => ({ ...d, id: uuid() })),
       })
     }
   }
@@ -39,7 +40,7 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
     if (!name) return
     const levelStr = window.prompt('Skill level (10-18)', '12')
     const level = Math.max(10, Math.min(18, Number(levelStr) || 12))
-    const newSkill: Skill = { id: crypto.randomUUID(), name, level }
+    const newSkill: Skill = { id: uuid(), name, level }
     setCharacter({
       ...character,
       skills: [...character.skills, newSkill],
@@ -61,7 +62,7 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
     const validTypes: DamageType[] = ['crushing', 'cutting', 'impaling', 'piercing']
     const damageType: DamageType = validTypes.includes(typeInput as DamageType) ? (typeInput as DamageType) : 'crushing'
     const newEquip: Equipment = { 
-      id: crypto.randomUUID(), 
+      id: uuid(), 
       name, 
       type: 'melee',
       damage,
@@ -86,7 +87,7 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
     const name = window.prompt('Advantage name (e.g., Combat Reflexes)')?.trim()
     if (!name) return
     const description = window.prompt('Description (optional)')?.trim()
-    const newAdvantage: Advantage = { id: crypto.randomUUID(), name, description: description || undefined }
+    const newAdvantage: Advantage = { id: uuid(), name, description: description || undefined }
     setCharacter({
       ...character,
       advantages: [...character.advantages, newAdvantage],
@@ -104,7 +105,7 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
     const name = window.prompt('Disadvantage name (e.g., Bad Temper)')?.trim()
     if (!name) return
     const description = window.prompt('Description (optional)')?.trim()
-    const newDisadvantage: Disadvantage = { id: crypto.randomUUID(), name, description: description || undefined }
+    const newDisadvantage: Disadvantage = { id: uuid(), name, description: description || undefined }
     setCharacter({
       ...character,
       disadvantages: [...character.disadvantages, newDisadvantage],
