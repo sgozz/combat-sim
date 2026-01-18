@@ -1457,7 +1457,10 @@ const handleAttackAction = async (
   await upsertMatch(lobby.id, updated);
   sendToLobby(lobby, { type: "match_state", state: updated });
   
-  scheduleDefenseTimeout(lobby.id);
+  const defenderPlayer = lobby.players.find(p => p.id === pendingDefense.defenderId);
+  if (defenderPlayer?.isBot) {
+    scheduleDefenseTimeout(lobby.id);
+  }
 };
 
 import { setDefenseTimeout, clearDefenseTimeout } from "./timers";

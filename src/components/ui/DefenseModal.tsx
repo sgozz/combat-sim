@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { 
   CharacterSheet, 
   CombatantState, 
@@ -19,7 +19,6 @@ export type DefenseModalProps = {
   attackerName: string;
   inCloseCombat: boolean;
   onDefend: (choice: DefenseChoice) => void;
-  timeRemaining: number;
 };
 
 // 3d6 probability of rolling <= N
@@ -42,21 +41,10 @@ export default function DefenseModal({
   attackerName,
   inCloseCombat,
   onDefend,
-  timeRemaining: initialTime
 }: DefenseModalProps) {
   const [retreat, setRetreat] = useState(false);
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(initialTime);
 
-  // Timer countdown
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Calculate base options
   const baseOptions = useMemo(() => {
     const derivedDodge = character.derived.dodge;
     return getDefenseOptions(character, derivedDodge);
@@ -233,13 +221,6 @@ export default function DefenseModal({
         </div>
 
         <div className="defense-footer">
-          <div className="defense-timer">
-            <span className="timer-icon">⏱️</span>
-            <span className={`timer-value ${timeLeft <= 5 ? 'urgent' : ''}`}>
-              {timeLeft}s
-            </span>
-          </div>
-          
           <button 
             className="action-btn danger no-defense-btn"
             onClick={() => onDefend({ type: 'none', retreat: false, dodgeAndDrop: false })}

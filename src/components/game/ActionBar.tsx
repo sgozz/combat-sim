@@ -65,7 +65,6 @@ export const ActionBar = ({
   const [showAODVariants, setShowAODVariants] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
-  const [defenseTimeLeft, setDefenseTimeLeft] = useState(0)
   const [botCount, setBotCount] = useState(1)
   
   const playerCombatant = playerId && matchState 
@@ -87,24 +86,13 @@ export const ActionBar = ({
   const pendingDefense = matchState?.pendingDefense
   const isDefending = pendingDefense?.defenderId === playerId
 
-  const DEFENSE_TIMEOUT_MS = 15000
-  
   useEffect(() => {
     if (!pendingDefense) {
       queueMicrotask(() => {
-        setDefenseTimeLeft(0)
         setRetreat(false)
         setDodgeAndDrop(false)
       })
-      return
     }
-    const expiresAt = pendingDefense.timestamp + DEFENSE_TIMEOUT_MS
-    const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000))
-    queueMicrotask(() => setDefenseTimeLeft(remaining))
-    const timer = setInterval(() => {
-      setDefenseTimeLeft(prev => Math.max(0, prev - 1))
-    }, 1000)
-    return () => clearInterval(timer)
   }, [pendingDefense])
 
   const defenseOptions = useMemo(() => {
@@ -277,10 +265,6 @@ export const ActionBar = ({
               <span className="defense-value">N/A</span>
             )}
           </button>
-
-          <div className="defense-timer-mobile">
-            <span className={`timer-value ${defenseTimeLeft <= 5 ? 'urgent' : ''}`}>{defenseTimeLeft}s</span>
-          </div>
 
           <button 
             className="action-bar-btn danger defense-btn none"
