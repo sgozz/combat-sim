@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, Player, DefenseType, PendingDefense, DamageType } from "../../shared/types";
-import type { Lobby } from "./types";
+import type { CharacterSheet, CombatantState, MatchState, User, DefenseType, DamageType, PendingDefense } from "../../shared/types";
 import { state } from "./state";
-import { upsertCharacter, upsertPlayerProfile, upsertMatch } from "./db";
+import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 
   calculateHexDistance, 
   computeHexMoveToward, 
@@ -10,10 +9,13 @@ import {
   getCombatantByPlayerId, 
   getCharacterById, 
   isDefeated,
-  sendToLobby,
+  sendToMatch,
   checkVictory
 } from "./helpers";
 import { advanceTurn, calculateDerivedStats, resolveAttackRoll, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance, rollDamage } from "../../shared/rules";
+
+const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
+  `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
 export const createBotCharacter = (name: string): CharacterSheet => {
   const attributes = {
@@ -43,27 +45,20 @@ export const createBotCharacter = (name: string): CharacterSheet => {
   };
 };
 
-export const addBotToLobby = async (lobby: Lobby) => {
+export const createBot = async (): Promise<User> => {
   const botName = `Bot ${state.botCount++}`;
-  const botPlayer: Player = {
-    id: randomUUID(),
-    name: botName,
-    isBot: true,
-    characterId: "",
-  };
-  const botCharacter = createBotCharacter(botName);
-  botPlayer.characterId = botCharacter.id;
-  state.players.set(botPlayer.id, botPlayer);
-  state.playerCharacters.set(botPlayer.id, botCharacter);
-  lobby.players.push(botPlayer);
-  await upsertCharacter(botCharacter);
-  await upsertPlayerProfile(botPlayer, lobby.id);
+  const bot = await createUser(botName, true);
+  state.users.set(bot.id, bot);
+  return bot;
 };
 
-export const ensureMinimumBots = async (lobby: Lobby) => {
-  while (lobby.players.length < 2) {
-    await addBotToLobby(lobby);
-  }
+export const addBotToMatch = async (matchId: string): Promise<{ bot: User; character: CharacterSheet }> => {
+  const bot = await createBot();
+  const character = createBotCharacter(bot.username);
+  await upsertCharacter(character, bot.id);
+  state.characters.set(character.id, character);
+  await addMatchMember(matchId, bot.id, character.id);
+  return { bot, character };
 };
 
 const findNearestEnemy = (
@@ -85,24 +80,20 @@ const findNearestEnemy = (
   return nearest;
 };
 
-const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
-  `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
-
-export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
-  if (match.status === "finished") {
-    return;
-  }
-  const activePlayer = lobby.players.find((player) => player.id === match.activeTurnPlayerId);
-  if (!activePlayer?.isBot) {
-    return;
-  }
-  const existingTimer = state.botTimers.get(lobby.id);
+export const scheduleBotTurn = (matchId: string, match: MatchState) => {
+  if (match.status !== "active") return;
+  
+  const activePlayer = match.players.find((player) => player.id === match.activeTurnPlayerId);
+  if (!activePlayer?.isBot) return;
+  
+  const existingTimer = state.botTimers.get(matchId);
   if (existingTimer) {
     clearTimeout(existingTimer);
   }
+  
   const timer = setTimeout(async () => {
-    const currentMatch = state.matches.get(lobby.id);
-    if (!currentMatch) return;
+    const currentMatch = state.matches.get(matchId);
+    if (!currentMatch || currentMatch.status !== "active") return;
 
     const botCombatant = getCombatantByPlayerId(currentMatch, activePlayer.id);
     if (!botCombatant || botCombatant.currentHP <= 0) {
@@ -110,10 +101,10 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
         ...currentMatch,
         log: [...currentMatch.log, `${activePlayer.name} is incapacitated.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
       return;
     }
 
@@ -123,10 +114,10 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
         ...currentMatch,
         log: [...currentMatch.log, `${activePlayer.name} finds no targets.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
       return;
     }
 
@@ -140,10 +131,10 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
           ...currentMatch,
           log: [...currentMatch.log, `${activePlayer.name} waits.`],
         });
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
-        scheduleBotTurn(lobby, updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
         return;
       }
 
@@ -161,14 +152,14 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
           ...currentMatch,
           log: [...currentMatch.log, logEntry],
         });
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
-        scheduleBotTurn(lobby, updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
         return;
       }
 
-      const targetPlayer = lobby.players.find(p => p.id === target.playerId);
+      const targetPlayer = currentMatch.players.find(p => p.id === target.playerId);
       const targetIsHuman = targetPlayer && !targetPlayer.isBot;
       
       if (attackRoll.critical) {
@@ -185,10 +176,10 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
           log: [...currentMatch.log, logEntry],
         });
         updated = checkVictory(updated);
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
-        scheduleBotTurn(lobby, updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
         return;
       }
 
@@ -211,9 +202,9 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
           pendingDefense,
           log: [...currentMatch.log, logEntry],
         };
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
         return;
       }
 
@@ -225,10 +216,10 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
           ...currentMatch,
           log: [...currentMatch.log, logEntry],
         });
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
-        scheduleBotTurn(lobby, updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
         return;
       }
 
@@ -245,10 +236,10 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
         log: [...currentMatch.log, logEntry],
       });
       updated = checkVictory(updated);
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
       return;
     }
 
@@ -268,19 +259,15 @@ export const scheduleBotTurn = (lobby: Lobby, match: MatchState) => {
       combatants: updatedCombatants,
       log: [...currentMatch.log, `${activePlayer.name} moves to (${newPosition.x}, ${newPosition.z}).`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   }, 1500);
-  state.botTimers.set(lobby.id, timer);
+  
+  state.botTimers.set(matchId, timer);
 };
 
-/**
- * Choose the best defense option for a bot based on available defenses.
- * Bots prefer: block (if available) > parry (if available) > dodge
- * This makes them slightly smarter than always dodging.
- */
 export const chooseBotDefense = (
   defenderCharacter: CharacterSheet,
   defenderCombatant: CombatantState
@@ -292,7 +279,6 @@ export const chooseBotDefense = (
   const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
   const options = getDefenseOptions(defenderCharacter, effectiveDodge);
   
-  // Collect available defenses with their values
   const defenses: { type: DefenseType; value: number }[] = [
     { type: 'dodge', value: options.dodge }
   ];
@@ -302,22 +288,18 @@ export const chooseBotDefense = (
   }
   
   if (options.parry) {
-    // Check if this weapon was already used to parry this turn (cumulative -4 penalty)
     const alreadyUsed = defenderCombatant.parryWeaponsUsedThisTurn.includes(options.parry.weapon);
     const parryValue = alreadyUsed ? options.parry.value - 4 : options.parry.value;
     defenses.push({ type: 'parry', value: parryValue });
   }
   
-  // Sort by value descending and pick the best
   defenses.sort((a, b) => b.value - a.value);
   const bestDefense = defenses[0];
-  
-  // Bots retreat if they haven't this turn (gives +3 to defense)
   const canRetreat = !defenderCombatant.retreatedThisTurn;
   
   return {
     defenseType: bestDefense.type,
     retreat: canRetreat,
-    dodgeAndDrop: false, // Bots don't dodge and drop
+    dodgeAndDrop: false,
   };
 };

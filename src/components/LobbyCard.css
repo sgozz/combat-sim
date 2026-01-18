@@ -17,11 +17,13 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-.lobby-card-open {
+.lobby-card-open,
+.lobby-card-waiting {
   border-left-color: #22c55e;
 }
 
-.lobby-card-in_match {
+.lobby-card-in_match,
+.lobby-card-active {
   border-left-color: #ef4444;
 }
 
@@ -37,6 +39,17 @@
 .lobby-card-finished {
   border-left-color: #6366f1;
   background: #1a1a2e;
+}
+
+.lobby-card.my-turn {
+  border-left-color: #22c55e;
+  background: #0a1f0a;
+  animation: myturn-glow 2s ease-in-out infinite;
+}
+
+@keyframes myturn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 20px 2px rgba(34, 197, 94, 0.3); }
 }
 
 .lobby-card-header {
@@ -65,12 +78,20 @@
 }
 
 .lobby-card-players {
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: #888;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.lobby-card-code {
+  font-size: 0.9rem;
+  color: #646cff;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 0.1em;
   background: #252525;
   padding: 0.25rem 0.75rem;
-  border-radius: 20px;
+  border-radius: 6px;
 }
 
 .lobby-card-meta {
@@ -170,6 +191,21 @@
 
 .lobby-card-spectate:hover:not(:disabled) {
   background: #535bf2;
+}
+
+.lobby-card-join.pulse {
+  animation: pulse-green 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+  50% { box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.3); }
+}
+
+.lobby-card-reconnect-hint {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  font-style: italic;
 }
 
 @media (max-width: 768px) {

@@ -4,54 +4,51 @@ import type sqlite3 from "sqlite3";
 
 export type SqliteDatabase = Database<sqlite3.Database, sqlite3.Statement>;
 
-export type Lobby = {
-  id: string;
-  name: string;
-  maxPlayers: number;
-  players: import("../../shared/types").Player[];
-  status: "open" | "in_match";
-};
-
 export type ConnectionState = {
   sessionToken?: string;
   userId?: string;
-  playerId?: string;
-  lobbyId?: string;
 };
 
-export type PlayerRow = {
-  id: string | null;
-  name: string;
-  character_id: string | null;
-  lobby_id: string | null;
-  is_bot: number | null;
-};
-
-export type LobbyRow = {
+export type UserRow = {
   id: string;
-  name: string;
-  max_players: number;
-  status: "open" | "in_match";
-  players_json: string | null;
+  username: string;
+  is_bot: number;
+  default_character_id: string | null;
+  created_at: number;
 };
 
-export type MatchRow = {
-  lobby_id: string;
-  state_json: string;
+export type SessionRow = {
+  token: string;
+  user_id: string;
+  created_at: number;
+  last_seen_at: number | null;
 };
 
 export type CharacterRow = {
   id: string;
-  data: string;
+  owner_id: string;
+  name: string;
+  data_json: string;
+  created_at: number;
 };
 
-export type ServerState = {
-  players: Map<string, import("../../shared/types").Player>;
-  playerCharacters: Map<string, import("../../shared/types").CharacterSheet>;
-  lobbies: Map<string, Lobby>;
-  connections: Map<WebSocket, ConnectionState>;
-  matches: Map<string, import("../../shared/types").MatchState>;
-  botTimers: Map<string, NodeJS.Timeout>;
-  botCount: number;
-  db: SqliteDatabase;
+export type MatchRow = {
+  id: string;
+  code: string;
+  name: string;
+  max_players: number;
+  status: string;
+  state_json: string | null;
+  created_by: string;
+  winner_id: string | null;
+  created_at: number;
+  finished_at: number | null;
+};
+
+export type MatchMemberRow = {
+  match_id: string;
+  user_id: string;
+  character_id: string | null;
+  is_connected: number;
+  joined_at: number;
 };

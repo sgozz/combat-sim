@@ -1,63 +1,46 @@
 import { WebSocket } from "ws";
-import type { CombatantState, GridPosition, MatchState, Player, ServerToClientMessage, LobbySummary } from "../../shared/types";
-import type { Lobby } from "./types";
+import type { CombatantState, GridPosition, MatchState, User, ServerToClientMessage } from "../../shared/types";
 import { state } from "./state";
+import { getMatchMembers } from "./db";
 
 export const sendMessage = (socket: WebSocket, message: ServerToClientMessage) => {
-  socket.send(JSON.stringify(message));
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+  }
 };
 
 export const broadcast = (wss: { clients: Set<WebSocket> }, message: ServerToClientMessage) => {
   for (const socket of wss.clients) {
-    if (socket.readyState === WebSocket.OPEN) {
-      sendMessage(socket, message);
-    }
+    sendMessage(socket, message);
   }
 };
 
-export const summarizeLobby = (lobby: Lobby): LobbySummary => {
-  const match = state.matches.get(lobby.id);
-  const pausedPlayer = match?.pausedForPlayerId 
-    ? match.players.find(p => p.id === match.pausedForPlayerId)
-    : null;
-  const winnerPlayer = match?.winnerId
-    ? match.players.find(p => p.id === match.winnerId)
-    : null;
-  
-  return {
-    id: lobby.id,
-    name: lobby.name,
-    playerCount: lobby.players.length,
-    maxPlayers: lobby.maxPlayers,
-    status: lobby.status,
-    matchPaused: match?.status === "paused",
-    pausedForPlayerName: pausedPlayer?.name,
-    matchFinished: match?.status === "finished",
-    winnerName: winnerPlayer?.name,
-  };
-};
-
-export const sendToLobby = (lobby: Lobby, message: ServerToClientMessage) => {
-  const lobbyPlayerIds = new Set(lobby.players.map((player) => player.id));
-  for (const [socket, connState] of state.connections.entries()) {
-    if (connState.playerId && lobbyPlayerIds.has(connState.playerId)) {
-      sendMessage(socket, message);
-    }
+export const sendToUser = (userId: string, message: ServerToClientMessage) => {
+  const sockets = state.getUserSockets(userId);
+  for (const socket of sockets) {
+    sendMessage(socket, message);
   }
 };
 
-export const requirePlayer = (socket: WebSocket): Player | null => {
+export const sendToMatch = async (matchId: string, message: ServerToClientMessage) => {
+  const members = await getMatchMembers(matchId);
+  for (const member of members) {
+    sendToUser(member.user_id, message);
+  }
+};
+
+export const requireUser = (socket: WebSocket): User | null => {
   const connState = state.connections.get(socket);
-  if (!connState?.playerId) {
+  if (!connState?.userId) {
     sendMessage(socket, { type: "error", message: "Authenticate first." });
     return null;
   }
-  const player = state.players.get(connState.playerId);
-  if (!player) {
-    sendMessage(socket, { type: "error", message: "Player not found." });
+  const user = state.users.get(connState.userId);
+  if (!user) {
+    sendMessage(socket, { type: "error", message: "User not found." });
     return null;
   }
-  return player;
+  return user;
 };
 
 export const calculateHexDistance = (from: GridPosition, to: GridPosition) => {
@@ -162,18 +145,6 @@ export const computeHexMoveToward = (
   }
 
   return current;
-};
-
-export const findLobbyByIdOrPrefix = (idOrPrefix: string): Lobby | null => {
-  const exact = state.lobbies.get(idOrPrefix);
-  if (exact) return exact;
-  
-  for (const [id, lobby] of state.lobbies) {
-    if (id.startsWith(idOrPrefix)) {
-      return lobby;
-    }
-  }
-  return null;
 };
 
 export const checkVictory = (match: MatchState): MatchState => {

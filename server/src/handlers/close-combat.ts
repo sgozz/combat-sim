@@ -11,12 +11,11 @@ import {
   resolveBreakFree,
   resolveGrappleTechnique,
 } from "../../../shared/rules";
-import type { Lobby } from "../types";
 import { state } from "../state";
-import { upsertMatch } from "../db";
+import { updateMatchState } from "../db";
 import { 
   sendMessage, 
-  sendToLobby, 
+  sendToMatch, 
   getCombatantByPlayerId, 
   getCharacterById,
   calculateHexDistance,
@@ -27,7 +26,7 @@ import { formatRoll } from "./damage";
 
 export const handleEnterCloseCombat = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
@@ -87,14 +86,15 @@ export const handleEnterCloseCombat = async (
       combatants: updatedCombatants,
       log: [...match.log, logEntry],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { 
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { 
       type: "visual_effect", 
+      matchId,
       effect: { type: "close_combat", attackerId: player.id, targetId: payload.targetId, position: targetCombatant.position } 
     });
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   } else {
     const logEntry = `${attackerCharacter.name} fails to enter close combat with ${targetCharacter.name}. ${formatRoll(contest.attacker, 'Skill')} vs ${formatRoll(contest.defender, 'Resist')}`;
     
@@ -102,16 +102,16 @@ export const handleEnterCloseCombat = async (
       ...match,
       log: [...match.log, logEntry],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   }
 };
 
 export const handleExitCloseCombat = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
@@ -149,10 +149,10 @@ export const handleExitCloseCombat = async (
       combatants: updatedCombatants,
       log: [...match.log, `${actorChar?.name} exits close combat.`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   } else {
     const opponentPlayer = match.players.find(p => p.id === opponentId);
     if (opponentPlayer?.isBot) {
@@ -173,13 +173,14 @@ export const handleExitCloseCombat = async (
         combatants: updatedCombatants,
         log: [...match.log, `${actorChar?.name} exits close combat. ${opponentChar?.name} lets them go.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     } else {
-      sendToLobby(lobby, { 
+      sendToMatch(matchId, { 
         type: "pending_action", 
+        matchId,
         action: { type: 'exit_close_combat_request', exitingId: player.id, targetId: opponentId }
       });
     }
@@ -188,7 +189,7 @@ export const handleExitCloseCombat = async (
 
 export const handleGrapple = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
@@ -257,14 +258,15 @@ export const handleGrapple = async (
         combatants: updatedCombatants,
         log: [...match.log, logEntry],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { 
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { 
         type: "visual_effect", 
+        matchId,
         effect: { type: "grapple", attackerId: player.id, targetId: payload.targetId, position: targetCombatant.position } 
       });
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     } else {
       let logEntry = `${attackerCharacter.name} fails to grapple ${targetCharacter.name}. ${formatRoll(grappleResult.attack, 'Wrestling')}`;
       if (grappleResult.defense) {
@@ -275,10 +277,10 @@ export const handleGrapple = async (
         ...match,
         log: [...match.log, logEntry],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
   } else if (payload.action === 'throw' || payload.action === 'lock' || payload.action === 'choke' || payload.action === 'pin') {
     if (!actorCombatant.grapple?.grappling) {
@@ -335,19 +337,19 @@ export const handleGrapple = async (
         combatants: updatedCombatants,
         log: [...match.log, logEntry],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     } else {
       const updated = advanceTurn({
         ...match,
         log: [...match.log, `${attackerCharacter.name} fails ${payload.action} attempt.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
   } else if (payload.action === 'release') {
     const updatedCombatants = match.combatants.map(c => {
@@ -367,15 +369,15 @@ export const handleGrapple = async (
       combatants: updatedCombatants,
       log: [...match.log, `${attackerCharacter.name} releases ${targetCharacter.name}.`],
     };
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
   }
 };
 
 export const handleBreakFree = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
@@ -426,10 +428,10 @@ export const handleBreakFree = async (
       combatants: updatedCombatants,
       log: [...match.log, logEntry],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   } else {
     const logEntry = `${attackerCharacter.name} fails to break free. ${formatRoll(breakResult.roll, `ST/Skill-${cpPenalty}CP`)}`;
     
@@ -437,9 +439,9 @@ export const handleBreakFree = async (
       ...match,
       log: [...match.log, logEntry],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   }
 };

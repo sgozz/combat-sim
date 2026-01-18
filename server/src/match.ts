@@ -1,46 +1,72 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, EquippedItem } from "../../shared/types";
-import type { Lobby } from "./types";
+import type { CharacterSheet, CombatantState, MatchState, EquippedItem, Player } from "../../shared/types";
 import { state } from "./state";
 import { calculateDerivedStats } from "../../shared/rules";
+import { getMatchMembers, findUserById, loadCharacterById } from "./db";
 
-export const createMatchState = (lobby: Lobby): MatchState => {
-  const characters = lobby.players.map((player) => {
-    const existing = state.playerCharacters.get(player.id);
-    if (existing) return existing;
-    const attributes = {
-      strength: 10,
-      dexterity: 10,
-      intelligence: 10,
-      health: 10,
+export const createMatchState = async (
+  matchId: string,
+  name: string,
+  code: string,
+  maxPlayers: number
+): Promise<MatchState> => {
+  const members = await getMatchMembers(matchId);
+  
+  const players: Player[] = [];
+  const characters: CharacterSheet[] = [];
+  
+  for (const member of members) {
+    const user = await findUserById(member.user_id);
+    if (!user) continue;
+    
+    let character: CharacterSheet | null = null;
+    if (member.character_id) {
+      character = await loadCharacterById(member.character_id);
+      if (!character) {
+        character = state.characters.get(member.character_id) ?? null;
+      }
+    }
+    
+    if (!character) {
+      const attributes = {
+        strength: 10,
+        dexterity: 10,
+        intelligence: 10,
+        health: 10,
+      };
+      character = {
+        id: randomUUID(),
+        name: user.username,
+        attributes,
+        derived: calculateDerivedStats(attributes),
+        skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
+        advantages: [],
+        disadvantages: [],
+        equipment: [{ 
+          id: randomUUID(), 
+          name: "Club", 
+          type: "melee",
+          damage: "1d+1",
+          reach: '1' as const,
+          parry: 0,
+          skillUsed: "Brawling"
+        }],
+        pointsTotal: 100,
+      };
+    }
+    
+    const player: Player = {
+      id: user.id,
+      name: user.username,
+      isBot: user.isBot,
+      characterId: character.id,
     };
-    const fallback: CharacterSheet = {
-      id: randomUUID(),
-      name: player.name,
-      attributes,
-      derived: calculateDerivedStats(attributes),
-      skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
-      advantages: [],
-      disadvantages: [],
-      equipment: [{ 
-        id: randomUUID(), 
-        name: "Club", 
-        type: "melee",
-        damage: "1d+1",
-        reach: '1' as const,
-        parry: 0,
-        skillUsed: "Brawling"
-      }],
-      pointsTotal: 100,
-    };
-    state.playerCharacters.set(player.id, fallback);
-    player.characterId = fallback.id;
-    state.players.set(player.id, player);
-    return fallback;
-  });
+    players.push(player);
+    characters.push(character);
+  }
 
   const combatants: CombatantState[] = characters.map((character, index) => {
-    const player = lobby.players[index];
+    const player = players[index];
     const isBot = player?.isBot ?? false;
     const q = isBot ? 6 : -2;
     const r = index;
@@ -103,11 +129,15 @@ export const createMatchState = (lobby: Lobby): MatchState => {
       return b.random - a.random;
     });
   
-  const sortedPlayers = initiativeOrder.map(i => lobby.players.find(p => p.id === i.playerId)!);
+  const sortedPlayers = initiativeOrder.map(i => players.find(p => p.id === i.playerId)!);
   const firstPlayerId = sortedPlayers[0]?.id ?? "";
 
   return {
-    id: randomUUID(),
+    id: matchId,
+    name,
+    code,
+    maxPlayers,
+    createdAt: Date.now(),
     players: sortedPlayers,
     characters,
     combatants,

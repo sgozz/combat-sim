@@ -28,12 +28,11 @@ import {
   applyCriticalHitDamage,
   getCriticalMissDescription,
 } from "../../../shared/rules";
-import type { Lobby } from "../types";
 import { state } from "../state";
-import { upsertMatch } from "../db";
+import { updateMatchState } from "../db";
 import { 
   sendMessage, 
-  sendToLobby, 
+  sendToMatch, 
   getCombatantByPlayerId, 
   getCharacterById,
   calculateHexDistance,
@@ -47,16 +46,16 @@ import { formatRoll, applyDamageToTarget } from "./damage";
 
 const BOT_DEFENSE_DELAY_MS = 800;
 
-const scheduleBotDefense = (lobby: Lobby, match: MatchState, defenderId: string) => {
+const scheduleBotDefense = (matchId: string, match: MatchState, defenderId: string) => {
   setTimeout(async () => {
-    const currentMatch = state.matches.get(lobby.id);
+    const currentMatch = state.matches.get(matchId);
     if (!currentMatch?.pendingDefense) return;
     
     const defenderCombatant = currentMatch.combatants.find(c => c.playerId === defenderId);
     const defenderCharacter = currentMatch.characters.find(c => c.id === defenderCombatant?.characterId);
     
     if (!defenderCombatant || !defenderCharacter) {
-      await resolveDefenseChoice(lobby, currentMatch, {
+      await resolveDefenseChoice(matchId, currentMatch, {
         type: 'defend',
         defenseType: 'dodge',
         retreat: false,
@@ -67,7 +66,7 @@ const scheduleBotDefense = (lobby: Lobby, match: MatchState, defenderId: string)
     
     const choice = chooseBotDefense(defenderCharacter, defenderCombatant);
     
-    await resolveDefenseChoice(lobby, currentMatch, {
+    await resolveDefenseChoice(matchId, currentMatch, {
       type: 'defend',
       ...choice,
     });
@@ -75,14 +74,14 @@ const scheduleBotDefense = (lobby: Lobby, match: MatchState, defenderId: string)
 };
 
 export const resolveDefenseChoice = async (
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   choice: { type: 'defend'; defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean }
 ): Promise<void> => {
   const pending = match.pendingDefense;
   if (!pending) return;
   
-  clearDefenseTimeout(lobby.id);
+  clearDefenseTimeout(matchId);
   
   const defenderCombatant = match.combatants.find(c => c.playerId === pending.defenderId);
   const attackerCombatant = match.combatants.find(c => c.playerId === pending.attackerId);
@@ -111,8 +110,9 @@ export const resolveDefenseChoice = async (
       logEntry += ` Major wound! ${defenderCharacter.name} is stunned!`;
     }
     
-    sendToLobby(lobby, { 
+    sendToMatch(matchId, { 
       type: "visual_effect", 
+      matchId,
       effect: { type: "damage", attackerId: pending.attackerId, targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
 
@@ -129,9 +129,9 @@ export const resolveDefenseChoice = async (
         log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
       };
       const checkedUpdate = checkVictory(updated);
-      state.matches.set(lobby.id, checkedUpdate);
-      await upsertMatch(lobby.id, checkedUpdate);
-      sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+      state.matches.set(matchId, checkedUpdate);
+      await updateMatchState(matchId, checkedUpdate);
+      sendToMatch(matchId, { type: "match_state", state: checkedUpdate });
     } else {
       let updated = advanceTurn({
         ...match,
@@ -140,10 +140,10 @@ export const resolveDefenseChoice = async (
         log: [...match.log, logEntry],
       });
       updated = checkVictory(updated);
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
     return;
   }
@@ -245,8 +245,9 @@ export const resolveDefenseChoice = async (
     const dropStr = choice.dodgeAndDrop ? ' (drop)' : '';
     const logEntry = `${defenderCharacter.name} defends with ${defenseLabel}${retreatStr}${dropStr}: ${formatRoll(defenseRoll.roll, defenseLabel)} Success!`;
     
-    sendToLobby(lobby, { 
+    sendToMatch(matchId, { 
       type: "visual_effect", 
+      matchId,
       effect: { type: "defend", attackerId: pending.attackerId, targetId: pending.defenderId, position: defenderCombatant.position } 
     });
     
@@ -278,16 +279,16 @@ export const resolveDefenseChoice = async (
         pendingDefense: undefined,
         log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
     } else {
       let updated = advanceTurn({ ...match, combatants: updatedCombatants, pendingDefense: undefined, log: [...match.log, logEntry] });
       updated = checkVictory(updated);
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
   } else {
     const dmg = rollDamage(pending.damage);
@@ -309,8 +310,9 @@ export const resolveDefenseChoice = async (
       logEntry += ` Major wound! ${defenderCharacter.name} is stunned!`;
     }
     
-    sendToLobby(lobby, { 
+    sendToMatch(matchId, { 
       type: "visual_effect", 
+      matchId,
       effect: { type: "damage", attackerId: pending.attackerId, targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
 
@@ -340,9 +342,9 @@ export const resolveDefenseChoice = async (
         log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
       };
       const checkedUpdate = checkVictory(updated);
-      state.matches.set(lobby.id, checkedUpdate);
-      await upsertMatch(lobby.id, checkedUpdate);
-      sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+      state.matches.set(matchId, checkedUpdate);
+      await updateMatchState(matchId, checkedUpdate);
+      sendToMatch(matchId, { type: "match_state", state: checkedUpdate });
     } else {
       let updated = advanceTurn({
         ...match,
@@ -351,17 +353,17 @@ export const resolveDefenseChoice = async (
         log: [...match.log, logEntry],
       });
       updated = checkVictory(updated);
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
   }
 };
 
 export const handleAttackAction = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
@@ -522,8 +524,9 @@ export const handleAttackAction = async (
     }
     
     logEntry += `: Miss.${critMissEffect} ${formatRoll(attackRoll.roll, 'Skill')}`;
-    sendToLobby(lobby, { 
+    sendToMatch(matchId, { 
       type: "visual_effect", 
+      matchId,
       effect: { type: "miss", attackerId: player.id, targetId: targetCombatant.playerId, position: targetCombatant.position } 
     });
     
@@ -541,19 +544,19 @@ export const handleAttackAction = async (
         combatants: updatedCombatants,
         log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining (Rapid Strike).`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
     } else {
       const combatantsWithEffects = match.combatants.map(c =>
         c.playerId === player.id ? { ...c, statusEffects: updatedAttackerEffects } : c
       );
       let updated = advanceTurn({ ...match, combatants: combatantsWithEffects, log: [...match.log, logEntry] });
       updated = checkVictory(updated);
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
     return;
   }
@@ -591,8 +594,9 @@ export const handleAttackAction = async (
       logEntry += ` ${targetCharacter.name} falls unconscious!`;
     }
     
-    sendToLobby(lobby, { 
+    sendToMatch(matchId, { 
       type: "visual_effect", 
+      matchId,
       effect: { type: "damage", attackerId: player.id, targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
     });
 
@@ -611,11 +615,11 @@ export const handleAttackAction = async (
         log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
       };
       const checkedUpdate = checkVictory(updated);
-      state.matches.set(lobby.id, checkedUpdate);
-      await upsertMatch(lobby.id, checkedUpdate);
-      sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+      state.matches.set(matchId, checkedUpdate);
+      await updateMatchState(matchId, checkedUpdate);
+      sendToMatch(matchId, { type: "match_state", state: checkedUpdate });
       if (checkedUpdate.status === 'finished') {
-        scheduleBotTurn(lobby, checkedUpdate);
+        scheduleBotTurn(matchId, checkedUpdate);
       }
     } else {
       let updated = advanceTurn({
@@ -624,15 +628,15 @@ export const handleAttackAction = async (
         log: [...match.log, logEntry],
       });
       updated = checkVictory(updated);
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
     return;
   }
 
-  const targetPlayer = lobby.players.find(p => p.id === targetCombatant.playerId);
+  const targetPlayer = match.players.find(p => p.id === targetCombatant.playerId);
   const isDefenderBot = targetPlayer?.isBot ?? false;
 
   if (isDefenderBot) {
@@ -706,8 +710,9 @@ export const handleAttackAction = async (
     if (defenseRoll.defended) {
       const retreatStr = canRetreat ? ' (with retreat)' : '';
       logEntry += `: ${defenseLabel}${retreatStr}! ${formatRoll(attackRoll.roll, 'Attack')} -> ${formatRoll(defenseRoll.roll, defenseLabel)}`;
-      sendToLobby(lobby, { 
+      sendToMatch(matchId, { 
         type: "visual_effect", 
+        matchId,
         effect: { type: "defend", attackerId: player.id, targetId: targetCombatant.playerId, position: targetCombatant.position } 
       });
       
@@ -737,16 +742,16 @@ export const handleAttackAction = async (
           combatants: updatedCombatants,
           log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
         };
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        sendToMatch(matchId, { type: "match_state", state: updated });
       } else {
         let updated = advanceTurn({ ...match, combatants: updatedCombatants, log: [...match.log, logEntry] });
         updated = checkVictory(updated);
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
-        scheduleBotTurn(lobby, updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
       }
     } else {
       const dmg = rollDamage(damageFormula);
@@ -768,8 +773,9 @@ export const handleAttackAction = async (
         logEntry += ` Major wound! ${targetCharacter.name} is stunned!`;
       }
       
-      sendToLobby(lobby, { 
+      sendToMatch(matchId, { 
         type: "visual_effect", 
+        matchId,
         effect: { type: "damage", attackerId: player.id, targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
       });
 
@@ -786,11 +792,11 @@ export const handleAttackAction = async (
           log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
         };
         const checkedUpdate = checkVictory(updated);
-        state.matches.set(lobby.id, checkedUpdate);
-        await upsertMatch(lobby.id, checkedUpdate);
-        sendToLobby(lobby, { type: "match_state", state: checkedUpdate });
+        state.matches.set(matchId, checkedUpdate);
+        await updateMatchState(matchId, checkedUpdate);
+        sendToMatch(matchId, { type: "match_state", state: checkedUpdate });
         if (checkedUpdate.status === 'finished') {
-          scheduleBotTurn(lobby, checkedUpdate);
+          scheduleBotTurn(matchId, checkedUpdate);
         }
       } else {
         let updated = advanceTurn({
@@ -799,10 +805,10 @@ export const handleAttackAction = async (
           log: [...match.log, logEntry],
         });
         updated = checkVictory(updated);
-        state.matches.set(lobby.id, updated);
-        await upsertMatch(lobby.id, updated);
-        sendToLobby(lobby, { type: "match_state", state: updated });
-        scheduleBotTurn(lobby, updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
       }
     }
     return;
@@ -829,12 +835,12 @@ export const handleAttackAction = async (
     log: [...match.log, logEntry],
   };
   
-  state.matches.set(lobby.id, updated);
-  await upsertMatch(lobby.id, updated);
-  sendToLobby(lobby, { type: "match_state", state: updated });
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  sendToMatch(matchId, { type: "match_state", state: updated });
   
-  const defenderPlayer = lobby.players.find(p => p.id === pendingDefense.defenderId);
+  const defenderPlayer = match.players.find(p => p.id === pendingDefense.defenderId);
   if (defenderPlayer?.isBot) {
-    scheduleBotDefense(lobby, updated, pendingDefense.defenderId);
+    scheduleBotDefense(matchId, updated, pendingDefense.defenderId);
   }
 };

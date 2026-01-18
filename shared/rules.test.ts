@@ -302,6 +302,10 @@ describe('Combat Rules', () => {
   describe('Turn Advancement', () => {
     const createTestMatch = (players: Player[], combatants: CombatantState[]): MatchState => ({
       id: 'test-match',
+      name: 'Test Match',
+      code: 'TEST01',
+      maxPlayers: 4,
+      createdAt: Date.now(),
       players,
       characters: [],
       combatants,

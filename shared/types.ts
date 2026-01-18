@@ -100,6 +100,12 @@ export type CharacterSheet = {
   pointsTotal: number;
 };
 
+export type User = {
+  id: Id;
+  username: string;
+  isBot: boolean;
+};
+
 export type Player = {
   id: Id;
   name: string;
@@ -235,8 +241,13 @@ export type CombatantState = {
   waitTrigger: WaitTrigger | null;
 };
 
+export type MatchStatus = "waiting" | "active" | "paused" | "finished";
+
 export type MatchState = {
   id: Id;
+  name: string;
+  code: string;
+  maxPlayers: number;
   players: Player[];
   characters: CharacterSheet[];
   combatants: CombatantState[];
@@ -244,23 +255,25 @@ export type MatchState = {
   round: number;
   log: string[];
   winnerId?: Id;
-  status: "active" | "paused" | "finished";
+  status: MatchStatus;
   pausedForPlayerId?: Id;
+  createdAt: number;
   finishedAt?: number;
   turnMovement?: TurnMovementState;
   reachableHexes?: ReachableHexInfo[];
   pendingDefense?: PendingDefense;
 };
 
-export type LobbySummary = {
+export type MatchSummary = {
   id: Id;
+  code: string;
   name: string;
   playerCount: number;
   maxPlayers: number;
-  status: "open" | "in_match";
-  matchPaused?: boolean;
-  pausedForPlayerName?: string;
-  matchFinished?: boolean;
+  status: MatchStatus;
+  players: { id: Id; name: string; isConnected: boolean }[];
+  isMyTurn: boolean;
+  winnerId?: Id;
   winnerName?: string;
 };
 
@@ -295,14 +308,13 @@ export type CombatActionPayload =
 export type ClientToServerMessage =
   | { type: "register"; username: string }
   | { type: "auth"; sessionToken: string }
-  | { type: "create_lobby"; name: string; maxPlayers: number }
-  | { type: "join_lobby"; lobbyId: Id }
-  | { type: "leave_lobby" }
-  | { type: "delete_lobby"; lobbyId: Id }
-  | { type: "list_lobbies" }
-  | { type: "start_match"; botCount?: number }
-  | { type: "select_character"; character: CharacterSheet }
-  | { type: "action"; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
+  | { type: "create_match"; name: string; maxPlayers: number }
+  | { type: "join_match"; code: string }
+  | { type: "leave_match"; matchId: Id }
+  | { type: "list_my_matches" }
+  | { type: "start_combat"; matchId: Id; botCount?: number }
+  | { type: "select_character"; matchId: Id; character: CharacterSheet }
+  | { type: "action"; matchId: Id; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
 
 export type VisualEffect = 
   | { type: 'damage'; attackerId: Id; targetId: Id; value: number; position: GridPosition }
@@ -316,16 +328,18 @@ export type PendingAction =
   | { type: 'exit_close_combat_request'; exitingId: Id; targetId: Id };
 
 export type ServerToClientMessage =
-  | { type: "auth_ok"; player: Player; sessionToken: string }
+  | { type: "auth_ok"; user: User; sessionToken: string }
   | { type: "session_invalid" }
-  | { type: "lobbies"; lobbies: LobbySummary[] }
-  | { type: "lobby_joined"; lobbyId: Id; players: Player[] }
-  | { type: "lobby_left" }
+  | { type: "my_matches"; matches: MatchSummary[] }
+  | { type: "match_created"; match: MatchSummary }
+  | { type: "match_joined"; matchId: Id }
+  | { type: "match_left"; matchId: Id }
   | { type: "match_state"; state: MatchState }
-  | { type: "match_paused"; playerId: Id; playerName: string }
-  | { type: "match_resumed"; playerId: Id; playerName: string }
-  | { type: "player_disconnected"; playerId: Id; playerName: string }
-  | { type: "player_reconnected"; playerId: Id; playerName: string }
-  | { type: "visual_effect"; effect: VisualEffect }
-  | { type: "pending_action"; action: PendingAction }
+  | { type: "match_updated"; match: MatchSummary }
+  | { type: "player_joined"; matchId: Id; player: Player }
+  | { type: "player_left"; matchId: Id; playerId: Id; playerName: string }
+  | { type: "player_disconnected"; matchId: Id; playerId: Id; playerName: string }
+  | { type: "player_reconnected"; matchId: Id; playerId: Id; playerName: string }
+  | { type: "visual_effect"; matchId: Id; effect: VisualEffect }
+  | { type: "pending_action"; matchId: Id; action: PendingAction }
   | { type: "error"; message: string };

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { useGameSocket } from './hooks/useGameSocket'
 import { uuid } from './utils/uuid'
 import { WelcomeScreen } from './components/WelcomeScreen'
-import { LobbyBrowser } from './components/LobbyBrowser'
+import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { CharacterEditor } from './components/ui/CharacterEditor'
 
@@ -17,10 +17,9 @@ function AppRoutes() {
   
   const {
     connectionState,
-    player,
-    lobbies,
-    lobbyPlayers,
-    lobbyId,
+    user,
+    myMatches,
+    activeMatchId,
     matchState,
     logs,
     visualEffects,
@@ -28,10 +27,12 @@ function AppRoutes() {
     authError,
     setScreen,
     setLogs,
+    setActiveMatchId,
     setPendingAction,
     register,
     sendMessage,
-    logout
+    logout,
+    refreshMyMatches
   } = useGameSocket()
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
@@ -39,12 +40,12 @@ function AppRoutes() {
   const [showCharacterModal, setShowCharacterModal] = useState(false)
   const [editingCharacter, setEditingCharacter] = useState<CharacterSheet | null>(null)
   
-  const pendingJoinLobbyIdRef = useRef<string | null>((() => {
+  const pendingJoinCodeRef = useRef<string | null>((() => {
     const params = new URLSearchParams(window.location.search)
-    const joinId = params.get('join')
-    if (joinId) {
+    const joinCode = params.get('join')
+    if (joinCode) {
       window.history.replaceState({}, '', window.location.pathname)
-      return joinId
+      return joinCode.toUpperCase()
     }
     return null
   })())
@@ -54,51 +55,58 @@ function AppRoutes() {
   }, [])
 
   useEffect(() => {
-    if (connectionState === 'connected' && player) {
-      if (pendingJoinLobbyIdRef.current && !lobbyId) {
-        sendMessage({ type: 'join_lobby', lobbyId: pendingJoinLobbyIdRef.current })
-        pendingJoinLobbyIdRef.current = null
+    if (connectionState === 'connected' && user) {
+      refreshMyMatches()
+      if (pendingJoinCodeRef.current && !activeMatchId) {
+        sendMessage({ type: 'join_match', code: pendingJoinCodeRef.current })
+        pendingJoinCodeRef.current = null
       } else if (location.pathname === '/') {
-        navigate('/lobby', { replace: true })
+        navigate('/matches', { replace: true })
       }
     } else if (connectionState === 'disconnected' && location.pathname !== '/') {
       navigate('/', { replace: true })
     }
-  }, [connectionState, player, navigate, location.pathname, lobbyId, sendMessage])
+  }, [connectionState, user, navigate, location.pathname, activeMatchId, sendMessage, refreshMyMatches])
 
   useEffect(() => {
-    if (lobbyId && location.pathname === '/lobby') {
+    if (activeMatchId && location.pathname === '/matches') {
       navigate('/game', { replace: true })
-    } else if (!lobbyId && location.pathname === '/game') {
-      navigate('/lobby', { replace: true })
+    } else if (!activeMatchId && location.pathname === '/game') {
+      navigate('/matches', { replace: true })
     }
-  }, [lobbyId, navigate, location.pathname])
+  }, [activeMatchId, navigate, location.pathname])
 
   const handleWelcomeComplete = (username: string) => {
-    setScreen('lobby')
+    setScreen('matches')
     register(username)
   }
 
-  const handleQuickMatch = () => {
-    if (!player) return
-    const name = `${player.name}'s Battle`
-    sendMessage({ type: 'create_lobby', name, maxPlayers: 4 })
+  const handleCreateMatch = (name: string) => {
+    sendMessage({ type: 'create_match', name, maxPlayers: 4 })
   }
 
-  const handleRefreshLobbies = () => {
-    sendMessage({ type: 'list_lobbies' })
+  const handleJoinByCode = (code: string) => {
+    sendMessage({ type: 'join_match', code })
+  }
+
+  const handleSelectMatch = (matchId: string) => {
+    setActiveMatchId(matchId)
+    const match = myMatches.find(m => m.id === matchId)
+    if (match && match.status !== 'waiting') {
+      navigate('/game')
+    }
   }
 
   const handleGameAction = useCallback((_action: string, payload?: CombatActionPayload) => {
-    if (payload) {
-      sendMessage({ type: 'action', action: payload.type, payload })
+    if (payload && activeMatchId) {
+      sendMessage({ type: 'action', matchId: activeMatchId, action: payload.type, payload })
     }
-  }, [sendMessage])
+  }, [sendMessage, activeMatchId])
 
   const handleGridClick = useCallback((position: GridPosition) => {
-    if (!matchState || matchState.activeTurnPlayerId !== player?.id) return
+    if (!matchState || !user || matchState.activeTurnPlayerId !== user.id) return
     if (matchState.status === 'finished') return
-    const currentCombatant = matchState.combatants.find((c) => c.playerId === player.id)
+    const currentCombatant = matchState.combatants.find((c) => c.playerId === user.id)
     if (!currentCombatant) return
     
     if (currentCombatant.inCloseCombatWith) {
@@ -115,32 +123,44 @@ function AppRoutes() {
         return
       }
       const payload: CombatActionPayload = { type: 'move_step', to: { q: position.x, r: position.z } }
-      sendMessage({ type: 'action', action: payload.type, payload })
+      sendMessage({ type: 'action', matchId: activeMatchId!, action: payload.type, payload })
       setMoveTarget(null)
       return
     }
     
     setMoveTarget(position)
-  }, [matchState, player, sendMessage, setLogs])
+  }, [matchState, user, sendMessage, setLogs, activeMatchId])
 
   const handleCombatantClick = useCallback((targetPlayerId: string) => {
-    if (!matchState || !player) return
-    if (targetPlayerId === player.id) {
+    if (!matchState || !user) return
+    if (targetPlayerId === user.id) {
       setSelectedTargetId(null)
       return
     }
     setSelectedTargetId(targetPlayerId)
-  }, [matchState, player])
+  }, [matchState, user])
 
-  const handleLeaveLobby = useCallback(() => {
-    sendMessage({ type: 'leave_lobby' })
-    setTimeout(() => navigate('/lobby'), 0)
-  }, [sendMessage, navigate])
+  const handleLeaveMatch = useCallback(() => {
+    if (activeMatchId) {
+      sendMessage({ type: 'leave_match', matchId: activeMatchId })
+    }
+    setActiveMatchId(null)
+    setTimeout(() => navigate('/matches'), 0)
+  }, [sendMessage, activeMatchId, navigate, setActiveMatchId])
 
   const handleLogout = useCallback(() => {
     logout()
     navigate('/')
   }, [logout, navigate])
+
+  const currentMatch = myMatches.find(m => m.id === activeMatchId)
+  const lobbyPlayers = matchState?.players ?? currentMatch?.players?.map(p => ({ 
+    id: p.id, 
+    name: p.name, 
+    isBot: false, 
+    characterId: '' 
+  })) ?? []
+  const isPlayerTurn = matchState?.activeTurnPlayerId === user?.id
 
   if (connectionState === 'connecting') {
     return (
@@ -161,63 +181,70 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={
         connectionState === 'connected' ? (
-          <Navigate to="/lobby" replace />
+          <Navigate to="/matches" replace />
         ) : (
           <WelcomeScreen onComplete={handleWelcomeComplete} authError={authError} />
         )
       } />
       
-      <Route path="/lobby" element={
-        !player ? (
+      <Route path="/matches" element={
+        !user ? (
           <Navigate to="/" replace />
         ) : (
-          <LobbyBrowser
-            player={player}
-            lobbies={lobbies}
-            onQuickMatch={handleQuickMatch}
-            onJoinLobby={(id) => sendMessage({ type: 'join_lobby', lobbyId: id })}
-            onRefresh={handleRefreshLobbies}
+          <MatchBrowser
+            user={user}
+            matches={myMatches}
+            onCreateMatch={handleCreateMatch}
+            onJoinByCode={handleJoinByCode}
+            onSelectMatch={handleSelectMatch}
+            onRefresh={refreshMyMatches}
             onLogout={handleLogout}
           />
         )
       } />
       
       <Route path="/game" element={
-        !player ? (
+        !user ? (
           <Navigate to="/" replace />
         ) : (
           <>
             <GameScreen
               matchState={matchState}
-              player={player}
+              player={user ? { id: user.id, name: user.username, isBot: user.isBot, characterId: '' } : null}
               lobbyPlayers={lobbyPlayers}
-              lobbyId={lobbyId}
+              lobbyId={activeMatchId}
               logs={logs}
               visualEffects={visualEffects}
               moveTarget={moveTarget}
               selectedTargetId={selectedTargetId}
-              isPlayerTurn={matchState?.activeTurnPlayerId === player?.id}
+              isPlayerTurn={isPlayerTurn}
               pendingAction={pendingAction}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}
               onAction={handleGameAction}
               onPendingActionResponse={(response) => {
-                sendMessage({ type: 'action', action: 'respond_exit', payload: { type: 'respond_exit', response } })
+                if (activeMatchId) {
+                  sendMessage({ type: 'action', matchId: activeMatchId, action: 'respond_exit', payload: { type: 'respond_exit', response } })
+                }
                 setPendingAction(null)
               }}
-              onLeaveLobby={handleLeaveLobby}
-              onStartMatch={(botCount) => sendMessage({ type: 'start_match', botCount })}
+              onLeaveLobby={handleLeaveMatch}
+              onStartMatch={(botCount) => {
+                if (activeMatchId) {
+                  sendMessage({ type: 'start_combat', matchId: activeMatchId, botCount })
+                }
+              }}
               onOpenCharacterEditor={() => {
                 setShowCharacterModal(true)
               }}
-              inLobbyButNoMatch={!matchState && !!lobbyId}
+              inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}
             />
             
             {showCharacterModal && (
               <CharacterEditor 
                 character={editingCharacter || {
                    id: uuid(),
-                   name: player?.name ?? 'New Character',
+                   name: user?.username ?? 'New Character',
                    attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
                    derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
                    skills: [],
@@ -228,8 +255,8 @@ function AppRoutes() {
                 }}
                 setCharacter={setEditingCharacter}
                 onSave={() => {
-                  if (editingCharacter) {
-                    sendMessage({ type: 'select_character', character: editingCharacter })
+                  if (editingCharacter && activeMatchId) {
+                    sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
                     setShowCharacterModal(false)
                     setEditingCharacter(null)
                   }
@@ -244,6 +271,7 @@ function AppRoutes() {
         )
       } />
       
+      <Route path="/lobby" element={<Navigate to="/matches" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

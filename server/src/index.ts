@@ -2,9 +2,8 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
-import { initializeDatabase, loadPersistedData, deleteLobby } from "./db";
-import { sendMessage, summarizeLobby, broadcast } from "./helpers";
-import { leaveLobby } from "./lobby";
+import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, buildMatchSummary } from "./db";
+import { sendMessage, sendToUser } from "./helpers";
 import { handleMessage } from "./handlers";
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -21,13 +20,13 @@ const startServer = async () => {
   state.setDb(db);
   await loadPersistedData();
   
-  const storedPlayers = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM players");
+  const storedUsers = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM users");
   const storedCharacters = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM characters");
-  console.log(`Loaded ${storedPlayers?.count ?? 0} player profiles and ${storedCharacters?.count ?? 0} characters.`);
+  const storedMatches = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM matches WHERE status IN ('waiting', 'active', 'paused')");
+  console.log(`Loaded ${storedUsers?.count ?? 0} users, ${storedCharacters?.count ?? 0} characters, ${storedMatches?.count ?? 0} active matches.`);
 
   wss.on("connection", (socket) => {
     state.connections.set(socket, {});
-    sendMessage(socket, { type: "lobbies", lobbies: Array.from(state.lobbies.values()).map(summarizeLobby) });
 
     socket.on("message", async (data) => {
       let message: ClientToServerMessage;
@@ -41,87 +40,65 @@ const startServer = async () => {
       await handleMessage(socket, wss, message);
     });
 
-    socket.on("close", () => {
-      void leaveLobby(socket, wss, false);
+    socket.on("close", async () => {
+      const connState = state.connections.get(socket);
+      if (connState?.userId) {
+        state.removeUserSocket(connState.userId, socket);
+        
+        const userMatches = await getUserMatches(connState.userId);
+        for (const matchRow of userMatches) {
+          if (matchRow.status === 'active' || matchRow.status === 'waiting') {
+            await updateMatchMemberConnection(matchRow.id, connState.userId, false);
+            
+            const summary = await buildMatchSummary(matchRow, connState.userId);
+            const user = state.users.get(connState.userId);
+            if (user) {
+              for (const player of summary.players) {
+                if (player.id !== connState.userId) {
+                  sendToUser(player.id, { type: "match_updated", match: summary });
+                }
+              }
+            }
+          }
+        }
+      }
       state.connections.delete(socket);
     });
   });
 
-  server.listen(PORT, async () => {
+  server.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
-    
-    const staleLobbies = Array.from(state.lobbies.entries()).filter(([, lobby]) => lobby.status === "in_match");
-    for (const [lobbyId] of staleLobbies) {
-      const timer = state.botTimers.get(lobbyId);
-      if (timer) {
-        clearTimeout(timer);
-        state.botTimers.delete(lobbyId);
-      }
-      state.matches.delete(lobbyId);
-      state.lobbies.delete(lobbyId);
-      await deleteLobby(lobbyId);
-    }
-    if (staleLobbies.length > 0) {
-      console.log(`Startup cleanup: removed ${staleLobbies.length} stale in-progress lobbies`);
-    }
   });
 
   const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
-  const FINISHED_MATCH_TTL_MS = 60 * 60 * 1000;
+  const FINISHED_MATCH_TTL_MS = 24 * 60 * 60 * 1000;
 
-  const getConnectedPlayerIds = (): Set<string> => {
-    const connected = new Set<string>();
-    for (const connState of state.connections.values()) {
-      if (connState.playerId) connected.add(connState.playerId);
-    }
-    return connected;
-  };
-
-  const cleanupOrphanedLobbies = async () => {
+  const cleanupOldMatches = async () => {
     const now = Date.now();
     let cleanedCount = 0;
-    const connectedPlayers = getConnectedPlayerIds();
 
-    for (const [lobbyId, lobby] of state.lobbies.entries()) {
-      const match = state.matches.get(lobbyId);
-      let shouldDelete = false;
-
-      if (match?.status === "finished" && match.finishedAt) {
+    for (const [matchId, match] of state.matches.entries()) {
+      if (match.status === "finished" && match.finishedAt) {
         const age = now - match.finishedAt;
         if (age > FINISHED_MATCH_TTL_MS) {
-          shouldDelete = true;
+          const timer = state.botTimers.get(matchId);
+          if (timer) {
+            clearTimeout(timer);
+            state.botTimers.delete(matchId);
+          }
+          state.matches.delete(matchId);
+          cleanedCount++;
         }
-      }
-
-      if (lobby.status === "in_match") {
-        const humanPlayers = lobby.players.filter(p => !p.isBot);
-        const hasConnectedPlayer = humanPlayers.some(p => connectedPlayers.has(p.id));
-        if (!hasConnectedPlayer) {
-          shouldDelete = true;
-        }
-      }
-
-      if (shouldDelete) {
-        const timer = state.botTimers.get(lobbyId);
-        if (timer) {
-          clearTimeout(timer);
-          state.botTimers.delete(lobbyId);
-        }
-        state.matches.delete(lobbyId);
-        state.lobbies.delete(lobbyId);
-        await deleteLobby(lobbyId);
-        cleanedCount++;
       }
     }
 
     if (cleanedCount > 0) {
-      console.log(`Cleanup: removed ${cleanedCount} orphaned/finished lobbies`);
-      broadcast(wss, { type: "lobbies", lobbies: Array.from(state.lobbies.values()).map(summarizeLobby) });
+      console.log(`Cleanup: removed ${cleanedCount} finished matches from memory`);
     }
   };
 
   setInterval(() => {
-    cleanupOrphanedLobbies().catch(err => console.error("Cleanup error:", err));
+    cleanupOldMatches().catch(err => console.error("Cleanup error:", err));
   }, CLEANUP_INTERVAL_MS);
 };
 

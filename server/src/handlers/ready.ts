@@ -7,15 +7,14 @@ import type {
   EquipmentSlot,
 } from "../../../shared/types";
 import { advanceTurn } from "../../../shared/rules";
-import type { Lobby } from "../types";
 import { state } from "../state";
-import { upsertMatch } from "../db";
-import { sendMessage, sendToLobby, getCombatantByPlayerId, getCharacterById } from "../helpers";
+import { updateMatchState } from "../db";
+import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../helpers";
 import { scheduleBotTurn } from "../bot";
 
 export const handleReadyAction = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
@@ -125,8 +124,8 @@ export const handleReadyAction = async (
     log: [...match.log, logMsg],
   });
   
-  state.matches.set(lobby.id, updated);
-  await upsertMatch(lobby.id, updated);
-  sendToLobby(lobby, { type: "match_state", state: updated });
-  scheduleBotTurn(lobby, updated);
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  sendToMatch(matchId, { type: "match_state", state: updated });
+  scheduleBotTurn(matchId, updated);
 };

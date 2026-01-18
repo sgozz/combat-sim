@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { WebSocket, WebSocketServer } from "ws";
 import type {
   ClientToServerMessage,
@@ -6,6 +5,7 @@ import type {
   MatchState,
   Player,
   HexCoord,
+  User,
 } from "../../shared/types";
 import { 
   advanceTurn, 
@@ -16,38 +16,40 @@ import {
   calculateEncumbrance,
   canChangePostureFree,
 } from "../../shared/rules";
-import type { Lobby, PlayerRow } from "./types";
 import { state } from "./state";
 import { 
-  loadCharacterById, 
-  upsertCharacter, 
-  upsertPlayerProfile, 
-  upsertMatch, 
-  persistLobbyState,
-  deleteLobby,
+  loadCharacterById,
+  upsertCharacter,
   findUserByUsername,
   findUserById,
   createUser,
-  updateUserLastLogin,
   findSessionByToken,
   createSession,
   updateSessionLastSeen,
+  createMatch,
+  findMatchByCode,
+  findMatchById,
+  addMatchMember,
+  getMatchMembers,
+  getUserMatches,
+  buildMatchSummary,
+  updateMatchState,
+  updateMatchMemberCharacter,
+  removeMatchMember,
+  getMatchMemberCount,
 } from "./db";
 import { 
-  sendMessage, 
-  sendToLobby, 
-  requirePlayer, 
-  summarizeLobby,
+  sendMessage,
+  sendToMatch,
+  requireUser,
   calculateHexDistance, 
   getCombatantByPlayerId, 
   getCharacterById,
   calculateFacing,
   findFreeAdjacentHex,
-  findLobbyByIdOrPrefix,
 } from "./helpers";
-import { broadcastLobbies, leaveLobby } from "./lobby";
 import { createMatchState } from "./match";
-import { scheduleBotTurn } from "./bot";
+import { addBotToMatch, scheduleBotTurn } from "./bot";
 import {
   handleMoveStep,
   handleRotate,
@@ -74,24 +76,15 @@ export const handleMessage = async (
       
       if (!user) {
         user = await createUser(message.username);
-      } else {
-        await updateUserLastLogin(user.id);
       }
       
+      state.users.set(user.id, user);
       const session = await createSession(user.id);
       
-      const player: Player = {
-        id: user.id,
-        name: user.username,
-        isBot: false,
-        characterId: "",
-      };
+      state.connections.set(socket, { sessionToken: session.token, userId: user.id });
+      state.addUserSocket(user.id, socket);
       
-      state.players.set(user.id, player);
-      state.connections.set(socket, { sessionToken: session.token, userId: user.id, playerId: user.id });
-      await upsertPlayerProfile(player, null);
-      
-      sendMessage(socket, { type: "auth_ok", player, sessionToken: session.token });
+      sendMessage(socket, { type: "auth_ok", user, sessionToken: session.token });
       return;
     }
     
@@ -108,247 +101,202 @@ export const handleMessage = async (
         return;
       }
       
-      await updateUserLastLogin(user.id);
       await updateSessionLastSeen(session.token);
       
-      const stored = await state.db.get<PlayerRow>(
-        "SELECT id, name, character_id, lobby_id, is_bot FROM players WHERE id = ?",
-        user.id
+      state.users.set(user.id, user);
+      state.connections.set(socket, { sessionToken: session.token, userId: user.id });
+      state.addUserSocket(user.id, socket);
+      
+      sendMessage(socket, { type: "auth_ok", user, sessionToken: session.token });
+      
+      const userMatches = await getUserMatches(user.id);
+      const summaries = await Promise.all(
+        userMatches.map(row => buildMatchSummary(row, user.id))
       );
+      sendMessage(socket, { type: "my_matches", matches: summaries });
       
-      const player: Player = {
-        id: user.id,
-        name: user.username,
-        isBot: false,
-        characterId: stored?.character_id ?? "",
-      };
+      return;
+    }
+    
+    case "list_my_matches": {
+      const user = requireUser(socket);
+      if (!user) return;
       
-      if (stored?.character_id) {
-        const storedCharacter = await loadCharacterById(stored.character_id);
-        if (storedCharacter) {
-          player.characterId = storedCharacter.id;
-          state.playerCharacters.set(player.id, storedCharacter);
-        }
+      const userMatches = await getUserMatches(user.id);
+      const summaries = await Promise.all(
+        userMatches.map(row => buildMatchSummary(row, user.id))
+      );
+      sendMessage(socket, { type: "my_matches", matches: summaries });
+      return;
+    }
+    
+    case "create_match": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const { id, code } = await createMatch(message.name, message.maxPlayers, user.id);
+      await addMatchMember(id, user.id, null);
+      
+      const matchRow = await findMatchById(id);
+      if (!matchRow) {
+        sendMessage(socket, { type: "error", message: "Failed to create match." });
+        return;
       }
       
-      state.players.set(user.id, player);
-      state.connections.set(socket, { sessionToken: session.token, userId: user.id, playerId: user.id });
-      await upsertPlayerProfile(player, session.lobbyId);
+      const summary = await buildMatchSummary(matchRow, user.id);
+      sendMessage(socket, { type: "match_created", match: summary });
+      sendMessage(socket, { type: "match_joined", matchId: id });
+      return;
+    }
+    
+    case "join_match": {
+      const user = requireUser(socket);
+      if (!user) return;
       
-      sendMessage(socket, { type: "auth_ok", player, sessionToken: session.token });
-
-      if (session.lobbyId) {
-        const lobby = state.lobbies.get(session.lobbyId);
-        if (lobby) {
-          if (!lobby.players.find((existing) => existing.id === player.id)) {
-            lobby.players.push(player);
+      const matchRow = await findMatchByCode(message.code);
+      if (!matchRow) {
+        sendMessage(socket, { type: "error", message: "Match not found. Check the code and try again." });
+        return;
+      }
+      
+      if (matchRow.status !== "waiting") {
+        sendMessage(socket, { type: "error", message: "This match has already started." });
+        return;
+      }
+      
+      const memberCount = await getMatchMemberCount(matchRow.id);
+      if (memberCount >= matchRow.max_players) {
+        sendMessage(socket, { type: "error", message: "Match is full." });
+        return;
+      }
+      
+      await addMatchMember(matchRow.id, user.id, null);
+      
+      const members = await getMatchMembers(matchRow.id);
+      for (const member of members) {
+        if (member.user_id !== user.id) {
+          const memberUser = await findUserById(member.user_id);
+          if (memberUser) {
+            const player: Player = { id: user.id, name: user.username, isBot: false, characterId: "" };
+            sendMessage(socket, { type: "player_joined", matchId: matchRow.id, player });
           }
-          state.connections.set(socket, { sessionToken: session.token, userId: user.id, playerId: player.id, lobbyId: lobby.id });
-          await persistLobbyState(lobby);
-          sendToLobby(lobby, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
-          
-          const match = state.matches.get(lobby.id);
-          if (match) {
-            if (match.status === "paused" && match.pausedForPlayerId === player.id) {
-              const resumedMatch: MatchState = {
-                ...match,
-                status: "active",
-                pausedForPlayerId: undefined,
-                log: [...match.log, `${player.name} reconnected. Match resumed.`],
-              };
-              state.matches.set(lobby.id, resumedMatch);
-              await upsertMatch(lobby.id, resumedMatch);
-              sendToLobby(lobby, { type: "match_resumed", playerId: player.id, playerName: player.name });
-              sendToLobby(lobby, { type: "match_state", state: resumedMatch });
-              scheduleBotTurn(lobby, resumedMatch);
-            } else {
-              sendToLobby(lobby, { type: "player_reconnected", playerId: player.id, playerName: player.name });
-              sendMessage(socket, { type: "match_state", state: match });
-            }
-          }
         }
       }
-      return;
-    }
-    case "list_lobbies": {
-      sendMessage(socket, { type: "lobbies", lobbies: Array.from(state.lobbies.values()).map(summarizeLobby) });
-      return;
-    }
-    case "create_lobby": {
-      const player = requirePlayer(socket);
-      if (!player) return;
-      const connState = state.connections.get(socket);
-      const lobbyId = randomUUID();
-      const lobby: Lobby = {
-        id: lobbyId,
-        name: message.name,
-        maxPlayers: message.maxPlayers,
-        players: [player],
-        status: "open",
-      };
-      state.lobbies.set(lobbyId, lobby);
-      state.connections.set(socket, { ...connState, playerId: player.id, lobbyId });
-      if (connState?.sessionToken) {
-        await updateSessionLastSeen(connState.sessionToken, lobbyId);
+      
+      sendMessage(socket, { type: "match_joined", matchId: matchRow.id });
+      
+      const existingMatch = state.matches.get(matchRow.id);
+      if (existingMatch) {
+        sendMessage(socket, { type: "match_state", state: existingMatch });
       }
-      await persistLobbyState(lobby);
-      broadcastLobbies(wss);
-      sendToLobby(lobby, { type: "lobby_joined", lobbyId, players: lobby.players });
+      
       return;
     }
-    case "join_lobby": {
-      const player = requirePlayer(socket);
-      if (!player) return;
-      const connState = state.connections.get(socket);
-      const lobby = findLobbyByIdOrPrefix(message.lobbyId);
-      if (!lobby) {
-        sendMessage(socket, { type: "error", message: "Lobby not available." });
+    
+    case "leave_match": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const matchRow = await findMatchById(message.matchId);
+      if (!matchRow) {
+        sendMessage(socket, { type: "error", message: "Match not found." });
         return;
       }
-      if (lobby.status === "open") {
-        if (lobby.players.some(p => p.id === player.id)) {
-          state.connections.set(socket, { ...connState, playerId: player.id, lobbyId: lobby.id });
-          sendMessage(socket, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
-          return;
-        }
-        if (lobby.players.length >= lobby.maxPlayers) {
-          sendMessage(socket, { type: "error", message: "Lobby is full." });
-          return;
-        }
-        lobby.players.push(player);
-        state.connections.set(socket, { ...connState, playerId: player.id, lobbyId: lobby.id });
-        if (connState?.sessionToken) {
-          await updateSessionLastSeen(connState.sessionToken, lobby.id);
-        }
-        await persistLobbyState(lobby);
-        broadcastLobbies(wss);
-        sendToLobby(lobby, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
-        return;
-      }
-      state.connections.set(socket, { ...connState, playerId: player.id, lobbyId: lobby.id });
-      if (connState?.sessionToken) {
-        await updateSessionLastSeen(connState.sessionToken, lobby.id);
-      }
-      await upsertPlayerProfile(player, lobby.id);
-      sendMessage(socket, { type: "lobby_joined", lobbyId: lobby.id, players: lobby.players });
-      const match = state.matches.get(lobby.id);
-      if (match) {
-        if (match.status === "paused" && match.pausedForPlayerId === player.id) {
-          const resumedMatch: MatchState = {
-            ...match,
-            status: "active",
-            pausedForPlayerId: undefined,
-            log: [...match.log, `${player.name} reconnected. Match resumed.`],
-          };
-          state.matches.set(lobby.id, resumedMatch);
-          await upsertMatch(lobby.id, resumedMatch);
-          sendToLobby(lobby, { type: "match_resumed", playerId: player.id, playerName: player.name });
-          sendToLobby(lobby, { type: "match_state", state: resumedMatch });
-          scheduleBotTurn(lobby, resumedMatch);
-        } else {
-          sendMessage(socket, { type: "match_state", state: match });
-        }
-      }
+      
+      await removeMatchMember(message.matchId, user.id);
+      sendMessage(socket, { type: "match_left", matchId: message.matchId });
+      
+      await sendToMatch(message.matchId, { 
+        type: "player_left", 
+        matchId: message.matchId, 
+        playerId: user.id, 
+        playerName: user.username 
+      });
+      
       return;
     }
-    case "leave_lobby": {
-      await leaveLobby(socket, wss, true);
-      return;
-    }
-    case "delete_lobby": {
-      const player = requirePlayer(socket);
-      if (!player) return;
-      const lobbyToDelete = state.lobbies.get(message.lobbyId);
-      if (!lobbyToDelete) {
-        sendMessage(socket, { type: "error", message: "Lobby not found." });
-        return;
-      }
-      for (const lobbyPlayer of lobbyToDelete.players) {
-        await upsertPlayerProfile(lobbyPlayer, null);
-      }
-      state.lobbies.delete(message.lobbyId);
-      state.matches.delete(message.lobbyId);
-      await deleteLobby(message.lobbyId);
-      const connState = state.connections.get(socket);
-      if (connState?.lobbyId === message.lobbyId) {
-        state.connections.set(socket, { playerId: connState.playerId });
-      }
-      broadcastLobbies(wss);
-      return;
-    }
+    
     case "select_character": {
-      const player = requirePlayer(socket);
-      if (!player) return;
-      state.playerCharacters.set(player.id, message.character);
-      player.characterId = message.character.id;
-      state.players.set(player.id, player);
-      await upsertCharacter(message.character);
-      const connState = state.connections.get(socket);
-      await upsertPlayerProfile(player, connState?.lobbyId ?? null);
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      await upsertCharacter(message.character, user.id);
+      state.characters.set(message.character.id, message.character);
+      await updateMatchMemberCharacter(message.matchId, user.id, message.character.id);
+      
       return;
     }
-    case "start_match": {
-      const player = requirePlayer(socket);
-      if (!player) return;
-      const connState = state.connections.get(socket);
-      const lobby = connState?.lobbyId ? state.lobbies.get(connState.lobbyId) : undefined;
-      if (!lobby) {
-        sendMessage(socket, { type: "error", message: "Lobby not found." });
+    
+    case "start_combat": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const matchRow = await findMatchById(message.matchId);
+      if (!matchRow) {
+        sendMessage(socket, { type: "error", message: "Match not found." });
         return;
       }
       
-      const { addBotToLobby } = await import("./bot");
+      if (matchRow.status !== "waiting") {
+        sendMessage(socket, { type: "error", message: "Match already started." });
+        return;
+      }
+      
+      const members = await getMatchMembers(message.matchId);
       const requestedBots = message.botCount ?? 0;
-      const maxBots = lobby.maxPlayers - lobby.players.length;
+      const maxBots = matchRow.max_players - members.length;
       const botsToAdd = Math.min(Math.max(0, requestedBots), maxBots);
       
       for (let i = 0; i < botsToAdd; i++) {
-        await addBotToLobby(lobby);
+        await addBotToMatch(message.matchId);
       }
       
-      if (lobby.players.length < 2) {
+      const finalMembers = await getMatchMembers(message.matchId);
+      if (finalMembers.length < 2) {
         sendMessage(socket, { type: "error", message: "Need at least 2 players to start." });
         return;
       }
       
-      lobby.status = "in_match";
-      const matchState = createMatchState(lobby);
-      state.matches.set(lobby.id, matchState);
-      await persistLobbyState(lobby);
-      await upsertMatch(lobby.id, matchState);
-      broadcastLobbies(wss);
-      sendToLobby(lobby, { type: "match_state", state: matchState });
-      scheduleBotTurn(lobby, matchState);
+      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players);
+      state.matches.set(message.matchId, matchState);
+      await updateMatchState(message.matchId, matchState);
+      
+      await sendToMatch(message.matchId, { type: "match_state", state: matchState });
+      scheduleBotTurn(message.matchId, matchState);
       return;
     }
+    
     case "action": {
-      const player = requirePlayer(socket);
-      if (!player) return;
-      const connState = state.connections.get(socket);
-      const lobby = connState?.lobbyId ? state.lobbies.get(connState.lobbyId) : undefined;
-      if (!lobby) {
-        sendMessage(socket, { type: "error", message: "Lobby not found." });
-        return;
-      }
-      const match = state.matches.get(lobby.id);
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const match = state.matches.get(message.matchId);
       if (!match) {
         sendMessage(socket, { type: "error", message: "Match not found." });
         return;
       }
+      
       if (match.status === "finished") {
         sendMessage(socket, { type: "error", message: "Match is over." });
         return;
       }
       
-      const payload = message.payload as CombatActionPayload | undefined;
+      const payload = message.payload;
       if (!payload || payload.type !== message.action) {
         sendMessage(socket, { type: "error", message: "Invalid action payload." });
         return;
       }
       
-      await handleCombatAction(socket, lobby, match, player, payload);
+      const player = match.players.find(p => p.id === user.id);
+      if (!player) {
+        sendMessage(socket, { type: "error", message: "You are not in this match." });
+        return;
+      }
+      
+      await handleCombatAction(socket, message.matchId, match, player, payload);
       return;
     }
+    
     default:
       return;
   }
@@ -356,7 +304,7 @@ export const handleMessage = async (
 
 const handleCombatAction = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   payload: CombatActionPayload
@@ -394,17 +342,17 @@ const handleCombatAction = async (
         combatants: updatedCombatants,
         log: [...match.log, `${actorChar?.name} lets ${exitingChar?.name} exit close combat.`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
     } else if (payload.response === 'follow') {
       const updated: MatchState = {
         ...match,
         log: [...match.log, `${actorChar?.name} follows ${exitingChar?.name}, maintaining close combat.`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
     } else if (payload.response === 'attack') {
       const updatedCombatants = match.combatants.map(c => {
         if (c.playerId === player.id) {
@@ -421,9 +369,9 @@ const handleCombatAction = async (
         combatants: updatedCombatants,
         log: [...match.log, `${actorChar?.name} makes a free attack as ${exitingChar?.name} exits close combat!`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
     }
     return;
   }
@@ -437,14 +385,14 @@ const handleCombatAction = async (
       winnerId: opponent?.id,
       log: [...match.log, `${player.name} surrenders! ${opponent?.name ?? 'Opponent'} wins!`],
     };
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
     return;
   }
 
   if (payload.type === "defend" && match.pendingDefense?.defenderId === player.id) {
-    await resolveDefenseChoice(lobby, match, payload);
+    await resolveDefenseChoice(matchId, match, payload);
     return;
   }
 
@@ -452,6 +400,7 @@ const handleCombatAction = async (
     sendMessage(socket, { type: "error", message: "Not your turn." });
     return;
   }
+  
   const actorCombatant = getCombatantByPlayerId(match, player.id);
   if (!actorCombatant) {
     sendMessage(socket, { type: "error", message: "Combatant not found." });
@@ -547,9 +496,9 @@ const handleCombatAction = async (
       turnMovement,
       reachableHexes,
     };
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
     return;
   }
 
@@ -559,27 +508,27 @@ const handleCombatAction = async (
   }
 
   if (payload.type === "move_step") {
-    await handleMoveStep(socket, lobby, match, player, actorCombatant, payload);
+    await handleMoveStep(socket, matchId, match, player, actorCombatant, payload);
     return;
   }
 
   if (payload.type === "rotate") {
-    await handleRotate(socket, lobby, match, player, actorCombatant, payload);
+    await handleRotate(socket, matchId, match, player, actorCombatant, payload);
     return;
   }
 
   if (payload.type === "undo_movement") {
-    await handleUndoMovement(socket, lobby, match, player, actorCombatant);
+    await handleUndoMovement(socket, matchId, match, player, actorCombatant);
     return;
   }
 
   if (payload.type === "confirm_movement") {
-    await handleConfirmMovement(socket, lobby, match, player, actorCombatant);
+    await handleConfirmMovement(socket, matchId, match, player, actorCombatant);
     return;
   }
 
   if (payload.type === "skip_movement") {
-    await handleSkipMovement(socket, lobby, match, player, actorCombatant);
+    await handleSkipMovement(socket, matchId, match, player, actorCombatant);
     return;
   }
 
@@ -601,9 +550,9 @@ const handleCombatAction = async (
         log: [...match.log, `${player.name} turns ${dirName}.`]
     };
     
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
     return;
   }
 
@@ -626,10 +575,10 @@ const handleCombatAction = async (
       combatants: updatedCombatants,
       log: [...match.log, `${player.name} aims at ${targetPlayer?.name ?? 'target'}.`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
     return;
   }
 
@@ -660,10 +609,10 @@ const handleCombatAction = async (
       combatants: updatedCombatants,
       log: [...match.log, `${player.name} evaluates ${targetPlayer?.name ?? 'target'}${bonusStr}.`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
     return;
   }
 
@@ -693,10 +642,10 @@ const handleCombatAction = async (
       combatants: updatedCombatants,
       log: [...match.log, `${player.name} waits to ${actionDesc} when ${conditionDesc[trigger.condition] ?? trigger.condition}.`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
     return;
   }
 
@@ -705,10 +654,10 @@ const handleCombatAction = async (
       ...match,
       log: [...match.log, `${player.name} ends their turn.`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
     return;
   }
 
@@ -737,19 +686,19 @@ const handleCombatAction = async (
         combatants: updatedCombatants,
         log: [...match.log, `${player.name} changes to ${newPosture} posture (free action).`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
     } else {
       const updated = advanceTurn({
         ...match,
         combatants: updatedCombatants,
         log: [...match.log, `${player.name} changes to ${newPosture} posture.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
     return;
   }
@@ -822,9 +771,9 @@ const handleCombatAction = async (
         combatants: updatedCombatants,
         log: [...match.log, `${player.name} ${moveVerb} to (${payload.position.x}, ${payload.position.z}).`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      await sendToMatch(matchId, { type: "match_state", state: updated });
       return;
     }
     
@@ -833,16 +782,16 @@ const handleCombatAction = async (
       combatants: updatedCombatants,
       log: [...match.log, `${player.name} moves to (${payload.position.x}, ${payload.position.z}).`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
     return;
   }
 
   if (payload.type === "defend") {
     if (match.pendingDefense && match.pendingDefense.defenderId === player.id) {
-      await resolveDefenseChoice(lobby, match, payload);
+      await resolveDefenseChoice(matchId, match, payload);
       return;
     }
     
@@ -855,40 +804,40 @@ const handleCombatAction = async (
       ),
       log: [...match.log, `${player.name} takes a defensive posture.`],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    await sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
     return;
   }
 
   if (payload.type === "attack") {
-    await handleAttackAction(socket, lobby, match, player, actorCombatant, payload);
+    await handleAttackAction(socket, matchId, match, player, actorCombatant, payload);
     return;
   }
 
   if (payload.type === "ready_action") {
-    await handleReadyAction(socket, lobby, match, player, actorCombatant, payload);
+    await handleReadyAction(socket, matchId, match, player, actorCombatant, payload);
     return;
   }
 
   if (payload.type === "enter_close_combat") {
-    await handleEnterCloseCombat(socket, lobby, match, player, actorCombatant, payload);
+    await handleEnterCloseCombat(socket, matchId, match, player, actorCombatant, payload);
     return;
   }
 
   if (payload.type === "exit_close_combat") {
-    await handleExitCloseCombat(socket, lobby, match, player, actorCombatant);
+    await handleExitCloseCombat(socket, matchId, match, player, actorCombatant);
     return;
   }
 
   if (payload.type === "grapple") {
-    await handleGrapple(socket, lobby, match, player, actorCombatant, payload);
+    await handleGrapple(socket, matchId, match, player, actorCombatant, payload);
     return;
   }
 
   if (payload.type === "break_free") {
-    await handleBreakFree(socket, lobby, match, player, actorCombatant);
+    await handleBreakFree(socket, matchId, match, player, actorCombatant);
     return;
   }
 

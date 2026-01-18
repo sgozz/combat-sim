@@ -16,15 +16,14 @@ import {
   executeRotation,
 } from "../../../shared/rules";
 import type { MovementState } from "../../../shared/rules";
-import type { Lobby } from "../types";
 import { state } from "../state";
-import { upsertMatch } from "../db";
-import { sendMessage, sendToLobby, getCombatantByPlayerId, getCharacterById } from "../helpers";
+import { updateMatchState } from "../db";
+import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../helpers";
 import { scheduleBotTurn } from "../bot";
 
 export const handleMoveStep = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
@@ -88,14 +87,14 @@ export const handleMoveStep = async (
     reachableHexes: newReachableHexes,
   };
   
-  state.matches.set(lobby.id, updated);
-  await upsertMatch(lobby.id, updated);
-  sendToLobby(lobby, { type: "match_state", state: updated });
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  sendToMatch(matchId, { type: "match_state", state: updated });
 };
 
 export const handleRotate = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
@@ -155,14 +154,14 @@ export const handleRotate = async (
     reachableHexes: newReachableHexes,
   };
   
-  state.matches.set(lobby.id, updated);
-  await upsertMatch(lobby.id, updated);
-  sendToLobby(lobby, { type: "match_state", state: updated });
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  sendToMatch(matchId, { type: "match_state", state: updated });
 };
 
 export const handleUndoMovement = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
@@ -211,14 +210,14 @@ export const handleUndoMovement = async (
     log: [...match.log, `${player.name} resets movement.`],
   };
   
-  state.matches.set(lobby.id, updated);
-  await upsertMatch(lobby.id, updated);
-  sendToLobby(lobby, { type: "match_state", state: updated });
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  sendToMatch(matchId, { type: "match_state", state: updated });
 };
 
 export const handleConfirmMovement = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
@@ -255,9 +254,9 @@ export const handleConfirmMovement = async (
       reachableHexes: [],
       log: [...match.log, logMsg],
     };
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
   } else {
     const updated = advanceTurn({
       ...match,
@@ -266,16 +265,16 @@ export const handleConfirmMovement = async (
       reachableHexes: undefined,
       log: [...match.log, logMsg],
     });
-    state.matches.set(lobby.id, updated);
-    await upsertMatch(lobby.id, updated);
-    sendToLobby(lobby, { type: "match_state", state: updated });
-    scheduleBotTurn(lobby, updated);
+    state.matches.set(matchId, updated);
+    await updateMatchState(matchId, updated);
+    sendToMatch(matchId, { type: "match_state", state: updated });
+    scheduleBotTurn(matchId, updated);
   }
 };
 
 export const handleSkipMovement = async (
   socket: WebSocket,
-  lobby: Lobby,
+  matchId: string,
   match: MatchState,
   player: Player,
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
@@ -304,9 +303,9 @@ export const handleSkipMovement = async (
         reachableHexes: [],
         log: [...match.log, `${player.name} skips movement.`],
       };
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
     } else {
       const updated = advanceTurn({
         ...match,
@@ -315,10 +314,10 @@ export const handleSkipMovement = async (
         reachableHexes: undefined,
         log: [...match.log, `${player.name} skips movement.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
   } else {
     const maneuver = actorCombatant.maneuver;
@@ -331,10 +330,10 @@ export const handleSkipMovement = async (
         ...match,
         log: [...match.log, `${player.name} skips movement.`],
       });
-      state.matches.set(lobby.id, updated);
-      await upsertMatch(lobby.id, updated);
-      sendToLobby(lobby, { type: "match_state", state: updated });
-      scheduleBotTurn(lobby, updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
     }
   }
 };
