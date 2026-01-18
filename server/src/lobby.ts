@@ -1,6 +1,4 @@
 import { WebSocket } from "ws";
-import type { Player } from "../../shared/types";
-import type { Lobby } from "./types";
 import { state } from "./state";
 import { deleteLobby, persistLobbyState, upsertPlayerProfile } from "./db";
 import { sendMessage, summarizeLobby, broadcast } from "./helpers";

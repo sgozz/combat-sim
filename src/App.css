@@ -1638,7 +1638,7 @@
   cursor: default;
 }
 
-.hp-bar-compact.flash {
+.hp-bar-compact.flash-on-mount {
   animation: damageFlashCompact 0.4s ease-out;
 }
 

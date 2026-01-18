@@ -14,7 +14,7 @@ export const TurnBanner = ({ activeTurnPlayerId, players, currentPlayerId }: Tur
   
   useEffect(() => {
     if (!activeTurnPlayerId) {
-      setVisible(false)
+      queueMicrotask(() => setVisible(false))
       return
     }
     
@@ -29,12 +29,13 @@ export const TurnBanner = ({ activeTurnPlayerId, players, currentPlayerId }: Tur
     
     if (!activePlayer) return
 
-    setContent({
-        text: isMyTurn ? "YOUR TURN" : `${activePlayer.name}'s Turn`,
-        type: isMyTurn ? 'my-turn' : 'opponent-turn'
+    queueMicrotask(() => {
+      setContent({
+          text: isMyTurn ? "YOUR TURN" : `${activePlayer.name}'s Turn`,
+          type: isMyTurn ? 'my-turn' : 'opponent-turn'
+      })
+      setVisible(true)
     })
-    
-    setVisible(true)
     
     const timer = setTimeout(() => setVisible(false), 2500)
     return () => clearTimeout(timer)

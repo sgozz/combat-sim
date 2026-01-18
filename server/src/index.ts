@@ -1,5 +1,5 @@
 import http from "node:http";
-import { WebSocket, WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
 import { initializeDatabase, loadPersistedData, deleteLobby } from "./db";

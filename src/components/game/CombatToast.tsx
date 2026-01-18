@@ -92,7 +92,7 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
       type: isMyTurn ? 'my-turn' : 'opponent-turn'
     }
     
-    setToasts(prev => [turnToast, ...prev])
+    queueMicrotask(() => setToasts(prev => [turnToast, ...prev]))
   }, [activeTurnPlayerId, currentPlayerId, players])
 
   useEffect(() => {

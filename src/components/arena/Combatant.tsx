@@ -66,15 +66,21 @@ function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; 
       }
     })
 
-    const mixer = new THREE.AnimationMixer(clone)
+    return clone
+  }, [scene, isPlayer, emissive])
+
+  useEffect(() => {
+    const mixer = new THREE.AnimationMixer(clonedScene)
     mixerRef.current = mixer
     actionsRef.current = {}
     animations.forEach(clip => {
       actionsRef.current[clip.name] = mixer.clipAction(clip)
     })
 
-    return clone
-  }, [scene, animations, isPlayer, emissive])
+    return () => {
+      mixer.stopAllAction()
+    }
+  }, [clonedScene, animations])
 
   useFrame((_, delta) => {
     mixerRef.current?.update(delta)
@@ -182,14 +188,12 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
   const maxHP = character?.derived.hitPoints ?? 10
   const hpPercent = Math.max(0, Math.min(100, (combatant.currentHP / maxHP) * 100))
 
-  const [isFlashing, setIsFlashing] = useState(false)
   const prevHpRef = useRef(combatant.currentHP)
+  const [flashKey, setFlashKey] = useState(0)
 
   useEffect(() => {
     if (combatant.currentHP < prevHpRef.current) {
-      setIsFlashing(true)
-      const timer = setTimeout(() => setIsFlashing(false), 400)
-      return () => clearTimeout(timer)
+      queueMicrotask(() => setFlashKey(k => k + 1))
     }
     prevHpRef.current = combatant.currentHP
   }, [combatant.currentHP])
@@ -226,7 +230,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, onClick 
       )}
 
       <Html position={[0, 2.5, 0]} center style={{ zIndex: 10, pointerEvents: 'none' }}>
-        <div className={`hp-bar-compact ${isFlashing ? 'flash' : ''}`}>
+        <div key={flashKey} className="hp-bar-compact flash-on-mount">
           <div className="hp-bar-name-compact">{character?.name ?? '?'}</div>
           <div className="hp-bar-track-compact">
             <div

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect } from 'react'
 
 type ColorMode = 'default' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'high-contrast'
@@ -31,6 +32,7 @@ const loadSettings = (): Settings => {
       return JSON.parse(stored) as Settings
     }
   } catch {
+    // localStorage may be unavailable (e.g., private browsing)
   }
   return { colorMode: 'default', fontSize: 'medium' }
 }

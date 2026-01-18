@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { WebSocket, WebSocketServer } from "ws";
 import type {
-  CharacterSheet,
   ClientToServerMessage,
   CombatActionPayload,
   MatchState,
@@ -13,14 +12,11 @@ import type {
   DamageType,
   EquippedItem,
   EquipmentSlot,
-  ReadyAction,
-  WaitTrigger,
   CombatantState,
 } from "../../shared/types";
 import type { Reach } from "../../shared/types";
 import { 
   advanceTurn, 
-  resolveAttack, 
   resolveAttackRoll,
   resolveDefenseRoll,
   calculateDefenseValue,
@@ -44,7 +40,6 @@ import {
   hexToGrid,
   executeMove,
   executeRotation,
-  getRotationCost,
   getHitLocationPenalty,
   getHitLocationWoundingMultiplier,
   calculateEncumbrance,
@@ -54,7 +49,7 @@ import {
   applyCriticalHitDamage,
   getCriticalMissDescription,
 } from "../../shared/rules";
-import type { HexPosition, MovementState } from "../../shared/rules";
+import type { MovementState } from "../../shared/rules";
 import type { Lobby, PlayerRow } from "./types";
 import { state } from "./state";
 import { 
@@ -70,7 +65,6 @@ import {
   sendToLobby, 
   requirePlayer, 
   summarizeLobby,
-  broadcast,
   calculateHexDistance, 
   getCombatantByPlayerId, 
   getCharacterById,
@@ -87,64 +81,6 @@ const formatRoll = (r: { target: number, roll: number, success: boolean, margin:
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
 const DEFENSE_TIMEOUT_MS = 15000;
-
-type WaitTriggerResult = {
-  triggered: boolean;
-  waiter: CombatantState | null;
-  waiterId: string | null;
-};
-
-const checkWaitTriggers = (
-  match: MatchState,
-  actingPlayerId: string,
-  triggerType: 'move' | 'attack',
-  newPosition?: { x: number; y: number; z: number },
-  attackTargetId?: string
-): WaitTriggerResult => {
-  const actingCombatant = match.combatants.find(c => c.playerId === actingPlayerId);
-  if (!actingCombatant) return { triggered: false, waiter: null, waiterId: null };
-  
-  for (const combatant of match.combatants) {
-    if (combatant.playerId === actingPlayerId) continue;
-    if (!combatant.waitTrigger) continue;
-    
-    const trigger = combatant.waitTrigger;
-    const waiterPos = combatant.position;
-    const actorPos = newPosition ?? actingCombatant.position;
-    const distance = calculateHexDistance(waiterPos, actorPos);
-    
-    let shouldTrigger = false;
-    
-    switch (trigger.condition) {
-      case 'enemy_moves_adjacent':
-        if (triggerType === 'move' && distance <= 1) {
-          shouldTrigger = true;
-        }
-        break;
-      case 'enemy_enters_reach':
-        if (triggerType === 'move' && distance <= 2) {
-          shouldTrigger = true;
-        }
-        break;
-      case 'enemy_attacks_me':
-        if (triggerType === 'attack' && attackTargetId === combatant.playerId) {
-          shouldTrigger = true;
-        }
-        break;
-      case 'enemy_attacks_ally':
-        if (triggerType === 'attack' && attackTargetId !== combatant.playerId) {
-          shouldTrigger = true;
-        }
-        break;
-    }
-    
-    if (shouldTrigger) {
-      return { triggered: true, waiter: combatant, waiterId: combatant.playerId };
-    }
-  }
-  
-  return { triggered: false, waiter: null, waiterId: null };
-};
 
 type ApplyDamageResult = {
   updatedCombatants: CombatantState[];
@@ -1099,7 +1035,7 @@ const handleAttackAction = async (
 
   if (!attackRoll.hit) {
     let critMissEffect = '';
-    let updatedAttackerEffects = [...actorCombatant.statusEffects];
+    const updatedAttackerEffects = [...actorCombatant.statusEffects];
     
     if (attackRoll.criticalMiss) {
       const critMiss = rollCriticalMissTable();
@@ -1424,17 +1360,12 @@ const handleAttackAction = async (
   await upsertMatch(lobby.id, updated);
   sendToLobby(lobby, { type: "match_state", state: updated });
   
-  scheduleDefenseTimeout(lobby.id, pendingDefense, actorCombatant, attackerManeuver);
+  scheduleDefenseTimeout(lobby.id);
 };
 
 const defenseTimeouts = new Map<string, NodeJS.Timeout>();
 
-const scheduleDefenseTimeout = (
-  lobbyId: string,
-  pendingDefense: PendingDefense,
-  attackerCombatant: ReturnType<typeof getCombatantByPlayerId>,
-  attackerManeuver: string | null
-) => {
+const scheduleDefenseTimeout = (lobbyId: string) => {
   const existingTimer = defenseTimeouts.get(lobbyId);
   if (existingTimer) {
     clearTimeout(existingTimer);

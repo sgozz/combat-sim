@@ -9,7 +9,7 @@ export const useCountdown = (
 
   useEffect(() => {
     if (!startTimestamp) {
-      setTimeRemaining(initialSeconds);
+      queueMicrotask(() => setTimeRemaining(initialSeconds));
       return;
     }
 

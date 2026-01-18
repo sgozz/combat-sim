@@ -92,14 +92,16 @@ export const ActionBar = ({
   
   useEffect(() => {
     if (!pendingDefense) {
-      setDefenseTimeLeft(0)
-      setRetreat(false)
-      setDodgeAndDrop(false)
+      queueMicrotask(() => {
+        setDefenseTimeLeft(0)
+        setRetreat(false)
+        setDodgeAndDrop(false)
+      })
       return
     }
     const expiresAt = pendingDefense.timestamp + DEFENSE_TIMEOUT_MS
     const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000))
-    setDefenseTimeLeft(remaining)
+    queueMicrotask(() => setDefenseTimeLeft(remaining))
     const timer = setInterval(() => {
       setDefenseTimeLeft(prev => Math.max(0, prev - 1))
     }, 1000)
