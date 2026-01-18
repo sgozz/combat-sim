@@ -2,8 +2,8 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
-import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, buildMatchSummary } from "./db";
-import { sendMessage, sendToUser } from "./helpers";
+import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, buildMatchSummary, removeMatchMember } from "./db";
+import { sendMessage, sendToUser, sendToMatch } from "./helpers";
 import { handleMessage } from "./handlers";
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -44,21 +44,26 @@ const startServer = async () => {
       const connState = state.connections.get(socket);
       if (connState?.userId) {
         state.removeUserSocket(connState.userId, socket);
+        const user = state.users.get(connState.userId);
         
         const userMatches = await getUserMatches(connState.userId);
         for (const matchRow of userMatches) {
-          if (matchRow.status === 'active' || matchRow.status === 'waiting') {
+          if (matchRow.status === 'waiting') {
+            await removeMatchMember(matchRow.id, connState.userId);
+            await sendToMatch(matchRow.id, { 
+              type: "player_left", 
+              matchId: matchRow.id, 
+              playerId: connState.userId, 
+              playerName: user?.username ?? 'Unknown' 
+            });
+          } else if (matchRow.status === 'active' || matchRow.status === 'paused') {
             await updateMatchMemberConnection(matchRow.id, connState.userId, false);
-            
-            const summary = await buildMatchSummary(matchRow, connState.userId);
-            const user = state.users.get(connState.userId);
-            if (user) {
-              for (const player of summary.players) {
-                if (player.id !== connState.userId) {
-                  sendToUser(player.id, { type: "match_updated", match: summary });
-                }
-              }
-            }
+            await sendToMatch(matchRow.id, { 
+              type: "player_disconnected", 
+              matchId: matchRow.id, 
+              playerId: connState.userId, 
+              playerName: user?.username ?? 'Unknown' 
+            });
           }
         }
       }

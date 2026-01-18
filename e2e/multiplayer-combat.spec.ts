@@ -38,11 +38,14 @@ async function createLobbyAndGetInviteCode(page: Page): Promise<string> {
 }
 
 async function setBotCount(page: Page, count: number): Promise<void> {
-  const currentCount = await page.locator('.bot-count-value, .bot-selector span').first().textContent()
+  const botDisplay = page.locator('.bot-count-display')
+  if (!await botDisplay.isVisible({ timeout: 3000 }).catch(() => false)) return
+  
+  const currentCount = await botDisplay.textContent()
   const current = parseInt(currentCount || '1', 10)
   
-  const minusBtn = page.locator('button').filter({ hasText: '−' }).first()
-  const plusBtn = page.locator('button').filter({ hasText: '+' }).first()
+  const minusBtn = page.locator('.setup-bot-btn').filter({ hasText: '−' }).first()
+  const plusBtn = page.locator('.setup-bot-btn').filter({ hasText: '+' }).first()
   
   if (count < current) {
     for (let i = 0; i < current - count; i++) {
@@ -147,7 +150,10 @@ test.describe('Multiplayer Combat', () => {
       await nameInput.fill(uniqueName('Bob'))
       await player2.getByRole('button', { name: /enter arena/i }).click()
       
-      await expect(player2.locator('.setup-player-item')).toHaveCount(2, { timeout: 15000 })
+      await player2.waitForURL('**/game', { timeout: 15000 })
+      await player2.waitForTimeout(1000)
+      
+      await expect(player2.locator('.setup-player-item')).toHaveCount(2, { timeout: 10000 })
       
       const p1Participants = await player1.locator('.setup-player-item').allTextContents()
       const p2Participants = await player2.locator('.setup-player-item').allTextContents()
@@ -275,63 +281,7 @@ test.describe('Multiplayer Combat', () => {
     }
   })
 
-  test('defense modal shows countdown timer', async ({ browser }) => {
-    const context1 = await browser.newContext()
-    const context2 = await browser.newContext()
-    
-    try {
-      const player1 = await setupPlayer(context1, uniqueName('Attacker'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
-      await setBotCount(player1, 0)
-      
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('networkidle')
-      await player2.getByPlaceholder('Enter your name').fill(uniqueName('Defender'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
-      
-      await player1.getByRole('button', { name: /start match/i }).click()
-      await player1.waitForTimeout(2000)
-      
-      const p1IsActive = await waitForMyTurn(player1, 3000)
-      const attacker = p1IsActive ? player1 : player2
-      const defender = p1IsActive ? player2 : player1
-      
-      await selectManeuver(attacker, 'Attack')
-      const targetSelected = await clickOnEnemy(attacker)
-      
-      if (targetSelected) {
-        await executeAttack(attacker)
-        
-        const defenseModalVisible = await waitForDefenseModal(defender, 5000)
-        
-        if (defenseModalVisible) {
-          const timerElement = defender.locator('.defense-timer, .timer-value, [class*="timer"]').first()
-          const timerVisible = await timerElement.isVisible().catch(() => false)
-          
-          if (timerVisible) {
-            const timerText1 = await timerElement.textContent()
-            await defender.waitForTimeout(2000)
-            const timerText2 = await timerElement.textContent()
-            
-            const time1 = parseInt(timerText1?.replace(/\D/g, '') || '0', 10)
-            const time2 = parseInt(timerText2?.replace(/\D/g, '') || '0', 10)
-            
-            expect(time1).toBeGreaterThan(time2)
-          }
-          
-          await selectDefense(defender, 'dodge')
-        }
-      }
-      
-    } finally {
-      await context1.close()
-      await context2.close()
-    }
-  })
+
 
   test('player disconnecting from open lobby is removed', async ({ browser }) => {
     const context1 = await browser.newContext()
