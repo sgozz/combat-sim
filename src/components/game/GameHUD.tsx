@@ -109,6 +109,86 @@ export const GameStatusPanel = ({
           </div>
         )}
 
+        {character && (
+          <div className="card">
+            <h3>Attributes</h3>
+            <div className="attributes-grid">
+              <div className="attr-item">
+                <span className="attr-label">ST</span>
+                <span className="attr-value">{character.attributes.strength}</span>
+              </div>
+              <div className="attr-item">
+                <span className="attr-label">DX</span>
+                <span className="attr-value">{character.attributes.dexterity}</span>
+              </div>
+              <div className="attr-item">
+                <span className="attr-label">IQ</span>
+                <span className="attr-value">{character.attributes.intelligence}</span>
+              </div>
+              <div className="attr-item">
+                <span className="attr-label">HT</span>
+                <span className="attr-value">{character.attributes.health}</span>
+              </div>
+            </div>
+            <div className="derived-stats">
+              <span>Speed: {character.derived.basicSpeed}</span>
+              <span>Move: {character.derived.basicMove}</span>
+              <span>Dodge: {character.derived.dodge}</span>
+            </div>
+          </div>
+        )}
+
+        {character && activeCombatant && (
+          <div className="card">
+            <h3>Equipment</h3>
+            <div className="equipment-list">
+              {activeCombatant.equipped.length > 0 ? (
+                activeCombatant.equipped.map(item => {
+                  const eq = character.equipment.find(e => e.id === item.equipmentId)
+                  if (!eq) return null
+                  const skill = eq.skillUsed ? character.skills.find(s => s.name === eq.skillUsed) : null
+                  return (
+                    <div key={item.equipmentId} className="equipment-item">
+                      <div className="equipment-header">
+                        <span className="equipment-icon">
+                          {eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}
+                        </span>
+                        <span className="equipment-name">{eq.name}</span>
+                        <span className={`equipment-ready ${item.ready ? 'ready' : 'unready'}`}>
+                          {item.ready ? 'Ready' : 'Unready'}
+                        </span>
+                      </div>
+                      <div className="equipment-details">
+                        <span className="equipment-slot">{item.slot.replace('_', ' ')}</span>
+                        {eq.damage && <span>Dmg: {eq.damage} {eq.damageType}</span>}
+                        {eq.reach && <span>Reach: {eq.reach}</span>}
+                        {eq.block && <span>Block: {eq.block}</span>}
+                        {skill && <span>Skill: {skill.level}</span>}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="equipment-empty">No items equipped</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {character && character.skills.length > 0 && (
+          <div className="card">
+            <h3>Skills</h3>
+            <div className="skills-list">
+              {character.skills.map(skill => (
+                <div key={skill.id} className="skill-item">
+                  <span className="skill-name">{skill.name}</span>
+                  <span className="skill-level">{skill.level}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="card">
           <h3>Participants</h3>
           <ul className="participants-list">

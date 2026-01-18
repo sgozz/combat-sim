@@ -3580,3 +3580,147 @@
     padding: 0.3rem 0.75rem;
   }
 }
+
+/* Attributes Grid */
+.attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.attr-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  background: #1a1a1a;
+  border-radius: 4px;
+  border: 1px solid #333;
+}
+
+.attr-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.attr-value {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.derived-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.derived-stats span {
+  white-space: nowrap;
+}
+
+/* Equipment List */
+.equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.equipment-item {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.equipment-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.equipment-icon {
+  font-size: 1rem;
+}
+
+.equipment-name {
+  flex: 1;
+  font-weight: 500;
+  color: #fff;
+}
+
+.equipment-ready {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.equipment-ready.ready {
+  background: #2a4a2a;
+  color: #4f4;
+}
+
+.equipment-ready.unready {
+  background: #4a2a2a;
+  color: #f44;
+}
+
+.equipment-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.equipment-slot {
+  text-transform: capitalize;
+  color: #666;
+}
+
+.equipment-empty {
+  color: #555;
+  font-style: italic;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+/* Skills List */
+.skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.skill-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  background: #1a1a1a;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+.skill-name {
+  color: #ccc;
+}
+
+.skill-level {
+  font-weight: bold;
+  color: #fff;
+  background: #333;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  min-width: 1.5rem;
+  text-align: center;
+}

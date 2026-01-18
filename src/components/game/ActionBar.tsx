@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger } from '../../../shared/types'
-import { getDefenseOptions, calculateDefenseValue, getPostureModifiers } from '../../../shared/rules'
+import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../shared/rules'
 import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
 
 type ActionBarProps = {
@@ -63,6 +63,7 @@ export const ActionBar = ({
   const [showWaitPicker, setShowWaitPicker] = useState(false)
   const [showAOAVariants, setShowAOAVariants] = useState(false)
   const [showAODVariants, setShowAODVariants] = useState(false)
+  const [showCharacterSheet, setShowCharacterSheet] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
   const [botCount, setBotCount] = useState(1)
@@ -73,6 +74,8 @@ export const ActionBar = ({
   const playerCharacter = playerCombatant && matchState
     ? matchState.characters.find(c => c.id === playerCombatant.characterId)
     : null
+  
+  const encumbrance = playerCharacter ? calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment) : null
     
   const maxHP = playerCharacter?.derived.hitPoints ?? 0
   const currentHP = playerCombatant?.currentHP ?? 0
@@ -383,6 +386,98 @@ export const ActionBar = ({
           />
         </div>
       )}
+      {showCharacterSheet && playerCharacter && playerCombatant && (
+        <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '70vh', overflowY: 'auto', alignItems: 'stretch', padding: '1rem' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '1.1rem' }}>{playerCharacter.name}</h3>
+          
+          <div className="card" style={{ marginBottom: '0.5rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: '#aaa', fontSize: '0.9rem' }}>Attributes</h4>
+            <div className="attributes-grid">
+              <div className="attr-item">
+                <span className="attr-label">ST</span>
+                <span className="attr-value">{playerCharacter.attributes.strength}</span>
+              </div>
+              <div className="attr-item">
+                <span className="attr-label">DX</span>
+                <span className="attr-value">{playerCharacter.attributes.dexterity}</span>
+              </div>
+              <div className="attr-item">
+                <span className="attr-label">IQ</span>
+                <span className="attr-value">{playerCharacter.attributes.intelligence}</span>
+              </div>
+              <div className="attr-item">
+                <span className="attr-label">HT</span>
+                <span className="attr-value">{playerCharacter.attributes.health}</span>
+              </div>
+            </div>
+            <div className="derived-stats">
+              <span>Speed: {playerCharacter.derived.basicSpeed}</span>
+              <span>Move: {playerCharacter.derived.basicMove}</span>
+              <span>Dodge: {playerCharacter.derived.dodge}</span>
+            </div>
+            {encumbrance && encumbrance.level > 0 && (
+              <div className="encumbrance-indicator" style={{ marginTop: '0.5rem' }}>
+                <span>Enc: <span style={{ color: encumbrance.level === 1 ? '#ff4' : encumbrance.level === 2 ? '#f80' : '#f44', fontWeight: 'bold' }}>{encumbrance.name}</span></span>
+                <span className="encumbrance-effects" style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: '#888' }}>{encumbrance.movePenalty} Move, {encumbrance.dodgePenalty} Dodge</span>
+              </div>
+            )}
+          </div>
+
+          <div className="card" style={{ marginBottom: '0.5rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', color: '#aaa', fontSize: '0.9rem' }}>Equipment</h4>
+            <div className="equipment-list">
+              {playerCombatant.equipped.length > 0 ? (
+                playerCombatant.equipped.map(item => {
+                  const eq = playerCharacter.equipment.find(e => e.id === item.equipmentId)
+                  if (!eq) return null
+                  const skill = eq.skillUsed ? playerCharacter.skills.find(s => s.name === eq.skillUsed) : null
+                  return (
+                    <div key={item.equipmentId} className="equipment-item">
+                      <div className="equipment-header">
+                        <span className="equipment-icon">
+                          {eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}
+                        </span>
+                        <span className="equipment-name">{eq.name}</span>
+                        <span className={`equipment-ready ${item.ready ? 'ready' : 'unready'}`}>
+                          {item.ready ? 'Ready' : 'Unready'}
+                        </span>
+                      </div>
+                      <div className="equipment-details">
+                        <span className="equipment-slot">{item.slot.replace('_', ' ')}</span>
+                        {eq.damage && <span>Dmg: {eq.damage} {eq.damageType}</span>}
+                        {eq.reach && <span>Reach: {eq.reach}</span>}
+                        {eq.block && <span>Block: {eq.block}</span>}
+                        {skill && <span>Skill: {skill.level}</span>}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="equipment-empty">No items equipped</div>
+              )}
+            </div>
+          </div>
+
+          {playerCharacter.skills.length > 0 && (
+            <div className="card">
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#aaa', fontSize: '0.9rem' }}>Skills</h4>
+              <div className="skills-list">
+                {playerCharacter.skills.map(skill => (
+                  <div key={skill.id} className="skill-item">
+                    <span className="skill-name">{skill.name}</span>
+                    <span className="skill-level">{skill.level}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button className="action-bar-maneuver-btn close" onClick={() => setShowCharacterSheet(false)} style={{ marginTop: '1rem' }}>
+            <span className="action-bar-icon">✕</span>
+            <span className="action-bar-label">Close</span>
+          </button>
+        </div>
+      )}
       {showManeuvers && (
         <div className="action-bar-maneuvers">
           {availableManeuvers.map(m => (
@@ -417,6 +512,14 @@ export const ActionBar = ({
         </div>
       )}
       <div className="action-bar">
+        <button 
+          className={`action-bar-btn ${showCharacterSheet ? 'active' : ''}`}
+          onClick={() => setShowCharacterSheet(!showCharacterSheet)}
+        >
+          <span className="action-bar-icon">👤</span>
+          <span className="action-bar-label">Char</span>
+        </button>
+
         {playerCombatant && (
           <div className="action-bar-status">
             <div className="action-bar-hp-bar">
