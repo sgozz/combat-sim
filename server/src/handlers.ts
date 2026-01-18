@@ -150,7 +150,16 @@ export const handleMessage = async (
       const user = requireUser(socket);
       if (!user) return;
       
-      const match = state.matches.get(message.matchId);
+      let match = state.matches.get(message.matchId);
+      
+      if (!match) {
+        const matchRow = await findMatchById(message.matchId);
+        if (matchRow && matchRow.state_json && matchRow.status === 'active') {
+          match = JSON.parse(matchRow.state_json) as MatchState;
+          state.matches.set(message.matchId, match);
+        }
+      }
+      
       if (!match) {
         sendMessage(socket, { type: "error", message: "Match not found or not active." });
         return;

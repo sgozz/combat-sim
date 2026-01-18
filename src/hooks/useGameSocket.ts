@@ -26,6 +26,7 @@ export const useGameSocket = () => {
   const connectingRef = useRef(false)
   const reconnectAttemptRef = useRef(false)
   const pendingRejoinRef = useRef<string | null>(null)
+  const reconnectDelayRef = useRef(1000)
 
   const handleMessage = useCallback((message: ServerToClientMessage) => {
     switch (message.type) {
@@ -34,6 +35,7 @@ export const useGameSocket = () => {
         localStorage.setItem(SESSION_TOKEN_KEY, message.sessionToken)
         setConnectionState('connected')
         connectingRef.current = false
+        reconnectDelayRef.current = 1000
         
         const savedScreen = localStorage.getItem(SCREEN_STATE_KEY) as ScreenState | null
         const savedMatchId = localStorage.getItem(ACTIVE_MATCH_KEY)
@@ -155,6 +157,12 @@ export const useGameSocket = () => {
           setConnectionState('disconnected')
           connectingRef.current = false
         }
+        if (message.message.includes('Match not found') || message.message.includes('not a member')) {
+          localStorage.removeItem(ACTIVE_MATCH_KEY)
+          setActiveMatchId(null)
+          setMatchState(null)
+          setScreen('matches')
+        }
         break
       case 'public_matches':
         setPublicMatches(message.matches)
@@ -192,13 +200,19 @@ export const useGameSocket = () => {
     }
 
     ws.onclose = () => {
-      setLogs(prev => [...prev, 'Disconnected from server. Attempting reconnect...'])
       setSocket(null)
       setConnectionState('disconnected')
       connectingRef.current = false
-      setTimeout(() => {
-        tryReconnect()
-      }, 1000)
+      reconnectAttemptRef.current = false
+      
+      const token = localStorage.getItem(SESSION_TOKEN_KEY)
+      if (token) {
+        setLogs(prev => [...prev, `Disconnected. Reconnecting in ${reconnectDelayRef.current / 1000}s...`])
+        setTimeout(() => {
+          tryReconnect()
+          reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000)
+        }, reconnectDelayRef.current)
+      }
     }
 
     setSocket(ws)
