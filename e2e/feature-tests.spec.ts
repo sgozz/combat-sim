@@ -17,12 +17,17 @@ function uniqueName(base: string): string {
 async function setupPlayer(context: BrowserContext, nickname: string): Promise<Page> {
   const page = await context.newPage()
   
-  await page.addInitScript(() => {
-    localStorage.removeItem('gurps.nickname')
-  })
-  
   await page.goto('/')
   await page.waitForLoadState('networkidle')
+  
+  await page.evaluate(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+  
+  await page.reload()
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(500)
   
   const nameInput = page.getByPlaceholder('Enter your name')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
@@ -270,11 +275,6 @@ test.describe('Phase 1: Core Combat Features', () => {
       const player = await setupPlayer(context, uniqueName('ShockIndicator'))
       await startQuickMatch(player)
       
-      // Check if shock indicator component exists (may not be visible if no shock)
-      const shockIndicator = player.locator('.shock-indicator')
-      
-      // Component structure exists - visibility depends on game state
-      // We're verifying the UI component is properly rendered
       const panelContent = player.locator('.panel-content')
       await expect(panelContent.first()).toBeVisible()
       
@@ -348,10 +348,6 @@ test.describe('Phase 2: Tactical Depth', () => {
       
       await selectManeuver(player, 'Evaluate')
       
-      // Should show evaluate button when target selected
-      const evalBtn = player.locator('.action-btn').filter({ hasText: /evaluate/i }).first()
-      
-      // Instructions should mention studying target
       const instructions = player.locator('.maneuver-instructions')
       await expect(instructions).toContainText(/study|target|\+1/i)
       

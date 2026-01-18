@@ -552,34 +552,40 @@
 
   .action-bar {
     display: flex;
+    flex-wrap: wrap;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     background: rgba(20, 20, 20, 0.98);
     border-top: 1px solid #444;
-    padding: 0.5rem;
+    padding: 0.4rem;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-    gap: 0.5rem;
+    gap: 0.35rem;
     justify-content: center;
+    align-content: flex-end;
     z-index: 200;
     backdrop-filter: blur(8px);
+    max-height: 50vh;
+    overflow-y: auto;
   }
 
   .action-bar-btn {
-    flex: 1;
-    max-width: 90px;
+    flex: 0 0 auto;
+    min-width: 52px;
+    max-width: 70px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.6rem 0.4rem;
+    gap: 0.15rem;
+    padding: 0.5rem 0.3rem;
     background: #333;
     border: 1px solid #555;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #fff;
     cursor: pointer;
     transition: all 0.15s;
+    min-height: 44px;
   }
 
   .action-bar-btn:active {
@@ -715,7 +721,7 @@
   }
 
   .turn-stepper.compact {
-    top: 8px;
+    top: 55px;
     padding: 0.35rem 0.7rem;
     font-size: 0.7rem;
   }
@@ -1451,16 +1457,17 @@
 
 .key-hint {
   font-size: 0.65rem;
-  color: #666;
-  background: #1a1a1a;
-  padding: 2px 5px;
-  border-radius: 3px;
+  color: #bbb;
+  background: #333;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-family: monospace;
+  font-weight: 500;
 }
 
 .maneuver-btn:hover .key-hint {
-  background: #2a2a2a;
-  color: #888;
+  background: #444;
+  color: #fff;
 }
 
 .action-buttons {
@@ -2239,11 +2246,11 @@
 
 .top-buttons {
   position: absolute;
-  top: 0.5rem;
+  top: 4rem;
   left: 0.5rem;
   display: flex;
   gap: 0.5rem;
-  z-index: 1001;
+  z-index: 50;
 }
 
 .back-btn {
@@ -2282,6 +2289,30 @@
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   border-color: #666;
+}
+
+@media (max-width: 768px) {
+  .top-buttons {
+    top: 3rem;
+    left: 0.25rem;
+    gap: 0.25rem;
+  }
+
+  .back-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .settings-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+  }
 }
 
 /* Combat Toast Notifications */
@@ -2749,4 +2780,116 @@
   background: rgba(100, 108, 255, 0.2);
   border-color: #646cff;
   color: #fff;
+}
+
+/* ========== Posture Controls ========== */
+
+.posture-controls {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+}
+
+.posture-current {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.posture-current .posture-icon {
+  font-size: 1.1rem;
+}
+
+.posture-current .posture-label {
+  font-weight: 500;
+}
+
+.posture-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.posture-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.posture-stat .stat-name {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.posture-stat .stat-value {
+  font-size: 0.9rem;
+  color: #4f4;
+  font-weight: 600;
+}
+
+.posture-penalty {
+  font-size: 0.75rem;
+  color: #f84;
+  margin-bottom: 0.5rem;
+}
+
+.posture-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.posture-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.posture-btn:hover:not(:disabled) {
+  background: #333;
+  border-color: #555;
+}
+
+.posture-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.posture-btn .btn-icon {
+  font-size: 0.9rem;
+}
+
+.posture-btn .btn-label {
+  font-size: 0.75rem;
+}
+
+.posture-btn.free {
+  border-color: #4a4;
+}
+
+.posture-btn.free:hover:not(:disabled) {
+  border-color: #6c6;
+  background: rgba(68, 170, 68, 0.15);
+}
+
+.free-badge {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  background: #4a4;
+  color: #fff;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
 }
