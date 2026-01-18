@@ -23,7 +23,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   await page.getByRole('button', { name: /enter arena/i }).click()
   await page.waitForTimeout(2000)
   
-  const quickMatchVisible = await page.getByText(/quick match/i).isVisible().catch(() => false)
+  const quickMatchVisible = await page.getByRole('button', { name: /new match/i }).isVisible().catch(() => false)
   
   if (!quickMatchVisible) {
     await page.reload()
@@ -31,7 +31,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
     await page.waitForTimeout(1000)
   }
   
-  await expect(page.getByText(/create lobby|quick match/i)).toBeVisible({ timeout: 10000 })
+  await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
   
   return page
 }
@@ -41,8 +41,8 @@ test.describe('Single Player Combat Flow', () => {
     const context = await browser.newContext()
     const player = await setupPlayer(context, uniqueName('MoveAttacker'))
     
-    await player.getByRole('button', { name: /quick match/i }).click()
-    await expect(player.getByText(/leave lobby/i)).toBeVisible({ timeout: 10000 })
+    await player.getByRole('button', { name: /new match/i }).click()
+    await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
     
     await player.getByRole('button', { name: /start match/i }).click()
     await player.waitForTimeout(2000)
@@ -94,18 +94,18 @@ test.describe('Single Player Combat Flow', () => {
     const context = await browser.newContext()
     const player = await setupPlayer(context, uniqueName('Warrior'))
     
-    const quickMatchBtn = player.getByRole('button', { name: /quick match/i })
+    const quickMatchBtn = player.getByRole('button', { name: /new match/i })
     await expect(quickMatchBtn).toBeVisible({ timeout: 5000 })
     await quickMatchBtn.click()
     
-    await expect(player.getByText(/leave lobby/i)).toBeVisible({ timeout: 10000 })
+    await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
     
     const editBtn = player.getByRole('button', { name: /edit character/i })
     await expect(editBtn).toBeVisible({ timeout: 5000 })
     await editBtn.click()
     
     await player.waitForTimeout(500)
-    const nameInput = player.locator('input[type="text"]').first()
+    const nameInput = player.locator('.char-input')
     await expect(nameInput).toBeVisible({ timeout: 3000 })
     await nameInput.clear()
     await nameInput.fill('Champion')
@@ -145,8 +145,8 @@ test.describe('Single Player Combat Flow', () => {
     const context = await browser.newContext()
     const player = await setupPlayer(context, uniqueName('KeyUser'))
     
-    await player.getByRole('button', { name: /quick match/i }).click()
-    await expect(player.getByText(/leave lobby/i)).toBeVisible({ timeout: 10000 })
+    await player.getByRole('button', { name: /new match/i }).click()
+    await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
     
     await player.getByRole('button', { name: /start match/i }).click()
     await player.waitForTimeout(2000)
@@ -186,7 +186,7 @@ test.describe('UI Elements', () => {
     await expect(enterBtn).toBeVisible()
     await enterBtn.click()
     
-    await expect(page.getByText(/quick match/i)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
   })
 
   test('tutorial can be opened from welcome screen', async ({ page }) => {
@@ -216,7 +216,7 @@ test.describe('UI Elements', () => {
     await page.getByPlaceholder('Enter your name').fill('LobbyTester')
     await page.getByRole('button', { name: /enter arena/i }).click()
     
-    await expect(page.getByRole('button', { name: /quick match/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('button', { name: /refresh/i })).toBeVisible({ timeout: 5000 })
   })
 })
@@ -237,7 +237,7 @@ test.describe('Mobile UI', () => {
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
-    const quickMatchBtn = page.getByRole('button', { name: /quick match/i })
+    const quickMatchBtn = page.getByRole('button', { name: /new match/i })
     await expect(quickMatchBtn).toBeVisible({ timeout: 10000 })
     await quickMatchBtn.click()
     await page.waitForTimeout(1000)
@@ -276,7 +276,7 @@ test.describe('Mobile UI', () => {
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
-    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.getByRole('button', { name: /new match/i }).click()
     await page.waitForTimeout(1000)
     
     await page.getByRole('button', { name: /start match/i }).click()
@@ -285,9 +285,12 @@ test.describe('Mobile UI', () => {
     const actionBar = page.locator('.action-bar')
     await expect(actionBar).toBeVisible({ timeout: 10000 })
     
+    // Wait for animations to settle
+    await page.waitForTimeout(1000)
+    
     const maneuverBtn = actionBar.locator('.action-bar-btn').filter({ hasText: /maneuver|change/i }).first()
     if (await maneuverBtn.isVisible().catch(() => false)) {
-      await maneuverBtn.click()
+      await maneuverBtn.click({ force: true })
       await page.waitForTimeout(500)
       
       const maneuverPopup = page.locator('.action-bar-maneuvers')
@@ -295,7 +298,7 @@ test.describe('Mobile UI', () => {
       
       const attackOption = maneuverPopup.locator('.action-bar-maneuver-btn').filter({ hasText: /attack/i }).first()
       if (await attackOption.isVisible().catch(() => false)) {
-        await attackOption.click()
+        await attackOption.click({ force: true })
         await page.waitForTimeout(500)
         
         await expect(maneuverPopup).not.toBeVisible()
@@ -320,7 +323,7 @@ test.describe('Mobile UI', () => {
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
-    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.getByRole('button', { name: /new match/i }).click()
     await page.waitForTimeout(1000)
     
     await page.getByRole('button', { name: /start match/i }).click()
@@ -328,16 +331,17 @@ test.describe('Mobile UI', () => {
     
     const actionBar = page.locator('.action-bar')
     await expect(actionBar).toBeVisible({ timeout: 10000 })
+    await page.waitForTimeout(1000)
     
     const maneuverBtn = actionBar.locator('.action-bar-btn').filter({ hasText: /maneuver|change/i }).first()
     if (await maneuverBtn.isVisible().catch(() => false)) {
-      await maneuverBtn.click()
+      await maneuverBtn.click({ force: true })
       await page.waitForTimeout(500)
       
       const maneuverPopup = page.locator('.action-bar-maneuvers')
       const attackOption = maneuverPopup.locator('.action-bar-maneuver-btn').filter({ hasText: /attack/i }).first()
       if (await attackOption.isVisible().catch(() => false)) {
-        await attackOption.click()
+        await attackOption.click({ force: true })
         await page.waitForTimeout(500)
       }
     }
@@ -379,7 +383,7 @@ test.describe('Mobile UI', () => {
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
-    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.getByRole('button', { name: /new match/i }).click()
     await page.waitForTimeout(1000)
     
     await page.getByRole('button', { name: /start match/i }).click()
@@ -410,7 +414,7 @@ test.describe('Mobile UI', () => {
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
-    await page.getByRole('button', { name: /quick match/i }).click()
+    await page.getByRole('button', { name: /new match/i }).click()
     await page.waitForTimeout(1000)
     
     await page.getByRole('button', { name: /start match/i }).click()

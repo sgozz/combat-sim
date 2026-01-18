@@ -36,7 +36,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   await page.getByRole('button', { name: /enter arena/i }).click()
   await page.waitForTimeout(2000)
   
-  const quickMatchVisible = await page.getByText(/quick match/i).isVisible().catch(() => false)
+  const quickMatchVisible = await page.getByRole('button', { name: /new match/i }).isVisible().catch(() => false)
   
   if (!quickMatchVisible) {
     await page.reload()
@@ -44,17 +44,17 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
     await page.waitForTimeout(1000)
   }
   
-  await expect(page.getByText(/create lobby|quick match/i)).toBeVisible({ timeout: 10000 })
+  await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
   
   return page
 }
 
 /**
- * Helper: Start a quick match and wait for combat UI
+ * Helper: Start a new match and wait for combat UI
  */
 async function startQuickMatch(player: Page): Promise<void> {
-  await player.getByRole('button', { name: /quick match/i }).click()
-  await expect(player.getByText(/leave lobby/i)).toBeVisible({ timeout: 10000 })
+  await player.getByRole('button', { name: /new match/i }).click()
+  await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
   
   await player.getByRole('button', { name: /start match/i }).click()
   await player.waitForTimeout(2000)
@@ -713,8 +713,7 @@ test.describe('UI Elements Verification', () => {
     const player = await setupPlayer(context, uniqueName('CombatLog'))
     await startQuickMatch(player)
     
-    // Combat log should be in the right panel
-    const combatLog = player.locator('.combat-log')
+    const combatLog = player.locator('.combat-log-card')
     await expect(combatLog).toBeVisible({ timeout: 5000 })
     
     await context.close()

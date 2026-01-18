@@ -19,19 +19,22 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   await nameInput.fill(nickname)
   
   await page.getByRole('button', { name: /enter arena/i }).click()
-  await page.waitForURL('**/lobby', { timeout: 10000 })
+  await page.waitForURL('**/matches', { timeout: 10000 })
   
   return page
 }
 
 async function createLobbyAndGetInviteCode(page: Page): Promise<string> {
-  await page.getByRole('button', { name: /quick match/i }).click()
+  await page.getByRole('button', { name: /new match/i }).click()
   await page.waitForURL('**/game', { timeout: 10000 })
   
-  const inviteCode = await page.locator('code').first().textContent()
-  if (!inviteCode) throw new Error('Could not get invite code')
+  const inviteInput = page.locator('.setup-invite-input')
+  await expect(inviteInput).toBeVisible({ timeout: 5000 })
+  const inviteUrl = await inviteInput.inputValue()
+  const match = inviteUrl.match(/join=([A-Z0-9]+)/)
+  if (!match) throw new Error('Could not get invite code from: ' + inviteUrl)
   
-  return inviteCode
+  return match[1]
 }
 
 async function setBotCount(page: Page, count: number): Promise<void> {
@@ -55,7 +58,7 @@ async function setBotCount(page: Page, count: number): Promise<void> {
 async function waitForMyTurn(page: Page, timeout = 15000): Promise<boolean> {
   const start = Date.now()
   while (Date.now() - start < timeout) {
-    const turnText = await page.locator('.turn-stepper').textContent().catch(() => '')
+    const turnText = await page.locator('.turn-stepper').textContent().catch(() => '') ?? ''
     if (turnText.includes('Choose') || turnText.includes('YOUR TURN') || turnText.includes('STEP 1')) {
       return true
     }
@@ -144,16 +147,15 @@ test.describe('Multiplayer Combat', () => {
       await nameInput.fill(uniqueName('Bob'))
       await player2.getByRole('button', { name: /enter arena/i }).click()
       
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
+      await expect(player2.locator('.setup-player-item')).toHaveCount(2, { timeout: 15000 })
       
-      const p1Participants = await player1.locator('li').allTextContents()
-      const p2Participants = await player2.locator('li').allTextContents()
+      const p1Participants = await player1.locator('.setup-player-item').allTextContents()
+      const p2Participants = await player2.locator('.setup-player-item').allTextContents()
       
       expect(p1Participants.length).toBeGreaterThanOrEqual(2)
       expect(p2Participants.length).toBeGreaterThanOrEqual(2)
-      expect(p1Participants.some(p => p.includes('(You)'))).toBe(true)
-      expect(p2Participants.some(p => p.includes('(You)'))).toBe(true)
+      expect(p1Participants.some(p => p.includes('(you)'))).toBe(true)
+      expect(p2Participants.some(p => p.includes('(you)'))).toBe(true)
       
     } finally {
       await context1.close()
@@ -182,8 +184,8 @@ test.describe('Multiplayer Combat', () => {
       await player1.getByRole('button', { name: /start match/i }).click()
       await player1.waitForTimeout(2000)
       
-      const p1Turn = await player1.locator('.turn-stepper').textContent().catch(() => '')
-      const p2Turn = await player2.locator('.turn-stepper').textContent().catch(() => '')
+      const p1Turn = await player1.locator('.turn-stepper').textContent().catch(() => '') ?? ''
+      const p2Turn = await player2.locator('.turn-stepper').textContent().catch(() => '') ?? ''
       
       const p1IsActive = p1Turn.includes('Choose') || p1Turn.includes('STEP')
       const p2IsActive = p2Turn.includes('Choose') || p2Turn.includes('STEP')
@@ -202,8 +204,8 @@ test.describe('Multiplayer Combat', () => {
         await activePlayer.waitForTimeout(1000)
       }
       
-      const newP1Turn = await player1.locator('.turn-stepper').textContent().catch(() => '')
-      const newP2Turn = await player2.locator('.turn-stepper').textContent().catch(() => '')
+      const newP1Turn = await player1.locator('.turn-stepper').textContent().catch(() => '') ?? ''
+      const newP2Turn = await player2.locator('.turn-stepper').textContent().catch(() => '') ?? ''
       
       const newP1IsActive = newP1Turn.includes('Choose') || newP1Turn.includes('STEP')
       const newP2IsActive = newP2Turn.includes('Choose') || newP2Turn.includes('STEP')
@@ -349,13 +351,13 @@ test.describe('Multiplayer Combat', () => {
       await player2.waitForURL('**/game', { timeout: 10000 })
       await player2.waitForTimeout(1000)
       
-      const participantsBefore = await player1.locator('li').count()
+      const participantsBefore = await player1.locator('.setup-player-item').count()
       expect(participantsBefore).toBe(2)
       
       await player2.close()
       await player1.waitForTimeout(2000)
       
-      const participantsAfter = await player1.locator('li').count()
+      const participantsAfter = await player1.locator('.setup-player-item').count()
       expect(participantsAfter).toBe(1)
       
     } finally {
