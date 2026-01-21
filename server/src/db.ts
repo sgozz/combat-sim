@@ -55,6 +55,7 @@ export const initializeDatabase = async (): Promise<SqliteDatabase> => {
       state_json TEXT,
       created_by TEXT NOT NULL,
       winner_id TEXT,
+      ruleset_id TEXT NOT NULL DEFAULT 'gurps',
       created_at INTEGER DEFAULT (strftime('%s', 'now')),
       finished_at INTEGER,
       FOREIGN KEY (created_by) REFERENCES users(id),
@@ -77,6 +78,12 @@ export const initializeDatabase = async (): Promise<SqliteDatabase> => {
     CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
     CREATE INDEX IF NOT EXISTS idx_matches_code ON matches(code);
   `);
+
+  const matchColumns = await db.all<{ name: string }>("PRAGMA table_info(matches)");
+  const hasRulesetId = matchColumns.some(column => column.name === 'ruleset_id');
+  if (!hasRulesetId) {
+    await db.exec("ALTER TABLE matches ADD COLUMN ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
+  }
 
   return db;
 };
@@ -163,7 +170,7 @@ export const upsertCharacter = async (character: CharacterSheet, ownerId: string
   );
 };
 
-export const createMatch = async (name: string, maxPlayers: number, createdBy: string): Promise<{ id: string; code: string }> => {
+export const createMatch = async (name: string, maxPlayers: number, createdBy: string, rulesetId: string): Promise<{ id: string; code: string }> => {
   const id = randomUUID();
   let code = generateShortCode();
   
@@ -177,8 +184,8 @@ export const createMatch = async (name: string, maxPlayers: number, createdBy: s
   
   const now = Math.floor(Date.now() / 1000);
   await state.db.run(
-    "INSERT INTO matches (id, code, name, max_players, status, created_by, created_at) VALUES (?, ?, ?, ?, 'waiting', ?, ?)",
-    id, code, name, maxPlayers, createdBy, now
+    "INSERT INTO matches (id, code, name, max_players, status, created_by, ruleset_id, created_at) VALUES (?, ?, ?, ?, 'waiting', ?, ?, ?)",
+    id, code, name, maxPlayers, createdBy, rulesetId, now
   );
   
   return { id, code };
@@ -186,7 +193,7 @@ export const createMatch = async (name: string, maxPlayers: number, createdBy: s
 
 export const findMatchByCode = async (code: string): Promise<MatchRow | null> => {
   const row = await state.db.get<MatchRow>(
-    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, created_at, finished_at FROM matches WHERE code = ?",
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE code = ?",
     code.toUpperCase()
   );
   return row ?? null;
@@ -194,7 +201,7 @@ export const findMatchByCode = async (code: string): Promise<MatchRow | null> =>
 
 export const findMatchById = async (matchId: string): Promise<MatchRow | null> => {
   const row = await state.db.get<MatchRow>(
-    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, created_at, finished_at FROM matches WHERE id = ?",
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE id = ?",
     matchId
   );
   return row ?? null;
@@ -253,7 +260,7 @@ export const getMatchMember = async (matchId: string, userId: string): Promise<M
 
 export const getUserMatches = async (userId: string): Promise<MatchRow[]> => {
   return state.db.all<MatchRow[]>(
-    `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.created_at, m.finished_at
+    `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
      FROM matches m
      INNER JOIN match_members mm ON m.id = mm.match_id
      WHERE mm.user_id = ?
@@ -313,6 +320,7 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
     creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
+    rulesetId: matchRow.ruleset_id ?? 'gurps',
     status: matchRow.status as MatchSummary["status"],
     players,
     isMyTurn: activeTurnPlayerId === forUserId,
@@ -323,7 +331,7 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
 
 export const loadPersistedMatches = async (): Promise<void> => {
   const rows = await state.db.all<MatchRow[]>(
-    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, created_at, finished_at FROM matches WHERE status IN ('waiting', 'active', 'paused')"
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE status IN ('waiting', 'active', 'paused')"
   );
   
   for (const row of rows) {
@@ -364,7 +372,7 @@ export const loadPersistedData = async (): Promise<void> => {
 
 export const getActiveMatches = async (): Promise<MatchRow[]> => {
   return state.db.all<MatchRow[]>(
-    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, created_at, finished_at FROM matches WHERE status IN ('active', 'paused')"
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE status IN ('active', 'paused')"
   );
 };
 
@@ -390,6 +398,7 @@ export const buildPublicMatchSummary = async (matchRow: MatchRow): Promise<Match
     creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
+    rulesetId: matchRow.ruleset_id ?? 'gurps',
     status: matchRow.status as MatchSummary['status'],
     players,
     isMyTurn: false,

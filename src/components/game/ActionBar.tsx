@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger } from '../../../shared/types'
+import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger, HitLocation } from '../../../shared/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../shared/rules'
 import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
-import { MANEUVERS, CLOSE_COMBAT_MANEUVERS, getSuccessChance } from './shared/useGameActions'
+import { getSuccessChance } from './shared/useGameActions'
+import type { RulesetUIAdapter } from '../../../shared/rulesets/Ruleset'
+import { rulesets } from '../../../shared/rulesets'
+import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 
 type ActionBarProps = {
   isMyTurn: boolean
@@ -13,6 +16,7 @@ type ActionBarProps = {
   onAction: (action: string, payload?: CombatActionPayload) => void
   onDefend: (choice: DefenseChoice) => void
   onLeaveLobby: () => void
+  uiAdapter?: RulesetUIAdapter
 }
 
 export const ActionBar = ({ 
@@ -24,6 +28,7 @@ export const ActionBar = ({
   onAction,
   onDefend,
   onLeaveLobby,
+  uiAdapter,
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)
@@ -32,6 +37,9 @@ export const ActionBar = ({
   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
+  const [hitLocation, setHitLocation] = useState<HitLocation>('torso')
+  const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
+  const [rapidStrike, setRapidStrike] = useState(false)
   
   const closeAllPanels = useCallback(() => {
     setShowManeuvers(false)
@@ -56,10 +64,11 @@ export const ActionBar = ({
   const currentHP = playerCombatant?.currentHP ?? 0
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
   const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
+  const adapter = uiAdapter ?? rulesets[matchState?.rulesetId ?? 'gurps']?.ui ?? rulesets.gurps.ui
   const inCloseCombat = !!playerCombatant?.inCloseCombatWith
   const availableManeuvers = inCloseCombat 
-    ? MANEUVERS.filter(m => CLOSE_COMBAT_MANEUVERS.includes(m.type))
-    : MANEUVERS
+    ? adapter.getManeuvers().filter(m => adapter.getCloseCombatManeuvers().includes(m.type))
+    : adapter.getManeuvers()
 
   const pendingDefense = matchState?.pendingDefense
   const isDefending = pendingDefense?.defenderId === playerId
@@ -258,68 +267,84 @@ export const ActionBar = ({
           onClick={closeAllPanels}
         />
       )}
-      {showAOAVariants && (
-        <div className="action-bar-maneuvers">
-          <div className="variant-header">All-Out Attack Variant</div>
-          {([
-            { variant: 'determined' as AOAVariant, label: 'Determined', desc: '+4 to hit' },
-            { variant: 'strong' as AOAVariant, label: 'Strong', desc: '+2 damage' },
-            { variant: 'double' as AOAVariant, label: 'Double', desc: '2 attacks' },
-          ]).map(v => (
-            <button
-              key={v.variant}
-              className="action-bar-maneuver-btn"
-              onClick={() => {
-                onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant })
-                setShowAOAVariants(false)
-              }}
-            >
-              <span className="action-bar-icon">😡</span>
-              <span className="action-bar-label">{v.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {showAODVariants && (
-        <div className="action-bar-maneuvers">
-          <div className="variant-header">All-Out Defense Variant</div>
-          {([
-            { variant: 'increased_dodge' as AODVariant, label: '+2 Dodge', desc: '+2 to Dodge' },
-            { variant: 'increased_parry' as AODVariant, label: '+2 Parry', desc: '+2 to Parry' },
-            { variant: 'increased_block' as AODVariant, label: '+2 Block', desc: '+2 to Block' },
-          ]).map(v => (
-            <button
-              key={v.variant}
-              className="action-bar-maneuver-btn"
-              onClick={() => {
-                onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant })
-                setShowAODVariants(false)
-              }}
-            >
-              <span className="action-bar-icon">🛡️</span>
-              <span className="action-bar-label">{v.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-      {showWaitPicker && (
-        <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '60vh', overflowY: 'auto', alignItems: 'stretch' }}>
-          <WaitTriggerPicker
-            enemies={matchState?.combatants
-              .filter(c => c.playerId !== playerId)
-              .map(c => {
-                const char = matchState?.characters.find(ch => ch.id === c.characterId)
-                return { id: c.playerId, name: char?.name ?? 'Unknown' }
-              }) ?? []
-            }
-            onSetTrigger={(trigger: WaitTrigger) => {
-              onAction('set_wait_trigger', { type: 'set_wait_trigger', trigger })
-              setShowWaitPicker(false)
-            }}
-            onCancel={() => setShowWaitPicker(false)}
-          />
-        </div>
-      )}
+       {showAOAVariants && (
+         <div className="action-bar-maneuvers">
+           <div className="variant-header">All-Out Attack Variant</div>
+           {adapter.getAoaVariants().map(v => (
+             <button
+               key={v.variant}
+               className="action-bar-maneuver-btn"
+               onClick={() => {
+                 if (v.variant === 'feint') return
+                 onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant as AOAVariant })
+                 setShowAOAVariants(false)
+               }}
+             >
+               <span className="action-bar-icon">😡</span>
+               <span className="action-bar-label">{v.label}</span>
+             </button>
+           ))}
+         </div>
+       )}
+       {showAODVariants && (
+         <div className="action-bar-maneuvers">
+           <div className="variant-header">All-Out Defense Variant</div>
+           {adapter.getAodVariants().map(v => (
+             <button
+               key={v.variant}
+               className="action-bar-maneuver-btn"
+               onClick={() => {
+                 if (v.variant === 'double') return
+                 onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant as AODVariant })
+                 setShowAODVariants(false)
+               }}
+             >
+               <span className="action-bar-icon">🛡️</span>
+               <span className="action-bar-label">{v.label}</span>
+             </button>
+           ))}
+         </div>
+       )}
+
+       {showWaitPicker && (
+         <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '60vh', overflowY: 'auto', alignItems: 'stretch' }}>
+           <WaitTriggerPicker
+             enemies={matchState?.combatants
+               .filter(c => c.playerId !== playerId)
+               .map(c => {
+                 const char = matchState?.characters.find(ch => ch.id === c.characterId)
+                 return { id: c.playerId, name: char?.name ?? 'Unknown' }
+               }) ?? []
+             }
+             onSetTrigger={(trigger: WaitTrigger) => {
+               onAction('set_wait_trigger', { type: 'set_wait_trigger', trigger })
+               setShowWaitPicker(false)
+             }}
+             onCancel={() => setShowWaitPicker(false)}
+           />
+         </div>
+       )}
+       {isMyTurn && currentManeuver && (
+         <div className="action-bar-config-slot">
+           {getRulesetUiSlots(matchState?.rulesetId).renderActionConfiguration?.({
+             matchState,
+             player: playerId && matchState ? matchState.players.find(p => p.id === playerId) ?? null : null,
+             selectedTargetId,
+             currentManeuver,
+             isMyTurn,
+             onAction,
+             attackOptions: {
+               hitLocation,
+               setHitLocation,
+               deceptiveLevel,
+               setDeceptiveLevel,
+               rapidStrike,
+               setRapidStrike,
+             },
+           })}
+         </div>
+       )}
+
       {showCharacterSheet && playerCharacter && playerCombatant && (
         <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '70vh', overflowY: 'auto', alignItems: 'stretch', padding: '1rem' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '1.1rem' }}>{playerCharacter.name}</h3>
@@ -359,36 +384,32 @@ export const ActionBar = ({
 
           <div className="card" style={{ marginBottom: '0.5rem' }}>
             <h4 style={{ margin: '0 0 0.5rem 0', color: '#aaa', fontSize: '0.9rem' }}>Equipment</h4>
-            <div className="equipment-list">
-              {playerCombatant.equipped.length > 0 ? (
-                playerCombatant.equipped.map(item => {
-                  const eq = playerCharacter.equipment.find(e => e.id === item.equipmentId)
-                  if (!eq) return null
-                  const skill = eq.skillUsed ? playerCharacter.skills.find(s => s.name === eq.skillUsed) : null
-                  return (
-                    <div key={item.equipmentId} className="equipment-item">
-                      <div className="equipment-header">
-                        <span className="equipment-icon">
-                          {eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}
-                        </span>
-                        <span className="equipment-name">{eq.name}</span>
-                        <span className={`equipment-ready ${item.ready ? 'ready' : 'unready'}`}>
-                          {item.ready ? 'Ready' : 'Unready'}
-                        </span>
+            <div className="equipment-belt">
+              {(['right_hand', 'left_hand', 'back', 'belt', 'quiver'] as const).map(slot => {
+                const item = playerCombatant.equipped.find(e => e.slot === slot)
+                const eq = item ? playerCharacter.equipment.find(e => e.id === item.equipmentId) : null
+                
+                return (
+                  <div key={slot} className="equipment-belt-slot">
+                    <span className="equipment-slot-label">{slot.replace('_', ' ')}</span>
+                    {item && eq ? (
+                      <div className="equipment-slot-content">
+                        <div className="equipment-slot-name" style={{ fontSize: '0.8rem' }}>
+                          <span>{eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}</span>
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{eq.name}</span>
+                        </div>
+                        <div className="equipment-slot-details">
+                          <span className={`equipment-ready ${item.ready ? 'ready' : 'unready'}`} style={{ fontSize: '0.65rem' }}>
+                            {item.ready ? 'Ready' : 'Unready'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="equipment-details">
-                        <span className="equipment-slot">{item.slot.replace('_', ' ')}</span>
-                        {eq.damage && <span>Dmg: {eq.damage} {eq.damageType}</span>}
-                        {eq.reach && <span>Reach: {eq.reach}</span>}
-                        {eq.block && <span>Block: {eq.block}</span>}
-                        {skill && <span>Skill: {skill.level}</span>}
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="equipment-empty">No items equipped</div>
-              )}
+                    ) : (
+                      <span className="equipment-slot-empty">Empty</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -496,7 +517,7 @@ export const ActionBar = ({
               setShowManeuvers(!showManeuvers)
             }}
           >
-            <span className="action-bar-icon">{currentManeuver ? MANEUVERS.find(m => m.type === currentManeuver)?.icon ?? '📋' : '📋'}</span>
+            <span className="action-bar-icon">{currentManeuver ? availableManeuvers.find(m => m.type === currentManeuver)?.icon ?? '📋' : '📋'}</span>
             <span className="action-bar-label">{currentManeuver ? 'Change' : 'Maneuver'}</span>
           </button>
         )}

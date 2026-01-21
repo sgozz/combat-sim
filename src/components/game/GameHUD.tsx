@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Tooltip } from '../ui/Tooltip'
 import { CombatLog } from './CombatLog'
-import HitLocationPicker from '../ui/HitLocationPicker'
 import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
 import { ReadyPanel } from '../ui/ReadyPanel'
 import { PostureControls } from '../ui/PostureControls'
-import { MANEUVERS, AOA_VARIANTS, AOD_VARIANTS, getHitProbability } from './shared/useGameActions'
+import { getHitProbability } from './shared/useGameActions'
 import type { MatchState, Player, CombatActionPayload, ManeuverType, HitLocation, ReadyAction, EquipmentSlot, WaitTrigger } from '../../../shared/types'
 import { hexDistance } from '../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty, calculateEncumbrance } from '../../../shared/rules'
+import type { RulesetUIAdapter } from '../../../shared/rulesets/Ruleset'
+import { rulesets } from '../../../shared/rulesets'
+import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 
 type GamePanelProps = {
   matchState: MatchState | null
@@ -131,36 +133,35 @@ export const GameStatusPanel = ({
         {character && activeCombatant && (
           <div className="card">
             <h3>Equipment</h3>
-            <div className="equipment-list">
-              {activeCombatant.equipped.length > 0 ? (
-                activeCombatant.equipped.map(item => {
-                  const eq = character.equipment.find(e => e.id === item.equipmentId)
-                  if (!eq) return null
-                  const skill = eq.skillUsed ? character.skills.find(s => s.name === eq.skillUsed) : null
-                  return (
-                    <div key={item.equipmentId} className="equipment-item">
-                      <div className="equipment-header">
-                        <span className="equipment-icon">
-                          {eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}
-                        </span>
-                        <span className="equipment-name">{eq.name}</span>
-                        <span className={`equipment-ready ${item.ready ? 'ready' : 'unready'}`}>
-                          {item.ready ? 'Ready' : 'Unready'}
-                        </span>
+            <div className="equipment-slots-grid">
+              {(['right_hand', 'left_hand', 'back', 'belt', 'quiver'] as const).map(slot => {
+                const item = activeCombatant.equipped.find(e => e.slot === slot)
+                const eq = item ? character.equipment.find(e => e.id === item.equipmentId) : null
+                const skill = eq?.skillUsed ? character.skills.find(s => s.name === eq.skillUsed) : null
+                
+                return (
+                  <div key={slot} className={`equipment-slot-container ${item ? 'filled' : ''}`}>
+                    <span className="equipment-slot-label">{slot.replace('_', ' ')}</span>
+                    {item && eq ? (
+                      <div className="equipment-slot-content">
+                        <div className="equipment-slot-name">
+                          <span>{eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}</span>
+                          <span>{eq.name}</span>
+                        </div>
+                        <div className="equipment-slot-details">
+                           <span className={`equipment-ready ${item.ready ? 'ready' : 'unready'}`} style={{ marginRight: '4px' }}>
+                             {item.ready ? 'Ready' : 'Unready'}
+                           </span>
+                           {eq.damage && <span>{eq.damage}</span>}
+                           {eq.block && <span>Block: {eq.block}</span>}
+                        </div>
                       </div>
-                      <div className="equipment-details">
-                        <span className="equipment-slot">{item.slot.replace('_', ' ')}</span>
-                        {eq.damage && <span>Dmg: {eq.damage} {eq.damageType}</span>}
-                        {eq.reach && <span>Reach: {eq.reach}</span>}
-                        {eq.block && <span>Block: {eq.block}</span>}
-                        {skill && <span>Skill: {skill.level}</span>}
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="equipment-empty">No items equipped</div>
-              )}
+                    ) : (
+                      <span className="equipment-slot-empty">Empty</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -206,7 +207,9 @@ type GameActionPanelProps = {
   isMyTurn: boolean
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
+  uiAdapter?: RulesetUIAdapter
 }
+
 
 export const GameActionPanel = ({ 
   matchState, 
@@ -216,6 +219,7 @@ export const GameActionPanel = ({
   isMyTurn,
   onAction,
   onLeaveLobby,
+  uiAdapter,
 }: GameActionPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
@@ -223,6 +227,8 @@ export const GameActionPanel = ({
   const [rapidStrike, setRapidStrike] = useState(false)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
+  const adapter = uiAdapter ?? rulesets[matchState?.rulesetId ?? 'gurps']?.ui ?? rulesets.gurps.ui
+  const slots = getRulesetUiSlots(matchState?.rulesetId)
   const selectedTarget = matchState?.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
     ? matchState?.characters.find(c => c.id === selectedTarget.characterId)?.name ?? 'Unknown'
@@ -309,7 +315,7 @@ export const GameActionPanel = ({
               <span className="aoa-variant-title">All-Out Attack Variant</span>
             </div>
             <div className="aoa-variant-grid">
-              {AOA_VARIANTS.map(v => (
+              {adapter.getAoaVariants().map(v => (
                 <Tooltip key={v.variant} content={v.desc} position="top">
                   <button 
                     className={`aoa-variant-btn ${v.variant === 'feint' ? 'disabled' : ''}`}
@@ -339,7 +345,7 @@ export const GameActionPanel = ({
               <span className="aoa-variant-title">All-Out Defense Variant</span>
             </div>
             <div className="aoa-variant-grid">
-              {AOD_VARIANTS.map(v => (
+              {adapter.getAodVariants().map(v => (
                 <Tooltip key={v.variant} content={v.desc} position="top">
                   <button 
                     className={`aoa-variant-btn ${v.variant === 'double' ? 'disabled' : ''}`}
@@ -362,7 +368,7 @@ export const GameActionPanel = ({
       return (
         <>
           <div className="maneuver-grid">
-            {MANEUVERS.map(m => (
+            {adapter.getManeuvers().map(m => (
               <Tooltip key={m.type} content={m.desc} position="top">
                 <button 
                   className="maneuver-btn"
@@ -417,38 +423,9 @@ export const GameActionPanel = ({
       )
     }
 
-    const maneuverLabel = currentManeuver ? MANEUVERS.find(m => m.type === currentManeuver) : null
+    const maneuverLabel = currentManeuver ? adapter.getManeuvers().find(m => m.type === currentManeuver) : null
 
-    const getManeuverInstructions = () => {
-      switch (currentManeuver) {
-        case 'move':
-          return { text: 'Click a hex to move. Full movement allowed.', canAttack: false, canMove: true, isStep: false }
-        case 'attack':
-          return { text: 'Click enemy to attack. You can step 1 hex first.', canAttack: true, canMove: true, isStep: true }
-        case 'all_out_attack':
-          return { text: 'Click enemy to attack (+4 to hit). NO DEFENSE this turn!', canAttack: true, canMove: false, isStep: false }
-        case 'all_out_defense':
-          return { text: 'Defending. +2 to all defenses. Click End Turn.', canAttack: false, canMove: false, isStep: false }
-        case 'move_and_attack':
-          return { text: 'Move then attack (-4 to hit, max skill 9).', canAttack: true, canMove: true, isStep: false }
-        case 'aim':
-          return { text: 'Aiming. You gain +Acc bonus next turn.', canAttack: false, canMove: false, isStep: false }
-        case 'evaluate':
-          return { text: 'Click enemy to study. +1 to hit (max +3).', canAttack: false, canMove: false, isStep: false, canEvaluate: true }
-        case 'ready':
-          return { text: 'Draw, sheathe, or prepare equipment.', canAttack: false, canMove: false, isStep: true, canReady: true }
-        case 'wait':
-          return { text: 'Set a trigger condition to interrupt enemy turn.', canAttack: false, canMove: false, isStep: false }
-        case 'change_posture':
-          return { text: 'Use Posture Controls to change posture.', canAttack: false, canMove: false, isStep: false }
-        case 'do_nothing':
-          return { text: 'Recover from stun or pass turn.', canAttack: false, canMove: false, isStep: false }
-        default:
-          return { text: '', canAttack: false, canMove: false, isStep: false }
-      }
-    }
-
-    const instructions = getManeuverInstructions()
+    const instructions = adapter.getManeuverInstructions(currentManeuver)
     const turnMovement = matchState?.turnMovement
     const inMovementPhase = turnMovement?.phase === 'moving'
     const movePointsRemaining = turnMovement?.movePointsRemaining ?? 0
@@ -464,7 +441,7 @@ export const GameActionPanel = ({
               <span className="maneuver-name">{maneuverLabel.label}</span>
             </div>
             {!inMovementPhase && (
-              <div className="maneuver-instructions">{instructions.text}</div>
+              <div className="maneuver-instructions">{instructions?.text ?? ''}</div>
             )}
           </>
         )}
@@ -499,17 +476,7 @@ export const GameActionPanel = ({
           </div>
         )}
         
-        {instructions.canAttack && (
-          <div className="hit-location-section">
-            <HitLocationPicker
-              selectedLocation={selectedHitLocation}
-              onSelect={setSelectedHitLocation}
-              disabled={!selectedTargetId}
-            />
-          </div>
-        )}
-
-        {hitChanceInfo && instructions.canAttack && (
+        {hitChanceInfo && instructions?.canAttack && (
           <div className="hit-chance-preview">
             <div className="hit-chance-header">
               <strong>Target: {selectedTargetName}</strong>
@@ -530,45 +497,6 @@ export const GameActionPanel = ({
           </div>
         )}
 
-        {instructions.canAttack && selectedTargetId && (
-          <div className="deceptive-attack-section">
-            <label className="deceptive-label">Deceptive Attack:</label>
-            <div className="deceptive-buttons">
-              <button 
-                className={`deceptive-btn ${deceptiveLevel === 0 ? 'active' : ''}`}
-                onClick={() => setDeceptiveLevel(0)}
-              >
-                None
-              </button>
-              <button 
-                className={`deceptive-btn ${deceptiveLevel === 1 ? 'active' : ''}`}
-                onClick={() => setDeceptiveLevel(1)}
-              >
-                -2 hit / -1 def
-              </button>
-              <button 
-                className={`deceptive-btn ${deceptiveLevel === 2 ? 'active' : ''}`}
-                onClick={() => setDeceptiveLevel(2)}
-              >
-                -4 hit / -2 def
-              </button>
-            </div>
-          </div>
-        )}
-
-        {currentManeuver === 'attack' && selectedTargetId && (
-          <div className="rapid-strike-section">
-            <label className="rapid-strike-label">
-              <input
-                type="checkbox"
-                checked={rapidStrike}
-                onChange={(e) => setRapidStrike(e.target.checked)}
-              />
-              Rapid Strike (-6 for two attacks)
-            </label>
-          </div>
-        )}
-
         {currentManeuver === 'wait' && activeCombatant && (
           <div className="wait-trigger-section" style={{ marginBottom: '1rem' }}>
             <WaitTriggerPicker
@@ -586,6 +514,22 @@ export const GameActionPanel = ({
           </div>
         )}
 
+        {slots.renderActionConfiguration?.({
+          matchState,
+          player: matchState?.players.find(p => p.id === matchState?.activeTurnPlayerId) ?? null,
+          selectedTargetId,
+          currentManeuver,
+          isMyTurn,
+          onAction,
+          attackOptions: {
+            hitLocation: selectedHitLocation,
+            setHitLocation: setSelectedHitLocation,
+            deceptiveLevel,
+            setDeceptiveLevel,
+            rapidStrike,
+            setRapidStrike,
+          },
+        })}
         {currentManeuver === 'ready' && activeCombatant && activeCharacter && (
           <ReadyPanel
             equipped={activeCombatant.equipped}
@@ -597,7 +541,8 @@ export const GameActionPanel = ({
         )}
 
         <div className="action-buttons">
-          {instructions.canAttack && (
+        {instructions?.canAttack && (
+
             <button 
               className="action-btn primary"
               disabled={!selectedTargetId}
@@ -675,7 +620,7 @@ export const GameActionPanel = ({
             </div>
           )}
           
-          {isMyTurn && !activeCombatant?.inCloseCombatWith && selectedTargetId && hitChanceInfo && hitChanceInfo.dist <= 1 && (instructions.canAttack || instructions.canMove) && (
+          {isMyTurn && !activeCombatant?.inCloseCombatWith && selectedTargetId && hitChanceInfo && hitChanceInfo.dist <= 1 && (instructions?.canAttack || instructions?.canMove) && (
             <button 
               className="action-btn"
               onClick={() => onAction('enter_close_combat', { type: 'enter_close_combat', targetId: selectedTargetId })}
@@ -730,10 +675,19 @@ export const GameActionPanel = ({
     )
   }
 
+  const slotHeader = slots.renderActionPanelHeader?.({
+    matchState,
+    player: matchState?.players.find(p => p.id === matchState?.activeTurnPlayerId) ?? null,
+    selectedTargetId,
+    currentManeuver,
+    isMyTurn,
+    onAction,
+  })
+
   return (
     <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
       <div className="panel-header">
-        <span>{isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions'}</span>
+        <span>{slotHeader ?? (isMyTurn && !currentManeuver && matchState ? 'Choose Maneuver' : 'Actions')}</span>
         <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? '◀' : '▶'}
         </button>

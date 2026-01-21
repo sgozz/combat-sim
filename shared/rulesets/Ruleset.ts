@@ -1,0 +1,56 @@
+import type { CharacterSheet, CombatantState, MatchState, RulesetId, ManeuverType, AOAVariant, AODVariant } from '../types';
+
+export type RulesetAction = {
+  type: string;
+  label: string;
+  description?: string;
+  icon?: string;
+};
+
+export type RulesetCombatPreview = {
+  summary: string;
+  details?: string[];
+};
+
+export type RulesetManeuver = {
+  type: ManeuverType;
+  label: string;
+  shortLabel: string;
+  icon: string;
+  desc: string;
+  key: string;
+};
+
+export type RulesetVariant = {
+  variant: AOAVariant | AODVariant;
+  label: string;
+  desc: string;
+};
+
+export type ManeuverInstruction = {
+  text: string;
+  canAttack: boolean;
+  canMove: boolean;
+  isStep: boolean;
+  canEvaluate?: boolean;
+  canReady?: boolean;
+};
+
+export type Ruleset = {
+  id: RulesetId;
+  getDerivedStats: (attributes: CharacterSheet['attributes']) => CharacterSheet['derived'];
+  getInitialCombatantState: (character: CharacterSheet) => Omit<CombatantState, 'playerId' | 'characterId' | 'position' | 'facing'>;
+  getAvailableActions: (state: MatchState, actorId: string) => RulesetAction[];
+  getCombatPreview: (state: MatchState, actorId: string, targetId: string, actionType: string) => RulesetCombatPreview | null;
+};
+
+export type RulesetUIAdapter = {
+  getActionLayout: (viewport: 'desktop' | 'mobile') => RulesetAction[];
+  getActionLabels: () => Record<string, string>;
+  getActionTooltips: () => Record<string, string>;
+  getManeuvers: () => RulesetManeuver[];
+  getCloseCombatManeuvers: () => ManeuverType[];
+  getAoaVariants: () => RulesetVariant[];
+  getAodVariants: () => RulesetVariant[];
+  getManeuverInstructions: (maneuver: ManeuverType | null) => ManeuverInstruction | null;
+};

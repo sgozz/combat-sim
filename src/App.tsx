@@ -8,7 +8,7 @@ import { GameScreen } from './components/game/GameScreen'
 import { CharacterEditor } from './components/ui/CharacterEditor'
 
 
-import type { GridPosition, CharacterSheet, CombatActionPayload } from '../shared/types'
+import type { GridPosition, CharacterSheet, CombatActionPayload, RulesetId } from '../shared/types'
 import './App.css'
 
 function AppRoutes() {
@@ -82,8 +82,8 @@ function AppRoutes() {
     register(username)
   }
 
-  const handleCreateMatch = (name: string) => {
-    sendMessage({ type: 'create_match', name, maxPlayers: 4 })
+  const handleCreateMatch = (name: string, rulesetId: RulesetId) => {
+    sendMessage({ type: 'create_match', name, maxPlayers: 4, rulesetId })
   }
 
   const handleJoinByCode = (code: string) => {

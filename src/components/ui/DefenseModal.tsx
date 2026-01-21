@@ -11,6 +11,7 @@ import {
   calculateDefenseValue, 
   getPostureModifiers 
 } from '../../../shared/rules';
+import { getRulesetUiSlots } from '../game/shared/rulesetUiSlots';
 
 export type DefenseModalProps = {
   pendingDefense: PendingDefense;
@@ -19,6 +20,7 @@ export type DefenseModalProps = {
   attackerName: string;
   inCloseCombat: boolean;
   onDefend: (choice: DefenseChoice) => void;
+  rulesetId?: MatchState['rulesetId'];
 };
 
 // 3d6 probability of rolling <= N
@@ -41,6 +43,7 @@ export default function DefenseModal({
   attackerName,
   inCloseCombat,
   onDefend,
+  rulesetId,
 }: DefenseModalProps) {
   const [retreat, setRetreat] = useState(false);
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
@@ -69,9 +72,27 @@ export default function DefenseModal({
     });
   };
 
+  const getSlotForDefense = (defenseName: string | undefined) => {
+    if (!defenseName) return null;
+    const item = character.equipment.find(e => e.name === defenseName);
+    if (!item) return null;
+    const equipped = combatant.equipped.find(e => e.equipmentId === item.id);
+    return equipped ? equipped.slot.replace('_', ' ') : null;
+  };
+
   const dodgeValue = getFinalValue('dodge', baseOptions.dodge);
   const parryValue = baseOptions.parry ? getFinalValue('parry', baseOptions.parry.value, baseOptions.parry.weapon) : 0;
   const blockValue = baseOptions.block ? getFinalValue('block', baseOptions.block.value) : 0;
+
+  const slots = getRulesetUiSlots(rulesetId);
+  const slotDefense = slots.renderDefenseOptions?.({
+    pendingDefense,
+    character,
+    combatant,
+    attackerName,
+    inCloseCombat,
+    onDefend,
+  });
 
   const handleDefend = (type: DefenseType) => {
     onDefend({
@@ -83,6 +104,10 @@ export default function DefenseModal({
 
   const retreatDisabled = combatant.retreatedThisTurn;
   const canRetreat = !retreatDisabled;
+
+  if (slotDefense) {
+    return <>{slotDefense}</>;
+  }
 
   return (
     <div className="modal-overlay defense-modal-overlay">
@@ -143,6 +168,12 @@ export default function DefenseModal({
                   <span>{getSuccessChance(parryValue).toFixed(1)}%</span>
                 </div>
                 <div className="defense-sub">{baseOptions.parry.weapon}</div>
+                {getSlotForDefense(baseOptions.parry.weapon) && (
+                  <div className="defense-source-indicator">
+                    <span className="defense-source-icon">✋</span>
+                    <span style={{ textTransform: 'capitalize' }}>{getSlotForDefense(baseOptions.parry.weapon)}</span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="defense-unavailable">N/A</div>
@@ -168,6 +199,12 @@ export default function DefenseModal({
                   <span>{getSuccessChance(blockValue).toFixed(1)}%</span>
                 </div>
                 <div className="defense-sub">{baseOptions.block.shield}</div>
+                {getSlotForDefense(baseOptions.block.shield) && (
+                  <div className="defense-source-indicator">
+                    <span className="defense-source-icon">🛡️</span>
+                    <span style={{ textTransform: 'capitalize' }}>{getSlotForDefense(baseOptions.block.shield)}</span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="defense-unavailable">N/A</div>

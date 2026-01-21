@@ -435,3 +435,43 @@
     font-size: 0.75rem;
   }
 }
+
+.quick-match-actions {
+  margin-left: auto;
+}
+
+.ruleset-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.ruleset-select:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.ruleset-select option {
+  background: #252525;
+  color: white;
+}
+
+@media (max-width: 480px) {
+  .quick-match-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .ruleset-select {
+    width: 100%;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.4);
+  }
+}

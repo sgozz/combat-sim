@@ -41,6 +41,7 @@ export type MatchRow = {
   state_json: string | null;
   created_by: string;
   winner_id: string | null;
+  ruleset_id: string;
   created_at: number;
   finished_at: number | null;
 };

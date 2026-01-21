@@ -1,5 +1,7 @@
 export type Id = string;
 
+export type RulesetId = 'gurps' | 'pf2';
+
 export type Attributes = {
   strength: number;
   dexterity: number;
@@ -248,6 +250,7 @@ export type MatchState = {
   name: string;
   code: string;
   maxPlayers: number;
+  rulesetId: RulesetId;
   players: Player[];
   characters: CharacterSheet[];
   combatants: CombatantState[];
@@ -271,6 +274,7 @@ export type MatchSummary = {
   creatorId: Id;
   playerCount: number;
   maxPlayers: number;
+  rulesetId: RulesetId;
   status: MatchStatus;
   players: { id: Id; name: string; isConnected: boolean }[];
   isMyTurn: boolean;
@@ -309,7 +313,7 @@ export type CombatActionPayload =
 export type ClientToServerMessage =
   | { type: "register"; username: string }
   | { type: "auth"; sessionToken: string }
-  | { type: "create_match"; name: string; maxPlayers: number }
+  | { type: "create_match"; name: string; maxPlayers: number; rulesetId: RulesetId }
   | { type: "join_match"; code: string }
   | { type: "leave_match"; matchId: Id }
   | { type: "rejoin_match"; matchId: Id }

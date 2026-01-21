@@ -696,7 +696,31 @@
   display: none;
 }
 
+.action-bar-config-slot {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .action-bar-config-slot {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 80px;
+    left: 1rem;
+    right: 1rem;
+    max-height: 55vh;
+    background: rgba(18, 18, 18, 0.96);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 1rem;
+    gap: 1rem;
+    z-index: 150;
+    overflow-y: auto;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
   .action-bar-maneuvers {
     display: flex;
     position: fixed;
@@ -3750,6 +3774,108 @@
 }
 
 /* Equipment List */
+.equipment-slots-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.equipment-slot-container {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 70px;
+  transition: all 0.2s;
+}
+
+.equipment-slot-container.filled {
+  border-color: #444;
+  background: #222;
+}
+
+.equipment-slot-container:hover {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+.equipment-slot-label {
+  font-size: 0.65rem;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.equipment-slot-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.equipment-slot-name {
+  font-size: 0.85rem;
+  color: #ddd;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.equipment-slot-details {
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.equipment-slot-empty {
+  font-size: 0.8rem;
+  color: #444;
+  font-style: italic;
+  margin-top: auto;
+}
+
+/* Equipment Belt (Mobile) */
+.equipment-belt {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem;
+  margin: 0 -0.25rem 0.5rem -0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.equipment-belt-slot {
+  flex: 0 0 130px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Defense Source Indicator */
+.defense-source-indicator {
+  font-size: 0.7rem;
+  color: #aaa;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.defense-source-icon {
+  font-size: 0.8rem;
+}
+
 .equipment-list {
   display: flex;
   flex-direction: column;

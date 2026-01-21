@@ -184,7 +184,7 @@ export const handleMessage = async (
       const user = requireUser(socket);
       if (!user) return;
       
-      const { id, code } = await createMatch(message.name, message.maxPlayers, user.id);
+      const { id, code } = await createMatch(message.name, message.maxPlayers, user.id, message.rulesetId);
       await addMatchMember(id, user.id, null);
       
       const matchRow = await findMatchById(id);
@@ -358,7 +358,7 @@ export const handleMessage = async (
         return;
       }
       
-      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players);
+      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, matchRow.ruleset_id ?? 'gurps');
       state.matches.set(message.matchId, matchState);
       await updateMatchState(message.matchId, matchState);
       

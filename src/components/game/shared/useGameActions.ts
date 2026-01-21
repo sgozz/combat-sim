@@ -1,10 +1,10 @@
 import { useMemo, useState, useEffect } from 'react'
-import type { 
-  MatchState, 
-  ManeuverType, 
-  CombatActionPayload, 
-  HitLocation, 
-  DefenseType, 
+import type {
+  MatchState,
+  ManeuverType,
+  CombatActionPayload,
+  HitLocation,
+  DefenseType,
   DefenseChoice,
   AOAVariant,
   AODVariant,
@@ -12,15 +12,17 @@ import type {
   ReadyAction,
   EquipmentSlot
 } from '../../../../shared/types'
-import { 
-  getDefenseOptions, 
-  calculateDefenseValue, 
-  getPostureModifiers, 
+import {
+  getDefenseOptions,
+  calculateDefenseValue,
+  getPostureModifiers,
   calculateEncumbrance,
   getRangePenalty,
   getHitLocationPenalty
 } from '../../../../shared/rules'
 import { hexDistance } from '../../../utils/hex'
+import type { RulesetUIAdapter } from '../../../../shared/rulesets/Ruleset'
+import { rulesets } from '../../../../shared/rulesets'
 
 export type ManeuverDef = {
   type: ManeuverType
@@ -82,6 +84,7 @@ export type GameActionsContext = {
   isCreator: boolean
   matchCode: string | null
   inLobbyButNoMatch: boolean
+  uiAdapter?: RulesetUIAdapter
 }
 
 export type AttackOptions = {
@@ -100,35 +103,10 @@ export type DefenseModifiers = {
   setDodgeAndDrop: (v: boolean) => void
 }
 
-export const MANEUVERS: ManeuverDef[] = [
-  { type: 'move', label: 'Move', shortLabel: 'Move', icon: '🏃', desc: 'Full move. No attack. Active defense allowed.', key: '1' },
-  { type: 'attack', label: 'Attack', shortLabel: 'Attack', icon: '⚔️', desc: 'Standard attack. Step allowed. Active defense allowed.', key: '2' },
-  { type: 'all_out_attack', label: 'All-Out Attack', shortLabel: 'All-Out', icon: '😡', desc: 'Bonus to hit or damage. Half move. NO DEFENSE.', key: '3' },
-  { type: 'all_out_defense', label: 'All-Out Defense', shortLabel: 'Defend', icon: '🛡️', desc: 'Bonus to defense (+2). Step allowed. No attack.', key: '4' },
-  { type: 'move_and_attack', label: 'Move & Attack', shortLabel: 'M&A', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.', key: '5' },
-  { type: 'aim', label: 'Aim', shortLabel: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.', key: '6' },
-  { type: 'evaluate', label: 'Evaluate', shortLabel: 'Eval', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
-  { type: 'wait', label: 'Wait', shortLabel: 'Wait', icon: '⏳', desc: 'Prepare to react when triggered.', key: '8' },
-  { type: 'ready', label: 'Ready', shortLabel: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '9' },
-  { type: 'change_posture', label: 'Change Posture', shortLabel: 'Posture', icon: '🧎', desc: 'Rise from kneeling/prone. Use for non-free posture changes.', key: '-' },
-  { type: 'do_nothing', label: 'Do Nothing', shortLabel: 'Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '0' },
-]
-
-export const AOA_VARIANTS: AOAVariantDef[] = [
-  { variant: 'determined', label: 'Determined', desc: '+4 to hit' },
-  { variant: 'strong', label: 'Strong', desc: '+2 damage' },
-  { variant: 'double', label: 'Double', desc: 'Two attacks at full skill' },
-  { variant: 'feint', label: 'Feint', desc: 'Attack + Feint (not implemented)' },
-]
-
-export const AOD_VARIANTS: AODVariantDef[] = [
-  { variant: 'increased_dodge', label: 'Increased Dodge', desc: '+2 to Dodge' },
-  { variant: 'increased_parry', label: 'Increased Parry', desc: '+2 to Parry' },
-  { variant: 'increased_block', label: 'Increased Block', desc: '+2 to Block' },
-  { variant: 'double', label: 'Double Defense', desc: 'Two different defenses vs same attack' },
-]
-
-export const CLOSE_COMBAT_MANEUVERS: ManeuverType[] = ['attack', 'all_out_attack', 'all_out_defense']
+export const getRulesetUiAdapter = (rulesetId?: MatchState['rulesetId']): RulesetUIAdapter => {
+  const selected = rulesetId ? rulesets[rulesetId] : rulesets.gurps
+  return (selected?.ui ?? rulesets.gurps.ui)
+}
 
 const PROBABILITY_TABLE: Record<number, number> = {
   3: 0.5, 4: 1.9, 5: 4.6, 6: 9.3, 7: 16.2, 8: 25.9, 9: 37.5,
@@ -148,7 +126,7 @@ export const getSuccessChance = (target: number): number => {
 }
 
 export const useGameActions = (ctx: GameActionsContext) => {
-  const { matchState, playerId, selectedTargetId, isMyTurn, lobbyPlayerCount, isCreator, matchCode, inLobbyButNoMatch } = ctx
+  const { matchState, playerId, selectedTargetId, isMyTurn, lobbyPlayerCount, isCreator, matchCode, inLobbyButNoMatch, uiAdapter } = ctx
 
   const [hitLocation, setHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
@@ -221,11 +199,15 @@ export const useGameActions = (ctx: GameActionsContext) => {
     return 'in_turn'
   }, [matchState, inLobbyButNoMatch, pendingDefense, playerId, isMyTurn, currentManeuver])
 
+  const adapter = uiAdapter ?? getRulesetUiAdapter(matchState?.rulesetId)
+
   const availableManeuvers = useMemo(() => {
-    return inCloseCombat 
-      ? MANEUVERS.filter(m => CLOSE_COMBAT_MANEUVERS.includes(m.type))
-      : MANEUVERS
-  }, [inCloseCombat])
+    const maneuvers = adapter.getManeuvers()
+    const closeCombat = adapter.getCloseCombatManeuvers()
+    return inCloseCombat
+      ? maneuvers.filter(m => closeCombat.includes(m.type))
+      : maneuvers
+  }, [adapter, inCloseCombat])
 
   const defenseOptions = useMemo((): DefenseValues | null => {
     if (!playerCharacter || !playerCombatant || !pendingDefense) return null
@@ -348,8 +330,8 @@ export const useGameActions = (ctx: GameActionsContext) => {
 
   return {
     maneuvers: availableManeuvers,
-    aoaVariants: AOA_VARIANTS,
-    aodVariants: AOD_VARIANTS,
+    aoaVariants: adapter.getAoaVariants(),
+    aodVariants: adapter.getAodVariants(),
 
     gamePhase,
     currentManeuver,

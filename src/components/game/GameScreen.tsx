@@ -5,6 +5,7 @@ import { TurnStepper } from './TurnStepper'
 
 import { ActionBar } from './ActionBar'
 import { GameStatusPanel, GameActionPanel } from './GameHUD'
+import { rulesets } from '../../../shared/rulesets'
 import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
@@ -235,6 +236,7 @@ export const GameScreen = ({
         isMyTurn={isPlayerTurn}
         onAction={onAction}
         onLeaveLobby={onLeaveLobby}
+        uiAdapter={matchState ? rulesets[matchState.rulesetId]?.ui : undefined}
       />
 
       {inLobbyButNoMatch && (
@@ -349,6 +351,7 @@ export const GameScreen = ({
           attackerName={attackerPlayer?.name ?? 'Unknown'}
           inCloseCombat={inCloseCombat}
           onDefend={handleDefenseChoice}
+          rulesetId={matchState?.rulesetId}
         />
       )}
 
@@ -394,6 +397,7 @@ export const GameScreen = ({
         onAction={onAction}
         onDefend={handleDefenseChoice}
         onLeaveLobby={onLeaveLobby}
+        uiAdapter={matchState ? rulesets[matchState.rulesetId]?.ui : undefined}
       />
     </div>
   )

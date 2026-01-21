@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { MatchSummary, User } from '../../shared/types'
+import type { MatchSummary, User, RulesetId } from '../../shared/types'
 import { MatchCard } from './MatchCard'
 import { SpectateCard } from './SpectateCard'
 import './LobbyBrowser.css'
@@ -8,7 +8,7 @@ type MatchBrowserProps = {
   user: User
   matches: MatchSummary[]
   publicMatches: MatchSummary[]
-  onCreateMatch: (name: string) => void
+  onCreateMatch: (name: string, rulesetId: RulesetId) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
   onRefresh: () => void
@@ -32,6 +32,7 @@ export const MatchBrowser = ({
   const [joinCode, setJoinCode] = useState('')
   const [showJoinInput, setShowJoinInput] = useState(false)
   const [showSpectate, setShowSpectate] = useState(false)
+  const [selectedRuleset, setSelectedRuleset] = useState<RulesetId>('gurps')
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -73,13 +74,34 @@ export const MatchBrowser = ({
 
       <main className="lobby-browser-main">
         <div className="lobby-browser-cta">
-          <button className="quick-match-button" onClick={() => onCreateMatch(`${user.username}'s Battle`)}>
+          <div 
+            className="quick-match-button" 
+            onClick={() => onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}
+          >
             <span className="quick-match-icon">⚔</span>
             <div className="quick-match-text">
               <div className="quick-match-title">New Match</div>
               <div className="quick-match-subtitle">Create a new battle room</div>
             </div>
-          </button>
+            <div 
+              className="quick-match-actions" 
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <select 
+                className="ruleset-select"
+                value={selectedRuleset}
+                onChange={(e) => setSelectedRuleset(e.target.value as RulesetId)}
+                aria-label="Select Ruleset"
+              >
+                <option value="gurps">GURPS 4e</option>
+                <option value="pf2">Pathfinder 2e</option>
+              </select>
+            </div>
+          </div>
           
           {showJoinInput ? (
             <div className="join-code-input-group">
@@ -183,7 +205,7 @@ export const MatchBrowser = ({
             <div className="lobby-browser-empty-icon">⚔</div>
             <h3>No matches yet</h3>
             <p>Create a new match or join one with a code!</p>
-            <button className="lobby-browser-empty-button" onClick={() => onCreateMatch(`${user.username}'s Battle`)}>
+            <button className="lobby-browser-empty-button" onClick={() => onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}>
               Create Your First Match
             </button>
           </div>

@@ -8,7 +8,8 @@ export const createMatchState = async (
   matchId: string,
   name: string,
   code: string,
-  maxPlayers: number
+  maxPlayers: number,
+  rulesetId: MatchState['rulesetId']
 ): Promise<MatchState> => {
   const members = await getMatchMembers(matchId);
   
@@ -143,6 +144,7 @@ export const createMatchState = async (
     name,
     code,
     maxPlayers,
+    rulesetId,
     createdAt: Date.now(),
     players: sortedPlayers,
     characters,
