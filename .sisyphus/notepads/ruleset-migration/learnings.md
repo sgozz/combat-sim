@@ -483,3 +483,50 @@ import type { GurpsSpecificType } from '../../../shared/rulesets/gurps/types'
 - Enables future rulesets (D&D 5e, etc.) to have their own type modules without polluting shared namespace
 - Build and test verification confirms no regressions
 
+
+## Task 3.2: Remove shared/rules.ts Re-export ✅
+
+**Completed**: 2025-01-24
+
+### Changes Made
+- Deleted `shared/rules.ts` (was single-line re-export: `export * from './rulesets/gurps/rules'`)
+- Updated 10 files to import directly from `shared/rulesets/gurps/rules`:
+  1. `src/data/characterTemplates.ts`
+  2. `src/components/rulesets/useCharacterEditor.ts`
+  3. `src/components/game/shared/useGameActions.ts`
+  4. `src/components/rulesets/gurps/GurpsGameActionPanel.tsx`
+  5. `src/components/rulesets/gurps/PostureControls.tsx`
+  6. `src/components/rulesets/gurps/GurpsActionBar.tsx`
+  7. `src/components/rulesets/gurps/DefenseModal.tsx`
+  8. `src/components/rulesets/gurps/GurpsGameStatusPanel.tsx`
+  9. `src/components/rulesets/gurps/HitLocationPicker.tsx`
+  10. `shared/rules.test.ts`
+
+### Import Pattern
+All files now import directly from:
+```typescript
+import { functionName } from '../../../../shared/rulesets/gurps/rules'
+```
+
+### Verification Results
+- ✅ `npx vitest run` - All 240 tests pass (3 test files, 888ms)
+- ✅ `npm run build` - Succeeds with zero errors (4.32s)
+- ✅ No TypeScript errors or warnings
+- ✅ No broken imports
+
+### Key Findings
+1. **Scope**: Single file deleted (shared/rules.ts)
+2. **Impact**: 10 files required import path updates
+3. **Pattern**: Consistent import path pattern across all files
+4. **Rationale**: Removed unnecessary re-export layer - direct imports are clearer and more explicit
+5. **Type Safety**: All imports properly typed, no `any` or type assertions needed
+
+### Architecture Notes
+- Phase 3 Task 3.2 complete: shared/rules.ts removed
+- Clear separation: GURPS rules live in `shared/rulesets/gurps/rules`
+- Enables future rulesets (D&D 5e, etc.) to have their own rules modules without shared namespace pollution
+- Completes Phase 3 (all 3 tasks done: 3.1 types cleanup, 3.2 rules cleanup, 3.3 would be additional rulesets)
+- Build and test verification confirms no regressions
+- All 240 tests passing
+- Production build succeeds
+

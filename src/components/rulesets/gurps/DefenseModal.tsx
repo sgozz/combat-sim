@@ -10,10 +10,10 @@ import type {
   DefenseChoice,
 } from '../../../../shared/rulesets/gurps/types';
 import { 
-  getDefenseOptions, 
-  calculateDefenseValue, 
-  getPostureModifiers 
-} from '../../../../shared/rules';
+   getDefenseOptions, 
+   calculateDefenseValue, 
+   getPostureModifiers 
+ } from '../../../../shared/rulesets/gurps/rules';
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots';
 
 export type DefenseModalProps = {

@@ -50,7 +50,7 @@ import {
   type HexPosition,
   type MovementState,
   type CriticalHitEffect,
-} from './rules'
+} from './rulesets/gurps/rules'
 import type { CharacterSheet, MatchState, Player } from './types'
 import type { CombatantState, Equipment } from './rulesets/gurps/types'
 

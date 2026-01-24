@@ -15,13 +15,13 @@ import type {
   EquipmentSlot
 } from '../../../../shared/rulesets/gurps/types'
 import {
-  getDefenseOptions,
-  calculateDefenseValue,
-  getPostureModifiers,
-  calculateEncumbrance,
-  getRangePenalty,
-  getHitLocationPenalty
-} from '../../../../shared/rules'
+   getDefenseOptions,
+   calculateDefenseValue,
+   getPostureModifiers,
+   calculateEncumbrance,
+   getRangePenalty,
+   getHitLocationPenalty
+ } from '../../../../shared/rulesets/gurps/rules'
 import { hexDistance } from '../../../utils/hex'
 import type { RulesetUIAdapter } from '../../../../shared/rulesets/Ruleset'
 import { rulesets } from '../../../../shared/rulesets'

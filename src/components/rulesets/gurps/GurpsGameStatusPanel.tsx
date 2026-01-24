@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PostureControls } from './PostureControls'
-import { calculateEncumbrance } from '../../../../shared/rules'
+import { calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
 import type { GameStatusPanelProps } from '../types'
 
 export const GurpsGameStatusPanel = ({ 

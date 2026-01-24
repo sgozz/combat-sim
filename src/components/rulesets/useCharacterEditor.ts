@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import type { Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType } from '../../../shared/rulesets/gurps/types'
-import { calculateDerivedStats, calculateTotalPoints } from '../../../shared/rules'
+import { calculateDerivedStats, calculateTotalPoints } from '../../../shared/rulesets/gurps/rules'
 import { getTemplatesForRuleset, TEMPLATE_NAMES, PF2_TEMPLATE_NAMES } from '../../data/characterTemplates'
 import { uuid } from '../../utils/uuid'
 

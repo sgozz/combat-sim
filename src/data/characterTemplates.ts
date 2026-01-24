@@ -1,5 +1,5 @@
 import type { CharacterSheet } from '../../shared/types'
-import { calculateDerivedStats } from '../../shared/rules'
+import { calculateDerivedStats } from '../../shared/rulesets/gurps/rules'
 import { uuid } from '../utils/uuid'
 
 const createTemplate = (

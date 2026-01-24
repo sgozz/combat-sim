@@ -354,7 +354,7 @@ Phase 6 (Final validation)
   - Message: `refactor(types): remove GURPS-specific exports from shared/types.ts`
   - Files: `shared/types.ts`, multiple import updates
 
-- [ ] 3.2. Remove or repurpose shared/rules.ts
+- [x] 3.2. Remove or repurpose shared/rules.ts
 
   **What to do**:
   - `shared/rules.ts` currently only re-exports GURPS rules
