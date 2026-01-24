@@ -137,7 +137,6 @@ export const GameStatusPanel = ({
               {(['right_hand', 'left_hand', 'back', 'belt', 'quiver'] as const).map(slot => {
                 const item = activeCombatant.equipped.find(e => e.slot === slot)
                 const eq = item ? character.equipment.find(e => e.id === item.equipmentId) : null
-                const skill = eq?.skillUsed ? character.skills.find(s => s.name === eq.skillUsed) : null
                 
                 return (
                   <div key={slot} className={`equipment-slot-container ${item ? 'filled' : ''}`}>
@@ -322,7 +321,7 @@ export const GameActionPanel = ({
                     disabled={v.variant === 'feint'}
                     onClick={() => {
                       setShowAOAVariantPicker(false)
-                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant })
+                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant as import('../../../shared/types').AOAVariant })
                     }}
                   >
                     <span className="aoa-variant-label">{v.label}</span>
@@ -352,7 +351,7 @@ export const GameActionPanel = ({
                     disabled={v.variant === 'double'}
                     onClick={() => {
                       setShowAODVariantPicker(false)
-                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant })
+                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant as import('../../../shared/types').AODVariant })
                     }}
                   >
                     <span className="aoa-variant-label">{v.label}</span>

@@ -1,6 +1,6 @@
 import type { Ruleset } from '../Ruleset';
 import { gurpsUiAdapter } from './ui';
-import { calculateDerivedStats } from '../../rules';
+import { calculateDerivedStats } from './rules';
 import type { MatchState, CharacterSheet } from '../../types';
 
 export const gurpsRuleset: Ruleset = {

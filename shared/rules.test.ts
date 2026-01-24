@@ -305,6 +305,7 @@ describe('Combat Rules', () => {
       name: 'Test Match',
       code: 'TEST01',
       maxPlayers: 4,
+      rulesetId: 'gurps',
       createdAt: Date.now(),
       players,
       characters: [],

@@ -4,7 +4,8 @@ import type {
   CombatantState, 
   PendingDefense, 
   DefenseType, 
-  DefenseChoice 
+  DefenseChoice,
+  RulesetId
 } from '../../../shared/types';
 import { 
   getDefenseOptions, 
@@ -20,7 +21,7 @@ export type DefenseModalProps = {
   attackerName: string;
   inCloseCombat: boolean;
   onDefend: (choice: DefenseChoice) => void;
-  rulesetId?: MatchState['rulesetId'];
+  rulesetId?: RulesetId;
 };
 
 // 3d6 probability of rolling <= N
