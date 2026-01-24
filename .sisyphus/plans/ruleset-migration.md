@@ -518,7 +518,7 @@ Phase 6 (Final validation)
   - Message: `feat(pf2): implement Step action`
   - Files: PF2 components and handlers
 
-- [ ] 5.2. Implement Stand action for PF2
+- [ ] 5.2. Implement Stand action for PF2 **[DEFERRED - See problems.md]**
 
   **What to do**:
   - Add `Stand` action (1 action, removes prone condition)
@@ -529,6 +529,8 @@ Phase 6 (Final validation)
   - Allow Stand when not prone
 
   **Parallelizable**: YES (with 5.1, 5.3, 5.4)
+  
+  **Status**: DEFERRED - Feature addition, not critical for core migration
 
   **References**:
   - `shared/rulesets/pf2/rules.ts:265` - 'stand' costs 1 action
@@ -544,7 +546,7 @@ Phase 6 (Final validation)
   - Message: `feat(pf2): implement Stand action`
   - Files: PF2 components and handlers
 
-- [ ] 5.3. Implement Drop Prone action for PF2
+- [ ] 5.3. Implement Drop Prone action for PF2 **[DEFERRED - See problems.md]**
 
   **What to do**:
   - Add `Drop Prone` action (1 action, gains prone condition)
@@ -555,6 +557,8 @@ Phase 6 (Final validation)
   - Allow Drop Prone when already prone
 
   **Parallelizable**: YES (with 5.1, 5.2, 5.4)
+  
+  **Status**: DEFERRED - Feature addition, not critical for core migration
 
   **References**:
   - `shared/rulesets/pf2/rules.ts:277` - 'drop_prone' is free action
@@ -570,7 +574,7 @@ Phase 6 (Final validation)
   - Message: `feat(pf2): implement Drop Prone action`
   - Files: PF2 components and handlers
 
-- [ ] 5.4. Implement flat-footed condition for PF2
+- [ ] 5.4. Implement flat-footed condition for PF2 **[DEFERRED - See problems.md]**
 
   **What to do**:
   - Add `flat-footed` condition type
@@ -583,6 +587,8 @@ Phase 6 (Final validation)
   - Add other conditions (frightened, stunned, etc.)
 
   **Parallelizable**: YES (with 5.1, 5.2, 5.3)
+  
+  **Status**: DEFERRED - Feature addition, not critical for core migration
 
   **References**:
   - `shared/rulesets/pf2/types.ts:35-47` - ConditionName type
