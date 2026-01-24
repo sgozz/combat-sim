@@ -273,7 +273,7 @@ describe('PF2 Rules', () => {
       expect(getActionCost('strike')).toBe(1);
       expect(getActionCost('stride')).toBe(1);
       expect(getActionCost('ready')).toBe(2);
-      expect(getActionCost('step')).toBe('free');
+      expect(getActionCost('step')).toBe(1);
     });
 
     it('canPerformAction checks action availability', () => {

@@ -274,6 +274,7 @@ export const getActionCost = (actionType: string): ActionCost => {
     case 'ready':
       return 2;
     case 'step':
+      return 1;
     case 'release':
     case 'drop_prone':
       return 'free';
