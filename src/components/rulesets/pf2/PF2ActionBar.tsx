@@ -191,6 +191,32 @@ export const PF2ActionBar = ({
             </button>
             <button
               className="action-bar-btn"
+              disabled={actionsRemaining === 0 || playerCombatant.posture === 'prone'}
+              onClick={() => onAction('pf2_step', { type: 'pf2_step', to: { q: 0, r: 0 } })}
+            >
+              <span className="action-bar-icon">👣</span>
+              <span className="action-bar-label">Step</span>
+            </button>
+            {playerCombatant.posture === 'prone' ? (
+              <button
+                className="action-bar-btn"
+                disabled={actionsRemaining === 0}
+                onClick={() => onAction('pf2_stand', { type: 'pf2_stand' })}
+              >
+                <span className="action-bar-icon">🧍</span>
+                <span className="action-bar-label">Stand</span>
+              </button>
+            ) : (
+              <button
+                className="action-bar-btn"
+                onClick={() => onAction('pf2_drop_prone', { type: 'pf2_drop_prone' })}
+              >
+                <span className="action-bar-icon">🔻</span>
+                <span className="action-bar-label">Drop</span>
+              </button>
+            )}
+            <button
+              className="action-bar-btn"
               onClick={() => onAction('end_turn', { type: 'end_turn' })}
             >
               <span className="action-bar-icon">✓</span>

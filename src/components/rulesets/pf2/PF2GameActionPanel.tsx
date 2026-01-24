@@ -105,6 +105,40 @@ export const PF2GameActionPanel = ({
               <span className="pf2-action-label">Stride</span>
             </button>
           </Tooltip>
+
+          <Tooltip content="Move 5 feet. Costs 1 action. Cannot use while prone." position="top">
+            <button 
+              className="pf2-action-btn step"
+              disabled={actionsRemaining === 0 || combatant.posture === 'prone'}
+              onClick={() => onAction('pf2_step', { type: 'pf2_step', to: { q: 0, r: 0 } })}
+            >
+              <span className="pf2-action-icon">👣</span>
+              <span className="pf2-action-label">Step</span>
+            </button>
+          </Tooltip>
+
+          {combatant.posture === 'prone' ? (
+            <Tooltip content="Stand up from prone. Costs 1 action." position="top">
+              <button 
+                className="pf2-action-btn stand"
+                disabled={actionsRemaining === 0}
+                onClick={() => onAction('pf2_stand', { type: 'pf2_stand' })}
+              >
+                <span className="pf2-action-icon">🧍</span>
+                <span className="pf2-action-label">Stand</span>
+              </button>
+            </Tooltip>
+          ) : (
+            <Tooltip content="Drop to the ground. Free action." position="top">
+              <button 
+                className="pf2-action-btn drop-prone"
+                onClick={() => onAction('pf2_drop_prone', { type: 'pf2_drop_prone' })}
+              >
+                <span className="pf2-action-icon">🔻</span>
+                <span className="pf2-action-label">Drop Prone</span>
+              </button>
+            </Tooltip>
+          )}
           
           <Tooltip content="Raise your shield for +2 AC until your next turn." position="top">
             <button 
