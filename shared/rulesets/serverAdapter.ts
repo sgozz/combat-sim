@@ -1,5 +1,5 @@
-import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, RulesetId, CharacterSheet } from '../types';
-import type { ManeuverType, Posture, Equipment, Attributes, DerivedStats, Reach, ShieldSize, DamageType, HitLocation } from './gurps/types';
+import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, RulesetId, CharacterSheet, GridPosition } from '../types';
+import type { ManeuverType, Posture, Equipment, Attributes, DerivedStats, Reach, ShieldSize, DamageType, HitLocation, CombatantState, DefenseType } from './gurps/types';
 import type { GridSystem } from '../grid';
 import { hexGrid } from '../grid';
 
@@ -28,6 +28,26 @@ export type EncumbranceInfo = {
   basicLift: number;
 };
 
+export type BotDefenseResult = {
+  defenseType: DefenseType;
+  defenseLabel: string;
+  finalDefenseValue: number;
+  canRetreat: boolean;
+  retreatHex: GridPosition | null;
+  parryWeaponName: string | null;
+};
+
+export type BotDefenseOptions = {
+  targetCharacter: CharacterSheet;
+  targetCombatant: CombatantState;
+  attackerPosition: GridPosition;
+  allCombatants: CombatantState[];
+  distance: number;
+  relativeDir: number;
+  isRanged: boolean;
+  findRetreatHex: (defenderPos: GridPosition, attackerPos: GridPosition, combatants: CombatantState[]) => GridPosition | null;
+};
+
 export type CombatDomain = {
   resolveAttackRoll: (skill: number, random?: () => number) => GurpsAttackRollResult;
   resolveDefenseRoll: (defenseValue: number, random?: () => number) => GurpsDefenseRollResult;
@@ -54,6 +74,7 @@ export type CombatDomain = {
   rollCriticalMissTable?: (random?: () => number) => { roll: number; effect: GurpsCriticalMissEffect };
   applyCriticalHitDamage?: (baseDamage: number, effect: GurpsCriticalHitEffect, formula: string, random?: () => number) => { damage: number; description: string };
   getCriticalMissDescription?: (effect: GurpsCriticalMissEffect) => string;
+  selectBotDefense?: (options: BotDefenseOptions) => BotDefenseResult | null;
 };
 
 export type DamageDomain = {
@@ -272,6 +293,7 @@ const pf2CombatDomain: CombatDomain = {
   rollCriticalMissTable: undefined,
   applyCriticalHitDamage: undefined,
   getCriticalMissDescription: undefined,
+  selectBotDefense: (): BotDefenseResult | null => null, // PF2 has no active defense
 };
 
 const pf2DamageDomain: DamageDomain = {
@@ -293,6 +315,85 @@ const pf2DamageDomain: DamageDomain = {
   getHitLocationWoundingMultiplier: (): number => 1,
 };
 
+const gurpsSelectBotDefense = (options: BotDefenseOptions): BotDefenseResult => {
+  const { targetCharacter, targetCombatant, attackerPosition, distance, relativeDir, isRanged, findRetreatHex } = options;
+  
+  const targetEncumbrance = gurpsCalculateEncumbrance(
+    targetCharacter.attributes.strength,
+    targetCharacter.equipment
+  );
+  const effectiveDodge = targetCharacter.derived.dodge + targetEncumbrance.dodgePenalty;
+  const defenseOptions = gurpsGetDefenseOptions(targetCharacter, effectiveDodge);
+  const targetWeapon = targetCharacter.equipment.find((e: Equipment) => e.type === 'melee');
+  const targetShield = targetCharacter.equipment.find((e: Equipment) => e.type === 'shield');
+  const inCloseCombat = distance === 0;
+  const ccDefMods = gurpsGetCloseCombatDefenseModifiers(
+    targetWeapon?.reach,
+    targetShield?.shieldSize,
+    inCloseCombat
+  );
+  
+  let defenseMod = 0;
+  if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
+  if (targetCombatant.statusEffects.includes('defending')) defenseMod += 1;
+  
+  const targetPosture = gurpsGetPostureModifiers(targetCombatant.posture);
+  const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
+  defenseMod += postureDefBonus;
+  
+  const targetManeuver = targetCombatant.maneuver;
+  const aodVariant = targetCombatant.aodVariant;
+  const dodgeAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_dodge') ? 2 : 0;
+  const parryAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_parry') ? 2 : 0;
+  const blockAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_block') ? 2 : 0;
+  const lostBalancePenalty = targetCombatant.statusEffects.includes('lost_balance') ? -2 : 0;
+  
+  let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod + dodgeAodBonus + lostBalancePenalty;
+  let defenseUsed: DefenseType = 'dodge';
+  let defenseLabel = "Dodge";
+  let parryWeaponName: string | null = null;
+  
+  if (ccDefMods.canParry && defenseOptions.parry) {
+    const parryWeapon = defenseOptions.parry.weapon;
+    const isSameWeaponParry = targetCombatant.parryWeaponsUsedThisTurn.includes(parryWeapon);
+    const sameWeaponPenalty = isSameWeaponParry ? -4 : 0;
+    const multiDefPenalty = isSameWeaponParry 
+      ? (targetCombatant.defensesThisTurn > 1 ? -(targetCombatant.defensesThisTurn - 1) : 0)
+      : -targetCombatant.defensesThisTurn;
+    const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus + sameWeaponPenalty + multiDefPenalty + lostBalancePenalty;
+    if (parryValue > bestDefense) {
+      bestDefense = parryValue;
+      defenseUsed = 'parry';
+      defenseLabel = `Parry (${parryWeapon})`;
+      parryWeaponName = parryWeapon;
+    }
+  }
+  if (ccDefMods.canBlock && defenseOptions.block) {
+    const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus - targetCombatant.defensesThisTurn + lostBalancePenalty;
+    if (blockValue > bestDefense) {
+      bestDefense = blockValue;
+      defenseUsed = 'block';
+      defenseLabel = `Block (${defenseOptions.block.shield})`;
+      parryWeaponName = null;
+    }
+  }
+  
+  const wantsRetreat = !targetCombatant.retreatedThisTurn;
+  const retreatHex = wantsRetreat ? findRetreatHex(targetCombatant.position, attackerPosition, options.allCombatants) : null;
+  const canRetreat = wantsRetreat && retreatHex !== null;
+  const retreatBonus = canRetreat ? (defenseUsed === 'dodge' ? 3 : 1) : 0;
+  const finalDefenseValue = bestDefense + retreatBonus;
+  
+  return {
+    defenseType: defenseUsed,
+    defenseLabel,
+    finalDefenseValue,
+    canRetreat,
+    retreatHex,
+    parryWeaponName,
+  };
+};
+
 const gurpsCombatDomain: CombatDomain = {
   resolveAttackRoll: gurpsResolveAttackRoll,
   resolveDefenseRoll: gurpsResolveDefenseRoll,
@@ -309,6 +410,7 @@ const gurpsCombatDomain: CombatDomain = {
   rollCriticalMissTable: gurpsRollCriticalMissTable,
   applyCriticalHitDamage: gurpsApplyCriticalHitDamage,
   getCriticalMissDescription: gurpsGetCriticalMissDescription,
+  selectBotDefense: gurpsSelectBotDefense,
 };
 
 const gurpsDamageDomain: DamageDomain = {

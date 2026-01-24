@@ -633,70 +633,44 @@ export const handleAttackAction = async (
   const isDefenderBot = targetPlayer?.isBot ?? false;
 
   if (isDefenderBot) {
-    const targetEncumbrance = adapter.calculateEncumbrance!(
-      targetCharacter.attributes.strength,
-      targetCharacter.equipment
-    );
-    const effectiveDodge = targetCharacter.derived.dodge + targetEncumbrance.dodgePenalty;
-    const defenseOptions = adapter.getDefenseOptions!(targetCharacter, effectiveDodge);
-    const targetWeapon = targetCharacter.equipment.find(e => e.type === 'melee');
-    const targetShield = targetCharacter.equipment.find(e => e.type === 'shield');
-    const inCloseCombat = distance === 0;
-    const ccDefMods = adapter.getCloseCombatDefenseModifiers!(
-      targetWeapon?.reach,
-      targetShield?.shieldSize,
-      inCloseCombat
-    );
+    const botDefense = adapter.combat?.selectBotDefense?.({
+      targetCharacter,
+      targetCombatant,
+      attackerPosition: actorCombatant.position,
+      allCombatants: match.combatants,
+      distance,
+      relativeDir,
+      isRanged,
+      findRetreatHex,
+    });
     
-    let defenseMod = 0;
-    if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
-    if (targetCombatant.statusEffects.includes('defending')) defenseMod += 1;
-    
-    const targetPosture = adapter.getPostureModifiers!(targetCombatant.posture);
-    const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
-    defenseMod += postureDefBonus;
-    
-    const aodVariant = targetCombatant.aodVariant;
-    const dodgeAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_dodge') ? 2 : 0;
-    const parryAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_parry') ? 2 : 0;
-    const blockAodBonus = (targetManeuver === 'all_out_defense' && aodVariant === 'increased_block') ? 2 : 0;
-    const lostBalancePenalty = targetCombatant.statusEffects.includes('lost_balance') ? -2 : 0;
-    
-    let bestDefense = defenseOptions.dodge + ccDefMods.dodge + defenseMod + dodgeAodBonus + lostBalancePenalty;
-    let defenseUsed: DefenseType = 'dodge';
-    let defenseLabel = "Dodge";
-    let botParryWeaponName: string | null = null;
-    
-    if (ccDefMods.canParry && defenseOptions.parry) {
-      const parryWeapon = defenseOptions.parry.weapon;
-      const isSameWeaponParry = targetCombatant.parryWeaponsUsedThisTurn.includes(parryWeapon);
-      const sameWeaponPenalty = isSameWeaponParry ? -4 : 0;
-      const multiDefPenalty = isSameWeaponParry 
-        ? (targetCombatant.defensesThisTurn > 1 ? -(targetCombatant.defensesThisTurn - 1) : 0)
-        : -targetCombatant.defensesThisTurn;
-      const parryValue = defenseOptions.parry.value + ccDefMods.parry + defenseMod + parryAodBonus + sameWeaponPenalty + multiDefPenalty + lostBalancePenalty;
-      if (parryValue > bestDefense) {
-        bestDefense = parryValue;
-        defenseUsed = 'parry';
-        defenseLabel = `Parry (${parryWeapon})`;
-        botParryWeaponName = parryWeapon;
+    if (!botDefense) {
+      const dmg = adapter.rollDamage!(damageFormula);
+      let baseDamage = dmg.total;
+      if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
+        baseDamage += 2;
       }
-    }
-    if (ccDefMods.canBlock && defenseOptions.block) {
-      const blockValue = defenseOptions.block.value + ccDefMods.block + defenseMod + blockAodBonus - targetCombatant.defensesThisTurn + lostBalancePenalty;
-      if (blockValue > bestDefense) {
-        bestDefense = blockValue;
-        defenseUsed = 'block';
-        defenseLabel = `Block (${defenseOptions.block.shield})`;
-        botParryWeaponName = null;
-      }
+      
+      const result = applyDamageToTarget(
+        match, targetCombatant.playerId, baseDamage, damageFormula,
+        damageType, hitLocation, dmg.rolls, dmg.modifier
+      );
+      logEntry += `: Hit! ${formatRoll(attackRoll.roll, 'Attack')} -> ${result.logEntry}`;
+      
+      let updated = advanceTurn({
+        ...match,
+        combatants: result.updatedCombatants,
+        log: [...match.log, logEntry],
+      });
+      updated = checkVictory(updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
+      return;
     }
     
-    const wantsRetreat = !targetCombatant.retreatedThisTurn;
-    const retreatHex = wantsRetreat ? findRetreatHex(targetCombatant.position, actorCombatant.position, match.combatants) : null;
-    const canRetreat = wantsRetreat && retreatHex !== null;
-    const retreatBonus = canRetreat ? (defenseUsed === 'dodge' ? 3 : 1) : 0;
-    const finalDefenseValue = bestDefense + retreatBonus;
+    const { defenseType: defenseUsed, defenseLabel, finalDefenseValue, canRetreat, retreatHex, parryWeaponName: botParryWeaponName } = botDefense;
     
 const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
     

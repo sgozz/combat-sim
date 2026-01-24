@@ -382,7 +382,7 @@ Phase 6 (Final validation)
 
 ### Phase 4: Attack Handler Refactoring
 
-- [ ] 4.1. Extract bot defense logic to adapter
+- [x] 4.1. Extract bot defense logic to adapter
 
   **What to do**:
   - Lines 633-699 in `attack.ts` contain bot defense selection

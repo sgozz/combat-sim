@@ -530,3 +530,71 @@ import { functionName } from '../../../../shared/rulesets/gurps/rules'
 - All 240 tests passing
 - Production build succeeds
 
+
+## Task 4.1: Extract Bot Defense Logic to Adapter ✅
+
+**Completed**: 2025-01-24
+
+### Changes Made
+1. Added `BotDefenseResult` type to `shared/rulesets/serverAdapter.ts`:
+   - `defenseType`: DefenseType (dodge, parry, block)
+   - `defenseLabel`: string (e.g., "Parry (Sword)")
+   - `finalDefenseValue`: number (calculated defense value with all modifiers)
+   - `canRetreat`: boolean
+   - `retreatHex`: GridPosition | null
+   - `parryWeaponName`: string | null
+
+2. Added `BotDefenseOptions` type for method input:
+   - `targetCharacter`: CharacterSheet
+   - `targetCombatant`: CombatantState
+   - `attackerPosition`: GridPosition
+   - `allCombatants`: CombatantState[]
+   - `distance`: number
+   - `relativeDir`: number
+   - `isRanged`: boolean
+   - `findRetreatHex`: function (passed from caller)
+
+3. Added `selectBotDefense` method to `CombatDomain` interface (optional)
+
+4. Implemented `gurpsSelectBotDefense` function in serverAdapter.ts:
+   - Moved exact logic from attack.ts lines 635-699
+   - Calculates encumbrance, defense options, close combat modifiers
+   - Applies posture, AOD variant, lost balance penalties
+   - Selects best defense (dodge, parry, or block)
+   - Calculates retreat bonus
+
+5. Added PF2 stub: `selectBotDefense: () => null` (PF2 has no active defense)
+
+6. Updated `attack.ts` to call `adapter.combat?.selectBotDefense?.(...)`:
+   - If null returned (PF2), applies damage directly
+   - If result returned (GURPS), uses defense values for roll
+
+### Key Findings
+1. **Position Types**: Combatant positions use `GridPosition` (x, y, z), not `HexCoord` (q, r)
+   - `findRetreatHex` helper takes GridPosition
+   - Adapter function receives GridPosition directly
+
+2. **Dependency Injection Pattern**: `findRetreatHex` passed as parameter to avoid circular imports
+   - Adapter in shared/ cannot import from server/src/helpers.ts
+   - Caller provides the function reference
+
+3. **Optional Chaining**: Used `adapter.combat?.selectBotDefense?.(...)` for safe access
+   - Returns undefined if method not implemented
+   - Allows graceful fallback for rulesets without active defense
+
+4. **Null Return Pattern**: PF2 returns null to indicate "no active defense"
+   - Caller handles null by applying damage directly
+   - Clean separation of ruleset-specific behavior
+
+### Verification Results
+- ✅ `npx vitest run` - All 240 tests pass
+- ✅ `npm run build` - Client builds successfully
+- ✅ `npm run build --prefix server` - Server builds successfully
+- ✅ Bot defense behavior unchanged (same logic, different location)
+
+### Architecture Notes
+- Phase 4 Task 4.1 complete: Bot defense logic extracted to adapter
+- Pattern established for extracting other bot behaviors (attack selection, movement)
+- CombatDomain interface now has 16 methods (15 existing + selectBotDefense)
+- GURPS adapter fully implements selectBotDefense
+- PF2 adapter stubs with null return
