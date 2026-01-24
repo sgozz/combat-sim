@@ -2,6 +2,7 @@
 // These are the types specific to the GURPS ruleset
 
 import type { Id } from '../../types';
+import type { BaseCombatantState } from '../base/types';
 
 // GURPS Attributes (ST, DX, IQ, HT)
 // PF2 adds wisdom and charisma (optional for GURPS compatibility)
@@ -199,18 +200,12 @@ export type PF2CombatantExtension = {
   shieldRaised: boolean;
 };
 
-export type CombatantState = {
-  playerId: Id;
-  characterId: Id;
-  position: { x: number; y: number; z: number };
-  facing: number;
+export type GurpsCombatantState = BaseCombatantState & {
   posture: Posture;
   maneuver: ManeuverType | null;
   aoaVariant: AOAVariant | null;
   aodVariant: AODVariant | null;
-  currentHP: number;
   currentFP: number;
-  statusEffects: string[];
   aimTurns: number;
   aimTargetId: Id | null;
   evaluateBonus: number;
@@ -219,7 +214,6 @@ export type CombatantState = {
   inCloseCombatWith: Id | null;
   closeCombatPosition: CloseCombatPosition | null;
   grapple: GrappleState | null;
-  usedReaction: boolean;
   shockPenalty: number;
   attacksRemaining: number;
   retreatedThisTurn: boolean;
@@ -228,3 +222,6 @@ export type CombatantState = {
   waitTrigger: WaitTrigger | null;
   pf2?: PF2CombatantExtension;
 };
+
+// Backward compatibility alias
+export type CombatantState = GurpsCombatantState;
