@@ -1,4 +1,4 @@
-import type { DefenseType } from '../../../../shared/types'
+import type { DefenseType } from '../../../../shared/rulesets/gurps/types'
 
 export type DefenseButtonProps = {
   type: DefenseType | 'none'

@@ -1,4 +1,5 @@
-import type { CombatantState, CharacterSheet } from '../../../shared/types'
+import type { CharacterSheet } from '../../../shared/types'
+import type { CombatantState } from '../../../shared/rulesets/gurps/types'
 
 type FloatingStatusProps = {
   combatant: CombatantState | null

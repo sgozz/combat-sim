@@ -1,12 +1,12 @@
 import { WebSocket, WebSocketServer } from "ws";
 import type {
   ClientToServerMessage,
-  CombatActionPayload,
   MatchState,
   Player,
   HexCoord,
   User,
 } from "../../shared/types";
+import type { CombatActionPayload } from "../../shared/rulesets/gurps/types";
 
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "./rulesetHelpers";

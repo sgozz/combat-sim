@@ -51,7 +51,8 @@ import {
   type MovementState,
   type CriticalHitEffect,
 } from './rules'
-import type { CharacterSheet, MatchState, CombatantState, Player, Equipment } from './types'
+import type { CharacterSheet, MatchState, Player } from './types'
+import type { CombatantState, Equipment } from './rulesets/gurps/types'
 
 describe('Combat Rules', () => {
   describe('Skill Check', () => {

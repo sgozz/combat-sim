@@ -395,3 +395,91 @@ All 5 GURPS components now in `src/components/rulesets/gurps/`:
 5. ReadyPanel ✅
 
 **Phase 2 Complete**: All component migrations finished.
+
+## Task 3.1: Clean shared/types.ts Exports ✅
+
+**Completed**: 2025-01-24
+
+### Changes Made
+- Removed 32 GURPS-specific type re-exports from `shared/types.ts` (lines 5-36)
+- Moved import statements to top of file for types used in CharacterSheet and message contracts
+- Updated 25 files to import GURPS types directly from `shared/rulesets/gurps/types`
+
+### GURPS Types Removed from shared/types.ts
+- Attributes, DerivedStats, Skill, Advantage, Disadvantage, Equipment, EquipmentType, DamageType
+- Posture, HitLocation, Reach, ShieldSize, GrappleState, CloseCombatPosition, EquipmentSlot, EquippedItem, ReadyAction
+- ManeuverType, WaitTriggerCondition, WaitTriggerAction, WaitTrigger
+- AOAVariant, AODVariant, DefenseType, DefenseChoice, PendingDefense, GrappleAction, CombatActionPayload, CombatantState, PF2CombatantExtension
+
+### Generic Types Kept in shared/types.ts
+- Id, RulesetId, User, Player, GridPosition, HexCoord, TurnMovementState, ReachableHexInfo
+- CharacterSheet (uses GURPS types internally but is generic container)
+- MatchStatus, MatchState, MatchSummary
+- ClientToServerMessage, ServerToClientMessage, VisualEffect, PendingAction
+
+### Files Updated (25 total)
+
+**Server-side (10 files)**:
+1. `server/src/match.ts` - CombatantState, EquippedItem
+2. `server/src/handlers.ts` - CombatActionPayload
+3. `server/src/bot.ts` - CombatantState, DefenseType, DamageType, PendingDefense
+4. `server/src/helpers.ts` - CombatantState
+5. `server/src/handlers/ready.ts` - CombatActionPayload, EquippedItem, EquipmentSlot
+6. `server/src/handlers/pf2-attack.ts` - CombatActionPayload
+7. `server/src/handlers/damage.ts` - DamageType, CombatantState
+8. `server/src/handlers/movement.ts` - CombatActionPayload
+9. `server/src/handlers/attack.ts` - CombatActionPayload, PendingDefense, DefenseType, DamageType, Reach
+10. `server/src/handlers/close-combat.ts` - CombatActionPayload
+
+**Client-side (12 files)**:
+1. `src/App.tsx` - CombatActionPayload
+2. `src/components/rulesets/useCharacterEditor.ts` - Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType
+3. `src/components/rulesets/types.ts` - CombatantState, CombatActionPayload, ManeuverType, DefenseChoice, PendingDefense
+4. `src/components/game/TurnStepper.tsx` - ManeuverType
+5. `src/components/arena/Combatant.tsx` - CombatantState
+6. `src/components/arena/ArenaScene.tsx` - CombatantState
+7. `src/components/game/FloatingStatus.tsx` - CombatantState
+8. `src/components/game/GameScreen.tsx` - CombatActionPayload, ManeuverType, DefenseType
+9. `src/components/game/shared/DefenseButton.tsx` - DefenseType
+10. `src/components/rulesets/gurps/PostureControls.tsx` - Posture, CombatActionPayload
+11. `src/components/rulesets/gurps/GurpsGameActionPanel.tsx` - HitLocation, ReadyAction, EquipmentSlot, WaitTrigger, AOAVariant, AODVariant
+12. `src/components/game/shared/useGameActions.ts` - ManeuverType, CombatActionPayload, HitLocation, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger, ReadyAction, EquipmentSlot
+
+**Shared/rulesets (3 files)**:
+1. `shared/rules.test.ts` - CombatantState, Equipment
+2. `shared/rulesets/Ruleset.ts` - CombatantState, ManeuverType, AOAVariant, AODVariant
+3. `shared/rulesets/serverTypes.ts` - CombatantState
+
+**Additional files (5 files)**:
+1. `src/components/rulesets/gurps/GurpsActionBar.tsx` - ManeuverType, HitLocation, AOAVariant, AODVariant, WaitTrigger
+2. `src/components/rulesets/gurps/WaitTriggerPicker.tsx` - WaitTrigger, WaitTriggerCondition, WaitTriggerAction
+3. `src/components/rulesets/gurps/HitLocationPicker.tsx` - HitLocation
+4. `src/components/rulesets/gurps/ReadyPanel.tsx` - EquippedItem, Equipment, ReadyAction, EquipmentSlot
+5. `src/components/game/shared/rulesetUiSlots.ts` - CombatActionPayload, ManeuverType, HitLocation, DefenseChoice, PendingDefense, CombatantState
+
+### Import Pattern
+All GURPS-specific types now import from:
+```typescript
+import type { GurpsSpecificType } from '../../../shared/rulesets/gurps/types'
+```
+
+### Verification Results
+- ✅ `npm run build` - Succeeds with zero errors (4.03s)
+- ✅ `npx vitest run` - All 240 tests pass (3 test files, 845ms)
+- ✅ No TypeScript errors or warnings
+- ✅ No broken imports
+
+### Key Findings
+1. **Scope**: 32 GURPS-specific types removed from shared/types.ts
+2. **Impact**: 25 files required import updates
+3. **Pattern**: Consistent import path pattern across all files
+4. **Backward Compatibility**: CharacterSheet and message types remain in shared/types.ts (they're generic containers)
+5. **Type Safety**: All imports properly typed, no `any` or type assertions needed
+
+### Architecture Notes
+- Phase 3 Task 3.1 complete: shared/types.ts now contains only truly generic types
+- Clear separation: GURPS-specific types live in `shared/rulesets/gurps/types`
+- Foundation ready for Phase 3 Task 3.2 (shared/rules.ts cleanup)
+- Enables future rulesets (D&D 5e, etc.) to have their own type modules without polluting shared namespace
+- Build and test verification confirms no regressions
+

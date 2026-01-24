@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
 import type {
   MatchState,
+} from '../../../../shared/types'
+import type {
   ManeuverType,
   CombatActionPayload,
   HitLocation,
@@ -11,7 +13,7 @@ import type {
   WaitTrigger,
   ReadyAction,
   EquipmentSlot
-} from '../../../../shared/types'
+} from '../../../../shared/rulesets/gurps/types'
 import {
   getDefenseOptions,
   calculateDefenseValue,

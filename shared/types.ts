@@ -1,39 +1,10 @@
+import type { Attributes, DerivedStats, Skill, Advantage, Disadvantage, Equipment, CombatantState, PendingDefense, CombatActionPayload } from './rulesets/gurps/types';
+
 export type Id = string;
 
 export type RulesetId = 'gurps' | 'pf2';
 
-export type {
-  Attributes,
-  DerivedStats,
-  Skill,
-  Advantage,
-  Disadvantage,
-  Equipment,
-  EquipmentType,
-  DamageType,
-  Posture,
-  HitLocation,
-  Reach,
-  ShieldSize,
-  GrappleState,
-  CloseCombatPosition,
-  EquipmentSlot,
-  EquippedItem,
-  ReadyAction,
-  ManeuverType,
-  WaitTriggerCondition,
-  WaitTriggerAction,
-  WaitTrigger,
-  AOAVariant,
-  AODVariant,
-  DefenseType,
-  DefenseChoice,
-  PendingDefense,
-  GrappleAction,
-  CombatActionPayload,
-  CombatantState,
-  PF2CombatantExtension,
-} from './rulesets/gurps/types';
+
 
 export type User = {
   id: Id;
@@ -76,8 +47,6 @@ export type ReachableHexInfo = {
   cost: number;
   finalFacing: number;
 };
-
-import type { Attributes, DerivedStats, Skill, Advantage, Disadvantage, Equipment, CombatantState, PendingDefense } from './rulesets/gurps/types';
 
 export type CharacterSheet = {
   id: Id;
@@ -129,8 +98,6 @@ export type MatchSummary = {
   winnerId?: Id;
   winnerName?: string;
 };
-
-import type { CombatActionPayload } from './rulesets/gurps/types';
 
 export type ClientToServerMessage =
   | { type: "register"; username: string }

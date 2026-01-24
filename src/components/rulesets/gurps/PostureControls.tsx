@@ -1,4 +1,4 @@
-import type { Posture, CombatActionPayload } from '../../../../shared/types'
+import type { Posture, CombatActionPayload } from '../../../../shared/rulesets/gurps/types'
 import { getPostureModifiers, canChangePostureFree, getValidPostureChanges } from '../../../../shared/rules'
 
 type PostureControlsProps = {

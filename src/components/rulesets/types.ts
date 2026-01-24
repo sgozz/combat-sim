@@ -2,12 +2,14 @@ import type {
   CharacterSheet, 
   MatchState, 
   Player, 
+} from '../../../shared/types'
+import type {
   CombatantState,
   CombatActionPayload, 
   ManeuverType,
   DefenseChoice,
   PendingDefense,
-} from '../../../shared/types'
+} from '../../../shared/rulesets/gurps/types'
 
 export type CharacterEditorProps = {
   character: CharacterSheet

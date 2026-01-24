@@ -1,8 +1,10 @@
 import type {
   MatchState,
+} from "../../../shared/types";
+import type {
   DamageType,
   CombatantState,
-} from "../../../shared/types";
+} from "../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 
 export type ApplyDamageResult = {

@@ -1,4 +1,5 @@
-import type { CharacterSheet, CombatantState, MatchState, RulesetId, ManeuverType, AOAVariant, AODVariant } from '../types';
+import type { CharacterSheet, MatchState, RulesetId } from '../types';
+import type { CombatantState, ManeuverType, AOAVariant, AODVariant } from './gurps/types';
 
 export type RulesetAction = {
   type: string;

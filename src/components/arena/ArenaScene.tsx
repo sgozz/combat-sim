@@ -5,7 +5,8 @@ import { MoveMarker } from './MoveMarker'
 import { CameraControls, type CameraMode } from './CameraControls'
 import { getHexInDirection } from '../../utils/hex'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
-import type { CombatantState, CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
+import type { CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
+import type { CombatantState } from '../../../shared/rulesets/gurps/types'
 import { useMemo, useState, useEffect } from 'react'
 
 type ArenaSceneProps = {

@@ -2,12 +2,14 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
+} from "../../../shared/types";
+import type {
   CombatActionPayload,
   PendingDefense,
   DefenseType,
   DamageType,
-} from "../../../shared/types";
-import type { Reach } from "../../../shared/types";
+  Reach,
+} from "../../../shared/rulesets/gurps/types";
 import { isPf2Match, getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../rulesetHelpers";
 import { state } from "../state";

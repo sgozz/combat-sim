@@ -10,7 +10,8 @@ import { CombatToast } from './CombatToast'
 
 import DefenseModal from '../rulesets/gurps/DefenseModal'
 import type { CameraMode } from '../arena/CameraControls'
-import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType, PendingAction, DefenseType } from '../../../shared/types'
+import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
+import type { CombatActionPayload, ManeuverType, DefenseType } from '../../../shared/rulesets/gurps/types'
 
 type GameScreenProps = {
   matchState: MatchState | null

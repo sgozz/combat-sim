@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import type { 
   CharacterSheet, 
+  RulesetId
+} from '../../../../shared/types';
+import type {
   CombatantState, 
   PendingDefense, 
   DefenseType, 
   DefenseChoice,
-  RulesetId
-} from '../../../../shared/types';
+} from '../../../../shared/rulesets/gurps/types';
 import { 
   getDefenseOptions, 
   calculateDefenseValue, 

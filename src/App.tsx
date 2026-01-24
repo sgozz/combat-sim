@@ -8,7 +8,8 @@ import { GameScreen } from './components/game/GameScreen'
 import { getRulesetComponents } from './components/rulesets'
 
 
-import type { GridPosition, CharacterSheet, CombatActionPayload, RulesetId } from '../shared/types'
+import type { GridPosition, CharacterSheet, RulesetId } from '../shared/types'
+import type { CombatActionPayload } from '../shared/rulesets/gurps/types'
 import './App.css'
 
 function AppRoutes() {

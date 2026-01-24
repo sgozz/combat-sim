@@ -1,5 +1,6 @@
 import { WebSocket } from "ws";
-import type { CombatantState, GridPosition, MatchState, User, ServerToClientMessage } from "../../shared/types";
+import type { GridPosition, MatchState, User, ServerToClientMessage } from "../../shared/types";
+import type { CombatantState } from "../../shared/rulesets/gurps/types";
 import type { GridSystem, GridCoord } from "../../shared/grid";
 import { hexGrid } from "../../shared/grid";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";

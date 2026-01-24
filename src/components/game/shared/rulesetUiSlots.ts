@@ -1,7 +1,7 @@
 import { Fragment, createElement } from 'react';
 import type { ReactNode } from 'react';
-import type { MatchState, Player, CombatActionPayload, ManeuverType, RulesetId, HitLocation } from '../../../../shared/types';
-import type { DefenseChoice, PendingDefense, CharacterSheet, CombatantState } from '../../../../shared/types';
+import type { MatchState, Player, RulesetId, CharacterSheet } from '../../../../shared/types';
+import type { CombatActionPayload, ManeuverType, HitLocation, DefenseChoice, PendingDefense, CombatantState } from '../../../../shared/rulesets/gurps/types';
 import HitLocationPicker from '../../rulesets/gurps/HitLocationPicker';
 
 export type AttackUiOptions = {

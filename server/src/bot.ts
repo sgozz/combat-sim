@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, User, DefenseType, DamageType, PendingDefense, RulesetId } from "../../shared/types";
+import type { CharacterSheet, MatchState, User, RulesetId } from "../../shared/types";
+import type { CombatantState, DefenseType, DamageType, PendingDefense } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 

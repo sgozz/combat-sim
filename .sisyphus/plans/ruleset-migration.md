@@ -329,7 +329,7 @@ Phase 6 (Final validation)
 
 ### Phase 3: Shared Directory Cleanup
 
-- [ ] 3.1. Clean shared/types.ts exports
+- [x] 3.1. Clean shared/types.ts exports
 
   **What to do**:
   - Remove GURPS-specific type exports from `shared/types.ts`

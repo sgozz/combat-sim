@@ -1,5 +1,5 @@
 import type { RulesetUIAdapter } from '../Ruleset';
-import type { ManeuverType } from '../../types';
+import type { ManeuverType } from './types';
 
 const MANEUVERS = [
   { type: 'move', label: 'Move', shortLabel: 'Move', icon: '🏃', desc: 'Full move. No attack. Active defense allowed.', key: '1' },

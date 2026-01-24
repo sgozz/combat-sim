@@ -1,4 +1,4 @@
-import type { EquippedItem, Equipment, ReadyAction, EquipmentSlot } from '../../../../shared/types';
+import type { EquippedItem, Equipment, ReadyAction, EquipmentSlot } from '../../../../shared/rulesets/gurps/types';
 import { Tooltip } from '../../ui/Tooltip';
 
 type ReadyPanelProps = {

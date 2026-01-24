@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { HitLocation } from '../../../../shared/types';
+import type { HitLocation } from '../../../../shared/rulesets/gurps/types';
 import { HIT_LOCATION_DATA } from '../../../../shared/rules';
 
 const getPenalty = (loc: HitLocation) => HIT_LOCATION_DATA[loc]?.penalty ?? 0;

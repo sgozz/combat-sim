@@ -1,4 +1,4 @@
-import type { ManeuverType } from '../../../shared/types'
+import type { ManeuverType } from '../../../shared/rulesets/gurps/types'
 
 type TurnStepperProps = {
   isMyTurn: boolean

@@ -2,10 +2,12 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
+} from "../../../shared/types";
+import type {
   CombatActionPayload,
   EquippedItem,
   EquipmentSlot,
-} from "../../../shared/types";
+} from "../../../shared/rulesets/gurps/types";
 import { advanceTurn } from "../rulesetHelpers";
 import { state } from "../state";
 import { updateMatchState } from "../db";
