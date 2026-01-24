@@ -79,10 +79,8 @@ export const resolveDefenseChoice = async (
 
   if (choice.defenseType === 'none') {
     const dmg = adapter.rollDamage!(pending.damage);
-    let baseDamage = dmg.total;
-    if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
-      baseDamage += 2;
-    }
+    const attackerManeuverInfo = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
+    let baseDamage = dmg.total + (attackerManeuverInfo?.aoaDamageBonus ?? 0);
     
     const result = applyDamageToTarget(
       match, pending.defenderId, baseDamage, pending.damage,
@@ -150,10 +148,8 @@ export const resolveDefenseChoice = async (
   
   if (!defenseResolution) {
     const dmg = adapter.rollDamage!(pending.damage);
-    let baseDamage = dmg.total;
-    if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
-      baseDamage += 2;
-    }
+    const attackerManeuverInfo2 = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
+    let baseDamage = dmg.total + (attackerManeuverInfo2?.aoaDamageBonus ?? 0);
     
     const result = applyDamageToTarget(
       match, pending.defenderId, baseDamage, pending.damage,
@@ -231,14 +227,14 @@ export const resolveDefenseChoice = async (
       const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
         ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
         : c.parryWeaponsUsedThisTurn;
-      return { 
+      const baseUpdate = { 
         ...c, 
         retreatedThisTurn: (canRetreat && retreatHex !== null) || c.retreatedThisTurn, 
         defensesThisTurn: c.defensesThisTurn + 1,
         parryWeaponsUsedThisTurn: newParryWeapons,
-        posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
         position: retreatHex ?? c.position,
       };
+      return choice.dodgeAndDrop ? (adapter.combat?.applyDodgeAndDrop?.(baseUpdate) ?? baseUpdate) : baseUpdate;
     });
     
     const isMultiAttack = attackerCombatant.attacksRemaining > 1;
@@ -267,10 +263,8 @@ export const resolveDefenseChoice = async (
     }
   } else {
     const dmg = adapter.rollDamage!(pending.damage);
-    let baseDamage = dmg.total;
-    if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
-      baseDamage += 2;
-    }
+    const attackerManeuverInfo3 = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
+    let baseDamage = dmg.total + (attackerManeuverInfo3?.aoaDamageBonus ?? 0);
     
     const result = applyDamageToTarget(
       match, pending.defenderId, baseDamage, pending.damage,
@@ -296,12 +290,12 @@ export const resolveDefenseChoice = async (
       const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
         ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
         : c.parryWeaponsUsedThisTurn;
-      return { 
+      const baseUpdate = { 
         ...c, 
         defensesThisTurn: c.defensesThisTurn + 1,
         parryWeaponsUsedThisTurn: newParryWeapons,
-        posture: choice.dodgeAndDrop ? 'prone' as const : c.posture,
       };
+      return choice.dodgeAndDrop ? (adapter.combat?.applyDodgeAndDrop?.(baseUpdate) ?? baseUpdate) : baseUpdate;
     });
 
     const remainingAttacks = attackerCombatant.attacksRemaining - 1;
@@ -402,9 +396,9 @@ export const handleAttackAction = async (
     return;
   }
   
-  const attackerManeuver = actorCombatant.maneuver;
+  const actorManeuverInfo = adapter.combat?.getAttackerManeuverInfo?.(actorCombatant);
   const rapidStrike = payload.rapidStrike ?? false;
-  if (rapidStrike && attackerManeuver !== 'attack') {
+  if (rapidStrike && !(actorManeuverInfo?.canRapidStrike ?? false)) {
     sendMessage(socket, { type: "error", message: "Rapid Strike only works with Attack maneuver." });
     return;
   }
@@ -439,14 +433,13 @@ export const handleAttackAction = async (
     defenseDescription = "flank (-2)";
   }
 
-  const targetManeuver = targetCombatant.maneuver;
+  const targetManeuverInfo = adapter.combat?.getDefenderManeuverInfo?.(targetCombatant);
   
-  if (targetManeuver === 'all_out_defense' && targetCombatant.aodVariant) {
-    const variantLabel = targetCombatant.aodVariant.replace('increased_', '+2 ').replace('_', ' ');
-    defenseDescription += defenseDescription === "normal" ? `AoD (${variantLabel})` : ` + AoD (${variantLabel})`;
+  if (targetManeuverInfo?.defenseDescription) {
+    defenseDescription += defenseDescription === "normal" ? targetManeuverInfo.defenseDescription : ` + ${targetManeuverInfo.defenseDescription}`;
   }
   
-  if (targetManeuver === 'all_out_attack') {
+  if (targetManeuverInfo && !targetManeuverInfo.canDefend) {
     canDefend = false;
     defenseDescription = "target in AoA (no defense)";
   }
@@ -481,8 +474,7 @@ export const handleAttackAction = async (
       effect: { type: "miss", attackerId: player.id, targetId: targetCombatant.playerId, position: targetCombatant.position } 
     });
     
-    const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-    const isMultiAttack = isDoubleAttack || rapidStrike;
+    const isMultiAttack = (actorManeuverInfo?.isMultiAttack ?? false) || rapidStrike;
     const effectiveAttacksRemaining = rapidStrike && actorCombatant.attacksRemaining === 1 ? 2 : actorCombatant.attacksRemaining;
     const remainingAttacks = isMultiAttack ? effectiveAttacksRemaining - 1 : 0;
     
@@ -517,10 +509,7 @@ export const handleAttackAction = async (
 
   if (attackRoll.critical || !canDefend) {
     const dmg = adapter.rollDamage!(damageFormula);
-    let baseDamage = dmg.total;
-    if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
-      baseDamage += 2;
-    }
+    let baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
     
     let critHitStr = '';
     let finalBaseDamage = baseDamage;
@@ -551,10 +540,9 @@ export const handleAttackAction = async (
       effect: { type: "damage", attackerId: player.id, targetId: targetCombatant.playerId, value: result.finalDamage, position: targetCombatant.position } 
     });
 
-    const isDoubleAttack = attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'double';
-    const isMultiAttack = isDoubleAttack || rapidStrike;
+    const isMultiAttackCrit = (actorManeuverInfo?.isMultiAttack ?? false) || rapidStrike;
     const effectiveAttacksRemaining = rapidStrike && actorCombatant.attacksRemaining === 1 ? 2 : actorCombatant.attacksRemaining;
-    const remainingAttacks = isMultiAttack ? effectiveAttacksRemaining - 1 : 0;
+    const remainingAttacks = isMultiAttackCrit ? effectiveAttacksRemaining - 1 : 0;
     
     if (remainingAttacks > 0) {
       const updatedCombatants = result.updatedCombatants.map(c => 
@@ -604,10 +592,7 @@ export const handleAttackAction = async (
     
     if (!botDefense) {
       const dmg = adapter.rollDamage!(damageFormula);
-      let baseDamage = dmg.total;
-      if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
-        baseDamage += 2;
-      }
+      let baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
       
       const result = applyDamageToTarget(
         match, targetCombatant.playerId, baseDamage, damageFormula,
@@ -680,10 +665,7 @@ const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
       }
     } else {
       const dmg = adapter.rollDamage!(damageFormula);
-      let baseDamage = dmg.total;
-      if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
-        baseDamage += 2;
-      }
+      let baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
       
       const result = applyDamageToTarget(
         match, targetCombatant.playerId, baseDamage, damageFormula,

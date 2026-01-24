@@ -458,7 +458,7 @@ Phase 6 (Final validation)
   - Message: `refactor(attack): extract defense resolution to adapter`
   - Files: `serverAdapter.ts`, `attack.ts`
 
-- [ ] 4.4. Clean attack.ts of remaining GURPS coupling
+- [x] 4.4. Clean attack.ts of remaining GURPS coupling
 
   **What to do**:
   - Review remaining GURPS-specific code in attack.ts

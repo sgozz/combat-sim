@@ -757,3 +757,60 @@ import { functionName } from '../../../../shared/rulesets/gurps/rules'
 - PF2 adapter returns null (no active defense system)
 - Enables future rulesets to implement their own defense resolution logic
 
+
+## Task 4.4: Clean attack.ts of Remaining GURPS Coupling ✅
+
+**Completed**: 2025-01-24
+
+### Changes Made
+
+1. **Added `ManeuverInfo` type to serverAdapter.ts**:
+   - `aoaDamageBonus`: number (0 for PF2, +2 for GURPS AoA Strong)
+   - `isMultiAttack`: boolean (true for GURPS AoA Double)
+   - `canDefend`: boolean (false for GURPS AoA)
+   - `defenseDescription`: string | null (AOD variant label for GURPS)
+   - `canRapidStrike`: boolean (true only for GURPS Attack maneuver)
+
+2. **Added adapter methods to CombatDomain**:
+   - `getAttackerManeuverInfo(combatant)`: Returns ManeuverInfo for attacker
+   - `getDefenderManeuverInfo(combatant)`: Returns ManeuverInfo for defender
+   - `applyDodgeAndDrop(combatant)`: Returns combatant with posture set to 'prone'
+
+3. **Updated attack.ts to use adapter methods**:
+   - Replaced 6 direct `maneuver === 'all_out_attack' && aoaVariant === 'strong'` checks with `actorManeuverInfo?.aoaDamageBonus`
+   - Replaced 2 direct `aoaVariant === 'double'` checks with `actorManeuverInfo?.isMultiAttack`
+   - Replaced direct `targetManeuver === 'all_out_defense' && aodVariant` check with `targetManeuverInfo?.defenseDescription`
+   - Replaced direct `targetManeuver === 'all_out_attack'` check with `!targetManeuverInfo?.canDefend`
+   - Replaced direct `attackerManeuver !== 'attack'` check with `!actorManeuverInfo?.canRapidStrike`
+   - Replaced 2 direct `posture: 'prone'` assignments with `adapter.combat?.applyDodgeAndDrop?.()`
+
+### GURPS-Specific Fields Removed from attack.ts
+- `.maneuver` - No longer accessed directly
+- `.aoaVariant` - No longer accessed directly
+- `.aodVariant` - No longer accessed directly
+- `.posture` - No longer accessed directly (state updates via adapter)
+
+### PF2 Adapter Stubs
+All new methods return neutral values for PF2:
+- `getAttackerManeuverInfo`: `{ aoaDamageBonus: 0, isMultiAttack: false, canDefend: true, defenseDescription: null, canRapidStrike: false }`
+- `getDefenderManeuverInfo`: Same as above
+- `applyDodgeAndDrop`: Returns combatant unchanged (PF2 has no dodge-and-drop)
+
+### Verification Results
+- ✅ `npx vitest run` - All 240 tests pass
+- ✅ `npm run build` - Client builds successfully
+- ✅ `npm run build --prefix server` - Server builds successfully
+- ✅ No direct GURPS field access in attack.ts
+
+### Key Findings
+1. **ManeuverInfo Pattern**: Single type encapsulates all maneuver-related info, reducing adapter method count
+2. **Optional Chaining**: `adapter.combat?.getAttackerManeuverInfo?.(combatant)` safely handles missing methods
+3. **Null Coalescing**: `?? 0` and `?? false` provide sensible defaults for PF2
+4. **State Mutation via Adapter**: `applyDodgeAndDrop` handles posture changes ruleset-specifically
+
+### Architecture Notes
+- Phase 4 Task 4.4 complete: attack.ts is now ruleset-agnostic
+- CombatDomain interface now has 21 methods
+- Pattern established for extracting ruleset-specific logic to adapter
+- attack.ts works for both GURPS and PF2 without direct field access
+- Phase 4 complete (all 4 tasks done)

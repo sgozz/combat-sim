@@ -83,6 +83,14 @@ export type DefenseResolutionResult = {
   inCloseCombat: boolean;
 };
 
+export type ManeuverInfo = {
+  aoaDamageBonus: number;
+  isMultiAttack: boolean;
+  canDefend: boolean;
+  defenseDescription: string | null;
+  canRapidStrike: boolean;
+};
+
 export type CombatDomain = {
   resolveAttackRoll: (skill: number, random?: () => number) => GurpsAttackRollResult;
   resolveDefenseRoll: (defenseValue: number, random?: () => number) => GurpsDefenseRollResult;
@@ -112,6 +120,9 @@ export type CombatDomain = {
   selectBotDefense?: (options: BotDefenseOptions) => BotDefenseResult | null;
   calculateEffectiveSkill?: (options: EffectiveSkillOptions) => number;
   resolveDefense?: (options: DefenseResolutionOptions) => DefenseResolutionResult | null;
+  getAttackerManeuverInfo?: (combatant: CombatantState) => ManeuverInfo;
+  getDefenderManeuverInfo?: (combatant: CombatantState) => ManeuverInfo;
+  applyDodgeAndDrop?: (combatant: CombatantState) => CombatantState;
 };
 
 export type DamageDomain = {
@@ -333,6 +344,21 @@ const pf2CombatDomain: CombatDomain = {
   selectBotDefense: (): BotDefenseResult | null => null,
   calculateEffectiveSkill: (options: EffectiveSkillOptions): number => options.baseSkill,
   resolveDefense: (): DefenseResolutionResult | null => null,
+  getAttackerManeuverInfo: (): ManeuverInfo => ({
+    aoaDamageBonus: 0,
+    isMultiAttack: false,
+    canDefend: true,
+    defenseDescription: null,
+    canRapidStrike: false,
+  }),
+  getDefenderManeuverInfo: (): ManeuverInfo => ({
+    aoaDamageBonus: 0,
+    isMultiAttack: false,
+    canDefend: true,
+    defenseDescription: null,
+    canRapidStrike: false,
+  }),
+  applyDodgeAndDrop: (combatant: CombatantState): CombatantState => combatant,
 };
 
 const pf2DamageDomain: DamageDomain = {
@@ -500,6 +526,37 @@ const calculateFacing = (from: GridPosition, to: GridPosition): number => {
   return Math.round(normalized / 60) % 6;
 };
 
+const gurpsGetAttackerManeuverInfo = (combatant: CombatantState): ManeuverInfo => {
+  const maneuver = combatant.maneuver;
+  const aoaVariant = combatant.aoaVariant;
+  
+  return {
+    aoaDamageBonus: (maneuver === 'all_out_attack' && aoaVariant === 'strong') ? 2 : 0,
+    isMultiAttack: maneuver === 'all_out_attack' && aoaVariant === 'double',
+    canDefend: maneuver !== 'all_out_attack',
+    defenseDescription: null,
+    canRapidStrike: maneuver === 'attack',
+  };
+};
+
+const gurpsGetDefenderManeuverInfo = (combatant: CombatantState): ManeuverInfo => {
+  const maneuver = combatant.maneuver;
+  const aodVariant = combatant.aodVariant;
+  
+  let defenseDescription: string | null = null;
+  if (maneuver === 'all_out_defense' && aodVariant) {
+    defenseDescription = `AoD (${aodVariant.replace('increased_', '+2 ').replace('_', ' ')})`;
+  }
+  
+  return {
+    aoaDamageBonus: 0,
+    isMultiAttack: false,
+    canDefend: maneuver !== 'all_out_attack',
+    defenseDescription,
+    canRapidStrike: false,
+  };
+};
+
 const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResolutionResult => {
   const { defenderCharacter, defenderCombatant, attackerCombatant, attackerCharacter, defenseChoice, deceptivePenalty } = options;
   
@@ -617,6 +674,9 @@ const gurpsCombatDomain: CombatDomain = {
   selectBotDefense: gurpsSelectBotDefense,
   calculateEffectiveSkill: gurpsCalculateEffectiveSkill,
   resolveDefense: gurpsResolveDefense,
+  getAttackerManeuverInfo: gurpsGetAttackerManeuverInfo,
+  getDefenderManeuverInfo: gurpsGetDefenderManeuverInfo,
+  applyDodgeAndDrop: (combatant: CombatantState): CombatantState => ({ ...combatant, posture: 'prone' }),
 };
 
 const gurpsDamageDomain: DamageDomain = {
