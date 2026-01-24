@@ -60,6 +60,29 @@ export type EffectiveSkillOptions = {
   hitLocation: HitLocation;
 };
 
+export type DefenseResolutionOptions = {
+  defenderCharacter: CharacterSheet;
+  defenderCombatant: CombatantState;
+  attackerCombatant: CombatantState;
+  attackerCharacter: CharacterSheet;
+  defenseChoice: {
+    defenseType: 'dodge' | 'parry' | 'block';
+    retreat: boolean;
+    dodgeAndDrop: boolean;
+  };
+  deceptivePenalty: number;
+};
+
+export type DefenseResolutionResult = {
+  baseDefense: number;
+  defenseLabel: string;
+  finalDefenseValue: number;
+  canRetreat: boolean;
+  parryWeaponName: string | null;
+  sameWeaponParry: boolean;
+  inCloseCombat: boolean;
+};
+
 export type CombatDomain = {
   resolveAttackRoll: (skill: number, random?: () => number) => GurpsAttackRollResult;
   resolveDefenseRoll: (defenseValue: number, random?: () => number) => GurpsDefenseRollResult;
@@ -88,6 +111,7 @@ export type CombatDomain = {
   getCriticalMissDescription?: (effect: GurpsCriticalMissEffect) => string;
   selectBotDefense?: (options: BotDefenseOptions) => BotDefenseResult | null;
   calculateEffectiveSkill?: (options: EffectiveSkillOptions) => number;
+  resolveDefense?: (options: DefenseResolutionOptions) => DefenseResolutionResult | null;
 };
 
 export type DamageDomain = {
@@ -308,6 +332,7 @@ const pf2CombatDomain: CombatDomain = {
   getCriticalMissDescription: undefined,
   selectBotDefense: (): BotDefenseResult | null => null,
   calculateEffectiveSkill: (options: EffectiveSkillOptions): number => options.baseSkill,
+  resolveDefense: (): DefenseResolutionResult | null => null,
 };
 
 const pf2DamageDomain: DamageDomain = {
@@ -459,6 +484,120 @@ const gurpsCalculateEffectiveSkill = (options: EffectiveSkillOptions): number =>
   return skill;
 };
 
+const calculateHexDistance = (a: GridPosition, b: GridPosition): number => {
+  const dq = Math.abs(a.x - b.x);
+  const dr = Math.abs(a.z - b.z);
+  const ds = Math.abs((-a.x - a.z) - (-b.x - b.z));
+  return Math.max(dq, dr, ds);
+};
+
+const calculateFacing = (from: GridPosition, to: GridPosition): number => {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  if (dx === 0 && dz === 0) return 0;
+  const angle = Math.atan2(dz, dx) * (180 / Math.PI);
+  const normalized = ((angle + 360) % 360);
+  return Math.round(normalized / 60) % 6;
+};
+
+const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResolutionResult => {
+  const { defenderCharacter, defenderCombatant, attackerCombatant, attackerCharacter, defenseChoice, deceptivePenalty } = options;
+  
+  const defenderEncumbrance = gurpsCalculateEncumbrance(
+    defenderCharacter.attributes.strength,
+    defenderCharacter.equipment
+  );
+  const effectiveDefenderDodge = defenderCharacter.derived.dodge + defenderEncumbrance.dodgePenalty;
+  const defenseOptions = gurpsGetDefenseOptions(defenderCharacter, effectiveDefenderDodge);
+  const distance = calculateHexDistance(attackerCombatant.position, defenderCombatant.position);
+  const inCloseCombat = distance === 0;
+  const defenderWeapon = defenderCharacter.equipment.find((e: Equipment) => e.type === 'melee');
+  const defenderShield = defenderCharacter.equipment.find((e: Equipment) => e.type === 'shield');
+  const ccDefMods = gurpsGetCloseCombatDefenseModifiers(
+    defenderWeapon?.reach,
+    defenderShield?.shieldSize,
+    inCloseCombat
+  );
+  
+  let baseDefense = 0;
+  let defenseLabel = '';
+  let parryWeaponName: string | null = null;
+  let sameWeaponParry = false;
+  
+  switch (defenseChoice.defenseType) {
+    case 'dodge':
+      baseDefense = defenseOptions.dodge + ccDefMods.dodge;
+      defenseLabel = 'Dodge';
+      break;
+    case 'parry':
+      if (!defenseOptions.parry || !ccDefMods.canParry) {
+        baseDefense = 3;
+        defenseLabel = 'Parry (unavailable)';
+      } else {
+        baseDefense = defenseOptions.parry.value + ccDefMods.parry;
+        defenseLabel = `Parry (${defenseOptions.parry.weapon})`;
+        parryWeaponName = defenseOptions.parry.weapon;
+        sameWeaponParry = defenderCombatant.parryWeaponsUsedThisTurn.includes(parryWeaponName);
+      }
+      break;
+    case 'block':
+      if (!defenseOptions.block || !ccDefMods.canBlock) {
+        baseDefense = 3;
+        defenseLabel = 'Block (unavailable)';
+      } else {
+        baseDefense = defenseOptions.block.value + ccDefMods.block;
+        defenseLabel = `Block (${defenseOptions.block.shield})`;
+      }
+      break;
+  }
+  
+  const attackerPos = attackerCombatant.position;
+  const defenderPos = defenderCombatant.position;
+  const attackDirection = calculateFacing(defenderPos, attackerPos);
+  const relativeDir = (attackDirection - defenderCombatant.facing + 6) % 6;
+  
+  let defenseMod = 0;
+  if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
+  if (defenderCombatant.statusEffects.includes('defending')) defenseMod += 1;
+  
+  const aodVariant = defenderCombatant.aodVariant;
+  if (defenderCombatant.maneuver === 'all_out_defense' && aodVariant) {
+    if ((aodVariant === 'increased_dodge' && defenseChoice.defenseType === 'dodge') ||
+        (aodVariant === 'increased_parry' && defenseChoice.defenseType === 'parry') ||
+        (aodVariant === 'increased_block' && defenseChoice.defenseType === 'block')) {
+      defenseMod += 2;
+    }
+  }
+  
+  const isRanged = attackerCharacter.equipment[0]?.type === 'ranged';
+  const defenderPosture = gurpsGetPostureModifiers(defenderCombatant.posture);
+  defenseMod += isRanged ? defenderPosture.defenseVsRanged : defenderPosture.defenseVsMelee;
+  
+  const canRetreat = defenseChoice.retreat && !defenderCombatant.retreatedThisTurn;
+  
+  const finalDefenseValue = gurpsCalculateDefenseValue(baseDefense, {
+    retreat: canRetreat,
+    dodgeAndDrop: defenseChoice.dodgeAndDrop && defenseChoice.defenseType === 'dodge',
+    inCloseCombat,
+    defensesThisTurn: defenderCombatant.defensesThisTurn,
+    deceptivePenalty,
+    postureModifier: defenseMod,
+    defenseType: defenseChoice.defenseType,
+    sameWeaponParry,
+    lostBalance: defenderCombatant.statusEffects.includes('lost_balance'),
+  });
+  
+  return {
+    baseDefense,
+    defenseLabel,
+    finalDefenseValue,
+    canRetreat,
+    parryWeaponName,
+    sameWeaponParry,
+    inCloseCombat,
+  };
+};
+
 const gurpsCombatDomain: CombatDomain = {
   resolveAttackRoll: gurpsResolveAttackRoll,
   resolveDefenseRoll: gurpsResolveDefenseRoll,
@@ -477,6 +616,7 @@ const gurpsCombatDomain: CombatDomain = {
   getCriticalMissDescription: gurpsGetCriticalMissDescription,
   selectBotDefense: gurpsSelectBotDefense,
   calculateEffectiveSkill: gurpsCalculateEffectiveSkill,
+  resolveDefense: gurpsResolveDefense,
 };
 
 const gurpsDamageDomain: DamageDomain = {

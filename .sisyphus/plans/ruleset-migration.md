@@ -433,7 +433,7 @@ Phase 6 (Final validation)
   - Message: `refactor(attack): extract skill calculation to adapter`
   - Files: `serverAdapter.ts`, `attack.ts`
 
-- [ ] 4.3. Extract defense resolution to adapter
+- [x] 4.3. Extract defense resolution to adapter
 
   **What to do**:
   - Defense resolution includes retreat, dodge-and-drop, parry penalties

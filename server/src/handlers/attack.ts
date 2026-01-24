@@ -135,90 +135,78 @@ export const resolveDefenseChoice = async (
     return;
   }
 
-  const defenderEncumbrance = adapter.calculateEncumbrance!(
-    defenderCharacter.attributes.strength,
-    defenderCharacter.equipment
-  );
-  const effectiveDefenderDodge = defenderCharacter.derived.dodge + defenderEncumbrance.dodgePenalty;
-  const defenseOptions = adapter.getDefenseOptions!(defenderCharacter, effectiveDefenderDodge);
-  const distance = calculateHexDistance(attackerCombatant.position, defenderCombatant.position);
-  const inCloseCombat = distance === 0;
-  const defenderWeapon = defenderCharacter.equipment.find(e => e.type === 'melee');
-  const defenderShield = defenderCharacter.equipment.find(e => e.type === 'shield');
-  const ccDefMods = adapter.getCloseCombatDefenseModifiers!(
-    defenderWeapon?.reach,
-    defenderShield?.shieldSize,
-    inCloseCombat
-  );
-  
-  let baseDefense = 0;
-  let defenseLabel = '';
-  
-  let parryWeaponName: string | null = null;
-  let sameWeaponParry = false;
-  
-  switch (choice.defenseType) {
-    case 'dodge':
-      baseDefense = defenseOptions.dodge + ccDefMods.dodge;
-      defenseLabel = 'Dodge';
-      break;
-    case 'parry':
-      if (!defenseOptions.parry || !ccDefMods.canParry) {
-        baseDefense = 3;
-        defenseLabel = 'Parry (unavailable)';
-      } else {
-        baseDefense = defenseOptions.parry.value + ccDefMods.parry;
-        defenseLabel = `Parry (${defenseOptions.parry.weapon})`;
-        parryWeaponName = defenseOptions.parry.weapon;
-        sameWeaponParry = defenderCombatant.parryWeaponsUsedThisTurn.includes(parryWeaponName);
-      }
-      break;
-    case 'block':
-      if (!defenseOptions.block || !ccDefMods.canBlock) {
-        baseDefense = 3;
-        defenseLabel = 'Block (unavailable)';
-      } else {
-        baseDefense = defenseOptions.block.value + ccDefMods.block;
-        defenseLabel = `Block (${defenseOptions.block.shield})`;
-      }
-      break;
-  }
-  
-  const attackerPos = attackerCombatant.position;
-  const defenderPos = defenderCombatant.position;
-  const attackDirection = calculateFacing(defenderPos, attackerPos);
-  const relativeDir = (attackDirection - defenderCombatant.facing + 6) % 6;
-  
-  let defenseMod = 0;
-  if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
-  if (defenderCombatant.statusEffects.includes('defending')) defenseMod += 1;
-  
-  const aodVariant = defenderCombatant.aodVariant;
-  if (defenderCombatant.maneuver === 'all_out_defense' && aodVariant) {
-    if ((aodVariant === 'increased_dodge' && choice.defenseType === 'dodge') ||
-        (aodVariant === 'increased_parry' && choice.defenseType === 'parry') ||
-        (aodVariant === 'increased_block' && choice.defenseType === 'block')) {
-      defenseMod += 2;
-    }
-  }
-  
-  const isRanged = attackerCharacter.equipment[0]?.type === 'ranged';
-  const defenderPosture = adapter.getPostureModifiers!(defenderCombatant.posture);
-  defenseMod += isRanged ? defenderPosture.defenseVsRanged : defenderPosture.defenseVsMelee;
-  
-  const canRetreat = choice.retreat && !defenderCombatant.retreatedThisTurn;
-  
-  const finalDefenseValue = adapter.calculateDefenseValue!(baseDefense, {
-    retreat: canRetreat,
-    dodgeAndDrop: choice.dodgeAndDrop && choice.defenseType === 'dodge',
-    inCloseCombat,
-    defensesThisTurn: defenderCombatant.defensesThisTurn,
+  const defenseResolution = adapter.combat?.resolveDefense?.({
+    defenderCharacter,
+    defenderCombatant,
+    attackerCombatant,
+    attackerCharacter,
+    defenseChoice: {
+      defenseType: choice.defenseType as 'dodge' | 'parry' | 'block',
+      retreat: choice.retreat,
+      dodgeAndDrop: choice.dodgeAndDrop,
+    },
     deceptivePenalty: pending.deceptivePenalty,
-    postureModifier: defenseMod,
-    defenseType: choice.defenseType,
-    sameWeaponParry,
-    lostBalance: defenderCombatant.statusEffects.includes('lost_balance'),
   });
+  
+  if (!defenseResolution) {
+    const dmg = adapter.rollDamage!(pending.damage);
+    let baseDamage = dmg.total;
+    if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
+      baseDamage += 2;
+    }
+    
+    const result = applyDamageToTarget(
+      match, pending.defenderId, baseDamage, pending.damage,
+      pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
+    );
+    
+    let logEntry = `${defenderCharacter.name} is hit for ${result.finalDamage} damage ${result.logEntry}`;
+    if (result.fellUnconscious) {
+      logEntry += ` ${defenderCharacter.name} falls unconscious!`;
+    }
+    if (result.majorWoundStunned) {
+      logEntry += ` Major wound! ${defenderCharacter.name} is stunned!`;
+    }
+    
+    sendToMatch(matchId, { 
+      type: "visual_effect", 
+      matchId,
+      effect: { type: "damage", attackerId: pending.attackerId, targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
+    });
+
+    const remainingAttacks = attackerCombatant.attacksRemaining - 1;
+    
+    if (remainingAttacks > 0) {
+      const updatedCombatants = result.updatedCombatants.map(c => 
+        c.playerId === pending.attackerId ? { ...c, attacksRemaining: remainingAttacks } : c
+      );
+      const updated: MatchState = {
+        ...match,
+        combatants: updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry, `${attackerCharacter.name} has ${remainingAttacks} attack(s) remaining.`],
+      };
+      const checkedUpdate = checkVictory(updated);
+      state.matches.set(matchId, checkedUpdate);
+      await updateMatchState(matchId, checkedUpdate);
+      sendToMatch(matchId, { type: "match_state", state: checkedUpdate });
+    } else {
+      let updated = advanceTurn({
+        ...match,
+        combatants: result.updatedCombatants,
+        pendingDefense: undefined,
+        log: [...match.log, logEntry],
+      });
+      updated = checkVictory(updated);
+      state.matches.set(matchId, updated);
+      await updateMatchState(matchId, updated);
+      sendToMatch(matchId, { type: "match_state", state: updated });
+      scheduleBotTurn(matchId, updated);
+    }
+    return;
+  }
+  
+  const { defenseLabel, finalDefenseValue, canRetreat, parryWeaponName } = defenseResolution;
   
   const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
   

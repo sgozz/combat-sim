@@ -674,3 +674,86 @@ import { functionName } from '../../../../shared/rulesets/gurps/rules'
 - GURPS adapter fully implements calculateEffectiveSkill
 - PF2 adapter returns baseSkill (PF2 attack system is different)
 - Enables future rulesets to implement their own skill calculation logic
+
+## Task 4.3: Extract Defense Resolution to Adapter ✅
+
+**Completed**: 2025-01-24
+
+### Changes Made
+1. Added `DefenseResolutionOptions` type to `shared/rulesets/serverAdapter.ts`:
+   - `defenderCharacter`: CharacterSheet
+   - `defenderCombatant`: CombatantState
+   - `attackerCombatant`: CombatantState
+   - `attackerCharacter`: CharacterSheet
+   - `defenseChoice`: { defenseType, retreat, dodgeAndDrop }
+   - `deceptivePenalty`: number
+
+2. Added `DefenseResolutionResult` type:
+   - `baseDefense`: number
+   - `defenseLabel`: string
+   - `finalDefenseValue`: number
+   - `canRetreat`: boolean
+   - `parryWeaponName`: string | null
+   - `sameWeaponParry`: boolean
+   - `inCloseCombat`: boolean
+
+3. Added `resolveDefense` method to `CombatDomain` interface (optional)
+
+4. Implemented `gurpsResolveDefense` function in serverAdapter.ts:
+   - Calculates encumbrance and effective dodge
+   - Gets defense options (dodge, parry, block values)
+   - Calculates close combat modifiers
+   - Determines base defense based on defense type
+   - Applies side/rear attack penalties
+   - Applies AOD variant bonuses
+   - Applies posture modifiers
+   - Calculates final defense value with all modifiers
+
+5. Added helper functions in serverAdapter.ts:
+   - `calculateHexDistance`: Calculates hex distance between positions
+   - `calculateFacing`: Calculates facing direction from one position to another
+
+6. Added PF2 stub: `resolveDefense: () => null` (PF2 has no active defense)
+
+7. Updated `attack.ts` to call `adapter.combat?.resolveDefense?.(...)`:
+   - If null returned (PF2), applies damage directly
+   - If result returned (GURPS), uses defense values for roll
+
+### Key Findings
+1. **DefenseType Narrowing**: The `DefenseResolutionOptions.defenseChoice.defenseType` uses `'dodge' | 'parry' | 'block'` instead of `DefenseType` because 'none' is handled separately in attack.ts before calling resolveDefense.
+
+2. **Helper Function Duplication**: Had to add `calculateHexDistance` and `calculateFacing` to serverAdapter.ts because:
+   - These functions exist in `server/src/helpers.ts`
+   - serverAdapter.ts is in `shared/` and cannot import from `server/`
+   - Functions are simple enough that duplication is acceptable
+
+3. **Null Return Pattern**: Consistent with Task 4.1 (selectBotDefense) - PF2 returns null to indicate "no active defense", caller handles by applying damage directly.
+
+4. **Optional Chaining**: Used `adapter.combat?.resolveDefense?.(...)` for safe access, returns undefined if method not implemented.
+
+5. **Defense Resolution Logic Extracted**:
+   - Encumbrance calculation
+   - Defense options (dodge, parry, block)
+   - Close combat modifiers
+   - Base defense by type (dodge/parry/block)
+   - Side/rear attack penalties (-2)
+   - Defending status bonus (+1)
+   - AOD variant bonuses (+2)
+   - Posture modifiers
+   - Retreat eligibility
+   - Final defense value calculation
+
+### Verification Results
+- ✅ `npx vitest run` - All 240 tests pass
+- ✅ `npm run build` - Client builds successfully
+- ✅ `npm run build --prefix server` - Server builds successfully
+- ✅ Defense outcomes unchanged (same logic, different location)
+
+### Architecture Notes
+- Phase 4 Task 4.3 complete: Defense resolution logic extracted to adapter
+- Pattern consistent with Tasks 4.1 and 4.2
+- CombatDomain interface now has 18 methods (17 existing + resolveDefense)
+- GURPS adapter fully implements resolveDefense
+- PF2 adapter returns null (no active defense system)
+- Enables future rulesets to implement their own defense resolution logic
+
