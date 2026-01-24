@@ -8,7 +8,7 @@ import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 
-import DefenseModal from '../ui/DefenseModal'
+import DefenseModal from '../rulesets/gurps/DefenseModal'
 import type { CameraMode } from '../arena/CameraControls'
 import type { MatchState, Player, GridPosition, CombatActionPayload, VisualEffect, ManeuverType, PendingAction, DefenseType } from '../../../shared/types'
 

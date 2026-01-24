@@ -6,13 +6,13 @@ import type {
   DefenseType, 
   DefenseChoice,
   RulesetId
-} from '../../../shared/types';
+} from '../../../../shared/types';
 import { 
   getDefenseOptions, 
   calculateDefenseValue, 
   getPostureModifiers 
-} from '../../../shared/rules';
-import { getRulesetUiSlots } from '../game/shared/rulesetUiSlots';
+} from '../../../../shared/rules';
+import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots';
 
 export type DefenseModalProps = {
   pendingDefense: PendingDefense;
@@ -75,9 +75,9 @@ export default function DefenseModal({
 
   const getSlotForDefense = (defenseName: string | undefined) => {
     if (!defenseName) return null;
-    const item = character.equipment.find(e => e.name === defenseName);
+    const item = character.equipment.find((e: typeof character.equipment[0]) => e.name === defenseName);
     if (!item) return null;
-    const equipped = combatant.equipped.find(e => e.equipmentId === item.id);
+    const equipped = combatant.equipped.find((e: typeof combatant.equipped[0]) => e.equipmentId === item.id);
     return equipped ? equipped.slot.replace('_', ' ') : null;
   };
 

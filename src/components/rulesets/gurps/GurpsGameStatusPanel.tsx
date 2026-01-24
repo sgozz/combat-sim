@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PostureControls } from '../../ui/PostureControls'
+import { PostureControls } from './PostureControls'
 import { calculateEncumbrance } from '../../../../shared/rules'
 import type { GameStatusPanelProps } from '../types'
 

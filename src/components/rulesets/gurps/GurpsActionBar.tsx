@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import type { ManeuverType, HitLocation, AOAVariant, AODVariant, WaitTrigger } from '../../../../shared/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../../shared/rules'
-import { WaitTriggerPicker } from '../../ui/WaitTriggerPicker'
+import { WaitTriggerPicker } from './WaitTriggerPicker'
 import { getSuccessChance } from '../../game/shared/useGameActions'
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
 import { rulesets } from '../../../../shared/rulesets'

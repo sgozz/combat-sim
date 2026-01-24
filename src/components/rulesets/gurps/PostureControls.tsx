@@ -1,5 +1,5 @@
-import type { Posture, CombatActionPayload } from '../../../shared/types'
-import { getPostureModifiers, canChangePostureFree, getValidPostureChanges } from '../../../shared/rules'
+import type { Posture, CombatActionPayload } from '../../../../shared/types'
+import { getPostureModifiers, canChangePostureFree, getValidPostureChanges } from '../../../../shared/rules'
 
 type PostureControlsProps = {
   currentPosture: Posture
@@ -67,8 +67,8 @@ export const PostureControls = ({
         </div>
       )}
       
-      <div className="posture-options">
-        {changes.map(change => (
+       <div className="posture-options">
+         {changes.map((change: typeof changes[number]) => (
           <button
             key={change.to}
             className={`posture-btn ${change.isFree ? 'free' : 'maneuver'}`}

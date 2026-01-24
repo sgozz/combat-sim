@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { WaitTrigger, WaitTriggerCondition, WaitTriggerAction, Id } from '../../../shared/types'
+import type { WaitTrigger, WaitTriggerCondition, WaitTriggerAction, Id } from '../../../../shared/types'
 
 type WaitTriggerPickerProps = {
   onSetTrigger: (trigger: WaitTrigger) => void

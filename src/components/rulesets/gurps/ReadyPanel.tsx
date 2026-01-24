@@ -1,5 +1,5 @@
-import type { EquippedItem, Equipment, ReadyAction, EquipmentSlot } from '../../../shared/types';
-import { Tooltip } from './Tooltip';
+import type { EquippedItem, Equipment, ReadyAction, EquipmentSlot } from '../../../../shared/types';
+import { Tooltip } from '../../ui/Tooltip';
 
 type ReadyPanelProps = {
   equipped: EquippedItem[];

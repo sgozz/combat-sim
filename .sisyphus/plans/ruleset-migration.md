@@ -215,7 +215,7 @@ Phase 6 (Final validation)
 
 ### Phase 2: Component Relocation
 
-- [ ] 2.1. Move PostureControls to rulesets/gurps/
+- [x] 2.1. Move PostureControls to rulesets/gurps/
 
   **What to do**:
   - Move `src/components/ui/PostureControls.tsx` to `src/components/rulesets/gurps/PostureControls.tsx`
@@ -242,7 +242,7 @@ Phase 6 (Final validation)
   - Message: `refactor(ui): move GURPS-only components to rulesets/gurps/`
   - Files: Multiple component moves
 
-- [ ] 2.2. Move HitLocationPicker to rulesets/gurps/
+- [x] 2.2. Move HitLocationPicker to rulesets/gurps/
 
   **What to do**:
   - Move `src/components/ui/HitLocationPicker.tsx` to `src/components/rulesets/gurps/HitLocationPicker.tsx`
@@ -263,7 +263,7 @@ Phase 6 (Final validation)
 
   **Commit**: YES (groups with 2.1)
 
-- [ ] 2.3. Move DefenseModal to rulesets/gurps/
+- [x] 2.3. Move DefenseModal to rulesets/gurps/
 
   **What to do**:
   - Move `src/components/ui/DefenseModal.tsx` to `src/components/rulesets/gurps/DefenseModal.tsx`
@@ -285,7 +285,7 @@ Phase 6 (Final validation)
 
   **Commit**: YES (groups with 2.1)
 
-- [ ] 2.4. Move WaitTriggerPicker to rulesets/gurps/
+- [x] 2.4. Move WaitTriggerPicker to rulesets/gurps/
 
   **What to do**:
   - Move `src/components/ui/WaitTriggerPicker.tsx` to `src/components/rulesets/gurps/WaitTriggerPicker.tsx`
@@ -305,7 +305,7 @@ Phase 6 (Final validation)
 
   **Commit**: YES (groups with 2.1)
 
-- [ ] 2.5. Move ReadyPanel to rulesets/gurps/
+- [x] 2.5. Move ReadyPanel to rulesets/gurps/
 
   **What to do**:
   - Move `src/components/ui/ReadyPanel.tsx` to `src/components/rulesets/gurps/ReadyPanel.tsx`
