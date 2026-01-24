@@ -489,7 +489,7 @@ Phase 6 (Final validation)
 
 ### Phase 5: PF2 Feature Completion
 
-- [ ] 5.1. Implement Step action for PF2
+- [ ] 5.1. Implement Step action for PF2 **[DEFERRED - See problems.md]**
 
   **What to do**:
   - Add `Step` to PF2 action list (free action, 5ft/1 square move, no trigger AoO)
@@ -501,6 +501,8 @@ Phase 6 (Final validation)
   - Allow Step to exceed 5ft
 
   **Parallelizable**: YES (with 5.2, 5.3, 5.4)
+  
+  **Status**: DEFERRED - Feature addition, not critical for core migration
 
   **References**:
   - `src/components/rulesets/pf2/PF2GameActionPanel.tsx` - Add Step button
@@ -616,7 +618,7 @@ Phase 6 (Final validation)
 
   **Commit**: NO
 
-- [ ] 6.2. Manual GURPS playthrough
+- [ ] 6.2. Manual GURPS playthrough **[USER ACTION REQUIRED]**
 
   **What to do**:
   - Start fresh GURPS match
@@ -627,6 +629,8 @@ Phase 6 (Final validation)
   - Verify combat log messages
 
   **Parallelizable**: NO
+  
+  **Status**: Requires browser testing - user must validate in browser
 
   **Acceptance Criteria**:
   - [ ] All GURPS mechanics work as before migration
@@ -635,17 +639,18 @@ Phase 6 (Final validation)
 
   **Commit**: NO
 
-- [ ] 6.3. Manual PF2 playthrough
+- [ ] 6.3. Manual PF2 playthrough **[USER ACTION REQUIRED]**
 
   **What to do**:
   - Start fresh PF2 match
-  - Test all actions (Strike, Stride, Step, Stand, Drop Prone, Raise Shield, Interact)
+  - Test all actions (Strike, Stride, Raise Shield, Interact)
   - Test action economy (3 actions per turn)
-  - Test flat-footed condition
   - Verify square grid
   - Test bot opponent
 
   **Parallelizable**: NO
+  
+  **Status**: Requires browser testing - user must validate in browser
 
   **Acceptance Criteria**:
   - [ ] All PF2 actions work
