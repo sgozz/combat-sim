@@ -316,6 +316,75 @@ describe('PF2 Rules', () => {
     });
   });
 
+  describe('PF2 Posture Actions', () => {
+    it('Step costs 1 action', () => {
+      expect(getActionCost('step')).toBe(1);
+    });
+
+    it('Cannot Step while prone', () => {
+      const combatant: PF2CombatantState = {
+        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false
+      };
+      const proneCombatant = { ...combatant, posture: 'prone' as const };
+      expect(getActionCost('step')).toBe(1);
+      expect(proneCombatant.posture).toBe('prone');
+    });
+
+    it('Stand removes prone condition', () => {
+      const combatant: PF2CombatantState = {
+        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false
+      };
+      const proneCombatant = { ...combatant, posture: 'prone' as const };
+      expect(getActionCost('stand')).toBe(1);
+      
+      const afterStand = applyActionCost(proneCombatant, 1);
+      expect(afterStand.actionsRemaining).toBe(2);
+      
+      const standing = { ...afterStand, posture: 'standing' as const };
+      expect(standing.posture).toBe('standing');
+      expect(standing.actionsRemaining).toBe(2);
+    });
+
+    it('Drop Prone sets prone condition', () => {
+      const combatant: PF2CombatantState = {
+        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false
+      };
+      const standing = { ...combatant, posture: 'standing' as const };
+      expect(getActionCost('drop_prone')).toBe('free');
+      
+      const afterDrop = applyActionCost(standing, 'free');
+      expect(afterDrop.actionsRemaining).toBe(3);
+      
+      const prone = { ...afterDrop, posture: 'prone' as const };
+      expect(prone.posture).toBe('prone');
+      expect(prone.actionsRemaining).toBe(3);
+    });
+
+    it('Flat-footed applies -2 AC penalty', () => {
+      const abilities: Abilities = {
+        strength: 10, dexterity: 14, constitution: 10,
+        intelligence: 10, wisdom: 10, charisma: 10
+      };
+      const standingAC = calculateAC(abilities, 2, 'trained', 1, null);
+      const flatFootedAC = standingAC - 2;
+      
+      expect(standingAC).toBe(17);
+      expect(flatFootedAC).toBe(15);
+    });
+  });
+
   describe('Turn Management', () => {
     it('startNewTurn resets actions', () => {
       const combatant: PF2CombatantState = {
