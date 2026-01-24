@@ -814,3 +814,10 @@ All new methods return neutral values for PF2:
 - Pattern established for extracting ruleset-specific logic to adapter
 - attack.ts works for both GURPS and PF2 without direct field access
 - Phase 4 complete (all 4 tasks done)
+
+## Documentation & Architecture (Task 6.4)
+- Updated `AGENTS.md` with a comprehensive "Multi-Ruleset Architecture" section.
+- Documented the three core pillars: Type System Abstraction, Server Adapter Pattern, and Component Registry.
+- Provided a step-by-step guide for adding new rulesets (e.g., D&D 5e).
+- Added JSDoc comments to `shared/rulesets/serverAdapter.ts` to clarify the purpose of domain interfaces and adapter methods.
+- Verified that the architecture allows for clean separation of concerns between GURPS and PF2 logic.

@@ -3,11 +3,67 @@
 ## Overview
 Tactical combat simulator with React/Three.js client and Node.js WebSocket server.
 
+**Multi-Ruleset Architecture**: Supports multiple tabletop RPG systems (GURPS, Pathfinder 2e) with clean separation.
+
 | Layer | Stack | Location |
 |-------|-------|----------|
 | Client | React 19 + Vite 7 + @react-three/fiber | `src/` |
 | Server | Node.js + ws + sqlite | `server/` |
 | Shared | TypeScript types + rules | `shared/` |
+| Rulesets | GURPS, PF2 (extensible) | `shared/rulesets/` |
+
+## Multi-Ruleset Architecture
+
+The simulator supports multiple tabletop RPG systems through a decoupled architecture.
+
+### Core Concepts
+
+1.  **Type System Abstraction**:
+    - `BaseCombatantState` (`shared/rulesets/base/types.ts`): Universal fields (HP, position, facing) shared by all systems.
+    - Ruleset-specific states (e.g., `GurpsCombatantState`) extend the base state with system-specific fields (maneuvers, fatigue, etc.).
+    - **Type Guards**: `isGurpsCombatant()` and `isPF2Combatant()` are used to safely access ruleset-specific data.
+
+2.  **Server Adapter Pattern** (`shared/rulesets/serverAdapter.ts`):
+    - The `ServerRulesetAdapter` interface defines the contract for server-side logic (turn advancement, movement validation, combat resolution).
+    - `getServerAdapter(rulesetId)` returns the appropriate implementation.
+    - Logic is grouped into domains: `combat`, `damage`, `closeCombat`, `pf2`.
+
+3.  **Component Registry** (`shared/rulesets/index.ts`):
+    - Rulesets are registered in a central registry.
+    - `Ruleset` interface: Handles data derivation and initial state.
+    - `RulesetUIAdapter` interface: Provides UI-specific configuration (maneuvers, action layouts, instructions).
+
+### Directory Structure
+```
+shared/rulesets/
+  base/                  # Universal types and logic
+  gurps/                 # GURPS implementation
+    types.ts             # GURPS-specific state and types
+    rules.ts             # GURPS combat and movement logic
+    ui.ts                # GURPS UI adapter implementation
+    index.ts             # GURPS bundle export
+  pf2/                   # Pathfinder 2e implementation
+    types.ts
+    rules.ts
+    ui.ts
+    index.ts
+  serverAdapter.ts       # Server-side adapter pattern
+  Ruleset.ts             # Core interfaces (Ruleset, RulesetUIAdapter)
+  index.ts               # Ruleset registry and type guards
+```
+
+### Adding a New Ruleset (e.g., D&D 5e)
+
+1.  **Create Directory**: `shared/rulesets/dnd5e/`.
+2.  **Define Types**: Create `types.ts`. Define `DnD5eCombatantState` extending `BaseCombatantState`.
+3.  **Implement Rules**: Create `rules.ts`. Implement movement, turn logic, and combat functions.
+4.  **Create UI Adapter**: Create `ui.ts`. Implement `RulesetUIAdapter` to define how the system appears in the HUD.
+5.  **Implement Server Adapter**: In `shared/rulesets/serverAdapter.ts`, create a `dnd5eAdapter` and add it to the `adapters` record.
+6.  **Register Ruleset**: In `shared/rulesets/index.ts`:
+    - Create a `dnd5eBundle`.
+    - Add it to the `rulesets` record.
+    - Add a type guard `isDnD5eCombatant()`.
+7.  **Add Tests**: Create `shared/rulesets/dnd5e/rules.test.ts` to verify the logic.
 
 ## Node Version
 **Required**: Node 22.12.0+ (Vite 7 requirement)

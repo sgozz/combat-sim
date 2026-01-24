@@ -91,9 +91,16 @@ export type ManeuverInfo = {
   canRapidStrike: boolean;
 };
 
+/**
+ * Interface for combat-related ruleset logic.
+ * Handles attack/defense resolution, modifiers, and bot AI decisions.
+ */
 export type CombatDomain = {
+  /** Resolves an attack roll against a target skill. */
   resolveAttackRoll: (skill: number, random?: () => number) => GurpsAttackRollResult;
+  /** Resolves a defense roll against a defense value. */
   resolveDefenseRoll: (defenseValue: number, random?: () => number) => GurpsDefenseRollResult;
+  /** Calculates the final defense value including all modifiers. */
   calculateDefenseValue: (baseDefense: number, options: {
     retreat: boolean;
     dodgeAndDrop: boolean;
@@ -105,37 +112,65 @@ export type CombatDomain = {
     sameWeaponParry?: boolean;
     lostBalance?: boolean;
   }) => number;
+  /** Returns available defense options for a character. */
   getDefenseOptions: (character: CharacterSheet, dodgeValue: number) => GurpsDefenseOptions;
+  /** Calculates range penalty based on distance. */
   getRangePenalty: (distance: number) => number;
+  /** Returns modifiers based on current posture. */
   getPostureModifiers: (posture: Posture) => PostureModifiers;
+  /** Checks if an attack is possible at a given distance. */
   canAttackAtDistance: (reach: Reach, distance: number) => boolean;
+  /** Returns modifiers for close combat attacks. */
   getCloseCombatAttackModifiers: (weapon: Equipment, distance: number) => GurpsCloseCombatAttackModifiers;
+  /** Returns modifiers for close combat defense. */
   getCloseCombatDefenseModifiers: (weaponReach: Reach | undefined, shieldSize: ShieldSize | undefined, inCloseCombat: boolean) => GurpsCloseCombatDefenseModifiers;
+  /** Parses reach string into min/max values. */
   parseReach: (reach: Reach) => { min: number; max: number; hasC: boolean };
+  /** Returns penalty for hitting a specific location. */
   getHitLocationPenalty: (location: HitLocation) => number;
   rollCriticalHitTable?: (random?: () => number) => { roll: number; effect: GurpsCriticalHitEffect };
   rollCriticalMissTable?: (random?: () => number) => { roll: number; effect: GurpsCriticalMissEffect };
   applyCriticalHitDamage?: (baseDamage: number, effect: GurpsCriticalHitEffect, formula: string, random?: () => number) => { damage: number; description: string };
   getCriticalMissDescription?: (effect: GurpsCriticalMissEffect) => string;
+  /** Selects the best defense for a bot-controlled combatant. */
   selectBotDefense?: (options: BotDefenseOptions) => BotDefenseResult | null;
+  /** Calculates effective skill including all situational modifiers. */
   calculateEffectiveSkill?: (options: EffectiveSkillOptions) => number;
+  /** High-level defense resolution combining choice and modifiers. */
   resolveDefense?: (options: DefenseResolutionOptions) => DefenseResolutionResult | null;
+  /** Returns maneuver-related info for an attacker. */
   getAttackerManeuverInfo?: (combatant: CombatantState) => ManeuverInfo;
+  /** Returns maneuver-related info for a defender. */
   getDefenderManeuverInfo?: (combatant: CombatantState) => ManeuverInfo;
+  /** Applies effects of 'Dodge and Drop' to a combatant. */
   applyDodgeAndDrop?: (combatant: CombatantState) => CombatantState;
 };
 
+/**
+ * Interface for damage-related ruleset logic.
+ */
 export type DamageDomain = {
+  /** Rolls damage based on a formula. */
   rollDamage: (formula: string, random?: () => number) => GurpsDamageRoll;
+  /** Applies wounding multipliers based on damage type. */
   applyDamageMultiplier: (baseDamage: number, damageType: DamageType) => number;
+  /** Resolves a Health check to avoid unconsciousness/death. */
   rollHTCheck: (ht: number, currentHP: number, maxHP: number, random?: () => number) => GurpsHTCheckResult;
+  /** Returns wounding multiplier for a specific hit location. */
   getHitLocationWoundingMultiplier: (location: HitLocation, damageType: DamageType) => number;
 };
 
+/**
+ * Interface for close combat (grappling) logic.
+ */
 export type CloseCombatDomain = {
+  /** Resolves a Quick Contest between two skills. */
   quickContest: (attackerSkill: number, defenderSkill: number, random?: () => number) => GurpsQuickContestResult;
+  /** Resolves a grapple attempt. */
   resolveGrappleAttempt: (attackerDX: number, attackerSkill: number, defenderDX: number, canDefend: boolean, random?: () => number) => GurpsGrappleAttemptResult;
+  /** Resolves an attempt to break free from a grapple. */
   resolveBreakFree: (defenderST: number, defenderSkill: number, controlPoints: number, random?: () => number) => GurpsBreakFreeResult;
+  /** Resolves a specific grappling technique (pin, choke, etc.). */
   resolveGrappleTechnique: (technique: 'throw' | 'lock' | 'choke' | 'pin', skill: number, ST: number, controlPoints: number, random?: () => number) => GurpsGrappleTechniqueResult;
 };
 
@@ -149,18 +184,32 @@ export type PF2RollResultType = {
   natural1: boolean;
 };
 
+/**
+ * Interface for Pathfinder 2e specific logic.
+ */
 export type PF2Domain = {
+  /** Resolves a d20 check against a DC. */
   rollCheck: (modifier: number, dc: number, random?: () => number) => PF2RollResultType;
+  /** Rolls damage for PF2. */
   rollDamage: (formula: string, damageType: string, random?: () => number) => { total: number; rolls: number[]; modifier: number };
+  /** Calculates ability modifier from score. */
   getAbilityModifier: (score: number) => number;
+  /** Calculates proficiency bonus. */
   getProficiencyBonus: (proficiency: string, level: number) => number;
+  /** Calculates Multiple Attack Penalty (MAP). */
   getMultipleAttackPenalty: (attackNumber: number, isAgile: boolean) => number;
 };
 
+/**
+ * Main adapter interface for server-side ruleset logic.
+ * Each ruleset must implement this to handle game state transitions.
+ */
 export type ServerRulesetAdapter = {
   id: RulesetId;
   gridSystem: GridSystem;
+  /** Advances the match state to the next turn. */
   advanceTurn: (state: MatchState) => MatchState;
+  /** Initializes movement state at the start of a turn. */
   initializeTurnMovement: (
     position: HexCoord,
     facing: number,
@@ -168,21 +217,29 @@ export type ServerRulesetAdapter = {
     basicMove: number,
     posture: Posture
   ) => TurnMovementState;
+  /** Calculates reachable hexes for the current movement state. */
   calculateReachableHexesInfo: (state: TurnMovementState, occupiedHexes: HexCoord[]) => ReachableHexInfo[];
+  /** Converts grid coordinates to hex coordinates. */
   gridToHex: (pos: { x: number; z: number }) => HexCoord;
+  /** Converts hex coordinates to grid coordinates. */
   hexToGrid: (hex: HexCoord) => { x: number; y: number; z: number };
+  /** Executes a move to a target hex. */
   executeMove?: (state: MovementState, targetHex: HexCoord, occupiedHexes: HexCoord[]) => MovementState | null;
+  /** Executes a rotation to a new facing. */
   executeRotation?: (state: MovementState, newFacing: number) => MovementState | null;
+  /** Calculates derived stats from base attributes. */
   calculateDerivedStats: (attributes: Attributes) => DerivedStats;
   getPostureModifiers?: (posture: Posture) => PostureModifiers;
   calculateEncumbrance?: (strength: number, equipment: Equipment[]) => EncumbranceInfo;
   canChangePostureFree?: (from: Posture, to: Posture) => boolean;
   
+  /** Domain-specific logic (optional depending on ruleset) */
   combat?: CombatDomain;
   damage?: DamageDomain;
   closeCombat?: CloseCombatDomain;
   pf2?: PF2Domain;
   
+  // Legacy flat methods (for backward compatibility)
   resolveAttackRoll?: (skill: number, random?: () => number) => GurpsAttackRollResult;
   resolveDefenseRoll?: (defenseValue: number, random?: () => number) => GurpsDefenseRollResult;
   calculateDefenseValue?: (baseDefense: number, options: {
