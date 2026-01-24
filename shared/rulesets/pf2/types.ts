@@ -1,4 +1,5 @@
 import type { Id } from '../../types';
+import type { BaseCombatantState } from '../base/types';
 
 export type Abilities = {
   strength: number;
@@ -157,16 +158,12 @@ export type PF2CombatAction = {
   weaponId?: Id;
 };
 
-export type PF2CombatantState = {
-  playerId: Id;
-  characterId: Id;
-  position: { x: number; y: number; z: number };
-  facing: number;
+export type PF2CombatantState = BaseCombatantState & {
   actionsRemaining: number;
   reactionAvailable: boolean;
   mapPenalty: number;
   conditions: ConditionValue[];
-  currentHP: number;
+  statusEffects: string[];
   tempHP: number;
   shieldRaised: boolean;
   shieldHP?: number;

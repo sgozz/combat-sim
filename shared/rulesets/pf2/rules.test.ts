@@ -281,7 +281,8 @@ describe('PF2 Rules', () => {
         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 2, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false
       };
       expect(canPerformAction(combatant, 1)).toBe(true);
       expect(canPerformAction(combatant, 2)).toBe(true);
@@ -295,7 +296,8 @@ describe('PF2 Rules', () => {
         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false
       };
       const after = applyActionCost(combatant, 1);
       expect(after.actionsRemaining).toBe(2);
@@ -306,7 +308,8 @@ describe('PF2 Rules', () => {
         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false
       };
       const after = applyActionCost(combatant, 1, true);
       expect(after.mapPenalty).toBe(-5);
@@ -319,7 +322,8 @@ describe('PF2 Rules', () => {
         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: -10,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: true,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: true
       };
       const after = startNewTurn(combatant);
       expect(after.actionsRemaining).toBe(3);
@@ -334,7 +338,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: 0,
         conditions: [{ condition: 'slowed', value: 1 }],
         currentHP: 10, tempHP: 0, shieldRaised: false,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: true
       };
       const after = startNewTurn(combatant);
       expect(after.actionsRemaining).toBe(2);
@@ -346,7 +351,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: 0,
         conditions: [{ condition: 'quickened' }],
         currentHP: 10, tempHP: 0, shieldRaised: false,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: true
       };
       const after = startNewTurn(combatant);
       expect(after.actionsRemaining).toBe(4);

@@ -161,7 +161,7 @@ Phase 6 (Final validation)
   - Message: `refactor(types): GurpsCombatantState extends BaseCombatantState`
   - Files: `shared/rulesets/gurps/types.ts`
 
-- [ ] 1.3. Create proper PF2CombatantState extending base
+- [x] 1.3. Create proper PF2CombatantState extending base
 
   **What to do**:
   - Modify `PF2CombatantState` to extend `BaseCombatantState`
