@@ -14,3 +14,4 @@ export const rulesets: Record<string, RulesetBundle> = {
 
 export { getServerAdapter, isGurpsMatch, isPf2Match } from './serverAdapter';
 export type { ServerRulesetAdapter, MovementState } from './serverAdapter';
+export type { BaseCombatantState } from './base/types';
