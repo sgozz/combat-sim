@@ -187,7 +187,7 @@ Phase 6 (Final validation)
   - Message: `refactor(types): PF2CombatantState extends BaseCombatantState`
   - Files: `shared/rulesets/pf2/types.ts`
 
-- [ ] 1.4. Create type guards for combatant discrimination
+- [x] 1.4. Create type guards for combatant discrimination
 
   **What to do**:
   - Create `isGurpsCombatant(c): c is GurpsCombatantState`
