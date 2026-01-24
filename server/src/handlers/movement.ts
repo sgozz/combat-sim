@@ -7,15 +7,8 @@ import type {
   CombatActionPayload,
 } from "../../../shared/types";
 import { advanceTurn } from "../rulesetHelpers";
-import { 
-  initializeTurnMovement,
-  calculateReachableHexesInfo,
-  gridToHex,
-  hexToGrid,
-  executeMove,
-  executeRotation,
-} from "../../../shared/rules";
-import type { MovementState } from "../../../shared/rules";
+import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
+import type { MovementState } from "../../../shared/rulesets/serverAdapter";
 import { state } from "../state";
 import { updateMatchState } from "../db";
 import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../helpers";
@@ -41,19 +34,24 @@ export const handleMoveStep = async (
     return;
   }
   
-  const occupiedHexes: HexCoord[] = match.combatants
-    .filter(c => c.playerId !== player.id)
-    .map(c => gridToHex(c.position));
-  
-  const movementState: MovementState = {
-    position: match.turnMovement.currentPosition,
-    facing: match.turnMovement.currentFacing,
-    movePointsRemaining: match.turnMovement.movePointsRemaining,
-    freeRotationUsed: match.turnMovement.freeRotationUsed,
-    movedBackward: match.turnMovement.movedBackward,
-  };
-  
-  const newState = executeMove(movementState, payload.to, occupiedHexes);
+   const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+   const occupiedHexes: HexCoord[] = match.combatants
+     .filter(c => c.playerId !== player.id)
+     .map(c => adapter.gridToHex(c.position));
+   
+    const movementState: MovementState = {
+      position: match.turnMovement.currentPosition,
+      facing: match.turnMovement.currentFacing,
+      movePointsRemaining: match.turnMovement.movePointsRemaining,
+      freeRotationUsed: match.turnMovement.freeRotationUsed,
+      movedBackward: match.turnMovement.movedBackward,
+    };
+    
+    if (!adapter.executeMove) {
+      sendMessage(socket, { type: "error", message: "Movement not supported for this ruleset." });
+      return;
+    }
+    const newState = adapter.executeMove(movementState, payload.to, occupiedHexes);
   
   if (!newState) {
     sendMessage(socket, { type: "error", message: "Troppo lontano." });
@@ -71,12 +69,12 @@ export const handleMoveStep = async (
   };
   
   const newReachableHexes = newTurnMovement.phase === 'moving'
-    ? calculateReachableHexesInfo(newTurnMovement, occupiedHexes)
+    ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes)
     : [];
   
   const updatedCombatants = match.combatants.map((c) =>
     c.playerId === player.id
-      ? { ...c, position: hexToGrid(newState.position), facing: newState.facing }
+      ? { ...c, position: adapter.hexToGrid(newState.position), facing: newState.facing }
       : c
   );
   
@@ -112,24 +110,29 @@ export const handleRotate = async (
     return;
   }
   
-  const movementState: MovementState = {
-    position: match.turnMovement.currentPosition,
-    facing: match.turnMovement.currentFacing,
-    movePointsRemaining: match.turnMovement.movePointsRemaining,
-    freeRotationUsed: match.turnMovement.freeRotationUsed,
-    movedBackward: match.turnMovement.movedBackward,
-  };
-  
-  const newState = executeRotation(movementState, payload.facing);
-  
-  if (!newState) {
-    sendMessage(socket, { type: "error", message: "Not enough move points to rotate." });
-    return;
-  }
-  
+   const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+   
+    const movementState: MovementState = {
+      position: match.turnMovement.currentPosition,
+      facing: match.turnMovement.currentFacing,
+      movePointsRemaining: match.turnMovement.movePointsRemaining,
+      freeRotationUsed: match.turnMovement.freeRotationUsed,
+      movedBackward: match.turnMovement.movedBackward,
+    };
+    
+    if (!adapter.executeRotation) {
+      sendMessage(socket, { type: "error", message: "Rotation not supported for this ruleset." });
+      return;
+    }
+    const newState = adapter.executeRotation(movementState, payload.facing);
+   
+   if (!newState) {
+     sendMessage(socket, { type: "error", message: "Not enough move points to rotate." });
+     return;
+   }
   const occupiedHexes: HexCoord[] = match.combatants
     .filter(c => c.playerId !== player.id)
-    .map(c => gridToHex(c.position));
+    .map(c => adapter.gridToHex(c.position));
   
   const newTurnMovement: TurnMovementState = {
     ...match.turnMovement,
@@ -140,7 +143,7 @@ export const handleRotate = async (
   };
   
   const newReachableHexes = newTurnMovement.phase === 'moving'
-    ? calculateReachableHexesInfo(newTurnMovement, occupiedHexes)
+    ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes)
     : [];
   
   const updatedCombatants = match.combatants.map((c) =>
@@ -176,7 +179,8 @@ export const handleUndoMovement = async (
   const actorCharacter = getCharacterById(match, actorCombatant.characterId);
   const basicMove = actorCharacter?.derived.basicMove ?? 5;
   
-  const resetTurnMovement = initializeTurnMovement(
+  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+  const resetTurnMovement = adapter.initializeTurnMovement(
     match.turnMovement.startPosition,
     match.turnMovement.startFacing,
     actorCombatant.maneuver,
@@ -186,17 +190,17 @@ export const handleUndoMovement = async (
   
   const occupiedHexes: HexCoord[] = match.combatants
     .filter(c => c.playerId !== player.id)
-    .map(c => gridToHex(c.position));
+    .map(c => adapter.gridToHex(c.position));
   
   const newReachableHexes = resetTurnMovement.phase === 'moving'
-    ? calculateReachableHexesInfo(resetTurnMovement, occupiedHexes)
+    ? adapter.calculateReachableHexesInfo(resetTurnMovement, occupiedHexes)
     : [];
   
   const updatedCombatants = match.combatants.map((c) =>
     c.playerId === player.id
       ? { 
           ...c, 
-          position: hexToGrid(match.turnMovement!.startPosition),
+          position: adapter.hexToGrid(match.turnMovement!.startPosition),
           facing: match.turnMovement!.startFacing 
         }
       : c
@@ -282,11 +286,12 @@ export const handleSkipMovement = async (
   if (!actorCombatant) return;
   
   if (match.turnMovement) {
+    const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
     const updatedCombatants = match.combatants.map((c) =>
       c.playerId === player.id
         ? { 
             ...c, 
-            position: hexToGrid(match.turnMovement!.startPosition),
+            position: adapter.hexToGrid(match.turnMovement!.startPosition),
             facing: match.turnMovement!.startFacing 
           }
         : c

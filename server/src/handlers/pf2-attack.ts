@@ -4,14 +4,7 @@ import type {
   Player,
   CombatActionPayload,
 } from "../../../shared/types";
-import type { PF2DamageType, DegreeOfSuccess } from "../../../shared/rulesets/pf2/types";
-import {
-  rollCheck,
-  rollDamage,
-  getAbilityModifier,
-  getProficiencyBonus,
-  getMultipleAttackPenalty,
-} from "../../../shared/rulesets/pf2/rules";
+import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../rulesetHelpers";
 import { state } from "../state";
 import { updateMatchState } from "../db";
@@ -20,10 +13,14 @@ import {
   sendToMatch,
   getCombatantByPlayerId,
   getCharacterById,
-  calculateHexDistance,
+  calculateGridDistance,
+  getGridSystemForMatch,
   checkVictory,
 } from "../helpers";
 import { scheduleBotTurn } from "../bot";
+
+type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
+type PF2DamageType = string;
 
 const getPF2Abilities = (attributes: { strength: number; dexterity: number; intelligence: number; health: number; wisdom?: number; charisma?: number }) => ({
   strength: attributes.strength,
@@ -81,6 +78,12 @@ export const handlePF2AttackAction = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>,
   payload: CombatActionPayload & { type: "attack" }
 ): Promise<void> => {
+  const adapter = getServerAdapter('pf2');
+  if (!adapter.pf2) {
+    sendMessage(socket, { type: "error", message: "PF2 adapter not available." });
+    return;
+  }
+
   if (!actorCombatant) return;
 
   const targetCombatant = match.combatants.find(
@@ -98,7 +101,8 @@ export const handlePF2AttackAction = async (
     return;
   }
 
-  const distance = calculateHexDistance(actorCombatant.position, targetCombatant.position);
+  const gridSystem = getGridSystemForMatch(match);
+  const distance = calculateGridDistance(actorCombatant.position, targetCombatant.position, gridSystem);
   if (distance > 1) {
     sendMessage(socket, { type: "error", message: "Target out of melee range." });
     return;
@@ -114,21 +118,21 @@ export const handlePF2AttackAction = async (
   const abilities = getPF2Abilities(attackerCharacter.attributes);
   const targetAC = calculateAC(targetCharacter);
 
-  const isFinesse = weapon.traits.includes('finesse');
-  const strMod = getAbilityModifier(abilities.strength);
-  const dexMod = getAbilityModifier(abilities.dexterity);
-  const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
+   const isFinesse = weapon.traits.includes('finesse');
+   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
+   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
+   const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
   
-  const level = 1;
-  const profBonus = getProficiencyBonus('trained', level);
+   const level = 1;
+   const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
   
-  const attackNumber = actorCombatant.pf2?.attacksThisTurn ?? 0;
-  const isAgile = weapon.traits.includes('agile');
-  const mapPenalty = getMultipleAttackPenalty(attackNumber + 1, isAgile);
+   const attackNumber = actorCombatant.pf2?.attacksThisTurn ?? 0;
+   const isAgile = weapon.traits.includes('agile');
+   const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attackNumber + 1, isAgile);
   
-  const totalAttackBonus = abilityMod + profBonus + mapPenalty;
+   const totalAttackBonus = abilityMod + profBonus + mapPenalty;
 
-  const attackRoll = rollCheck(totalAttackBonus, targetAC);
+   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
   
   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
   if (mapPenalty < 0) {
@@ -136,10 +140,10 @@ export const handlePF2AttackAction = async (
   }
   logEntry += `: [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${attackRoll.dc}] ${formatDegree(attackRoll.degree)}`;
 
-  let damageDealt = 0;
-  if (attackRoll.degree === 'critical_success' || attackRoll.degree === 'success') {
-    const damageRoll = rollDamage(`${weapon.damage}+${strMod}`, weapon.damageType);
-    damageDealt = attackRoll.degree === 'critical_success' ? damageRoll.total * 2 : damageRoll.total;
+   let damageDealt = 0;
+   if (attackRoll.degree === 'critical_success' || attackRoll.degree === 'success') {
+     const damageRoll = adapter.pf2!.rollDamage(`${weapon.damage}+${strMod}`, weapon.damageType);
+     damageDealt = attackRoll.degree === 'critical_success' ? damageRoll.total * 2 : damageRoll.total;
     logEntry += ` for ${damageDealt} ${weapon.damageType} damage`;
     if (attackRoll.degree === 'critical_success') {
       logEntry += ' (doubled)';
@@ -164,13 +168,13 @@ export const handlePF2AttackAction = async (
       return {
         ...c,
         attacksRemaining: newActionsRemaining,
-        pf2: {
-          actionsRemaining: newActionsRemaining,
-          attacksThisTurn: newAttacksThisTurn,
-          mapPenalty: getMultipleAttackPenalty(newAttacksThisTurn + 1, isAgile),
-          reactionAvailable: c.pf2?.reactionAvailable ?? true,
-          shieldRaised: c.pf2?.shieldRaised ?? false,
-        },
+       pf2: {
+           actionsRemaining: newActionsRemaining,
+           attacksThisTurn: newAttacksThisTurn,
+           mapPenalty: adapter.pf2!.getMultipleAttackPenalty(newAttacksThisTurn + 1, isAgile),
+           reactionAvailable: c.pf2?.reactionAvailable ?? true,
+           shieldRaised: c.pf2?.shieldRaised ?? false,
+         },
       };
     }
     return c;

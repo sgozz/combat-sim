@@ -5,12 +5,7 @@ import type {
   CombatActionPayload,
 } from "../../../shared/types";
 import { advanceTurn } from "../rulesetHelpers";
-import { 
-  quickContest,
-  resolveGrappleAttempt,
-  resolveBreakFree,
-  resolveGrappleTechnique,
-} from "../../../shared/rules";
+import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 import { state } from "../state";
 import { updateMatchState } from "../db";
 import { 
@@ -33,6 +28,8 @@ export const handleEnterCloseCombat = async (
   payload: CombatActionPayload & { type: "enter_close_combat" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  
+  const adapter = getServerAdapter(match.rulesetId);
   
   if (actorCombatant.inCloseCombatWith) {
     sendMessage(socket, { type: "error", message: "Already in close combat." });
@@ -66,7 +63,7 @@ export const handleEnterCloseCombat = async (
   const attackerSkill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
   const defenderSkill = targetCharacter.skills[0]?.level ?? targetCharacter.attributes.dexterity;
   
-  const contest = quickContest(attackerSkill, defenderSkill);
+  const contest = adapter.closeCombat!.quickContest(attackerSkill, defenderSkill);
   
   if (contest.attackerWins) {
     const updatedCombatants = match.combatants.map(c => {
@@ -197,6 +194,8 @@ export const handleGrapple = async (
 ): Promise<void> => {
   if (!actorCombatant) return;
   
+  const adapter = getServerAdapter(match.rulesetId);
+  
   const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
   if (!targetCombatant) {
     sendMessage(socket, { type: "error", message: "Target not found." });
@@ -218,7 +217,7 @@ export const handleGrapple = async (
   
   if (payload.action === 'grab') {
     const wrestlingSkill = attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.dexterity;
-    const grappleResult = resolveGrappleAttempt(
+    const grappleResult = adapter.closeCombat!.resolveGrappleAttempt(
       attackerCharacter.attributes.dexterity,
       wrestlingSkill,
       targetCharacter.attributes.dexterity,
@@ -282,18 +281,18 @@ export const handleGrapple = async (
       sendToMatch(matchId, { type: "match_state", state: updated });
       scheduleBotTurn(matchId, updated);
     }
-  } else if (payload.action === 'throw' || payload.action === 'lock' || payload.action === 'choke' || payload.action === 'pin') {
-    if (!actorCombatant.grapple?.grappling) {
-      sendMessage(socket, { type: "error", message: "Must be grappling to use this technique." });
-      return;
-    }
-    
-    const techResult = resolveGrappleTechnique(
-      payload.action,
-      attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.dexterity,
-      attackerCharacter.attributes.strength,
-      actorCombatant.grapple.cpSpent
-    );
+   } else if (payload.action === 'throw' || payload.action === 'lock' || payload.action === 'choke' || payload.action === 'pin') {
+     if (!actorCombatant.grapple?.grappling) {
+       sendMessage(socket, { type: "error", message: "Must be grappling to use this technique." });
+       return;
+     }
+     
+     const techResult = adapter.closeCombat!.resolveGrappleTechnique(
+       payload.action,
+       attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.dexterity,
+       attackerCharacter.attributes.strength,
+       actorCombatant.grapple.cpSpent
+     );
     
     if (techResult.success) {
       let updatedCombatants = match.combatants;
@@ -384,6 +383,8 @@ export const handleBreakFree = async (
 ): Promise<void> => {
   if (!actorCombatant) return;
   
+  const adapter = getServerAdapter(match.rulesetId);
+  
   if (!actorCombatant.grapple?.grappledBy) {
     sendMessage(socket, { type: "error", message: "Not being grappled." });
     return;
@@ -402,7 +403,7 @@ export const handleBreakFree = async (
   }
   
   const wrestlingSkill = attackerCharacter.skills.find(s => s.name === 'Wrestling')?.level ?? attackerCharacter.attributes.strength;
-  const breakResult = resolveBreakFree(
+  const breakResult = adapter.closeCombat!.resolveBreakFree(
     attackerCharacter.attributes.strength,
     wrestlingSkill,
     cpPenalty

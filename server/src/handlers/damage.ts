@@ -3,11 +3,7 @@ import type {
   DamageType,
   CombatantState,
 } from "../../../shared/types";
-import { 
-  applyDamageMultiplier, 
-  rollHTCheck,
-  getHitLocationWoundingMultiplier,
-} from "../../../shared/rules";
+import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 
 export type ApplyDamageResult = {
   updatedCombatants: CombatantState[];
@@ -34,6 +30,7 @@ export const applyDamageToTarget = (
   damageRolls: number[],
   damageModifier: number,
 ): ApplyDamageResult => {
+  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
   const targetCombatant = match.combatants.find(c => c.playerId === targetPlayerId);
   const targetCharacter = match.characters.find(c => c.id === targetCombatant?.characterId);
   
@@ -41,8 +38,8 @@ export const applyDamageToTarget = (
     return { updatedCombatants: match.combatants, finalDamage: 0, logEntry: '', fellUnconscious: false, majorWound: false, majorWoundStunned: false };
   }
 
-  const baseMultDamage = applyDamageMultiplier(baseDamage, damageType);
-  const hitLocMultiplier = getHitLocationWoundingMultiplier(hitLocation as Parameters<typeof getHitLocationWoundingMultiplier>[0], damageType);
+  const baseMultDamage = adapter.damage?.applyDamageMultiplier?.(baseDamage, damageType) ?? baseDamage;
+  const hitLocMultiplier = adapter.damage?.getHitLocationWoundingMultiplier?.(hitLocation as any, damageType) ?? 1;
   const finalDamage = Math.floor(baseMultDamage * hitLocMultiplier);
   
   const rolls = damageRolls.join(',');
@@ -69,21 +66,21 @@ export const applyDamageToTarget = (
     
     let effects = [...combatant.statusEffects];
     
-    if (isMajorWound && !effects.includes('stunned')) {
-      const htCheck = rollHTCheck(targetHT, combatant.currentHP, targetMaxHP);
-      if (!htCheck.success) {
-        effects = [...effects, 'stunned'];
-        majorWoundStunned = true;
-      }
-    }
-    
-    if (wasAboveZero && nowAtOrBelowZero) {
-      const htCheck = rollHTCheck(targetHT, newHP, targetMaxHP);
-      if (!htCheck.success) {
-        effects = [...effects, 'unconscious'];
-        fellUnconscious = true;
-      }
-    }
+     if (isMajorWound && !effects.includes('stunned')) {
+       const htCheck = adapter.damage?.rollHTCheck?.(targetHT, combatant.currentHP, targetMaxHP);
+       if (!htCheck?.success) {
+         effects = [...effects, 'stunned'];
+         majorWoundStunned = true;
+       }
+     }
+     
+     if (wasAboveZero && nowAtOrBelowZero) {
+       const htCheck = adapter.damage?.rollHTCheck?.(targetHT, newHP, targetMaxHP);
+       if (!htCheck?.success) {
+         effects = [...effects, 'unconscious'];
+         fellUnconscious = true;
+       }
+     }
     
     return { 
       ...combatant, 

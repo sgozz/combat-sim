@@ -382,47 +382,39 @@ export const advanceTurn = (state: MatchState): MatchState => {
   };
 };
 
-export type HexPosition = {
-  q: number;
-  r: number;
+import { squareGrid8 } from '../../grid';
+import type { GridCoord } from '../../grid';
+
+export type SquarePosition = GridCoord;
+
+const grid = squareGrid8;
+
+export const getSquareNeighbor = (pos: SquarePosition, direction: number): SquarePosition => {
+  return grid.getNeighborInDirection(pos, direction);
 };
 
-const HEX_DIRECTIONS: HexPosition[] = [
-  { q: 1, r: 0 },
-  { q: 1, r: -1 },
-  { q: 0, r: -1 },
-  { q: -1, r: 0 },
-  { q: -1, r: 1 },
-  { q: 0, r: 1 },
-];
-
-export const getHexNeighbor = (pos: HexPosition, direction: number): HexPosition => {
-  const dir = HEX_DIRECTIONS[(direction % 6 + 6) % 6];
-  return { q: pos.q + dir.q, r: pos.r + dir.r };
+export const squareDistance = (a: SquarePosition, b: SquarePosition): number => {
+  return grid.distance(a, b);
 };
 
-export const hexDistance = (a: HexPosition, b: HexPosition): number => {
-  return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
-};
-
-export const getReachableHexes = (
-  startPos: HexPosition,
+export const getReachableSquares = (
+  startPos: SquarePosition,
   speed: number,
-  occupiedHexes: HexPosition[] = []
-): Map<string, { position: HexPosition; cost: number }> => {
-  const results = new Map<string, { position: HexPosition; cost: number }>();
+  occupiedSquares: SquarePosition[] = []
+): Map<string, { position: SquarePosition; cost: number }> => {
+  const results = new Map<string, { position: SquarePosition; cost: number }>();
   const visited = new Set<string>();
-  const queue: { pos: HexPosition; cost: number }[] = [{ pos: startPos, cost: 0 }];
+  const queue: { pos: SquarePosition; cost: number }[] = [{ pos: startPos, cost: 0 }];
   
-  const hexKey = (p: HexPosition) => `${p.q},${p.r}`;
-  const isOccupied = (p: HexPosition) => occupiedHexes.some(o => o.q === p.q && o.r === p.r);
-  const feetPerHex = 5;
-  const maxHexes = Math.floor(speed / feetPerHex);
+  const coordKey = (p: SquarePosition) => `${p.q},${p.r}`;
+  const isOccupied = (p: SquarePosition) => occupiedSquares.some(o => o.q === p.q && o.r === p.r);
+  const feetPerSquare = 5;
+  const maxSquares = Math.floor(speed / feetPerSquare);
   
   while (queue.length > 0) {
     queue.sort((a, b) => a.cost - b.cost);
     const current = queue.shift()!;
-    const key = hexKey(current.pos);
+    const key = coordKey(current.pos);
     
     if (visited.has(key)) continue;
     visited.add(key);
@@ -431,12 +423,11 @@ export const getReachableHexes = (
       results.set(key, { position: current.pos, cost: current.cost });
     }
     
-    if (current.cost >= maxHexes) continue;
+    if (current.cost >= maxSquares) continue;
     
-    for (let dir = 0; dir < 6; dir++) {
-      const neighbor = getHexNeighbor(current.pos, dir);
+    const neighbors = grid.neighbors(current.pos);
+    for (const neighbor of neighbors) {
       if (isOccupied(neighbor)) continue;
-      
       queue.push({ pos: neighbor, cost: current.cost + 1 });
     }
   }
@@ -447,14 +438,14 @@ export const getReachableHexes = (
 export const initializeTurnMovement = (
   position: HexCoord,
   facing: number,
-  speed: number
+  basicMove: number
 ): TurnMovementState => {
   return {
     startPosition: { ...position },
     startFacing: facing,
     currentPosition: { ...position },
     currentFacing: facing,
-    movePointsRemaining: Math.floor(speed / 5),
+    movePointsRemaining: basicMove,
     freeRotationUsed: false,
     movedBackward: false,
     phase: 'moving',
@@ -463,17 +454,17 @@ export const initializeTurnMovement = (
 
 export const calculateReachableHexesInfo = (
   state: TurnMovementState,
-  occupiedHexes: HexCoord[]
+  occupiedSquares: HexCoord[]
 ): ReachableHexInfo[] => {
   const speed = state.movePointsRemaining * 5;
-  const reachable = getReachableHexes(state.currentPosition, speed, occupiedHexes);
+  const reachable = getReachableSquares(state.currentPosition, speed, occupiedSquares);
   
   const result: ReachableHexInfo[] = [];
-  reachable.forEach((hex) => {
+  reachable.forEach((cell) => {
     result.push({
-      q: hex.position.q,
-      r: hex.position.r,
-      cost: hex.cost,
+      q: cell.position.q,
+      r: cell.position.r,
+      cost: cell.cost,
       finalFacing: state.currentFacing,
     });
   });
@@ -491,3 +482,34 @@ export const hexToGrid = (hex: HexCoord): { x: number; y: number; z: number } =>
   y: 0,
   z: hex.r,
 });
+
+export type MovementState = {
+  position: HexCoord;
+  facing: number;
+  movePointsRemaining: number;
+  freeRotationUsed: boolean;
+  movedBackward: boolean;
+};
+
+export const executeMove = (
+  state: MovementState,
+  targetHex: HexCoord,
+  occupiedHexes: HexCoord[]
+): MovementState | null => {
+  const isOccupied = occupiedHexes.some(h => h.q === targetHex.q && h.r === targetHex.r);
+  if (isOccupied) return null;
+  
+  const dx = Math.abs(targetHex.q - state.position.q);
+  const dz = Math.abs(targetHex.r - state.position.r);
+  const chebyshevDistance = Math.max(dx, dz);
+  
+  if (chebyshevDistance > state.movePointsRemaining) return null;
+  
+  return {
+    position: { ...targetHex },
+    facing: state.facing,
+    movePointsRemaining: state.movePointsRemaining - chebyshevDistance,
+    freeRotationUsed: state.freeRotationUsed,
+    movedBackward: state.movedBackward,
+  };
+};

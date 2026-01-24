@@ -7,14 +7,8 @@ import type {
   HexCoord,
   User,
 } from "../../shared/types";
-import { 
-  getPostureModifiers,
-  initializeTurnMovement,
-  calculateReachableHexesInfo,
-  gridToHex,
-  calculateEncumbrance,
-  canChangePostureFree,
-} from "../../shared/rules";
+
+import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "./rulesetHelpers";
 import { state } from "./state";
 import { 
@@ -573,15 +567,19 @@ const handleCombatAction = async (
     logMsg += '.';
     
     const actorCharacter = getCharacterById(match, actorCombatant.characterId);
+    const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
     const baseMove = actorCharacter?.derived.basicMove ?? 5;
-    const encumbrance = calculateEncumbrance(
-      actorCharacter?.attributes.strength ?? 10, 
-      actorCharacter?.equipment ?? []
-    );
-    const basicMove = Math.max(1, baseMove + encumbrance.movePenalty);
     
-    const turnMovement = initializeTurnMovement(
-      gridToHex(actorCombatant.position),
+    let basicMove = baseMove;
+    if (adapter.calculateEncumbrance) {
+      const encumbrance = adapter.calculateEncumbrance(
+        actorCharacter?.attributes.strength ?? 10, 
+        actorCharacter?.equipment ?? []
+      );
+      basicMove = Math.max(1, baseMove + encumbrance.movePenalty);
+    }
+    const turnMovement = adapter.initializeTurnMovement(
+      adapter.gridToHex(actorCombatant.position),
       actorCombatant.facing,
       newManeuver,
       basicMove,
@@ -590,10 +588,10 @@ const handleCombatAction = async (
     
     const occupiedHexes: HexCoord[] = match.combatants
       .filter(c => c.playerId !== player.id)
-      .map(c => gridToHex(c.position));
+      .map(c => adapter.gridToHex(c.position));
     
     const reachableHexes = turnMovement.phase === 'moving' 
-      ? calculateReachableHexesInfo(turnMovement, occupiedHexes)
+      ? adapter.calculateReachableHexesInfo(turnMovement, occupiedHexes)
       : [];
     
     const updated: MatchState = {
@@ -768,15 +766,16 @@ const handleCombatAction = async (
     return;
   }
 
-  if (payload.type === "change_posture") {
-    const newPosture = payload.posture;
-    const oldPosture = actorCombatant.posture;
-    if (newPosture === oldPosture) {
-      sendMessage(socket, { type: "error", message: "Already in that posture." });
-      return;
-    }
-    
-    const isFreeChange = canChangePostureFree(oldPosture, newPosture);
+   if (payload.type === "change_posture") {
+     const newPosture = payload.posture;
+     const oldPosture = actorCombatant.posture;
+     if (newPosture === oldPosture) {
+       sendMessage(socket, { type: "error", message: "Already in that posture." });
+       return;
+     }
+     
+     const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+     const isFreeChange = adapter.canChangePostureFree!(oldPosture, newPosture);
     
     if (!isFreeChange && actorCombatant.maneuver !== 'change_posture') {
       sendMessage(socket, { type: "error", message: `Changing from ${oldPosture} to ${newPosture} requires Change Posture maneuver.` });
@@ -810,30 +809,31 @@ const handleCombatAction = async (
     return;
   }
 
-  if (payload.type === "move") {
-    if (actorCombatant.inCloseCombatWith) {
-      sendMessage(socket, { type: "error", message: "Cannot move while in close combat. Use Exit Close Combat first." });
-      return;
-    }
-    
-    const actorCharacter = getCharacterById(match, actorCombatant.characterId);
-    if (!actorCharacter) {
-      sendMessage(socket, { type: "error", message: "Character not found." });
-      return;
-    }
-    
-    const occupant = match.combatants.find(c => 
-      c.playerId !== player.id && 
-      c.position.x === payload.position.x && 
-      c.position.z === payload.position.z
-    );
-    if (occupant) {
-      sendMessage(socket, { type: "error", message: "Hex is occupied. Use Enter Close Combat to share hex." });
-      return;
-    }
-    
-    const distance = calculateHexDistance(actorCombatant.position, payload.position);
-    const postureMods = getPostureModifiers(actorCombatant.posture);
+   if (payload.type === "move") {
+     if (actorCombatant.inCloseCombatWith) {
+       sendMessage(socket, { type: "error", message: "Cannot move while in close combat. Use Exit Close Combat first." });
+       return;
+     }
+     
+     const actorCharacter = getCharacterById(match, actorCombatant.characterId);
+     if (!actorCharacter) {
+       sendMessage(socket, { type: "error", message: "Character not found." });
+       return;
+     }
+     
+     const occupant = match.combatants.find(c => 
+       c.playerId !== player.id && 
+       c.position.x === payload.position.x && 
+       c.position.z === payload.position.z
+     );
+     if (occupant) {
+       sendMessage(socket, { type: "error", message: "Hex is occupied. Use Enter Close Combat to share hex." });
+       return;
+     }
+     
+     const distance = calculateHexDistance(actorCombatant.position, payload.position);
+     const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+     const postureMods = adapter.getPostureModifiers!(actorCombatant.posture);
     
     let allowed = Math.floor(actorCharacter.derived.basicMove * postureMods.moveMultiplier);
     const m = actorCombatant.maneuver;

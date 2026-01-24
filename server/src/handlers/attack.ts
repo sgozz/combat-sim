@@ -8,27 +8,8 @@ import type {
   DamageType,
 } from "../../../shared/types";
 import type { Reach } from "../../../shared/types";
-import { isPf2Match } from "../../../shared/rulesets/serverAdapter";
+import { isPf2Match, getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../rulesetHelpers";
-import { 
-  resolveAttackRoll,
-  resolveDefenseRoll,
-  calculateDefenseValue,
-  rollDamage,
-  getDefenseOptions, 
-  getRangePenalty, 
-  getPostureModifiers,
-  canAttackAtDistance,
-  getCloseCombatAttackModifiers,
-  getCloseCombatDefenseModifiers,
-  parseReach,
-  getHitLocationPenalty,
-  calculateEncumbrance,
-  rollCriticalHitTable,
-  rollCriticalMissTable,
-  applyCriticalHitDamage,
-  getCriticalMissDescription,
-} from "../../../shared/rules";
 import { state } from "../state";
 import { updateMatchState } from "../db";
 import { 
@@ -83,6 +64,8 @@ export const resolveDefenseChoice = async (
   const pending = match.pendingDefense;
   if (!pending) return;
   
+  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+  
   clearDefenseTimeout(matchId);
   
   const defenderCombatant = match.combatants.find(c => c.playerId === pending.defenderId);
@@ -93,7 +76,7 @@ export const resolveDefenseChoice = async (
   if (!defenderCombatant || !attackerCombatant || !defenderCharacter || !attackerCharacter) return;
 
   if (choice.defenseType === 'none') {
-    const dmg = rollDamage(pending.damage);
+    const dmg = adapter.rollDamage!(pending.damage);
     let baseDamage = dmg.total;
     if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
       baseDamage += 2;
@@ -150,17 +133,17 @@ export const resolveDefenseChoice = async (
     return;
   }
 
-  const defenderEncumbrance = calculateEncumbrance(
+  const defenderEncumbrance = adapter.calculateEncumbrance!(
     defenderCharacter.attributes.strength,
     defenderCharacter.equipment
   );
   const effectiveDefenderDodge = defenderCharacter.derived.dodge + defenderEncumbrance.dodgePenalty;
-  const defenseOptions = getDefenseOptions(defenderCharacter, effectiveDefenderDodge);
+  const defenseOptions = adapter.getDefenseOptions!(defenderCharacter, effectiveDefenderDodge);
   const distance = calculateHexDistance(attackerCombatant.position, defenderCombatant.position);
   const inCloseCombat = distance === 0;
   const defenderWeapon = defenderCharacter.equipment.find(e => e.type === 'melee');
   const defenderShield = defenderCharacter.equipment.find(e => e.type === 'shield');
-  const ccDefMods = getCloseCombatDefenseModifiers(
+  const ccDefMods = adapter.getCloseCombatDefenseModifiers!(
     defenderWeapon?.reach,
     defenderShield?.shieldSize,
     inCloseCombat
@@ -218,12 +201,12 @@ export const resolveDefenseChoice = async (
   }
   
   const isRanged = attackerCharacter.equipment[0]?.type === 'ranged';
-  const defenderPosture = getPostureModifiers(defenderCombatant.posture);
+  const defenderPosture = adapter.getPostureModifiers!(defenderCombatant.posture);
   defenseMod += isRanged ? defenderPosture.defenseVsRanged : defenderPosture.defenseVsMelee;
   
   const canRetreat = choice.retreat && !defenderCombatant.retreatedThisTurn;
   
-  const finalDefenseValue = calculateDefenseValue(baseDefense, {
+  const finalDefenseValue = adapter.calculateDefenseValue!(baseDefense, {
     retreat: canRetreat,
     dodgeAndDrop: choice.dodgeAndDrop && choice.defenseType === 'dodge',
     inCloseCombat,
@@ -235,7 +218,7 @@ export const resolveDefenseChoice = async (
     lostBalance: defenderCombatant.statusEffects.includes('lost_balance'),
   });
   
-  const defenseRoll = resolveDefenseRoll(finalDefenseValue);
+  const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
   
   if (defenseRoll.defended) {
     let retreatHex: { x: number; y: number; z: number } | null = null;
@@ -293,7 +276,7 @@ export const resolveDefenseChoice = async (
       scheduleBotTurn(matchId, updated);
     }
   } else {
-    const dmg = rollDamage(pending.damage);
+    const dmg = adapter.rollDamage!(pending.damage);
     let baseDamage = dmg.total;
     if (attackerCombatant.maneuver === 'all_out_attack' && attackerCombatant.aoaVariant === 'strong') {
       baseDamage += 2;
@@ -377,6 +360,8 @@ export const handleAttackAction = async (
     return handlePF2AttackAction(socket, matchId, match, player, actorCombatant, payload);
   }
   
+  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+  
   if (actorCombatant.inCloseCombatWith && actorCombatant.inCloseCombatWith !== payload.targetId) {
     sendMessage(socket, { type: "error", message: "In close combat - can only attack your close combat opponent." });
     return;
@@ -415,13 +400,13 @@ export const handleAttackAction = async (
   const isRanged = weapon.type === 'ranged';
   const weaponReach: Reach = weapon.reach ?? '1';
   
-  if (!isRanged && !canAttackAtDistance(weaponReach, distance)) {
-    const { max } = parseReach(weaponReach);
+  if (!isRanged && !adapter.canAttackAtDistance!(weaponReach, distance)) {
+    const { max } = adapter.parseReach!(weaponReach);
     sendMessage(socket, { type: "error", message: `Target out of melee range (reach ${max}).` });
     return;
   }
   
-  const closeCombatMods = getCloseCombatAttackModifiers(weapon ?? { id: '', name: 'Fist', type: 'melee', reach: 'C' }, distance);
+  const closeCombatMods = adapter.getCloseCombatAttackModifiers!(weapon ?? { id: '', name: 'Fist', type: 'melee', reach: 'C' }, distance);
   if (!closeCombatMods.canAttack) {
     sendMessage(socket, { type: "error", message: closeCombatMods.reason });
     return;
@@ -431,7 +416,7 @@ export const handleAttackAction = async (
   const attackerManeuver = actorCombatant.maneuver;
   
   if (isRanged) {
-    const rangePenalty = getRangePenalty(distance);
+    const rangePenalty = adapter.getRangePenalty!(distance);
     skill += rangePenalty;
   }
   
@@ -473,11 +458,11 @@ export const handleAttackAction = async (
     skill -= 6;
   }
   
-  const attackerPosture = getPostureModifiers(actorCombatant.posture);
+  const attackerPosture = adapter.getPostureModifiers!(actorCombatant.posture);
   skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
   
   const hitLocation = payload.hitLocation ?? 'torso';
-  const hitLocationPenalty = getHitLocationPenalty(hitLocation);
+  const hitLocationPenalty = adapter.getHitLocationPenalty!(hitLocation);
   skill += hitLocationPenalty;
   
   const targetFacing = targetCombatant.facing;
@@ -510,7 +495,7 @@ export const handleAttackAction = async (
     defenseDescription += defenseDescription === "normal" ? "defensive (+1)" : " + defensive (+1)";
   }
 
-  const attackRoll = resolveAttackRoll(skill);
+  const attackRoll = adapter.resolveAttackRoll!(skill);
   const hitLocLabel = hitLocation === 'torso' ? '' : ` [${hitLocation.replace('_', ' ')}]`;
   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}${hitLocLabel} (${defenseDescription})`;
 
@@ -519,8 +504,8 @@ export const handleAttackAction = async (
     const updatedAttackerEffects = [...actorCombatant.statusEffects];
     
     if (attackRoll.criticalMiss) {
-      const critMiss = rollCriticalMissTable();
-      const critMissDesc = getCriticalMissDescription(critMiss.effect);
+      const critMiss = adapter.rollCriticalMissTable!();
+      const critMissDesc = adapter.getCriticalMissDescription!(critMiss.effect);
       if (critMissDesc) {
         critMissEffect = ` Critical miss (${critMiss.roll})! ${critMissDesc}`;
       }
@@ -571,7 +556,7 @@ export const handleAttackAction = async (
   const damageType: DamageType = weapon?.damageType ?? 'crushing';
 
   if (attackRoll.critical || !canDefend) {
-    const dmg = rollDamage(damageFormula);
+    const dmg = adapter.rollDamage!(damageFormula);
     let baseDamage = dmg.total;
     if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
       baseDamage += 2;
@@ -580,8 +565,8 @@ export const handleAttackAction = async (
     let critHitStr = '';
     let finalBaseDamage = baseDamage;
     if (attackRoll.critical) {
-      const critHit = rollCriticalHitTable();
-      const critResult = applyCriticalHitDamage(baseDamage, critHit.effect, damageFormula);
+      const critHit = adapter.rollCriticalHitTable!();
+      const critResult = adapter.applyCriticalHitDamage!(baseDamage, critHit.effect, damageFormula);
       finalBaseDamage = critResult.damage;
       critHitStr = critResult.description ? `Critical hit (${critHit.roll})! ${critResult.description} ` : `Critical hit (${critHit.roll})! `;
     }
@@ -646,16 +631,16 @@ export const handleAttackAction = async (
   const isDefenderBot = targetPlayer?.isBot ?? false;
 
   if (isDefenderBot) {
-    const targetEncumbrance = calculateEncumbrance(
+    const targetEncumbrance = adapter.calculateEncumbrance!(
       targetCharacter.attributes.strength,
       targetCharacter.equipment
     );
     const effectiveDodge = targetCharacter.derived.dodge + targetEncumbrance.dodgePenalty;
-    const defenseOptions = getDefenseOptions(targetCharacter, effectiveDodge);
+    const defenseOptions = adapter.getDefenseOptions!(targetCharacter, effectiveDodge);
     const targetWeapon = targetCharacter.equipment.find(e => e.type === 'melee');
     const targetShield = targetCharacter.equipment.find(e => e.type === 'shield');
     const inCloseCombat = distance === 0;
-    const ccDefMods = getCloseCombatDefenseModifiers(
+    const ccDefMods = adapter.getCloseCombatDefenseModifiers!(
       targetWeapon?.reach,
       targetShield?.shieldSize,
       inCloseCombat
@@ -665,7 +650,7 @@ export const handleAttackAction = async (
     if (relativeDir === 2 || relativeDir === 4) defenseMod = -2;
     if (targetCombatant.statusEffects.includes('defending')) defenseMod += 1;
     
-    const targetPosture = getPostureModifiers(targetCombatant.posture);
+    const targetPosture = adapter.getPostureModifiers!(targetCombatant.posture);
     const postureDefBonus = isRanged ? targetPosture.defenseVsRanged : targetPosture.defenseVsMelee;
     defenseMod += postureDefBonus;
     
@@ -711,7 +696,7 @@ export const handleAttackAction = async (
     const retreatBonus = canRetreat ? (defenseUsed === 'dodge' ? 3 : 1) : 0;
     const finalDefenseValue = bestDefense + retreatBonus;
     
-    const defenseRoll = resolveDefenseRoll(finalDefenseValue);
+const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
     
     if (defenseRoll.defended) {
       const retreatStr = canRetreat ? ' (with retreat)' : '';
@@ -760,7 +745,7 @@ export const handleAttackAction = async (
         scheduleBotTurn(matchId, updated);
       }
     } else {
-      const dmg = rollDamage(damageFormula);
+      const dmg = adapter.rollDamage!(damageFormula);
       let baseDamage = dmg.total;
       if (attackerManeuver === 'all_out_attack' && actorCombatant.aoaVariant === 'strong') {
         baseDamage += 2;

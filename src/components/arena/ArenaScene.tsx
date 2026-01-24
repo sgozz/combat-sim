@@ -1,10 +1,11 @@
 import { OrbitControls, Environment, GizmoHelper, GizmoViewport, Html } from '@react-three/drei'
-import { HexGrid } from './HexGrid'
+import { BattleGrid } from './BattleGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
 import { CameraControls, type CameraMode } from './CameraControls'
-import { hexToWorld, getHexInDirection } from '../../utils/hex'
-import type { CombatantState, CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo } from '../../../shared/types'
+import { getHexInDirection } from '../../utils/hex'
+import { hexGrid, squareGrid8 } from '../../../shared/grid'
+import type { CombatantState, CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
 import { useMemo, useState, useEffect } from 'react'
 
 type ArenaSceneProps = {
@@ -18,12 +19,14 @@ type ArenaSceneProps = {
   reachableHexes: ReachableHexInfo[]
   visualEffects: (VisualEffect & { id: string })[]
   cameraMode: CameraMode
+  rulesetId: RulesetId
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
 }
 
-const FloatingText = ({ effect }: { effect: VisualEffect }) => {
-  const [x, z] = hexToWorld(effect.position.x, effect.position.z)
+const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: RulesetId }) => {
+  const gridSystem = rulesetId === 'pf2' ? squareGrid8 : hexGrid
+  const worldPos = gridSystem.coordToWorld({ q: effect.position.x, r: effect.position.z })
   
   let content = ''
   let color = 'white'
@@ -40,7 +43,7 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
   }
 
   return (
-    <Html position={[x, 3, z]} center zIndexRange={[0, 50]} style={{ pointerEvents: 'none' }}>
+    <Html position={[worldPos.x, 3, worldPos.z]} center zIndexRange={[0, 50]} style={{ pointerEvents: 'none' }}>
       <div style={{
         color,
         fontSize: '24px',
@@ -54,7 +57,7 @@ const FloatingText = ({ effect }: { effect: VisualEffect }) => {
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   
   useEffect(() => {
@@ -105,7 +108,10 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
   }, [playerCombatant, characters])
 
   const facingArcs = useMemo(() => {
-    if (!playerCombatant?.position) return { front: [], side: [], rear: [] }
+    const emptyArcs = { front: [], side: [], rear: [] }
+    if (!playerCombatant?.position) return emptyArcs
+    if (rulesetId === 'pf2') return emptyArcs
+    
     const { x: q, z: r } = playerCombatant.position
     const f = playerCombatant.facing ?? 0
     return {
@@ -122,14 +128,15 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         getHexInDirection(q, r, -f + 3),
       ],
     }
-  }, [playerCombatant])
+  }, [playerCombatant, rulesetId])
 
   return (
     <>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       
-      <HexGrid 
+      <BattleGrid 
+        gridType={rulesetId === 'pf2' ? 'square' : 'hex'}
         radius={10} 
         playerPosition={isPlayerTurn ? playerPosition : null}
         attackRange={attackRange}
@@ -139,7 +146,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         moveTargetPosition={moveTarget}
         facingArcs={facingArcs}
         reachableHexes={reachableHexes}
-        onHexClick={(q, r) => {
+        onHexClick={(q: number, r: number) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {
             onCombatantClick(enemyAtHex.playerId)
@@ -157,15 +164,16 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
           isPlayer={combatant.playerId === playerId}
           isSelected={combatant.playerId === selectedTargetId}
           visualEffects={visualEffects}
+          gridType={rulesetId === 'pf2' ? 'square' : 'hex'}
           onClick={() => onCombatantClick(combatant.playerId)}
         />
       ))}
 
       {visualEffects.map((effect) => (
-        <FloatingText key={effect.id} effect={effect} />
+        <FloatingText key={effect.id} effect={effect} rulesetId={rulesetId} />
       ))}
 
-      {moveTarget && <MoveMarker position={moveTarget} />}
+      {moveTarget && <MoveMarker position={moveTarget} gridType={rulesetId === 'pf2' ? 'square' : 'hex'} />}
 
       <CameraControls targetPosition={activeCombatantPosition} focusPositions={focusPositions} mode={cameraMode} />
       <OrbitControls makeDefault />

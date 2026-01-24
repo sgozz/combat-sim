@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, useGLTF } from '@react-three/drei'
-import { hexToWorld } from '../../utils/hex'
+import type { GridSystem, GridType } from '../../../shared/grid'
+import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { CombatantState, CharacterSheet, VisualEffect } from '../../../shared/types'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
+
+const getGridSystem = (gridType: GridType): GridSystem => {
+  return gridType === 'square' ? squareGrid8 : hexGrid
+}
 
 type AnimationState = 'idle' | 'walk' | 'run' | 'death' | 'jump' | 'punch' | 'working'
 
@@ -14,6 +19,7 @@ type CombatantProps = {
   isPlayer: boolean
   isSelected: boolean
   visualEffects: (VisualEffect & { id: string })[]
+  gridType: GridType
   onClick: () => void
 }
 
@@ -132,9 +138,12 @@ const RUN_TO_WALK_DISTANCE = 1.0
 const WALK_SPEED_MULTIPLIER = 0.5
 const ROTATION_SPEED = 8
 
-export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEffects, onClick }: CombatantProps) => {
+export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEffects, gridType, onClick }: CombatantProps) => {
   const emissive = isSelected ? '#ffff00' : '#000000'
-  const [targetX, targetZ] = hexToWorld(combatant.position.x, combatant.position.z)
+  const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
+  const worldPos = gridSystem.coordToWorld({ q: combatant.position.x, r: combatant.position.z })
+  const targetX = worldPos.x
+  const targetZ = worldPos.z
   const targetRotation = -combatant.facing * (Math.PI / 3)
 
   const groupRef = useRef<THREE.Group>(null)

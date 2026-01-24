@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { CharacterSheet, CombatantState, MatchState, EquippedItem, Player } from "../../shared/types";
 import { state } from "./state";
-import { calculateDerivedStats } from "../../shared/rules";
+import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { getMatchMembers, findUserById, loadCharacterById } from "./db";
 
 export const createMatchState = async (
@@ -29,6 +29,7 @@ export const createMatchState = async (
     }
     
     if (!character) {
+      const adapter = getServerAdapter(rulesetId ?? 'gurps');
       const attributes = {
         strength: 10,
         dexterity: 10,
@@ -39,7 +40,7 @@ export const createMatchState = async (
         id: randomUUID(),
         name: user.username,
         attributes,
-        derived: calculateDerivedStats(attributes),
+        derived: adapter.calculateDerivedStats(attributes),
         skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
         advantages: [],
         disadvantages: [],

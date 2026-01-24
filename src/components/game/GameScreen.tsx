@@ -244,6 +244,7 @@ export const GameScreen = ({
             reachableHexes={matchState?.reachableHexes ?? []}
             visualEffects={visualEffects}
             cameraMode={cameraMode}
+            rulesetId={matchState?.rulesetId ?? 'gurps'}
             onGridClick={onGridClick}
             onCombatantClick={onCombatantClick}
           />

@@ -1,5 +1,8 @@
 import { WebSocket } from "ws";
 import type { CombatantState, GridPosition, MatchState, User, ServerToClientMessage } from "../../shared/types";
+import type { GridSystem, GridCoord } from "../../shared/grid";
+import { hexGrid } from "../../shared/grid";
+import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { state } from "./state";
 import { getMatchMembers } from "./db";
 
@@ -48,12 +51,22 @@ export const requireUser = (socket: WebSocket): User | null => {
   return user;
 };
 
+export const calculateGridDistance = (
+  from: GridPosition,
+  to: GridPosition,
+  gridSystem: GridSystem
+): number => {
+  const coordFrom: GridCoord = { q: from.x, r: from.z };
+  const coordTo: GridCoord = { q: to.x, r: to.z };
+  return gridSystem.distance(coordFrom, coordTo);
+};
+
+export const getGridSystemForMatch = (match: MatchState): GridSystem => {
+  return getServerAdapter(match.rulesetId ?? 'gurps').gridSystem;
+};
+
 export const calculateHexDistance = (from: GridPosition, to: GridPosition) => {
-  const q1 = from.x, r1 = from.z;
-  const q2 = to.x, r2 = to.z;
-  const s1 = -q1 - r1;
-  const s2 = -q2 - r2;
-  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2));
+  return calculateGridDistance(from, to, hexGrid);
 };
 
 export const getCombatantByPlayerId = (matchState: MatchState, playerId: string) => {
@@ -68,21 +81,51 @@ export const isDefeated = (combatant: CombatantState): boolean => {
   return combatant.currentHP <= 0 || combatant.statusEffects.includes('unconscious');
 };
 
+export const getGridNeighbors = (q: number, r: number, gridSystem: GridSystem): GridPosition[] => {
+  const coord: GridCoord = { q, r };
+  return gridSystem.neighbors(coord).map((n) => ({ x: n.q, y: 0, z: n.r }));
+};
+
 export const getHexNeighbors = (q: number, r: number): GridPosition[] => {
-  const directions = [
-    { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
-    { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
-  ];
-  return directions.map((d) => ({ x: q + d.q, y: 0, z: r + d.r }));
+  return getGridNeighbors(q, r, hexGrid);
+};
+
+export const findFreeAdjacentCell = (
+  pos: GridPosition,
+  combatants: CombatantState[],
+  gridSystem: GridSystem
+): GridPosition | null => {
+  const neighbors = getGridNeighbors(pos.x, pos.z, gridSystem);
+  for (const cell of neighbors) {
+    const occupied = combatants.some(c => c.position.x === cell.x && c.position.z === cell.z);
+    if (!occupied) return cell;
+  }
+  return null;
 };
 
 export const findFreeAdjacentHex = (pos: GridPosition, combatants: CombatantState[]): GridPosition | null => {
-  const neighbors = getHexNeighbors(pos.x, pos.z);
-  for (const hex of neighbors) {
-    const occupied = combatants.some(c => c.position.x === hex.x && c.position.z === hex.z);
-    if (!occupied) return hex;
-  }
-  return null;
+  return findFreeAdjacentCell(pos, combatants, hexGrid);
+};
+
+export const findRetreatCell = (
+  defenderPos: GridPosition,
+  attackerPos: GridPosition,
+  combatants: CombatantState[],
+  gridSystem: GridSystem
+): GridPosition | null => {
+  const neighbors = getGridNeighbors(defenderPos.x, defenderPos.z, gridSystem);
+  const currentDist = calculateGridDistance(defenderPos, attackerPos, gridSystem);
+  
+  const validRetreats = neighbors
+    .filter(cell => {
+      const occupied = combatants.some(c => c.position.x === cell.x && c.position.z === cell.z);
+      if (occupied) return false;
+      const newDist = calculateGridDistance(cell, attackerPos, gridSystem);
+      return newDist > currentDist;
+    })
+    .sort((a, b) => calculateGridDistance(b, attackerPos, gridSystem) - calculateGridDistance(a, attackerPos, gridSystem));
+  
+  return validRetreats[0] ?? null;
 };
 
 export const findRetreatHex = (
@@ -90,19 +133,7 @@ export const findRetreatHex = (
   attackerPos: GridPosition,
   combatants: CombatantState[]
 ): GridPosition | null => {
-  const neighbors = getHexNeighbors(defenderPos.x, defenderPos.z);
-  const currentDist = calculateHexDistance(defenderPos, attackerPos);
-  
-  const validRetreats = neighbors
-    .filter(hex => {
-      const occupied = combatants.some(c => c.position.x === hex.x && c.position.z === hex.z);
-      if (occupied) return false;
-      const newDist = calculateHexDistance(hex, attackerPos);
-      return newDist > currentDist;
-    })
-    .sort((a, b) => calculateHexDistance(b, attackerPos) - calculateHexDistance(a, attackerPos));
-  
-  return validRetreats[0] ?? null;
+  return findRetreatCell(defenderPos, attackerPos, combatants, hexGrid);
 };
 
 export const calculateFacing = (from: GridPosition, to: GridPosition): number => {
@@ -118,25 +149,26 @@ export const calculateFacing = (from: GridPosition, to: GridPosition): number =>
   return (sector + 6) % 6;
 };
 
-export const computeHexMoveToward = (
+export const computeGridMoveToward = (
   from: GridPosition,
   to: GridPosition,
   maxMove: number,
+  gridSystem: GridSystem,
   stopDistance: number = 1
 ): GridPosition => {
   let current = { ...from };
   let remaining = maxMove;
 
   while (remaining > 0) {
-    const currentDist = calculateHexDistance(current, to);
+    const currentDist = calculateGridDistance(current, to, gridSystem);
     if (currentDist <= stopDistance) break;
 
-    const neighbors = getHexNeighbors(current.x, current.z);
+    const neighbors = getGridNeighbors(current.x, current.z, gridSystem);
     let bestNeighbor = current;
     let bestDist = currentDist;
 
     for (const neighbor of neighbors) {
-      const dist = calculateHexDistance(neighbor, to);
+      const dist = calculateGridDistance(neighbor, to, gridSystem);
       if (dist < bestDist) {
         bestDist = dist;
         bestNeighbor = neighbor;
@@ -150,6 +182,15 @@ export const computeHexMoveToward = (
   }
 
   return current;
+};
+
+export const computeHexMoveToward = (
+  from: GridPosition,
+  to: GridPosition,
+  maxMove: number,
+  stopDistance: number = 1
+): GridPosition => {
+  return computeGridMoveToward(from, to, maxMove, hexGrid, stopDistance);
 };
 
 export const checkVictory = (match: MatchState): MatchState => {

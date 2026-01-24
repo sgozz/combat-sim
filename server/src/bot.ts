@@ -1,32 +1,26 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet, CombatantState, MatchState, User, DefenseType, DamageType, PendingDefense } from "../../shared/types";
+import type { CharacterSheet, CombatantState, MatchState, User, DefenseType, DamageType, PendingDefense, RulesetId } from "../../shared/types";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 
-  calculateHexDistance, 
-  computeHexMoveToward, 
+  calculateGridDistance,
+  computeGridMoveToward, 
   calculateFacing, 
   getCombatantByPlayerId, 
   getCharacterById, 
   isDefeated,
   sendToMatch,
-  checkVictory
+  checkVictory,
+  getGridSystemForMatch
 } from "./helpers";
 import { advanceTurn } from "./rulesetHelpers";
-import { calculateDerivedStats, resolveAttackRoll, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance, rollDamage } from "../../shared/rules";
-import { 
-  rollCheck as pf2RollCheck, 
-  rollDamage as pf2RollDamage, 
-  getAbilityModifier, 
-  getProficiencyBonus, 
-  getMultipleAttackPenalty 
-} from "../../shared/rulesets/pf2/rules";
-import type { PF2DamageType } from "../../shared/rulesets/pf2/types";
+import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
-export const createBotCharacter = (name: string): CharacterSheet => {
+export const createBotCharacter = (name: string, rulesetId: RulesetId = 'gurps'): CharacterSheet => {
+  const adapter = getServerAdapter(rulesetId);
   const attributes = {
     strength: 10,
     dexterity: 10,
@@ -37,7 +31,7 @@ export const createBotCharacter = (name: string): CharacterSheet => {
     id: randomUUID(),
     name,
     attributes,
-    derived: calculateDerivedStats(attributes),
+    derived: adapter.calculateDerivedStats(attributes),
     skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
     advantages: [],
     disadvantages: [],
@@ -73,14 +67,16 @@ export const addBotToMatch = async (matchId: string): Promise<{ bot: User; chara
 const findNearestEnemy = (
   botCombatant: CombatantState,
   allCombatants: CombatantState[],
-  botPlayerId: string
+  botPlayerId: string,
+  match: MatchState
 ): CombatantState | null => {
+  const gridSystem = getGridSystemForMatch(match);
   let nearest: CombatantState | null = null;
   let minDistance = Infinity;
   for (const combatant of allCombatants) {
     if (combatant.playerId === botPlayerId) continue;
     if (isDefeated(combatant)) continue;
-    const dist = calculateHexDistance(botCombatant.position, combatant.position);
+    const dist = calculateGridDistance(botCombatant.position, combatant.position, gridSystem);
     if (dist < minDistance) {
       minDistance = dist;
       nearest = combatant;
@@ -89,6 +85,8 @@ const findNearestEnemy = (
   return nearest;
 };
 
+type PF2DamageType = 'bludgeoning' | 'slashing' | 'piercing' | 'fire' | 'cold' | 'electricity' | 'acid' | 'sonic' | 'force' | 'mental' | 'poison' | 'bleed' | 'precision' | 'spirit' | 'vitality' | 'void';
+
 const executePF2BotAttack = async (
   matchId: string,
   currentMatch: MatchState,
@@ -96,6 +94,7 @@ const executePF2BotAttack = async (
   target: CombatantState,
   activePlayer: { id: string; name: string }
 ): Promise<MatchState> => {
+  const adapter = getServerAdapter('pf2');
   const attackerCharacter = getCharacterById(currentMatch, botCombatant.characterId);
   const targetCharacter = getCharacterById(currentMatch, target.characterId);
   
@@ -117,15 +116,15 @@ const executePF2BotAttack = async (
   };
   const pf2DamageType: PF2DamageType = damageTypeMap[weapon?.damageType ?? 'crushing'] ?? 'bludgeoning';
 
-  const strMod = getAbilityModifier(attackerCharacter.attributes.strength);
+  const strMod = adapter.pf2!.getAbilityModifier(attackerCharacter.attributes.strength);
   const level = 1;
-  const profBonus = getProficiencyBonus('trained', level);
+  const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
   const attacksThisTurn = botCombatant.pf2?.attacksThisTurn ?? 0;
-  const mapPenalty = getMultipleAttackPenalty(attacksThisTurn + 1, false);
+  const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attacksThisTurn + 1, false);
   const totalAttackBonus = strMod + profBonus + mapPenalty;
   
   const targetAC = targetCharacter.derived.dodge;
-  const attackRoll = pf2RollCheck(totalAttackBonus, targetAC);
+  const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
   
   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weaponName}`;
   if (mapPenalty < 0) {
@@ -141,7 +140,7 @@ const executePF2BotAttack = async (
 
   let damageDealt = 0;
   if (attackRoll.degree === 'critical_success' || attackRoll.degree === 'success') {
-    const damageRoll = pf2RollDamage(`${weaponDamage}+${strMod}`, pf2DamageType);
+    const damageRoll = adapter.pf2!.rollDamage(`${weaponDamage}+${strMod}`, pf2DamageType);
     damageDealt = attackRoll.degree === 'critical_success' ? damageRoll.total * 2 : damageRoll.total;
     logEntry += ` for ${damageDealt} ${pf2DamageType} damage`;
     if (attackRoll.degree === 'critical_success') {
@@ -170,7 +169,7 @@ const executePF2BotAttack = async (
         pf2: {
           actionsRemaining: newActionsRemaining,
           attacksThisTurn: newAttacksThisTurn,
-          mapPenalty: getMultipleAttackPenalty(newAttacksThisTurn + 1, false),
+          mapPenalty: adapter.pf2!.getMultipleAttackPenalty(newAttacksThisTurn + 1, false),
           reactionAvailable: c.pf2?.reactionAvailable ?? true,
           shieldRaised: c.pf2?.shieldRaised ?? false,
         },
@@ -252,7 +251,7 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
       return;
     }
 
-    const target = findNearestEnemy(botCombatant, currentMatch.combatants, activePlayer.id);
+    const target = findNearestEnemy(botCombatant, currentMatch.combatants, activePlayer.id, currentMatch);
     if (!target) {
       const updated = advanceTurn({
         ...currentMatch,
@@ -265,7 +264,8 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
       return;
     }
 
-    const distanceToTarget = calculateHexDistance(botCombatant.position, target.position);
+    const gridSystem = getGridSystemForMatch(currentMatch);
+    const distanceToTarget = calculateGridDistance(botCombatant.position, target.position, gridSystem);
 
     if (distanceToTarget <= 1) {
       if (currentMatch.rulesetId === 'pf2') {
@@ -292,11 +292,12 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
         return;
       }
 
-      const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
-      const weapon = attackerCharacter.equipment[0];
-      const damageFormula = weapon?.damage ?? "1d";
-      const damageType: DamageType = weapon?.damageType ?? 'crushing';
-      const attackRoll = resolveAttackRoll(skill);
+       const skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+       const weapon = attackerCharacter.equipment[0];
+       const damageFormula = weapon?.damage ?? "1d";
+       const damageType: DamageType = weapon?.damageType ?? 'crushing';
+       const adapter = getServerAdapter(currentMatch.rulesetId);
+       const attackRoll = adapter.resolveAttackRoll!(skill);
       
       let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name}`;
 
@@ -316,9 +317,9 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
       const targetPlayer = currentMatch.players.find(p => p.id === target.playerId);
       const targetIsHuman = targetPlayer && !targetPlayer.isBot;
       
-      if (attackRoll.critical) {
-        const dmg = rollDamage(damageFormula);
-        const finalDamage = applyDamageMultiplier(dmg.total, damageType);
+       if (attackRoll.critical) {
+         const dmg = adapter.rollDamage!(damageFormula);
+         const finalDamage = adapter.applyDamageMultiplier!(dmg.total, damageType);
         const updatedCombatants = currentMatch.combatants.map((combatant) => {
           if (combatant.playerId !== target.playerId) return combatant;
           return { ...combatant, currentHP: Math.max(combatant.currentHP - finalDamage, 0) };
@@ -377,13 +378,13 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
         return;
       }
 
-      const dmg = rollDamage(damageFormula);
-      const finalDamage = applyDamageMultiplier(dmg.total, damageType);
-      const updatedCombatants = currentMatch.combatants.map((combatant) => {
-        if (combatant.playerId !== target.playerId) return combatant;
-        return { ...combatant, currentHP: Math.max(combatant.currentHP - finalDamage, 0) };
-      });
-      logEntry += `: Hit for ${finalDamage} damage. ${formatRoll(attackRoll.roll, 'Attack')}`;
+       const dmg = adapter.rollDamage!(damageFormula);
+       const finalDamage = adapter.applyDamageMultiplier!(dmg.total, damageType);
+       const updatedCombatants = currentMatch.combatants.map((combatant) => {
+         if (combatant.playerId !== target.playerId) return combatant;
+         return { ...combatant, currentHP: Math.max(combatant.currentHP - finalDamage, 0) };
+       });
+       logEntry += `: Hit for ${finalDamage} damage. ${formatRoll(attackRoll.roll, 'Attack')}`;
       let updated = advanceTurn({
         ...currentMatch,
         combatants: updatedCombatants,
@@ -399,7 +400,7 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
 
     const botCharacter = getCharacterById(currentMatch, botCombatant.characterId);
     const maxMove = botCharacter?.derived.basicMove ?? 5;
-    const newPosition = computeHexMoveToward(botCombatant.position, target.position, maxMove);
+    const newPosition = computeGridMoveToward(botCombatant.position, target.position, maxMove, gridSystem);
     const newFacing = calculateFacing(botCombatant.position, newPosition);
 
     const updatedCombatants = currentMatch.combatants.map((combatant) =>
@@ -423,15 +424,16 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
 };
 
 export const chooseBotDefense = (
-  defenderCharacter: CharacterSheet,
-  defenderCombatant: CombatantState
-): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
-  const encumbrance = calculateEncumbrance(
-    defenderCharacter.attributes.strength,
-    defenderCharacter.equipment
-  );
-  const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
-  const options = getDefenseOptions(defenderCharacter, effectiveDodge);
+   defenderCharacter: CharacterSheet,
+   defenderCombatant: CombatantState
+ ): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
+   const adapter = getServerAdapter('gurps');
+   const encumbrance = adapter.calculateEncumbrance!(
+     defenderCharacter.attributes.strength,
+     defenderCharacter.equipment
+   );
+   const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
+   const options = adapter.getDefenseOptions!(defenderCharacter, effectiveDodge);
   
   const defenses: { type: DefenseType; value: number }[] = [
     { type: 'dodge', value: options.dodge }
