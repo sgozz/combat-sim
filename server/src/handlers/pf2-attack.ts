@@ -114,11 +114,15 @@ export const handlePF2AttackAction = async (
     return;
   }
 
-  const weapon = getWeaponInfo(attackerCharacter);
-  const abilities = getPF2Abilities(attackerCharacter.attributes);
-  const targetAC = calculateAC(targetCharacter);
+   const weapon = getWeaponInfo(attackerCharacter);
+   const abilities = getPF2Abilities(attackerCharacter.attributes);
+   let targetAC = calculateAC(targetCharacter);
 
-   const isFinesse = weapon.traits.includes('finesse');
+   if (targetCombatant.posture === 'prone') {
+     targetAC -= 2;
+   }
+
+    const isFinesse = weapon.traits.includes('finesse');
    const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
    const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
    const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
@@ -134,11 +138,14 @@ export const handlePF2AttackAction = async (
 
    const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
   
-  let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
-  if (mapPenalty < 0) {
-    logEntry += ` (MAP ${mapPenalty})`;
-  }
-  logEntry += `: [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${attackRoll.dc}] ${formatDegree(attackRoll.degree)}`;
+   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
+   if (mapPenalty < 0) {
+     logEntry += ` (MAP ${mapPenalty})`;
+   }
+   if (targetCombatant.posture === 'prone') {
+     logEntry += ` (flat-footed, -2 AC)`;
+   }
+   logEntry += `: [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${attackRoll.dc}] ${formatDegree(attackRoll.degree)}`;
 
    let damageDealt = 0;
    if (attackRoll.degree === 'critical_success' || attackRoll.degree === 'success') {
