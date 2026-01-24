@@ -1,9 +1,8 @@
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+import Database from "better-sqlite3";
 import type { CharacterSheet, MatchState, User, MatchSummary } from "../../shared/types";
-import type { SqliteDatabase, CharacterRow, MatchRow, MatchMemberRow, UserRow, SessionRow } from "./types";
+import type { BetterSqliteDatabase, CharacterRow, MatchRow, MatchMemberRow, UserRow, SessionRow } from "./types";
 import { state } from "./state";
 
 const DB_PATH = path.join(process.cwd(), "data.sqlite");
@@ -17,10 +16,10 @@ const generateShortCode = (): string => {
   return code;
 };
 
-export const initializeDatabase = async (): Promise<SqliteDatabase> => {
-  const db = await open({ filename: DB_PATH, driver: sqlite3.Database });
+export const initializeDatabase = (): BetterSqliteDatabase => {
+  const db = new Database(DB_PATH);
   
-  await db.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
@@ -79,10 +78,10 @@ export const initializeDatabase = async (): Promise<SqliteDatabase> => {
     CREATE INDEX IF NOT EXISTS idx_matches_code ON matches(code);
   `);
 
-  const matchColumns = await db.all<{ name: string }[]>("PRAGMA table_info(matches)");
-  const hasRulesetId = matchColumns.some((column: { name: string }) => column.name === 'ruleset_id');
+  const matchColumns = db.prepare("PRAGMA table_info(matches)").all() as { name: string }[];
+  const hasRulesetId = matchColumns.some((column) => column.name === 'ruleset_id');
   if (!hasRulesetId) {
-    await db.exec("ALTER TABLE matches ADD COLUMN ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
+    db.exec("ALTER TABLE matches ADD COLUMN ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
   }
 
   return db;
@@ -95,121 +94,111 @@ export type Session = {
   lastSeenAt: number | null;
 };
 
-export const findUserByUsername = async (username: string): Promise<User | null> => {
-  const row = await state.db.get<UserRow>(
-    "SELECT id, username, is_bot FROM users WHERE username = ?",
-    username
-  );
+export const findUserByUsername = (username: string): User | null => {
+  const row = state.db.prepare(
+    "SELECT id, username, is_bot FROM users WHERE username = ?"
+  ).get(username) as UserRow | undefined;
   if (!row) return null;
   return { id: row.id, username: row.username, isBot: row.is_bot === 1 };
 };
 
-export const findUserById = async (userId: string): Promise<User | null> => {
-  const row = await state.db.get<UserRow>(
-    "SELECT id, username, is_bot FROM users WHERE id = ?",
-    userId
-  );
+export const findUserById = (userId: string): User | null => {
+  const row = state.db.prepare(
+    "SELECT id, username, is_bot FROM users WHERE id = ?"
+  ).get(userId) as UserRow | undefined;
   if (!row) return null;
   return { id: row.id, username: row.username, isBot: row.is_bot === 1 };
 };
 
-export const createUser = async (username: string, isBot = false): Promise<User> => {
+export const createUser = (username: string, isBot = false): User => {
   const id = randomUUID();
-  await state.db.run(
-    "INSERT INTO users (id, username, is_bot) VALUES (?, ?, ?)",
-    id, username, isBot ? 1 : 0
-  );
+  state.db.prepare(
+    "INSERT INTO users (id, username, is_bot) VALUES (?, ?, ?)"
+  ).run(id, username, isBot ? 1 : 0);
   return { id, username, isBot };
 };
 
-export const findSessionByToken = async (token: string): Promise<Session | null> => {
-  const row = await state.db.get<SessionRow>(
-    "SELECT token, user_id, created_at, last_seen_at FROM sessions WHERE token = ?",
-    token
-  );
+export const findSessionByToken = (token: string): Session | null => {
+  const row = state.db.prepare(
+    "SELECT token, user_id, created_at, last_seen_at FROM sessions WHERE token = ?"
+  ).get(token) as SessionRow | undefined;
   if (!row) return null;
   return { token: row.token, userId: row.user_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at };
 };
 
-export const createSession = async (userId: string): Promise<Session> => {
+export const createSession = (userId: string): Session => {
   const token = randomUUID();
   const now = Math.floor(Date.now() / 1000);
-  await state.db.run(
-    "INSERT INTO sessions (token, user_id, created_at, last_seen_at) VALUES (?, ?, ?, ?)",
-    token, userId, now, now
-  );
+  state.db.prepare(
+    "INSERT INTO sessions (token, user_id, created_at, last_seen_at) VALUES (?, ?, ?, ?)"
+  ).run(token, userId, now, now);
   return { token, userId, createdAt: now, lastSeenAt: now };
 };
 
-export const updateSessionLastSeen = async (token: string): Promise<void> => {
+export const updateSessionLastSeen = (token: string): void => {
   const now = Math.floor(Date.now() / 1000);
-  await state.db.run("UPDATE sessions SET last_seen_at = ? WHERE token = ?", now, token);
+  state.db.prepare("UPDATE sessions SET last_seen_at = ? WHERE token = ?").run(now, token);
 };
 
-export const loadCharacterById = async (characterId: string): Promise<CharacterSheet | null> => {
-  const row = await state.db.get<CharacterRow>(
-    "SELECT data_json FROM characters WHERE id = ?",
-    characterId
-  );
+export const loadCharacterById = (characterId: string): CharacterSheet | null => {
+  const row = state.db.prepare(
+    "SELECT data_json FROM characters WHERE id = ?"
+  ).get(characterId) as CharacterRow | undefined;
   if (!row) return null;
   return JSON.parse(row.data_json) as CharacterSheet;
 };
 
-export const loadCharactersByOwner = async (ownerId: string): Promise<CharacterSheet[]> => {
-  const rows = await state.db.all<CharacterRow[]>(
-    "SELECT data_json FROM characters WHERE owner_id = ?",
-    ownerId
-  );
+export const loadCharactersByOwner = (ownerId: string): CharacterSheet[] => {
+  const rows = state.db.prepare(
+    "SELECT data_json FROM characters WHERE owner_id = ?"
+  ).all(ownerId) as CharacterRow[];
   return rows.map(row => JSON.parse(row.data_json) as CharacterSheet);
 };
 
-export const upsertCharacter = async (character: CharacterSheet, ownerId: string): Promise<void> => {
-  await state.db.run(
-    "INSERT OR REPLACE INTO characters (id, owner_id, name, data_json) VALUES (?, ?, ?, ?)",
-    character.id, ownerId, character.name, JSON.stringify(character)
-  );
+export const upsertCharacter = (character: CharacterSheet, ownerId: string): void => {
+  state.db.prepare(
+    "INSERT OR REPLACE INTO characters (id, owner_id, name, data_json) VALUES (?, ?, ?, ?)"
+  ).run(character.id, ownerId, character.name, JSON.stringify(character));
 };
 
-export const createMatch = async (name: string, maxPlayers: number, createdBy: string, rulesetId: string): Promise<{ id: string; code: string }> => {
+export const createMatch = (name: string, maxPlayers: number, createdBy: string, rulesetId: string): { id: string; code: string } => {
   const id = randomUUID();
   let code = generateShortCode();
   
   let attempts = 0;
   while (attempts < 10) {
-    const existing = await state.db.get("SELECT id FROM matches WHERE code = ?", code);
+    const existing = state.db.prepare("SELECT id FROM matches WHERE code = ?").get(code);
     if (!existing) break;
     code = generateShortCode();
     attempts++;
   }
   
   const now = Math.floor(Date.now() / 1000);
-  await state.db.run(
-    "INSERT INTO matches (id, code, name, max_players, status, created_by, ruleset_id, created_at) VALUES (?, ?, ?, ?, 'waiting', ?, ?, ?)",
-    id, code, name, maxPlayers, createdBy, rulesetId, now
-  );
+  state.db.prepare(
+    "INSERT INTO matches (id, code, name, max_players, status, created_by, ruleset_id, created_at) VALUES (?, ?, ?, ?, 'waiting', ?, ?, ?)"
+  ).run(id, code, name, maxPlayers, createdBy, rulesetId, now);
   
   return { id, code };
 };
 
-export const findMatchByCode = async (code: string): Promise<MatchRow | null> => {
-  const row = await state.db.get<MatchRow>(
-    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE code = ?",
-    code.toUpperCase()
-  );
+export const findMatchByCode = (code: string): MatchRow | null => {
+  const row = state.db.prepare(
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE code = ?"
+  ).get(code.toUpperCase()) as MatchRow | undefined;
   return row ?? null;
 };
 
-export const findMatchById = async (matchId: string): Promise<MatchRow | null> => {
-  const row = await state.db.get<MatchRow>(
-    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE id = ?",
-    matchId
-  );
+export const findMatchById = (matchId: string): MatchRow | null => {
+  const row = state.db.prepare(
+    "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE id = ?"
+  ).get(matchId) as MatchRow | undefined;
   return row ?? null;
 };
 
-export const updateMatchState = async (matchId: string, matchState: MatchState): Promise<void> => {
-  await state.db.run(
-    "UPDATE matches SET status = ?, state_json = ?, winner_id = ?, finished_at = ? WHERE id = ?",
+export const updateMatchState = (matchId: string, matchState: MatchState): void => {
+  state.db.prepare(
+    "UPDATE matches SET status = ?, state_json = ?, winner_id = ?, finished_at = ? WHERE id = ?"
+  ).run(
     matchState.status,
     JSON.stringify(matchState),
     matchState.winnerId ?? null,
@@ -218,74 +207,66 @@ export const updateMatchState = async (matchId: string, matchState: MatchState):
   );
 };
 
-export const updateMatchStatus = async (matchId: string, status: string): Promise<void> => {
-  await state.db.run("UPDATE matches SET status = ? WHERE id = ?", status, matchId);
+export const updateMatchStatus = (matchId: string, status: string): void => {
+  state.db.prepare("UPDATE matches SET status = ? WHERE id = ?").run(status, matchId);
 };
 
-export const addMatchMember = async (matchId: string, userId: string, characterId: string | null): Promise<void> => {
-  await state.db.run(
-    "INSERT OR REPLACE INTO match_members (match_id, user_id, character_id, is_connected) VALUES (?, ?, ?, 1)",
-    matchId, userId, characterId
-  );
+export const addMatchMember = (matchId: string, userId: string, characterId: string | null): void => {
+  state.db.prepare(
+    "INSERT OR REPLACE INTO match_members (match_id, user_id, character_id, is_connected) VALUES (?, ?, ?, 1)"
+  ).run(matchId, userId, characterId);
 };
 
-export const updateMatchMemberConnection = async (matchId: string, userId: string, isConnected: boolean): Promise<void> => {
-  await state.db.run(
-    "UPDATE match_members SET is_connected = ? WHERE match_id = ? AND user_id = ?",
-    isConnected ? 1 : 0, matchId, userId
-  );
+export const updateMatchMemberConnection = (matchId: string, userId: string, isConnected: boolean): void => {
+  state.db.prepare(
+    "UPDATE match_members SET is_connected = ? WHERE match_id = ? AND user_id = ?"
+  ).run(isConnected ? 1 : 0, matchId, userId);
 };
 
-export const updateMatchMemberCharacter = async (matchId: string, userId: string, characterId: string): Promise<void> => {
-  await state.db.run(
-    "UPDATE match_members SET character_id = ? WHERE match_id = ? AND user_id = ?",
-    characterId, matchId, userId
-  );
+export const updateMatchMemberCharacter = (matchId: string, userId: string, characterId: string): void => {
+  state.db.prepare(
+    "UPDATE match_members SET character_id = ? WHERE match_id = ? AND user_id = ?"
+  ).run(characterId, matchId, userId);
 };
 
-export const getMatchMembers = async (matchId: string): Promise<MatchMemberRow[]> => {
-  return state.db.all<MatchMemberRow[]>(
-    "SELECT match_id, user_id, character_id, is_connected, joined_at FROM match_members WHERE match_id = ?",
-    matchId
-  );
+export const getMatchMembers = (matchId: string): MatchMemberRow[] => {
+  return state.db.prepare(
+    "SELECT match_id, user_id, character_id, is_connected, joined_at FROM match_members WHERE match_id = ?"
+  ).all(matchId) as MatchMemberRow[];
 };
 
-export const getMatchMember = async (matchId: string, userId: string): Promise<MatchMemberRow | null> => {
-  const row = await state.db.get<MatchMemberRow>(
-    "SELECT match_id, user_id, character_id, is_connected, joined_at FROM match_members WHERE match_id = ? AND user_id = ?",
-    matchId, userId
-  );
+export const getMatchMember = (matchId: string, userId: string): MatchMemberRow | null => {
+  const row = state.db.prepare(
+    "SELECT match_id, user_id, character_id, is_connected, joined_at FROM match_members WHERE match_id = ? AND user_id = ?"
+  ).get(matchId, userId) as MatchMemberRow | undefined;
   return row ?? null;
 };
 
-export const getUserMatches = async (userId: string): Promise<MatchRow[]> => {
-  return state.db.all<MatchRow[]>(
+export const getUserMatches = (userId: string): MatchRow[] => {
+  return state.db.prepare(
     `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
      FROM matches m
      INNER JOIN match_members mm ON m.id = mm.match_id
      WHERE mm.user_id = ?
-     ORDER BY m.created_at DESC`,
-    userId
-  );
+     ORDER BY m.created_at DESC`
+  ).all(userId) as MatchRow[];
 };
 
-export const removeMatchMember = async (matchId: string, userId: string): Promise<void> => {
-  await state.db.run(
-    "DELETE FROM match_members WHERE match_id = ? AND user_id = ?",
-    matchId, userId
-  );
+export const removeMatchMember = (matchId: string, userId: string): void => {
+  state.db.prepare(
+    "DELETE FROM match_members WHERE match_id = ? AND user_id = ?"
+  ).run(matchId, userId);
 };
 
-export const getMatchMemberCount = async (matchId: string): Promise<number> => {
-  const result = await state.db.get<{ count: number }>(
-    "SELECT COUNT(*) as count FROM match_members WHERE match_id = ?",
-    matchId
-  );
+export const getMatchMemberCount = (matchId: string): number => {
+  const result = state.db.prepare(
+    "SELECT COUNT(*) as count FROM match_members WHERE match_id = ?"
+  ).get(matchId) as { count: number } | undefined;
   return result?.count ?? 0;
 };
 
-export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): Promise<MatchSummary> => {
-  const members = await getMatchMembers(matchRow.id);
+export const buildMatchSummary = (matchRow: MatchRow, forUserId: string): MatchSummary => {
+  const members = getMatchMembers(matchRow.id);
   const players: { id: string; name: string; isConnected: boolean }[] = [];
   
   let activeTurnPlayerId: string | null = null;
@@ -297,7 +278,7 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
   }
   
   for (const member of members) {
-    const user = await findUserById(member.user_id);
+    const user = findUserById(member.user_id);
     if (user) {
       players.push({
         id: user.id,
@@ -309,7 +290,7 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
   
   let winnerName: string | undefined;
   if (matchRow.winner_id) {
-    const winner = await findUserById(matchRow.winner_id);
+    const winner = findUserById(matchRow.winner_id);
     winnerName = winner?.username;
   }
   
@@ -329,10 +310,10 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
   };
 };
 
-export const loadPersistedMatches = async (): Promise<void> => {
-  const rows = await state.db.all<MatchRow[]>(
+export const loadPersistedMatches = (): void => {
+  const rows = state.db.prepare(
     "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE status IN ('waiting', 'active', 'paused')"
-  );
+  ).all() as MatchRow[];
   
   for (const row of rows) {
     if (row.state_json) {
@@ -344,15 +325,15 @@ export const loadPersistedMatches = async (): Promise<void> => {
   }
 };
 
-export const loadPersistedUsers = async (): Promise<void> => {
-  const rows = await state.db.all<UserRow[]>("SELECT id, username, is_bot FROM users");
+export const loadPersistedUsers = (): void => {
+  const rows = state.db.prepare("SELECT id, username, is_bot FROM users").all() as UserRow[];
   for (const row of rows) {
     state.users.set(row.id, { id: row.id, username: row.username, isBot: row.is_bot === 1 });
   }
 };
 
-export const loadPersistedCharacters = async (): Promise<void> => {
-  const rows = await state.db.all<CharacterRow[]>("SELECT id, data_json FROM characters");
+export const loadPersistedCharacters = (): void => {
+  const rows = state.db.prepare("SELECT id, data_json FROM characters").all() as CharacterRow[];
   for (const row of rows) {
     try {
       const character = JSON.parse(row.data_json) as CharacterSheet;
@@ -361,27 +342,27 @@ export const loadPersistedCharacters = async (): Promise<void> => {
   }
 };
 
-export const loadPersistedData = async (): Promise<void> => {
-  await loadPersistedUsers();
-  await loadPersistedCharacters();
-  await loadPersistedMatches();
+export const loadPersistedData = (): void => {
+  loadPersistedUsers();
+  loadPersistedCharacters();
+  loadPersistedMatches();
   
   const botUsers = Array.from(state.users.values()).filter(u => u.isBot);
   state.botCount = botUsers.length + 1;
 };
 
-export const getActiveMatches = async (): Promise<MatchRow[]> => {
-  return state.db.all<MatchRow[]>(
+export const getActiveMatches = (): MatchRow[] => {
+  return state.db.prepare(
     "SELECT id, code, name, max_players, status, state_json, created_by, winner_id, ruleset_id, created_at, finished_at FROM matches WHERE status IN ('active', 'paused')"
-  );
+  ).all() as MatchRow[];
 };
 
-export const buildPublicMatchSummary = async (matchRow: MatchRow): Promise<MatchSummary> => {
-  const members = await getMatchMembers(matchRow.id);
+export const buildPublicMatchSummary = (matchRow: MatchRow): MatchSummary => {
+  const members = getMatchMembers(matchRow.id);
   const players: { id: string; name: string; isConnected: boolean }[] = [];
   
   for (const member of members) {
-    const user = await findUserById(member.user_id);
+    const user = findUserById(member.user_id);
     if (user) {
       players.push({
         id: user.id,

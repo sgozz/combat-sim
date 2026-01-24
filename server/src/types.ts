@@ -1,8 +1,6 @@
-import type { WebSocket } from "ws";
-import type { Database } from "sqlite";
-import type sqlite3 from "sqlite3";
+import type Database from "better-sqlite3";
 
-export type SqliteDatabase = Database<sqlite3.Database, sqlite3.Statement>;
+export type BetterSqliteDatabase = Database.Database;
 
 export type ConnectionState = {
   sessionToken?: string;

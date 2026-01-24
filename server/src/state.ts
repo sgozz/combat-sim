@@ -1,6 +1,6 @@
 import type { WebSocket } from "ws";
 import type { CharacterSheet, MatchState, User } from "../../shared/types";
-import type { SqliteDatabase, ConnectionState } from "./types";
+import type { BetterSqliteDatabase, ConnectionState } from "./types";
 
 class ServerState {
   users = new Map<string, User>();
@@ -11,9 +11,9 @@ class ServerState {
   spectators = new Map<string, Set<string>>();
   botTimers = new Map<string, NodeJS.Timeout>();
   botCount = 1;
-  db!: SqliteDatabase;
+  db!: BetterSqliteDatabase;
 
-  setDb(db: SqliteDatabase) {
+  setDb(db: BetterSqliteDatabase) {
     this.db = db;
   }
 

@@ -16,13 +16,13 @@ const server = http.createServer((_, res) => {
 const wss = new WebSocketServer({ server });
 
 const startServer = async () => {
-  const db = await initializeDatabase();
+  const db = initializeDatabase();
   state.setDb(db);
-  await loadPersistedData();
+  loadPersistedData();
   
-  const storedUsers = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM users");
-  const storedCharacters = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM characters");
-  const storedMatches = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM matches WHERE status IN ('waiting', 'active', 'paused')");
+  const storedUsers = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number } | undefined;
+  const storedCharacters = db.prepare("SELECT COUNT(*) as count FROM characters").get() as { count: number } | undefined;
+  const storedMatches = db.prepare("SELECT COUNT(*) as count FROM matches WHERE status IN ('waiting', 'active', 'paused')").get() as { count: number } | undefined;
   console.log(`Loaded ${storedUsers?.count ?? 0} users, ${storedCharacters?.count ?? 0} characters, ${storedMatches?.count ?? 0} active matches.`);
 
   wss.on("connection", (socket) => {
@@ -46,10 +46,10 @@ const startServer = async () => {
         state.removeUserSocket(connState.userId, socket);
         const user = state.users.get(connState.userId);
         
-        const userMatches = await getUserMatches(connState.userId);
+        const userMatches = getUserMatches(connState.userId);
         for (const matchRow of userMatches) {
           if (matchRow.status === 'waiting') {
-            await removeMatchMember(matchRow.id, connState.userId);
+            removeMatchMember(matchRow.id, connState.userId);
             await sendToMatch(matchRow.id, { 
               type: "player_left", 
               matchId: matchRow.id, 
@@ -57,13 +57,13 @@ const startServer = async () => {
               playerName: user?.username ?? 'Unknown' 
             });
           } else if (matchRow.status === 'active' || matchRow.status === 'paused') {
-            await updateMatchMemberConnection(matchRow.id, connState.userId, false);
+            updateMatchMemberConnection(matchRow.id, connState.userId, false);
             
             const match = state.matches.get(matchRow.id);
             if (match && match.activeTurnPlayerId === connState.userId && match.status === 'active') {
               const paused = { ...match, status: 'paused' as const, pausedForPlayerId: connState.userId };
               state.matches.set(matchRow.id, paused);
-              await updateMatchState(matchRow.id, paused);
+              updateMatchState(matchRow.id, paused);
               await sendToMatch(matchRow.id, { type: "match_state", state: paused });
             }
             
