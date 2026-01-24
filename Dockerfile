@@ -32,8 +32,8 @@ FROM node:22-alpine AS server-build
 WORKDIR /app
 COPY --from=server-deps /app/server/node_modules ./server/node_modules
 COPY server/ ./server/
-COPY shared/*.ts ./shared/
-RUN rm -f ./shared/*.test.ts
+COPY shared/ ./shared/
+RUN find ./shared -name "*.test.ts" -delete
 WORKDIR /app/server
 RUN mkdir -p dist && npm run build
 
