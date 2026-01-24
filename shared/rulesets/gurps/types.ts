@@ -190,7 +190,10 @@ export type CombatActionPayload =
   | { type: "break_free" }
   | { type: "respond_close_combat"; accept: boolean }
   | { type: "respond_exit"; response: 'let_go' | 'follow' | 'attack' }
-  | { type: "surrender" };
+  | { type: "surrender" }
+  | { type: "pf2_step"; to: { q: number; r: number } }
+  | { type: "pf2_stand" }
+  | { type: "pf2_drop_prone" };
 
 export type PF2CombatantExtension = {
   actionsRemaining: number;
