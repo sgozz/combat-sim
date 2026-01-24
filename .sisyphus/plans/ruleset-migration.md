@@ -408,7 +408,7 @@ Phase 6 (Final validation)
   - Message: `refactor(attack): extract bot defense logic to adapter`
   - Files: `serverAdapter.ts`, `attack.ts`
 
-- [ ] 4.2. Extract attack skill calculation to adapter
+- [x] 4.2. Extract attack skill calculation to adapter
 
   **What to do**:
   - Attack skill calculation includes maneuver bonuses (aim, evaluate), shock, deceptive attack, rapid strike

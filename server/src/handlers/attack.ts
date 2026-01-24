@@ -414,58 +414,28 @@ export const handleAttackAction = async (
     return;
   }
   
-  let skill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
   const attackerManeuver = actorCombatant.maneuver;
-  
-  if (isRanged) {
-    const rangePenalty = adapter.getRangePenalty!(distance);
-    skill += rangePenalty;
-  }
-  
-  skill += closeCombatMods.toHit;
-  
-  if (attackerManeuver === 'all_out_attack') {
-    if (actorCombatant.aoaVariant === 'determined') {
-      skill += 4;
-    }
-  } else if (attackerManeuver === 'move_and_attack') {
-    skill = Math.min(skill - 4, 9);
-  }
-  
-  if (actorCombatant.aimTurns > 0 && actorCombatant.aimTargetId === payload.targetId) {
-    const weaponAcc = weapon?.accuracy ?? 0;
-    const aimBonus = weaponAcc + Math.min(actorCombatant.aimTurns - 1, 2);
-    skill += aimBonus;
-  }
-  
-  if (actorCombatant.evaluateBonus > 0 && actorCombatant.evaluateTargetId === payload.targetId) {
-    skill += actorCombatant.evaluateBonus;
-  }
-  
-  if (actorCombatant.shockPenalty > 0) {
-    skill -= actorCombatant.shockPenalty;
+  const rapidStrike = payload.rapidStrike ?? false;
+  if (rapidStrike && attackerManeuver !== 'attack') {
+    sendMessage(socket, { type: "error", message: "Rapid Strike only works with Attack maneuver." });
+    return;
   }
   
   const deceptiveLevel = payload.deceptiveLevel ?? 0;
-  if (deceptiveLevel > 0) {
-    skill -= deceptiveLevel * 2;
-  }
-  
-  const rapidStrike = payload.rapidStrike ?? false;
-  if (rapidStrike) {
-    if (attackerManeuver !== 'attack') {
-      sendMessage(socket, { type: "error", message: "Rapid Strike only works with Attack maneuver." });
-      return;
-    }
-    skill -= 6;
-  }
-  
-  const attackerPosture = adapter.getPostureModifiers!(actorCombatant.posture);
-  skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
-  
   const hitLocation = payload.hitLocation ?? 'torso';
-  const hitLocationPenalty = adapter.getHitLocationPenalty!(hitLocation);
-  skill += hitLocationPenalty;
+  const baseSkill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+  
+  const skill = adapter.combat?.calculateEffectiveSkill?.({
+    baseSkill,
+    attackerCombatant: actorCombatant,
+    weapon,
+    distance,
+    targetId: payload.targetId,
+    isRanged,
+    deceptiveLevel,
+    rapidStrike,
+    hitLocation,
+  }) ?? baseSkill;
   
   const targetFacing = targetCombatant.facing;
   const attackDirection = calculateFacing(targetCombatant.position, actorCombatant.position);

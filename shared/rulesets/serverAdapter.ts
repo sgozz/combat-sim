@@ -48,6 +48,18 @@ export type BotDefenseOptions = {
   findRetreatHex: (defenderPos: GridPosition, attackerPos: GridPosition, combatants: CombatantState[]) => GridPosition | null;
 };
 
+export type EffectiveSkillOptions = {
+  baseSkill: number;
+  attackerCombatant: CombatantState;
+  weapon: Equipment;
+  distance: number;
+  targetId: string;
+  isRanged: boolean;
+  deceptiveLevel: number;
+  rapidStrike: boolean;
+  hitLocation: HitLocation;
+};
+
 export type CombatDomain = {
   resolveAttackRoll: (skill: number, random?: () => number) => GurpsAttackRollResult;
   resolveDefenseRoll: (defenseValue: number, random?: () => number) => GurpsDefenseRollResult;
@@ -75,6 +87,7 @@ export type CombatDomain = {
   applyCriticalHitDamage?: (baseDamage: number, effect: GurpsCriticalHitEffect, formula: string, random?: () => number) => { damage: number; description: string };
   getCriticalMissDescription?: (effect: GurpsCriticalMissEffect) => string;
   selectBotDefense?: (options: BotDefenseOptions) => BotDefenseResult | null;
+  calculateEffectiveSkill?: (options: EffectiveSkillOptions) => number;
 };
 
 export type DamageDomain = {
@@ -293,7 +306,8 @@ const pf2CombatDomain: CombatDomain = {
   rollCriticalMissTable: undefined,
   applyCriticalHitDamage: undefined,
   getCriticalMissDescription: undefined,
-  selectBotDefense: (): BotDefenseResult | null => null, // PF2 has no active defense
+  selectBotDefense: (): BotDefenseResult | null => null,
+  calculateEffectiveSkill: (options: EffectiveSkillOptions): number => options.baseSkill,
 };
 
 const pf2DamageDomain: DamageDomain = {
@@ -394,6 +408,57 @@ const gurpsSelectBotDefense = (options: BotDefenseOptions): BotDefenseResult => 
   };
 };
 
+const gurpsCalculateEffectiveSkill = (options: EffectiveSkillOptions): number => {
+  const { baseSkill, attackerCombatant, weapon, distance, targetId, isRanged, deceptiveLevel, rapidStrike, hitLocation } = options;
+  
+  let skill = baseSkill;
+  const attackerManeuver = attackerCombatant.maneuver;
+  
+  if (isRanged) {
+    skill += gurpsGetRangePenalty(distance);
+  }
+  
+  const closeCombatMods = gurpsGetCloseCombatAttackModifiers(weapon, distance);
+  skill += closeCombatMods.toHit;
+  
+  if (attackerManeuver === 'all_out_attack') {
+    if (attackerCombatant.aoaVariant === 'determined') {
+      skill += 4;
+    }
+  } else if (attackerManeuver === 'move_and_attack') {
+    skill = Math.min(skill - 4, 9);
+  }
+  
+  if (attackerCombatant.aimTurns > 0 && attackerCombatant.aimTargetId === targetId) {
+    const weaponAcc = weapon?.accuracy ?? 0;
+    const aimBonus = weaponAcc + Math.min(attackerCombatant.aimTurns - 1, 2);
+    skill += aimBonus;
+  }
+  
+  if (attackerCombatant.evaluateBonus > 0 && attackerCombatant.evaluateTargetId === targetId) {
+    skill += attackerCombatant.evaluateBonus;
+  }
+  
+  if (attackerCombatant.shockPenalty > 0) {
+    skill -= attackerCombatant.shockPenalty;
+  }
+  
+  if (deceptiveLevel > 0) {
+    skill -= deceptiveLevel * 2;
+  }
+  
+  if (rapidStrike) {
+    skill -= 6;
+  }
+  
+  const attackerPosture = gurpsGetPostureModifiers(attackerCombatant.posture);
+  skill += isRanged ? attackerPosture.toHitRanged : attackerPosture.toHitMelee;
+  
+  skill += gurpsGetHitLocationPenalty(hitLocation);
+  
+  return skill;
+};
+
 const gurpsCombatDomain: CombatDomain = {
   resolveAttackRoll: gurpsResolveAttackRoll,
   resolveDefenseRoll: gurpsResolveDefenseRoll,
@@ -411,6 +476,7 @@ const gurpsCombatDomain: CombatDomain = {
   applyCriticalHitDamage: gurpsApplyCriticalHitDamage,
   getCriticalMissDescription: gurpsGetCriticalMissDescription,
   selectBotDefense: gurpsSelectBotDefense,
+  calculateEffectiveSkill: gurpsCalculateEffectiveSkill,
 };
 
 const gurpsDamageDomain: DamageDomain = {

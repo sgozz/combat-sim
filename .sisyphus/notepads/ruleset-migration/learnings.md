@@ -598,3 +598,79 @@ import { functionName } from '../../../../shared/rulesets/gurps/rules'
 - CombatDomain interface now has 16 methods (15 existing + selectBotDefense)
 - GURPS adapter fully implements selectBotDefense
 - PF2 adapter stubs with null return
+
+## Task 4.2: Extract Attack Skill Calculation to Adapter ✅
+
+**Completed**: 2025-01-24
+
+### Changes Made
+1. Added `EffectiveSkillOptions` type to `shared/rulesets/serverAdapter.ts`:
+   - `baseSkill`: number (weapon skill or DX)
+   - `attackerCombatant`: CombatantState
+   - `weapon`: Equipment
+   - `distance`: number
+   - `targetId`: string
+   - `isRanged`: boolean
+   - `deceptiveLevel`: number
+   - `rapidStrike`: boolean
+   - `hitLocation`: HitLocation
+
+2. Added `calculateEffectiveSkill` method to `CombatDomain` interface (optional)
+
+3. Implemented `gurpsCalculateEffectiveSkill` function in serverAdapter.ts:
+   - Range penalty (for ranged attacks)
+   - Close combat modifiers
+   - Maneuver modifiers (AoA Determined +4, Move and Attack -4/max 9)
+   - Aim bonus (weapon accuracy + turns aimed)
+   - Evaluate bonus
+   - Shock penalty
+   - Deceptive attack penalty (-2 per level)
+   - Rapid strike penalty (-6)
+   - Posture modifiers
+   - Hit location penalty
+
+4. Added PF2 implementation: Returns `baseSkill` unchanged (PF2 uses different attack system)
+
+5. Updated `attack.ts` to call `adapter.combat?.calculateEffectiveSkill?.(...)`:
+   - Kept rapidStrike validation in attack.ts (returns early with error)
+   - Fallback to baseSkill if adapter method not available
+
+### Key Findings
+1. **Validation vs Calculation Separation**: 
+   - Validation (rapidStrike + maneuver check) stays in attack.ts (needs socket for error)
+   - Pure calculation moves to adapter (no side effects)
+
+2. **Optional Chaining Pattern**: Used `adapter.combat?.calculateEffectiveSkill?.(...)` for safe access
+   - Returns undefined if method not implemented
+   - Fallback to baseSkill with `?? baseSkill`
+
+3. **Variable Preservation**: `attackerManeuver` variable needed to stay in attack.ts
+   - Used elsewhere in the file (lines 495, 532, 565, 619, 695)
+   - Cannot be removed even though skill calculation moved
+
+4. **GURPS Skill Modifiers Extracted**:
+   - Range penalty: `gurpsGetRangePenalty(distance)`
+   - Close combat: `gurpsGetCloseCombatAttackModifiers(weapon, distance).toHit`
+   - AoA Determined: +4
+   - Move and Attack: -4, max skill 9
+   - Aim: weapon accuracy + min(aimTurns - 1, 2)
+   - Evaluate: evaluateBonus (up to +3)
+   - Shock: -shockPenalty
+   - Deceptive: -deceptiveLevel * 2
+   - Rapid Strike: -6
+   - Posture: toHitMelee or toHitRanged
+   - Hit Location: penalty from location table
+
+### Verification Results
+- ✅ `npx vitest run` - All 240 tests pass
+- ✅ `npm run build` - Client builds successfully
+- ✅ `npm run build --prefix server` - Server builds successfully
+- ✅ Skill calculations unchanged (same logic, different location)
+
+### Architecture Notes
+- Phase 4 Task 4.2 complete: Attack skill calculation extracted to adapter
+- Pattern consistent with Task 4.1 (bot defense extraction)
+- CombatDomain interface now has 17 methods (16 existing + calculateEffectiveSkill)
+- GURPS adapter fully implements calculateEffectiveSkill
+- PF2 adapter returns baseSkill (PF2 attack system is different)
+- Enables future rulesets to implement their own skill calculation logic
