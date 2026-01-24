@@ -79,8 +79,8 @@ export const initializeDatabase = async (): Promise<SqliteDatabase> => {
     CREATE INDEX IF NOT EXISTS idx_matches_code ON matches(code);
   `);
 
-  const matchColumns = await db.all<{ name: string }>("PRAGMA table_info(matches)");
-  const hasRulesetId = matchColumns.some(column => column.name === 'ruleset_id');
+  const matchColumns = await db.all<{ name: string }[]>("PRAGMA table_info(matches)");
+  const hasRulesetId = matchColumns.some((column: { name: string }) => column.name === 'ruleset_id');
   if (!hasRulesetId) {
     await db.exec("ALTER TABLE matches ADD COLUMN ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
   }
@@ -320,7 +320,7 @@ export const buildMatchSummary = async (matchRow: MatchRow, forUserId: string): 
     creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
-    rulesetId: matchRow.ruleset_id ?? 'gurps',
+    rulesetId: (matchRow.ruleset_id ?? 'gurps') as MatchSummary['rulesetId'],
     status: matchRow.status as MatchSummary["status"],
     players,
     isMyTurn: activeTurnPlayerId === forUserId,
@@ -398,7 +398,7 @@ export const buildPublicMatchSummary = async (matchRow: MatchRow): Promise<Match
     creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
-    rulesetId: matchRow.ruleset_id ?? 'gurps',
+    rulesetId: (matchRow.ruleset_id ?? 'gurps') as MatchSummary['rulesetId'],
     status: matchRow.status as MatchSummary['status'],
     players,
     isMyTurn: false,

@@ -145,3 +145,15 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<CharacterSheet, 'id'>> = {
 }
 
 export const TEMPLATE_NAMES = Object.keys(CHARACTER_TEMPLATES)
+
+import { PF2_CHARACTER_TEMPLATES, PF2_TEMPLATE_NAMES } from './pf2CharacterTemplates'
+export { PF2_CHARACTER_TEMPLATES, PF2_TEMPLATE_NAMES }
+
+import type { RulesetId } from '../../shared/types'
+
+export const getTemplatesForRuleset = (rulesetId: RulesetId): Record<string, Omit<CharacterSheet, 'id'>> => {
+  if (rulesetId === 'pf2') {
+    return PF2_CHARACTER_TEMPLATES
+  }
+  return CHARACTER_TEMPLATES
+}

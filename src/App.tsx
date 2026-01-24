@@ -5,7 +5,7 @@ import { uuid } from './utils/uuid'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
-import { CharacterEditor } from './components/ui/CharacterEditor'
+import { getRulesetComponents } from './components/rulesets'
 
 
 import type { GridPosition, CharacterSheet, CombatActionPayload, RulesetId } from '../shared/types'
@@ -258,33 +258,37 @@ function AppRoutes() {
               inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}
             />
             
-            {showCharacterModal && (
-              <CharacterEditor 
-                character={editingCharacter || {
-                   id: uuid(),
-                   name: user?.username ?? 'New Character',
-                   attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
-                   derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
-                   skills: [],
-                   advantages: [],
-                   disadvantages: [],
-                   equipment: [],
-                   pointsTotal: 100
-                }}
-                setCharacter={setEditingCharacter}
-                onSave={() => {
-                  if (editingCharacter && activeMatchId) {
-                    sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
+            {showCharacterModal && (() => {
+              const rulesetId = matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'
+              const { CharacterEditor } = getRulesetComponents(rulesetId)
+              return (
+                <CharacterEditor 
+                  character={editingCharacter || {
+                     id: uuid(),
+                     name: user?.username ?? 'New Character',
+                     attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
+                     derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
+                     skills: [],
+                     advantages: [],
+                     disadvantages: [],
+                     equipment: [],
+                     pointsTotal: 100
+                  }}
+                  setCharacter={setEditingCharacter}
+                  onSave={() => {
+                    if (editingCharacter && activeMatchId) {
+                      sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
+                      setShowCharacterModal(false)
+                      setEditingCharacter(null)
+                    }
+                  }}
+                  onCancel={() => {
                     setShowCharacterModal(false)
                     setEditingCharacter(null)
-                  }
-                }}
-                onCancel={() => {
-                  setShowCharacterModal(false)
-                  setEditingCharacter(null)
-                }}
-              />
-            )}
+                  }}
+                />
+              )
+            })()}
           </>
         )
       } />

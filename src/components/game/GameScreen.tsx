@@ -1,11 +1,9 @@
-import { useEffect, useCallback, useState, useRef } from 'react'
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnStepper } from './TurnStepper'
 
-import { ActionBar } from './ActionBar'
-import { GameStatusPanel, GameActionPanel } from './GameHUD'
-import { rulesets } from '../../../shared/rulesets'
+import { getRulesetComponents } from '../rulesets'
 import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
@@ -52,7 +50,7 @@ export const GameScreen = ({
   matchState,
   player,
   lobbyPlayers,
-  lobbyId,
+  lobbyId: _lobbyId,
   matchCode,
   logs,
   visualEffects,
@@ -71,6 +69,7 @@ export const GameScreen = ({
   onOpenCharacterEditor,
   inLobbyButNoMatch
 }: GameScreenProps) => {
+  void _lobbyId
   const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
   const hasSeenMatchStart = useRef(false)
   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
@@ -134,16 +133,39 @@ export const GameScreen = ({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
+  const rulesetId = matchState?.rulesetId ?? 'gurps'
+  const { GameStatusPanel, GameActionPanel, ActionBar } = useMemo(
+    () => getRulesetComponents(rulesetId),
+    [rulesetId]
+  )
+
+  const playerCharacter = matchState?.characters.find(c => c.id === currentCombatant?.characterId)
+  const canRenderPanels = matchState && player && currentCombatant && playerCharacter
+
   return (
     <div className="app-container">
-      <GameStatusPanel
-        matchState={matchState}
-        player={player}
-        lobbyPlayers={lobbyPlayers}
-        lobbyId={lobbyId}
-        isMyTurn={isPlayerTurn}
-        onAction={onAction}
-      />
+      {canRenderPanels ? (
+        <GameStatusPanel
+          matchState={matchState}
+          player={player}
+          combatant={currentCombatant}
+          character={playerCharacter}
+          lobbyPlayers={lobbyPlayers}
+          isMyTurn={isPlayerTurn}
+          onAction={onAction}
+        />
+      ) : (
+        <aside className="panel">
+          <div className="panel-header">
+            <span>Status</span>
+          </div>
+          <div className="panel-content">
+            <div className="card">
+              <p>Loading...</p>
+            </div>
+          </div>
+        </aside>
+      )}
 
       <main className="canvas-container">
         <header className="game-header">
@@ -228,16 +250,31 @@ export const GameScreen = ({
         </Canvas>
       </main>
 
-      <GameActionPanel
-        matchState={matchState}
-        logs={logs}
-        selectedTargetId={selectedTargetId}
-        currentManeuver={currentManeuver}
-        isMyTurn={isPlayerTurn}
-        onAction={onAction}
-        onLeaveLobby={onLeaveLobby}
-        uiAdapter={matchState ? rulesets[matchState.rulesetId]?.ui : undefined}
-      />
+      {canRenderPanels ? (
+        <GameActionPanel
+          matchState={matchState}
+          player={player}
+          combatant={currentCombatant}
+          character={playerCharacter}
+          logs={logs}
+          selectedTargetId={selectedTargetId}
+          currentManeuver={currentManeuver}
+          isMyTurn={isPlayerTurn}
+          onAction={onAction}
+          onLeaveLobby={onLeaveLobby}
+        />
+      ) : (
+        <aside className="panel panel-right">
+          <div className="panel-header">
+            <span>Actions</span>
+          </div>
+          <div className="panel-content">
+            <div className="card">
+              <p>Waiting for match...</p>
+            </div>
+          </div>
+        </aside>
+      )}
 
       {inLobbyButNoMatch && (
         <div className="lobby-setup-overlay">
@@ -343,7 +380,7 @@ export const GameScreen = ({
         </div>
       )}
 
-      {isDefending && pendingDefense && defenderCharacter && currentCombatant && (
+      {isDefending && pendingDefense && defenderCharacter && currentCombatant && matchState?.rulesetId !== 'pf2' && (
         <DefenseModal
           pendingDefense={pendingDefense}
           character={defenderCharacter}
@@ -388,17 +425,20 @@ export const GameScreen = ({
         </div>
       )}
 
-      <ActionBar
-        isMyTurn={isPlayerTurn}
-        currentManeuver={currentManeuver}
-        selectedTargetId={selectedTargetId}
-        matchState={matchState}
-        playerId={player?.id ?? null}
-        onAction={onAction}
-        onDefend={handleDefenseChoice}
-        onLeaveLobby={onLeaveLobby}
-        uiAdapter={matchState ? rulesets[matchState.rulesetId]?.ui : undefined}
-      />
+      {canRenderPanels && (
+        <ActionBar
+          matchState={matchState}
+          player={player}
+          combatant={currentCombatant}
+          character={playerCharacter}
+          isMyTurn={isPlayerTurn}
+          currentManeuver={currentManeuver}
+          selectedTargetId={selectedTargetId}
+          onAction={onAction}
+          onDefend={handleDefenseChoice}
+          onLeaveLobby={onLeaveLobby}
+        />
+      )}
     </div>
   )
 }

@@ -32,6 +32,7 @@ export type {
   GrappleAction,
   CombatActionPayload,
   CombatantState,
+  PF2CombatantExtension,
 } from './rulesets/gurps/types';
 
 export type User = {

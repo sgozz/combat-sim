@@ -8,7 +8,6 @@ import type {
   User,
 } from "../../shared/types";
 import { 
-  advanceTurn, 
   getPostureModifiers,
   initializeTurnMovement,
   calculateReachableHexesInfo,
@@ -16,6 +15,7 @@ import {
   calculateEncumbrance,
   canChangePostureFree,
 } from "../../shared/rules";
+import { advanceTurn } from "./rulesetHelpers";
 import { state } from "./state";
 import { 
   loadCharacterById,
@@ -358,7 +358,8 @@ export const handleMessage = async (
         return;
       }
       
-      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, matchRow.ruleset_id ?? 'gurps');
+      const rulesetId = (matchRow.ruleset_id ?? 'gurps') as MatchState['rulesetId'];
+      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, rulesetId);
       state.matches.set(message.matchId, matchState);
       await updateMatchState(message.matchId, matchState);
       

@@ -1,33 +1,14 @@
 import { useState } from 'react'
+import type { RulesetId } from '../../../shared/types'
+import { getRulesetComponents } from '../rulesets'
 
 type TutorialProps = {
   onClose: () => void
+  rulesetId?: RulesetId
 }
 
-const STEPS = [
-  {
-    title: "Welcome to Tactical Combat!",
-    description: "This simulator lets you experience tactical turn-based combat. You'll control a character on a hex grid, managing movement, attacks, and defenses.",
-  },
-  {
-    title: "Choose Your Maneuver",
-    description: "At the start of your turn, you must choose a maneuver (e.g., Move, Attack, All-Out Defense). This determines what you can do during your turn.",
-  },
-  {
-    title: "Movement & Attacks",
-    description: "Click on the hex grid to move your character. To attack, select an enemy within range and choose your attack type. Facing and distance matter!",
-  },
-  {
-    title: "Combat Resolution",
-    description: "Attacks are resolved by rolling 3d6 against your skill. If you hit, the defender rolls for active defense (Dodge, Parry, or Block). Damage is applied if the defense fails.",
-  },
-  {
-    title: "Victory!",
-    description: "The goal is to defeat your opponents by reducing their HP to 0 or below. Watch your fatigue and keep an eye on the initiative tracker!",
-  }
-]
-
-export const Tutorial = ({ onClose }: TutorialProps) => {
+export const Tutorial = ({ onClose, rulesetId = 'gurps' }: TutorialProps) => {
+  const { tutorialSteps: STEPS } = getRulesetComponents(rulesetId)
   const [currentStep, setCurrentStep] = useState(0)
 
   const handleNext = () => {

@@ -4,8 +4,8 @@ import type {
   Player,
   CombatActionPayload,
 } from "../../../shared/types";
+import { advanceTurn } from "../rulesetHelpers";
 import { 
-  advanceTurn,
   quickContest,
   resolveGrappleAttempt,
   resolveBreakFree,

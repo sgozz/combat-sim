@@ -6,8 +6,8 @@ import type {
   TurnMovementState,
   CombatActionPayload,
 } from "../../../shared/types";
+import { advanceTurn } from "../rulesetHelpers";
 import { 
-  advanceTurn,
   initializeTurnMovement,
   calculateReachableHexesInfo,
   gridToHex,

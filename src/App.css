@@ -4175,3 +4175,299 @@
     z-index: 198;
   }
 }
+
+/* PF2 Action Economy UI */
+.pf2-action-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pf2-actions {
+  display: flex;
+  gap: 0.25rem;
+  font-size: 1.2rem;
+}
+
+.pf2-action-dot {
+  transition: opacity 0.2s;
+}
+
+.pf2-action-dot.available {
+  color: #4caf50;
+}
+
+.pf2-action-dot.used {
+  color: #333;
+}
+
+.pf2-map-indicator {
+  font-size: 0.85rem;
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.pf2-status-section {
+  background: rgba(30, 30, 40, 0.8);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #333;
+}
+
+.pf2-actions-display,
+.pf2-map-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.pf2-actions-display:last-child,
+.pf2-map-display:last-child {
+  margin-bottom: 0;
+}
+
+.pf2-label {
+  color: #888;
+  font-size: 0.85rem;
+  min-width: 80px;
+}
+
+.pf2-action-icons {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 1.1rem;
+}
+
+.pf2-action-icon.available {
+  color: #4caf50;
+}
+
+.pf2-action-icon.used {
+  color: #444;
+}
+
+.pf2-map-value {
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.action-bar-pf2-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0 0.5rem;
+  font-size: 1rem;
+}
+
+.pf2-action-pip.available {
+  color: #4caf50;
+}
+
+.pf2-action-pip.used {
+  color: #444;
+}
+
+.pf2-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pf2-action-panel .pf2-action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.pf2-actions-remaining {
+  display: flex;
+  gap: 0.3rem;
+  font-size: 1.5rem;
+}
+
+.pf2-actions-remaining .pf2-action-pip {
+  transition: color 0.2s;
+}
+
+.pf2-map-badge {
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 100, 0, 0.15);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.pf2-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.pf2-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #2a2a35 0%, #1a1a25 100%);
+  border: 2px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 80px;
+}
+
+.pf2-action-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3a3a45 0%, #2a2a35 100%);
+  border-color: #666;
+  transform: translateY(-2px);
+}
+
+.pf2-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pf2-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pf2-action-btn.strike {
+  border-color: #c45;
+}
+
+.pf2-action-btn.strike:hover:not(:disabled) {
+  border-color: #f67;
+  box-shadow: 0 0 10px rgba(200, 70, 90, 0.3);
+}
+
+.pf2-action-btn.stride {
+  border-color: #4a8;
+}
+
+.pf2-action-btn.stride:hover:not(:disabled) {
+  border-color: #6ca;
+  box-shadow: 0 0 10px rgba(70, 170, 130, 0.3);
+}
+
+.pf2-action-btn.raise-shield {
+  border-color: #68a;
+}
+
+.pf2-action-btn.raise-shield:hover:not(:disabled) {
+  border-color: #8ac;
+  box-shadow: 0 0 10px rgba(100, 130, 170, 0.3);
+}
+
+.pf2-action-btn.interact {
+  border-color: #a86;
+}
+
+.pf2-action-btn.interact:hover:not(:disabled) {
+  border-color: #ca8;
+  box-shadow: 0 0 10px rgba(170, 130, 100, 0.3);
+}
+
+.pf2-action-btn.needs-target {
+  border-style: dashed;
+}
+
+.pf2-action-icon {
+  font-size: 1.5rem;
+}
+
+.pf2-action-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pf2-action-target {
+  font-size: 0.75rem;
+  color: #aaa;
+  margin-top: 0.2rem;
+}
+
+.pf2-turn-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+}
+
+.pf2-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pf2-class {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #c9a227;
+  text-transform: capitalize;
+}
+
+.pf2-level {
+  font-size: 0.9rem;
+  color: #888;
+  padding: 0.2rem 0.5rem;
+  background: rgba(100, 100, 100, 0.2);
+  border-radius: 4px;
+}
+
+.pf2-class-btn {
+  text-transform: capitalize;
+}
+
+.pf2-class-btn.active {
+  background: linear-gradient(135deg, #c9a227 0%, #8b6914 100%);
+  border-color: #c9a227;
+  color: #000;
+}
+
+.pf2-attr-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pf2-derived-grid {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+}
+
+.pf2-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(50, 50, 60, 0.5);
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+.pf2-stat .stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pf2-stat .stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}

@@ -90,7 +90,7 @@ export const createMatchState = async (
       equipped.push({ equipmentId: shield.id, slot: 'left_hand', ready: true });
     }
     
-    return {
+    const baseCombatant = {
       playerId: player?.id ?? character.id,
       characterId: character.id,
       position: { x: finalQ, y: 0, z: finalR },
@@ -112,12 +112,27 @@ export const createMatchState = async (
       grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },
       usedReaction: false,
       shockPenalty: 0,
-      attacksRemaining: 1,
+      attacksRemaining: rulesetId === 'pf2' ? 3 : 1,
       retreatedThisTurn: false,
       defensesThisTurn: 0,
       parryWeaponsUsedThisTurn: [],
       waitTrigger: null,
     };
+    
+    if (rulesetId === 'pf2') {
+      return {
+        ...baseCombatant,
+        pf2: {
+          actionsRemaining: 3,
+          reactionAvailable: true,
+          mapPenalty: 0,
+          attacksThisTurn: 0,
+          shieldRaised: false,
+        },
+      };
+    }
+    
+    return baseCombatant;
   });
 
   const initiativeOrder = combatants

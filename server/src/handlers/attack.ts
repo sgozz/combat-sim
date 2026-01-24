@@ -8,8 +8,9 @@ import type {
   DamageType,
 } from "../../../shared/types";
 import type { Reach } from "../../../shared/types";
+import { isPf2Match } from "../../../shared/rulesets/serverAdapter";
+import { advanceTurn } from "../rulesetHelpers";
 import { 
-  advanceTurn, 
   resolveAttackRoll,
   resolveDefenseRoll,
   calculateDefenseValue,
@@ -43,6 +44,7 @@ import {
 import { scheduleBotTurn, chooseBotDefense } from "../bot";
 import { clearDefenseTimeout } from "../timers";
 import { formatRoll, applyDamageToTarget } from "./damage";
+import { handlePF2AttackAction } from "./pf2-attack";
 
 const BOT_DEFENSE_DELAY_MS = 800;
 
@@ -370,6 +372,10 @@ export const handleAttackAction = async (
   payload: CombatActionPayload & { type: "attack" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  
+  if (isPf2Match(match)) {
+    return handlePF2AttackAction(socket, matchId, match, player, actorCombatant, payload);
+  }
   
   if (actorCombatant.inCloseCombatWith && actorCombatant.inCloseCombatWith !== payload.targetId) {
     sendMessage(socket, { type: "error", message: "In close combat - can only attack your close combat opponent." });

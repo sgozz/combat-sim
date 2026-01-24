@@ -12,7 +12,16 @@ import {
   sendToMatch,
   checkVictory
 } from "./helpers";
-import { advanceTurn, calculateDerivedStats, resolveAttackRoll, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance, rollDamage } from "../../shared/rules";
+import { advanceTurn } from "./rulesetHelpers";
+import { calculateDerivedStats, resolveAttackRoll, applyDamageMultiplier, getDefenseOptions, calculateEncumbrance, rollDamage } from "../../shared/rules";
+import { 
+  rollCheck as pf2RollCheck, 
+  rollDamage as pf2RollDamage, 
+  getAbilityModifier, 
+  getProficiencyBonus, 
+  getMultipleAttackPenalty 
+} from "../../shared/rulesets/pf2/rules";
+import type { PF2DamageType } from "../../shared/rulesets/pf2/types";
 
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
@@ -80,6 +89,141 @@ const findNearestEnemy = (
   return nearest;
 };
 
+const executePF2BotAttack = async (
+  matchId: string,
+  currentMatch: MatchState,
+  botCombatant: CombatantState,
+  target: CombatantState,
+  activePlayer: { id: string; name: string }
+): Promise<MatchState> => {
+  const attackerCharacter = getCharacterById(currentMatch, botCombatant.characterId);
+  const targetCharacter = getCharacterById(currentMatch, target.characterId);
+  
+  if (!attackerCharacter || !targetCharacter) {
+    return advanceTurn({
+      ...currentMatch,
+      log: [...currentMatch.log, `${activePlayer.name} waits.`],
+    });
+  }
+
+  const weapon = attackerCharacter.equipment[0];
+  const weaponName = weapon?.name ?? 'Fist';
+  const weaponDamage = weapon?.damage ?? '1d4';
+  const damageTypeMap: Record<string, PF2DamageType> = {
+    crushing: 'bludgeoning',
+    cutting: 'slashing',
+    impaling: 'piercing',
+    piercing: 'piercing',
+  };
+  const pf2DamageType: PF2DamageType = damageTypeMap[weapon?.damageType ?? 'crushing'] ?? 'bludgeoning';
+
+  const strMod = getAbilityModifier(attackerCharacter.attributes.strength);
+  const level = 1;
+  const profBonus = getProficiencyBonus('trained', level);
+  const attacksThisTurn = botCombatant.pf2?.attacksThisTurn ?? 0;
+  const mapPenalty = getMultipleAttackPenalty(attacksThisTurn + 1, false);
+  const totalAttackBonus = strMod + profBonus + mapPenalty;
+  
+  const targetAC = targetCharacter.derived.dodge;
+  const attackRoll = pf2RollCheck(totalAttackBonus, targetAC);
+  
+  let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weaponName}`;
+  if (mapPenalty < 0) {
+    logEntry += ` (MAP ${mapPenalty})`;
+  }
+  
+  const degreeLabel = attackRoll.degree === 'critical_success' ? 'Critical Hit!' 
+    : attackRoll.degree === 'success' ? 'Hit' 
+    : attackRoll.degree === 'failure' ? 'Miss' 
+    : 'Critical Miss!';
+  
+  logEntry += `: [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${attackRoll.dc}] ${degreeLabel}`;
+
+  let damageDealt = 0;
+  if (attackRoll.degree === 'critical_success' || attackRoll.degree === 'success') {
+    const damageRoll = pf2RollDamage(`${weaponDamage}+${strMod}`, pf2DamageType);
+    damageDealt = attackRoll.degree === 'critical_success' ? damageRoll.total * 2 : damageRoll.total;
+    logEntry += ` for ${damageDealt} ${pf2DamageType} damage`;
+    if (attackRoll.degree === 'critical_success') {
+      logEntry += ' (doubled)';
+    }
+  }
+
+  const newActionsRemaining = (botCombatant.pf2?.actionsRemaining ?? 3) - 1;
+  const newAttacksThisTurn = attacksThisTurn + 1;
+
+  const updatedCombatants = currentMatch.combatants.map(c => {
+    if (c.playerId === target.playerId && damageDealt > 0) {
+      const newHP = Math.max(0, c.currentHP - damageDealt);
+      return { 
+        ...c, 
+        currentHP: newHP,
+        statusEffects: newHP <= 0 
+          ? [...c.statusEffects.filter(e => e !== 'unconscious'), 'unconscious']
+          : c.statusEffects,
+      };
+    }
+    if (c.playerId === activePlayer.id) {
+      return {
+        ...c,
+        attacksRemaining: newActionsRemaining,
+        pf2: {
+          actionsRemaining: newActionsRemaining,
+          attacksThisTurn: newAttacksThisTurn,
+          mapPenalty: getMultipleAttackPenalty(newAttacksThisTurn + 1, false),
+          reactionAvailable: c.pf2?.reactionAvailable ?? true,
+          shieldRaised: c.pf2?.shieldRaised ?? false,
+        },
+      };
+    }
+    return c;
+  });
+
+  const targetAfterDamage = updatedCombatants.find(c => c.playerId === target.playerId);
+  if (targetAfterDamage && targetAfterDamage.currentHP <= 0) {
+    logEntry += `. ${targetCharacter.name} falls unconscious!`;
+  }
+
+  if (damageDealt > 0) {
+    sendToMatch(matchId, {
+      type: "visual_effect",
+      matchId,
+      effect: { 
+        type: "damage", 
+        attackerId: activePlayer.id, 
+        targetId: target.playerId, 
+        value: damageDealt, 
+        position: target.position 
+      }
+    });
+  } else {
+    sendToMatch(matchId, {
+      type: "visual_effect",
+      matchId,
+      effect: { 
+        type: "miss", 
+        attackerId: activePlayer.id, 
+        targetId: target.playerId, 
+        position: target.position 
+      }
+    });
+  }
+
+  if (newActionsRemaining <= 0) {
+    return advanceTurn({
+      ...currentMatch,
+      combatants: updatedCombatants,
+      log: [...currentMatch.log, logEntry],
+    });
+  } else {
+    return {
+      ...currentMatch,
+      combatants: updatedCombatants,
+      log: [...currentMatch.log, logEntry],
+    };
+  }
+};
+
 export const scheduleBotTurn = (matchId: string, match: MatchState) => {
   if (match.status !== "active") return;
   
@@ -124,6 +268,16 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
     const distanceToTarget = calculateHexDistance(botCombatant.position, target.position);
 
     if (distanceToTarget <= 1) {
+      if (currentMatch.rulesetId === 'pf2') {
+        let updated = await executePF2BotAttack(matchId, currentMatch, botCombatant, target, activePlayer);
+        updated = checkVictory(updated);
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
+        return;
+      }
+
       const attackerCharacter = getCharacterById(currentMatch, botCombatant.characterId);
       const targetCharacter = getCharacterById(currentMatch, target.characterId);
       if (!attackerCharacter || !targetCharacter) {

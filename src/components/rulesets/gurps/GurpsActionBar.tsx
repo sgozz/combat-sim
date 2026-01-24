@@ -1,34 +1,23 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import type { ManeuverType, CombatActionPayload, MatchState, DefenseType, DefenseChoice, AOAVariant, AODVariant, WaitTrigger, HitLocation } from '../../../shared/types'
-import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../shared/rules'
-import { WaitTriggerPicker } from '../ui/WaitTriggerPicker'
-import { getSuccessChance } from './shared/useGameActions'
-import type { RulesetUIAdapter } from '../../../shared/rulesets/Ruleset'
-import { rulesets } from '../../../shared/rulesets'
-import { getRulesetUiSlots } from './shared/rulesetUiSlots'
+import type { ManeuverType, HitLocation, AOAVariant, AODVariant, WaitTrigger } from '../../../../shared/types'
+import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../../shared/rules'
+import { WaitTriggerPicker } from '../../ui/WaitTriggerPicker'
+import { getSuccessChance } from '../../game/shared/useGameActions'
+import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
+import { rulesets } from '../../../../shared/rulesets'
+import type { ActionBarProps } from '../types'
 
-type ActionBarProps = {
-  isMyTurn: boolean
-  currentManeuver: ManeuverType | null
-  selectedTargetId: string | null
-  matchState: MatchState | null
-  playerId: string | null
-  onAction: (action: string, payload?: CombatActionPayload) => void
-  onDefend: (choice: DefenseChoice) => void
-  onLeaveLobby: () => void
-  uiAdapter?: RulesetUIAdapter
-}
-
-export const ActionBar = ({ 
+export const GurpsActionBar = ({ 
+  matchState,
+  player,
+  combatant: playerCombatant,
+  character: playerCharacter,
   isMyTurn, 
   currentManeuver, 
   selectedTargetId,
-  matchState,
-  playerId,
   onAction,
   onDefend,
   onLeaveLobby,
-  uiAdapter,
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)
@@ -51,27 +40,20 @@ export const ActionBar = ({
   
   const hasOpenPanel = showManeuvers || showCharacterSheet || showAOAVariants || showAODVariants || showWaitPicker
   
-  const playerCombatant = playerId && matchState 
-    ? matchState.combatants.find(c => c.playerId === playerId) 
-    : null
-  const playerCharacter = playerCombatant && matchState
-    ? matchState.characters.find(c => c.id === playerCombatant.characterId)
-    : null
-  
-  const encumbrance = playerCharacter ? calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment) : null
+  const encumbrance = calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment)
     
-  const maxHP = playerCharacter?.derived.hitPoints ?? 0
-  const currentHP = playerCombatant?.currentHP ?? 0
+  const maxHP = playerCharacter.derived.hitPoints
+  const currentHP = playerCombatant.currentHP
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
   const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
-  const adapter = uiAdapter ?? rulesets[matchState?.rulesetId ?? 'gurps']?.ui ?? rulesets.gurps.ui
-  const inCloseCombat = !!playerCombatant?.inCloseCombatWith
+  const adapter = rulesets.gurps.ui
+  const inCloseCombat = !!playerCombatant.inCloseCombatWith
   const availableManeuvers = inCloseCombat 
     ? adapter.getManeuvers().filter(m => adapter.getCloseCombatManeuvers().includes(m.type))
     : adapter.getManeuvers()
 
-  const pendingDefense = matchState?.pendingDefense
-  const isDefending = pendingDefense?.defenderId === playerId
+  const pendingDefense = matchState.pendingDefense
+  const isDefending = pendingDefense?.defenderId === player.id
 
   useEffect(() => {
     if (!pendingDefense) {
@@ -83,7 +65,7 @@ export const ActionBar = ({
   }, [pendingDefense])
 
   const defenseOptions = useMemo(() => {
-    if (!playerCharacter || !playerCombatant || !pendingDefense) return null
+    if (!pendingDefense) return null
     const derivedDodge = playerCharacter.derived.dodge
     const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
     const postureMods = getPostureModifiers(playerCombatant.posture)
@@ -109,7 +91,7 @@ export const ActionBar = ({
     }
   }, [playerCharacter, playerCombatant, pendingDefense, retreat, dodgeAndDrop, inCloseCombat])
 
-  const handleDefense = (type: DefenseType | 'none') => {
+  const handleDefense = (type: 'dodge' | 'parry' | 'block' | 'none') => {
     onDefend({
       type,
       retreat,
@@ -117,10 +99,6 @@ export const ActionBar = ({
     })
     setRetreat(false)
     setDodgeAndDrop(false)
-  }
-
-  if (!matchState) {
-    return null
   }
 
   if (matchState.status === 'finished') {
@@ -235,11 +213,10 @@ export const ActionBar = ({
   }
 
   const canAttack = currentManeuver === 'attack' || currentManeuver === 'all_out_attack' || currentManeuver === 'move_and_attack'
-
-  const closeCombatTargetId = inCloseCombat ? playerCombatant?.inCloseCombatWith : null
+  const closeCombatTargetId = inCloseCombat ? playerCombatant.inCloseCombatWith : null
   const effectiveTargetId = closeCombatTargetId ?? selectedTargetId
   
-  const turnMovement = matchState?.turnMovement
+  const turnMovement = matchState.turnMovement
   const inMovementPhase = turnMovement?.phase === 'moving'
   const movePointsRemaining = turnMovement?.movePointsRemaining ?? 0
   
@@ -309,12 +286,12 @@ export const ActionBar = ({
        {showWaitPicker && (
          <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '60vh', overflowY: 'auto', alignItems: 'stretch' }}>
            <WaitTriggerPicker
-             enemies={matchState?.combatants
-               .filter(c => c.playerId !== playerId)
+             enemies={matchState.combatants
+               .filter(c => c.playerId !== player.id)
                .map(c => {
-                 const char = matchState?.characters.find(ch => ch.id === c.characterId)
+                 const char = matchState.characters.find(ch => ch.id === c.characterId)
                  return { id: c.playerId, name: char?.name ?? 'Unknown' }
-               }) ?? []
+               })
              }
              onSetTrigger={(trigger: WaitTrigger) => {
                onAction('set_wait_trigger', { type: 'set_wait_trigger', trigger })
@@ -326,9 +303,9 @@ export const ActionBar = ({
        )}
        {isMyTurn && currentManeuver && (
          <div className="action-bar-config-slot">
-           {getRulesetUiSlots(matchState?.rulesetId).renderActionConfiguration?.({
+           {getRulesetUiSlots('gurps').renderActionConfiguration?.({
              matchState,
-             player: playerId && matchState ? matchState.players.find(p => p.id === playerId) ?? null : null,
+             player,
              selectedTargetId,
              currentManeuver,
              isMyTurn,
@@ -345,7 +322,7 @@ export const ActionBar = ({
          </div>
        )}
 
-      {showCharacterSheet && playerCharacter && playerCombatant && (
+      {showCharacterSheet && (
         <div className="action-bar-maneuvers" style={{ flexDirection: 'column', height: 'auto', maxHeight: '70vh', overflowY: 'auto', alignItems: 'stretch', padding: '1rem' }}>
           <h3 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '1.1rem' }}>{playerCharacter.name}</h3>
           
@@ -485,19 +462,15 @@ export const ActionBar = ({
           }}
         >
           <span className="action-bar-icon">👤</span>
-          {playerCombatant ? (
-            <div className="char-btn-hp">
-              <div className="char-btn-hp-bar">
-                <div 
-                  className="char-btn-hp-fill" 
-                  style={{ width: `${hpPercent}%`, background: hpColor }}
-                />
-              </div>
-              <span className="char-btn-hp-text">{currentHP}/{maxHP}</span>
+          <div className="char-btn-hp">
+            <div className="char-btn-hp-bar">
+              <div 
+                className="char-btn-hp-fill" 
+                style={{ width: `${hpPercent}%`, background: hpColor }}
+              />
             </div>
-          ) : (
-            <span className="action-bar-label">Char</span>
-          )}
+            <span className="char-btn-hp-text">{currentHP}/{maxHP}</span>
+          </div>
         </button>
         
         {inCloseCombat && (
@@ -566,7 +539,7 @@ export const ActionBar = ({
           <>
             <button
               className="action-bar-btn"
-              onClick={() => onAction('grapple', { type: 'grapple', targetId: playerCombatant!.inCloseCombatWith!, action: 'grab' })}
+              onClick={() => onAction('grapple', { type: 'grapple', targetId: playerCombatant.inCloseCombatWith!, action: 'grab' })}
             >
               <span className="action-bar-icon">🤼</span>
               <span className="action-bar-label">Grapple</span>

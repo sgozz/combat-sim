@@ -6,7 +6,7 @@ import type {
   EquippedItem,
   EquipmentSlot,
 } from "../../../shared/types";
-import { advanceTurn } from "../../../shared/rules";
+import { advanceTurn } from "../rulesetHelpers";
 import { state } from "../state";
 import { updateMatchState } from "../db";
 import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../helpers";

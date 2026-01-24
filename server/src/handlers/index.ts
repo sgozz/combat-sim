@@ -19,3 +19,4 @@ export {
 export { handleReadyAction } from './ready';
 
 export { handleAttackAction, resolveDefenseChoice } from './attack';
+export { handlePF2AttackAction } from './pf2-attack';

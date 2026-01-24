@@ -120,6 +120,85 @@ const GurpsActionConfiguration = ({
   );
 };
 
+const PF2ActionPanelHeader = ({
+  matchState,
+  player,
+}: Pick<RulesetUiSlotContext, 'matchState' | 'player'>) => {
+  if (!matchState || !player) return null;
+  
+  const combatant = matchState.combatants.find(c => c.playerId === player.id);
+  if (!combatant) return null;
+  
+  const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining;
+  const attacksThisTurn = combatant.pf2?.attacksThisTurn ?? 0;
+  const mapPenalty = combatant.pf2?.mapPenalty ?? 0;
+  
+  const actionDots = Array.from({ length: 3 }, (_, i) => 
+    createElement('span', {
+      key: i,
+      className: `pf2-action-dot ${i < actionsRemaining ? 'available' : 'used'}`,
+    }, i < actionsRemaining ? '◆' : '◇')
+  );
+  
+  return createElement(
+    'div',
+    { className: 'pf2-action-header' },
+    createElement('div', { className: 'pf2-actions' }, ...actionDots),
+    attacksThisTurn > 0 && createElement(
+      'div',
+      { className: 'pf2-map-indicator' },
+      `MAP: ${mapPenalty}`
+    )
+  );
+};
+
+const PF2StatusPanel = ({
+  matchState,
+  player,
+}: Pick<RulesetUiSlotContext, 'matchState' | 'player'>) => {
+  if (!matchState || !player) return null;
+  
+  const combatant = matchState.combatants.find(c => c.playerId === player.id);
+  if (!combatant) return null;
+  
+  const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining;
+  const attacksThisTurn = combatant.pf2?.attacksThisTurn ?? 0;
+  
+  const getMapPenaltyForNextAttack = () => {
+    if (attacksThisTurn === 0) return 0;
+    if (attacksThisTurn === 1) return -5;
+    return -10;
+  };
+  
+  const nextMap = getMapPenaltyForNextAttack();
+  
+  return createElement(
+    'div',
+    { className: 'pf2-status-section' },
+    createElement('div', { className: 'pf2-actions-display' },
+      createElement('span', { className: 'pf2-label' }, 'Actions: '),
+      createElement('span', { className: 'pf2-action-icons' },
+        ...Array.from({ length: 3 }, (_, i) => 
+          createElement('span', {
+            key: i,
+            className: `pf2-action-icon ${i < actionsRemaining ? 'available' : 'used'}`,
+            title: i < actionsRemaining ? 'Available' : 'Used',
+          }, i < actionsRemaining ? '●' : '○')
+        )
+      )
+    ),
+    attacksThisTurn > 0 && createElement(
+      'div',
+      { className: 'pf2-map-display' },
+      createElement('span', { className: 'pf2-label' }, 'Next Attack: '),
+      createElement('span', { 
+        className: 'pf2-map-value',
+        style: { color: nextMap < -5 ? '#f44' : nextMap < 0 ? '#ff4' : '#4f4' }
+      }, nextMap === 0 ? '+0' : `${nextMap}`)
+    )
+  );
+};
+
 const rulesetUiSlots: Record<RulesetId, RulesetUiSlots> = {
   gurps: {
     renderActionConfiguration: (ctx) =>
@@ -129,7 +208,18 @@ const rulesetUiSlots: Record<RulesetId, RulesetUiSlots> = {
         attackOptions: ctx.attackOptions,
       }),
   },
-  pf2: {},
+  pf2: {
+    renderActionPanelHeader: (ctx) =>
+      createElement(PF2ActionPanelHeader, {
+        matchState: ctx.matchState,
+        player: ctx.player,
+      }),
+    renderStatusPanel: (ctx) =>
+      createElement(PF2StatusPanel, {
+        matchState: ctx.matchState,
+        player: ctx.player,
+      }),
+  },
 };
 
 export const getRulesetUiSlots = (rulesetId?: RulesetId): RulesetUiSlots => {

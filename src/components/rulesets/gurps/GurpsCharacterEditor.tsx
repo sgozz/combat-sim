@@ -1,125 +1,23 @@
-import { Tooltip } from './Tooltip'
-import type { CharacterSheet, Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType } from '../../../shared/types'
-import { calculateDerivedStats, calculateTotalPoints } from '../../../shared/rules'
-import { CHARACTER_TEMPLATES, TEMPLATE_NAMES } from '../../data/characterTemplates'
-import { uuid } from '../../utils/uuid'
+import { Tooltip } from '../../ui/Tooltip'
+import type { CharacterEditorProps } from '../types'
+import { useCharacterEditor } from '../useCharacterEditor'
 
-type CharacterEditorProps = {
-  character: CharacterSheet
-  setCharacter: (character: CharacterSheet) => void
-  onSave: () => void
-  onCancel: () => void
-}
-
-export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: CharacterEditorProps) => {
-  const loadTemplate = (templateKey: string) => {
-    const template = CHARACTER_TEMPLATES[templateKey]
-    if (template) {
-      setCharacter({
-        ...template,
-        id: character.id,
-        skills: template.skills.map(s => ({ ...s, id: uuid() })),
-        equipment: template.equipment.map(e => ({ ...e, id: uuid() })),
-        advantages: template.advantages.map(a => ({ ...a, id: uuid() })),
-        disadvantages: template.disadvantages.map(d => ({ ...d, id: uuid() })),
-      })
-    }
-  }
-  const updateAttribute = (attr: keyof Attributes, delta: number) => {
-    const current = character.attributes[attr]
-    const newValue = Math.max(7, Math.min(20, current + delta))
-    setCharacter({
-      ...character,
-      attributes: { ...character.attributes, [attr]: newValue },
-      derived: calculateDerivedStats({ ...character.attributes, [attr]: newValue }),
-    })
-  }
-
-  const addSkill = () => {
-    const name = window.prompt('Skill name (e.g., Brawling, Sword)')?.trim()
-    if (!name) return
-    const levelStr = window.prompt('Skill level (10-18)', '12')
-    const level = Math.max(10, Math.min(18, Number(levelStr) || 12))
-    const newSkill: Skill = { id: uuid(), name, level }
-    setCharacter({
-      ...character,
-      skills: [...character.skills, newSkill],
-    })
-  }
-
-  const removeSkill = (skillId: string) => {
-    setCharacter({
-      ...character,
-      skills: character.skills.filter(s => s.id !== skillId),
-    })
-  }
-
-  const addEquipment = () => {
-    const name = window.prompt('Weapon name (e.g., Sword, Club)')?.trim()
-    if (!name) return
-    const damage = window.prompt('Damage formula (e.g., 1d+2, 2d)', '1d+1')?.trim() || '1d'
-    const typeInput = window.prompt('Damage type (crushing, cutting, impaling, piercing)', 'crushing')?.trim().toLowerCase()
-    const validTypes: DamageType[] = ['crushing', 'cutting', 'impaling', 'piercing']
-    const damageType: DamageType = validTypes.includes(typeInput as DamageType) ? (typeInput as DamageType) : 'crushing'
-    const newEquip: Equipment = { 
-      id: uuid(), 
-      name, 
-      type: 'melee',
-      damage,
-      damageType,
-      reach: '1',
-      parry: 0,
-    }
-    setCharacter({
-      ...character,
-      equipment: [...character.equipment, newEquip],
-    })
-  }
-
-  const removeEquipment = (equipId: string) => {
-    setCharacter({
-      ...character,
-      equipment: character.equipment.filter(e => e.id !== equipId),
-    })
-  }
-
-  const addAdvantage = () => {
-    const name = window.prompt('Advantage name (e.g., Combat Reflexes)')?.trim()
-    if (!name) return
-    const description = window.prompt('Description (optional)')?.trim()
-    const newAdvantage: Advantage = { id: uuid(), name, description: description || undefined }
-    setCharacter({
-      ...character,
-      advantages: [...character.advantages, newAdvantage],
-    })
-  }
-
-  const removeAdvantage = (id: string) => {
-    setCharacter({
-      ...character,
-      advantages: character.advantages.filter(a => a.id !== id),
-    })
-  }
-
-  const addDisadvantage = () => {
-    const name = window.prompt('Disadvantage name (e.g., Bad Temper)')?.trim()
-    if (!name) return
-    const description = window.prompt('Description (optional)')?.trim()
-    const newDisadvantage: Disadvantage = { id: uuid(), name, description: description || undefined }
-    setCharacter({
-      ...character,
-      disadvantages: [...character.disadvantages, newDisadvantage],
-    })
-  }
-
-  const removeDisadvantage = (id: string) => {
-    setCharacter({
-      ...character,
-      disadvantages: character.disadvantages.filter(d => d.id !== id),
-    })
-  }
-
-  const totalPoints = calculateTotalPoints(character)
+export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel }: CharacterEditorProps) => {
+  const {
+    templates,
+    templateNames,
+    totalPoints,
+    loadTemplate,
+    updateAttribute,
+    addSkill,
+    removeSkill,
+    addEquipment,
+    removeEquipment,
+    addAdvantage,
+    removeAdvantage,
+    addDisadvantage,
+    removeDisadvantage,
+  } = useCharacterEditor({ character, setCharacter, rulesetId: 'gurps' })
 
   return (
     <div className="modal-overlay">
@@ -135,13 +33,13 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
         <div className="char-section">
           <label className="char-label">Load Template</label>
           <div className="template-buttons">
-            {TEMPLATE_NAMES.map(key => (
+            {templateNames.map(key => (
               <button 
                 key={key} 
                 className="template-btn"
                 onClick={() => loadTemplate(key)}
               >
-                {CHARACTER_TEMPLATES[key].name}
+                {templates[key].name}
               </button>
             ))}
           </div>
@@ -231,7 +129,7 @@ export const CharacterEditor = ({ character, setCharacter, onSave, onCancel }: C
             ) : (
               character.skills.map((skill) => (
                 <div key={skill.id} className="list-item">
-                  <Tooltip content="Skill Level determines your base chance to succeed." position="right">
+                  <Tooltip content="Skill Level determines your base chance to succeed (roll 3d6 ≤ skill)." position="right">
                     <span>{skill.name} ({skill.level})</span>
                   </Tooltip>
                   <button className="remove-btn" onClick={() => removeSkill(skill.id)}>x</button>

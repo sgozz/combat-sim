@@ -4,11 +4,14 @@
 import type { Id } from '../../types';
 
 // GURPS Attributes (ST, DX, IQ, HT)
+// PF2 adds wisdom and charisma (optional for GURPS compatibility)
 export type Attributes = {
   strength: number;
   dexterity: number;
   intelligence: number;
-  health: number;
+  health: number;  // HT in GURPS, CON in PF2
+  wisdom?: number;     // PF2 only
+  charisma?: number;   // PF2 only
 };
 
 // GURPS Derived Stats
@@ -188,6 +191,14 @@ export type CombatActionPayload =
   | { type: "respond_exit"; response: 'let_go' | 'follow' | 'attack' }
   | { type: "surrender" };
 
+export type PF2CombatantExtension = {
+  actionsRemaining: number;
+  reactionAvailable: boolean;
+  mapPenalty: number;
+  attacksThisTurn: number;
+  shieldRaised: boolean;
+};
+
 export type CombatantState = {
   playerId: Id;
   characterId: Id;
@@ -213,6 +224,7 @@ export type CombatantState = {
   attacksRemaining: number;
   retreatedThisTurn: boolean;
   defensesThisTurn: number;
-  parryWeaponsUsedThisTurn: string[]; // Track weapons used for parry (same-weapon = -4 penalty)
+  parryWeaponsUsedThisTurn: string[];
   waitTrigger: WaitTrigger | null;
+  pf2?: PF2CombatantExtension;
 };
