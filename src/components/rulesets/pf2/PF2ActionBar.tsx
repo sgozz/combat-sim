@@ -210,6 +210,8 @@ export const PF2ActionBar = ({
               <button
                 className="action-bar-btn"
                 onClick={() => onAction('pf2_drop_prone', { type: 'pf2_drop_prone' })}
+                disabled={actionsRemaining === 0}
+                title="Drop to the ground. Costs 1 action."
               >
                 <span className="action-bar-icon">🔻</span>
                 <span className="action-bar-label">Drop</span>

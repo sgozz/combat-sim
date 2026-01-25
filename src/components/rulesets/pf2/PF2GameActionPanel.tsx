@@ -129,10 +129,11 @@ export const PF2GameActionPanel = ({
               </button>
             </Tooltip>
           ) : (
-            <Tooltip content="Drop to the ground. Free action." position="top">
+            <Tooltip content="Drop to the ground. Costs 1 action." position="top">
               <button 
                 className="pf2-action-btn drop-prone"
                 onClick={() => onAction('pf2_drop_prone', { type: 'pf2_drop_prone' })}
+                disabled={actionsRemaining === 0}
               >
                 <span className="pf2-action-icon">🔻</span>
                 <span className="pf2-action-label">Drop Prone</span>

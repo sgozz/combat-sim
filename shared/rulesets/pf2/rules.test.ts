@@ -362,14 +362,14 @@ describe('PF2 Rules', () => {
         statusEffects: [], usedReaction: false
       };
       const standing = { ...combatant, posture: 'standing' as const };
-      expect(getActionCost('drop_prone')).toBe('free');
+      expect(getActionCost('drop_prone')).toBe(1);
       
-      const afterDrop = applyActionCost(standing, 'free');
-      expect(afterDrop.actionsRemaining).toBe(3);
+      const afterDrop = applyActionCost(standing, 1);
+      expect(afterDrop.actionsRemaining).toBe(2);
       
       const prone = { ...afterDrop, posture: 'prone' as const };
       expect(prone.posture).toBe('prone');
-      expect(prone.actionsRemaining).toBe(3);
+      expect(prone.actionsRemaining).toBe(2);
     });
 
     it('Flat-footed applies -2 AC penalty', () => {
