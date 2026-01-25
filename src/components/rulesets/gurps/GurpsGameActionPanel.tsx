@@ -10,6 +10,7 @@ import type { HitLocation, ReadyAction, EquipmentSlot, WaitTrigger, AOAVariant, 
 import { hexDistance } from '../../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../../shared/rulesets/gurps/rules'
 import { rulesets } from '../../../../shared/rulesets'
+import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 
 export const GurpsGameActionPanel = ({ 
   matchState, 
@@ -23,6 +24,11 @@ export const GurpsGameActionPanel = ({
   onAction,
   onLeaveLobby,
 }: GameActionPanelProps) => {
+  // Type guard: ensure activeCharacter is GURPS
+  if (!activeCharacter || !isGurpsCharacter(activeCharacter)) {
+    return null
+  }
+
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)

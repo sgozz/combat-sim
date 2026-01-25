@@ -472,7 +472,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
 ### Phase 4: Fix Type System Leakage
 
-- [ ] 4.1. Fix GURPS component type guards
+- [x] 4.1. Fix GURPS component type guards
 
   **What to do**:
   - Update `src/components/rulesets/gurps/GurpsGameActionPanel.tsx`

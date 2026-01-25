@@ -408,3 +408,34 @@ Added database migration to ensure all loaded matches have valid rulesetId value
 - Facing arcs show for GURPS, hidden for PF2 ✓
 
 **Key Learning**: This pattern (adapter property for UI visibility) is cleaner than hardcoded rulesetId checks and scales well for future rulesets. Consider using for other UI toggles (e.g., posture system, maneuver variants).
+
+## Task 4.1: GURPS Component Type Guards - COMPLETED (2026-01-25)
+
+### Pattern Applied
+Added `isGurpsCharacter()` type guard at component entry point with early return:
+
+```typescript
+// In GurpsGameActionPanel.tsx and GurpsActionBar.tsx
+if (!activeCharacter || !isGurpsCharacter(activeCharacter)) {
+  return null
+}
+```
+
+### Files Modified
+1. `src/components/rulesets/gurps/GurpsGameActionPanel.tsx`
+   - Added import: `import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'`
+   - Added type guard check at component start (line 14-16)
+   - Fixes all `.equipment` and `.level` access errors
+
+2. `src/components/rulesets/gurps/GurpsActionBar.tsx`
+   - Added import: `import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'`
+   - Added type guard check at component start (line 14-16)
+   - Fixes all `.attributes`, `.equipment`, `.dodge`, `.basicSpeed`, `.basicMove` access errors
+
+### Verification
+- ✅ All TypeScript errors in GURPS components resolved
+- ✅ 356 tests pass (no regressions)
+- ✅ Components still render correctly (early return on type mismatch)
+
+### Key Insight
+Type guards at component entry point are cleaner than scattered checks throughout the component. Once the guard passes, TypeScript narrows the type for the entire component body, eliminating all union type errors.
