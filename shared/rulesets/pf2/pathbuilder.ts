@@ -37,6 +37,83 @@ export interface PathbuilderProficiencies {
 }
 
 /**
+ * Weapon from Pathbuilder export
+ */
+export interface PathbuilderWeapon {
+  name: string;
+  qty: number;
+  prof: string;
+  die: string;
+  pot: number;
+  str: string;
+  mat: string | null;
+  display: string;
+  runes: unknown[];
+  damageType: string;
+  attack: number;
+  damageBonus: number;
+  extraDamage: unknown[];
+  increasedDice: boolean;
+}
+
+/**
+ * Armor from Pathbuilder export
+ */
+export interface PathbuilderArmor {
+  name: string;
+  qty: number;
+  prof: string;
+  pot: number;
+  res: string;
+  mat: string | null;
+  display: string;
+  worn: boolean;
+  runes: unknown[];
+}
+
+/**
+ * AC total from Pathbuilder export
+ */
+export interface PathbuilderACTotal {
+  acProfBonus: number;
+  acAbilityBonus: number;
+  acItemBonus: number;
+  acTotal: number;
+  shieldBonus: number | null;
+}
+
+/**
+ * Focus spell data from Pathbuilder export
+ */
+export interface PathbuilderFocusData {
+  abilityBonus: number;
+  proficiency: number;
+  itemBonus: number;
+  focusCantrips: string[];
+  focusSpells: string[];
+}
+
+/**
+ * Feat tuple from Pathbuilder export
+ * Format: [name, extra, type, level, slot?, choiceType?, parentRef?]
+ */
+export type PathbuilderFeatTuple = [
+  string,           // name
+  string | null,    // extra
+  string,           // type
+  number,           // level
+  string?,          // slot
+  string?,          // choiceType
+  unknown?          // parentRef
+];
+
+/**
+ * Lore tuple from Pathbuilder export
+ * Format: [name, proficiency]
+ */
+export type PathbuilderLoreTuple = [string, number];
+
+/**
  * Character build from Pathbuilder export
  */
 export interface PathbuilderBuild {
@@ -58,22 +135,27 @@ export interface PathbuilderBuild {
   rituals?: unknown[];
   resistances?: unknown[];
   inventorMods?: unknown[];
-  attributes?: {
-    ancestryhp?: number;
-    classhp?: number;
-    bonushp?: number;
-    bonushpPerLevel?: number;
-    speed?: number;
-    speedBonus?: number;
+  attributes: {
+    ancestryhp: number;
+    classhp: number;
+    bonushp: number;
+    bonushpPerLevel: number;
+    speed: number;
+    speedBonus: number;
   };
   abilities: PathbuilderAbilities;
   proficiencies: PathbuilderProficiencies;
   mods?: Record<string, unknown>;
-  feats?: unknown[];
+  feats: PathbuilderFeatTuple[];
   specials?: string[];
-  lores?: unknown[];
+  lores: PathbuilderLoreTuple[];
   equipmentContainers?: Record<string, unknown>;
   equipment?: unknown[];
+  weapons: PathbuilderWeapon[];
+  armor: PathbuilderArmor[];
+  acTotal: PathbuilderACTotal;
+  focus: Record<string, Record<string, PathbuilderFocusData>>;
+  spellCasters: unknown[];
 }
 
 /**

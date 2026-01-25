@@ -1318,7 +1318,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 13. Create Pathbuilder → PF2CharacterSheet mapping
+- [x] 13. Create Pathbuilder → PF2CharacterSheet mapping
 
   **What to do**:
   - Create `shared/rulesets/pf2/pathbuilderMapping.ts`
