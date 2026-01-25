@@ -3,6 +3,7 @@ import type { CharacterSheet, MatchState, Player } from "../../shared/types";
 import type { CombatantState, EquippedItem } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
+import { getRulesetServerFactory } from "./rulesets";
 import { getMatchMembers, findUserById, loadCharacterById } from "./db";
 
 export const createMatchState = async (
@@ -29,34 +30,10 @@ export const createMatchState = async (
       }
     }
     
-    if (!character) {
-      const adapter = getServerAdapter(rulesetId ?? 'gurps');
-      const attributes = {
-        strength: 10,
-        dexterity: 10,
-        intelligence: 10,
-        health: 10,
-      };
-      character = {
-        id: randomUUID(),
-        name: user.username,
-        attributes,
-        derived: adapter.calculateDerivedStats(attributes),
-        skills: [{ id: randomUUID(), name: "Brawling", level: 12 }],
-        advantages: [],
-        disadvantages: [],
-        equipment: [{ 
-          id: randomUUID(), 
-          name: "Club", 
-          type: "melee",
-          damage: "1d+1",
-          reach: '1' as const,
-          parry: 0,
-          skillUsed: "Brawling"
-        }],
-        pointsTotal: 100,
-      };
-    }
+     if (!character) {
+       const factory = getRulesetServerFactory(rulesetId ?? 'gurps');
+       character = factory.createDefaultCharacter(user.username);
+     }
     
     const player: Player = {
       id: user.id,
@@ -68,74 +45,23 @@ export const createMatchState = async (
     characters.push(character);
   }
 
-  const combatants: CombatantState[] = characters.map((character, index) => {
-    const player = players[index];
-    const isBot = player?.isBot ?? false;
-    const spawnRow = Math.floor(index / 2);
-    const spawnOffset = index % 2 === 0 ? -1 : 1;
-    const q = isBot ? 6 + spawnOffset : -2 + spawnOffset;
-    const r = spawnRow;
-    const facing = isBot ? 3 : 0;
+   const combatants: CombatantState[] = characters.map((character, index) => {
+     const player = players[index];
+     const isBot = player?.isBot ?? false;
+     const spawnRow = Math.floor(index / 2);
+     const spawnOffset = index % 2 === 0 ? -1 : 1;
+     const q = isBot ? 6 + spawnOffset : -2 + spawnOffset;
+     const r = spawnRow;
+     const facing = isBot ? 3 : 0;
 
-    const randomShift = Math.random() < 0.5 ? 0 : 1;
-    const finalQ = q + randomShift;
-    const finalR = r + (Math.random() < 0.5 ? 0 : 1);
-    
-    const equipped: EquippedItem[] = [];
-    const primaryWeapon = character.equipment.find(e => e.type === 'melee' || e.type === 'ranged');
-    const shield = character.equipment.find(e => e.type === 'shield');
-    
-    if (primaryWeapon) {
-      equipped.push({ equipmentId: primaryWeapon.id, slot: 'right_hand', ready: true });
-    }
-    if (shield) {
-      equipped.push({ equipmentId: shield.id, slot: 'left_hand', ready: true });
-    }
-    
-    const baseCombatant = {
-      playerId: player?.id ?? character.id,
-      characterId: character.id,
-      position: { x: finalQ, y: 0, z: finalR },
-      facing,
-      posture: 'standing' as const,
-      maneuver: null,
-      aoaVariant: null,
-      aodVariant: null,
-      currentHP: character.derived.hitPoints,
-      currentFP: character.derived.fatiguePoints,
-      statusEffects: [],
-      aimTurns: 0,
-      aimTargetId: null,
-      evaluateBonus: 0,
-      evaluateTargetId: null,
-      equipped,
-      inCloseCombatWith: null,
-      closeCombatPosition: null,
-      grapple: { grappledBy: null, grappling: null, cpSpent: 0, cpReceived: 0 },
-      usedReaction: false,
-      shockPenalty: 0,
-      attacksRemaining: rulesetId === 'pf2' ? 3 : 1,
-      retreatedThisTurn: false,
-      defensesThisTurn: 0,
-      parryWeaponsUsedThisTurn: [],
-      waitTrigger: null,
-    };
-    
-    if (rulesetId === 'pf2') {
-      return {
-        ...baseCombatant,
-        pf2: {
-          actionsRemaining: 3,
-          reactionAvailable: true,
-          mapPenalty: 0,
-          attacksThisTurn: 0,
-          shieldRaised: false,
-        },
-      };
-    }
-    
-    return baseCombatant;
-  });
+     const randomShift = Math.random() < 0.5 ? 0 : 1;
+     const finalQ = q + randomShift;
+     const finalR = r + (Math.random() < 0.5 ? 0 : 1);
+     const position = { x: finalQ, y: 0, z: finalR };
+     
+     const factory = getRulesetServerFactory(rulesetId ?? 'gurps');
+     return factory.createCombatant(character, player?.id ?? character.id, position, facing);
+   });
 
   const initiativeOrder = combatants
     .map(c => {
