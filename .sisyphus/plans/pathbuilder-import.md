@@ -774,7 +774,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 3. Create CharacterSheet union + type guards
+- [x] 3. Create CharacterSheet union + type guards
 
   **What to do**:
   - Create `shared/rulesets/characterSheet.ts`

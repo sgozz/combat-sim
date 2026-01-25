@@ -71,3 +71,55 @@
 ### Next Steps
 - Task 3: Create `PF2CharacterSheet` (already done in Task 1)
 - Task 4: Remove `CharacterSheet` from `shared/types.ts` and update imports
+
+## Task 3: CharacterSheet Union Type and Resilient Type Guards
+
+### Key Decisions
+
+1. **Union Type Pattern**: Created `CharacterSheet = PF2CharacterSheet | GurpsCharacterSheet`
+   - Centralized in `shared/rulesets/characterSheet.ts`
+   - Enables type-safe discrimination across the codebase
+   - Follows TypeScript union best practices
+
+2. **Resilient Type Guards**: Implemented with defensive checks
+   - **Critical Fix**: Must check `typeof character === 'object' && character !== null` FIRST
+   - Reason: The `in` operator throws TypeError on null/undefined, not just returns false
+   - Order matters: type check → null check → field existence → nested type checks
+   - Pattern:
+     ```typescript
+     typeof character === 'object' &&
+     character !== null &&
+     'field' in character &&
+     character.field !== null &&
+     typeof character.field === 'object' &&
+     'discriminant' in character.field
+     ```
+
+3. **Discriminant Fields**:
+   - PF2: `abilities.constitution` (nested discriminant)
+   - GURPS: `attributes.health` (nested discriminant)
+   - Both are required fields in their respective types, making them reliable discriminants
+
+4. **Test Coverage**: 23 comprehensive runtime tests
+   - Valid character identification (PF2 and GURPS)
+   - Cross-ruleset rejection (PF2 guard rejects GURPS, vice versa)
+   - Null/undefined safety (no throws on malformed input)
+   - Missing field handling (returns false, not error)
+   - Mutual exclusivity verification
+   - Edge cases: extra fields, optional fields, hybrid objects
+
+### File Structure
+- Created: `shared/rulesets/characterSheet.ts` (36 lines)
+- Created: `shared/rulesets/characterSheet.test.ts` (262 lines)
+- Tests: ✅ 23/23 passing
+- Build: ✅ TypeScript compilation successful
+
+### Resilience Guarantees
+- Guards NEVER throw on any input (including null, undefined, primitives)
+- Guards return false for malformed data (missing fields, wrong types)
+- Guards are mutually exclusive for valid characters
+- Guards handle extra fields gracefully (forward compatibility)
+
+### Next Steps
+- Task 4: Update `shared/types.ts` to remove `CharacterSheet` and import from `characterSheet.ts`
+- Task 5: Update all imports across codebase to use new union type
