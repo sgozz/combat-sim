@@ -735,7 +735,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 2. Create GurpsCharacterSheet type
+- [x] 2. Create GurpsCharacterSheet type
 
   **What to do**:
   - Create `shared/rulesets/gurps/characterSheet.ts`

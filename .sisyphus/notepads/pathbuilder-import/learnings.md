@@ -40,3 +40,34 @@
 **CRITICAL**: `PF2CharacterSheet.abilities.constitution` is the discriminant field
 - NOT `attributes.health` (GURPS pattern)
 - This enables type guards: `isPF2Combatant()` checks for `abilities.constitution`
+
+## Task 2: GurpsCharacterSheet Type Definition
+
+### Key Decisions
+
+1. **Exact Copy Pattern**: Created `GurpsCharacterSheet` as exact copy of `CharacterSheet` from `shared/types.ts`
+   - Reason: Maintains compatibility with existing GURPS logic while enabling future divergence
+   - All 9 fields preserved: id, name, attributes, derived, skills, advantages, disadvantages, equipment, pointsTotal
+
+2. **Type Imports**: Imported GURPS-specific types from `./types.ts`
+   - `Attributes` (with `health` field - GURPS discriminant)
+   - `DerivedStats`, `Skill`, `Advantage`, `Disadvantage`, `Equipment`
+   - `Id` from `../../types` (shared ID type)
+
+3. **Export Pattern**: Used re-export pattern in `index.ts`
+   - Added: `export type { GurpsCharacterSheet } from './characterSheet'`
+   - Keeps exports clean and centralized
+
+### Discriminant Field
+**CRITICAL**: `GurpsCharacterSheet.attributes.health` is the GURPS discriminant
+- Distinguishes GURPS from PF2 (which uses `abilities.constitution`)
+- Enables type guards: `isGurpsCombatant()` checks for `attributes.health`
+
+### File Structure
+- Created: `shared/rulesets/gurps/characterSheet.ts` (15 lines)
+- Updated: `shared/rulesets/gurps/index.ts` (added 1-line export)
+- Build: ✅ Passes TypeScript compilation
+
+### Next Steps
+- Task 3: Create `PF2CharacterSheet` (already done in Task 1)
+- Task 4: Remove `CharacterSheet` from `shared/types.ts` and update imports

@@ -38,3 +38,5 @@ export const gurpsBundle = {
   ruleset: gurpsRuleset,
   ui: gurpsUiAdapter,
 };
+
+export type { GurpsCharacterSheet } from './characterSheet';
