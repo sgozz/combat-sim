@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { Tooltip } from '../../ui/Tooltip'
 import type { CharacterEditorProps } from '../types'
 import { useCharacterEditor } from '../useCharacterEditor'
-import type { PF2CharacterSheet } from '../../../../shared/rulesets/pf2/types'
+import type { PF2CharacterSheet } from '../../../../shared/rulesets/pf2/characterSheet'
+import { PathbuilderImport } from './PathbuilderImport'
 
 export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }: CharacterEditorProps) => {
+  const [showImport, setShowImport] = useState(false)
   const pf2Character = character as PF2CharacterSheet
   const {
     templateNames,
@@ -18,11 +21,28 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
     removeAdvantage,
   } = useCharacterEditor({ character, setCharacter, rulesetId: 'pf2' })
 
+  if (showImport) {
+    return (
+      <PathbuilderImport
+        onImport={(importedCharacter) => {
+          setCharacter(importedCharacter)
+          setShowImport(false)
+        }}
+        onCancel={() => setShowImport(false)}
+      />
+    )
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal-content character-modal">
         <div className="modal-header">
-          <h2>Character Builder</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h2>Character Builder</h2>
+            <button onClick={() => setShowImport(true)} style={{ fontSize: '0.9em', padding: '4px 8px' }}>
+              Import from Pathbuilder
+            </button>
+          </div>
           <div className="pf2-header-info">
             <span className="pf2-class">{selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)}</span>
             <span className="pf2-level">Lv. 1</span>

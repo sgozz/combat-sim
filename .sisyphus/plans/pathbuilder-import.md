@@ -1648,7 +1648,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 15. Create PathbuilderImport UI + integration
+- [x] 15. Create PathbuilderImport UI + integration
 
   **What to do**:
   
