@@ -910,3 +910,7 @@ export const isGurpsMatch = (match: MatchState): boolean => {
 export const isPf2Match = (match: MatchState): boolean => {
   return match.rulesetId === 'pf2';
 };
+
+export function getGridType(rulesetId: RulesetId): 'hex' | 'square' {
+  return getServerAdapter(rulesetId).gridSystem.type;
+}

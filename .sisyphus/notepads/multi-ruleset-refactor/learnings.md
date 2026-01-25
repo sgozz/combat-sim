@@ -330,3 +330,27 @@ Added database migration to ensure all loaded matches have valid rulesetId value
 - Migration runs on every server startup (safe due to idempotency)
 - Ensures database consistency even if old code inserted NULL values
 - Combined with assertRulesetId() in load functions, guarantees type safety
+
+## Task 3.1: getGridType() Helper Function - COMPLETED
+
+**Implementation Pattern:**
+- Added `getGridType(rulesetId: RulesetId): 'hex' | 'square'` to `shared/rulesets/serverAdapter.ts`
+- Exported from `shared/rulesets/index.ts` alongside other adapter functions
+- Implementation: `return getServerAdapter(rulesetId).gridSystem.type`
+
+**Key Insight:**
+- GridSystem interface already has `type: GridType` property
+- GURPS adapter uses `hexGrid` (type: 'hex')
+- PF2 adapter uses `squareGrid8` (type: 'square')
+- No need to create new abstraction - just expose existing property
+
+**Tests Added:**
+- Added to existing `shared/rulesets/typeGuards.test.ts`
+- Test: `getGridType('gurps')` → 'hex' ✓
+- Test: `getGridType('pf2')` → 'square' ✓
+- All 356 tests passing (2 new tests included)
+
+**Dependency Chain:**
+- Phase 2 complete (all defaults replaced with assertRulesetId)
+- Task 3.1 complete (grid type helper ready)
+- Unblocks Tasks 3.2-3.4 (grid conditional replacements can now use this helper)

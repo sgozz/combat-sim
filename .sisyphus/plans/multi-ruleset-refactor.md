@@ -358,7 +358,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
 ### Phase 3: Centralize Grid Type Selection
 
-- [ ] 3.1. Add getGridType helper function
+- [x] 3.1. Add getGridType helper function
 
   **What to do**:
   - Add `getGridType(rulesetId: RulesetId): 'hex' | 'square'` to `shared/rulesets/index.ts`

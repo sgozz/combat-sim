@@ -15,7 +15,7 @@ export const rulesets: Record<string, RulesetBundle> = {
   pf2: pf2Bundle,
 };
 
-export { getServerAdapter, isGurpsMatch, isPf2Match } from './serverAdapter';
+export { getServerAdapter, isGurpsMatch, isPf2Match, getGridType } from './serverAdapter';
 export type { ServerRulesetAdapter, MovementState } from './serverAdapter';
 export type { BaseCombatantState } from './base/types';
 

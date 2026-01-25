@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isGurpsCombatant, isPF2Combatant } from './index';
+import { isGurpsCombatant, isPF2Combatant, getGridType } from './index';
 import { isGurpsCharacter, isPF2Character } from './characterSheet';
 import type { BaseCombatantState } from './base/types';
 import type { GurpsCharacterSheet } from './gurps/characterSheet';
@@ -124,13 +124,23 @@ describe('Ruleset type guards', () => {
       expect(isPF2Character(gurpsCharacter)).toBe(false);
     });
 
-    it('returns false when required fields are missing', () => {
-      const missingAbilities = { ...pf2Character } as unknown as PF2CharacterSheet;
-      delete (missingAbilities as { abilities?: unknown }).abilities;
-      const missingAttributes = { ...gurpsCharacter } as unknown as GurpsCharacterSheet;
-      delete (missingAttributes as { attributes?: unknown }).attributes;
-      expect(isPF2Character(missingAbilities)).toBe(false);
-      expect(isGurpsCharacter(missingAttributes)).toBe(false);
-    });
-  });
+     it('returns false when required fields are missing', () => {
+       const missingAbilities = { ...pf2Character } as unknown as PF2CharacterSheet;
+       delete (missingAbilities as { abilities?: unknown }).abilities;
+       const missingAttributes = { ...gurpsCharacter } as unknown as GurpsCharacterSheet;
+       delete (missingAttributes as { attributes?: unknown }).attributes;
+       expect(isPF2Character(missingAbilities)).toBe(false);
+       expect(isGurpsCharacter(missingAttributes)).toBe(false);
+     });
+   });
+
+   describe('getGridType', () => {
+     it('returns hex for GURPS ruleset', () => {
+       expect(getGridType('gurps')).toBe('hex');
+     });
+
+     it('returns square for PF2 ruleset', () => {
+       expect(getGridType('pf2')).toBe('square');
+     });
+   });
 });
