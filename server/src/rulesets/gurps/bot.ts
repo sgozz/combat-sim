@@ -1,9 +1,14 @@
-import type { CharacterSheet, MatchState } from "../../../../shared/types";
+import type { MatchState } from "../../../../shared/types";
+import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
 import type { CombatantState, DefenseType, DamageType, PendingDefense } from "../../../../shared/rulesets/gurps/types";
 import type { BotAttackExecutor } from "../types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../../rulesetHelpers";
 import { getCharacterById, sendToMatch, checkVictory } from "../../helpers";
+
+const asGurpsCharacter = (match: MatchState, characterId: string): GurpsCharacterSheet | undefined => {
+  return getCharacterById(match, characterId) as GurpsCharacterSheet | undefined;
+};
 
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
@@ -15,8 +20,8 @@ export const executeBotAttack: BotAttackExecutor = async (
   target,
   activePlayer
 ) => {
-  const attackerCharacter = getCharacterById(currentMatch, botCombatant.characterId);
-  const targetCharacter = getCharacterById(currentMatch, target.characterId);
+  const attackerCharacter = asGurpsCharacter(currentMatch, botCombatant.characterId);
+  const targetCharacter = asGurpsCharacter(currentMatch, target.characterId);
   if (!attackerCharacter || !targetCharacter) {
     const updated = advanceTurn({
       ...currentMatch,
@@ -113,7 +118,7 @@ export const executeBotAttack: BotAttackExecutor = async (
 };
 
 export const chooseBotDefense = (
-  defenderCharacter: CharacterSheet,
+  defenderCharacter: GurpsCharacterSheet,
   defenderCombatant: CombatantState
 ): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
   const adapter = getServerAdapter('gurps');

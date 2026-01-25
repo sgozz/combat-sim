@@ -1,11 +1,13 @@
 import type { CharacterSheet } from "../../../../shared/types";
+import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
 import type { CombatantState, EquippedItem } from "../../../../shared/rulesets/gurps/types";
 import type { CombatantFactory } from "../types";
 
 export const createCombatant: CombatantFactory = (character, playerId, position, facing) => {
+  const gurpsChar = character as GurpsCharacterSheet;
   const equipped: EquippedItem[] = [];
-  const primaryWeapon = character.equipment.find(e => e.type === 'melee' || e.type === 'ranged');
-  const shield = character.equipment.find(e => e.type === 'shield');
+  const primaryWeapon = gurpsChar.equipment.find(e => e.type === 'melee' || e.type === 'ranged');
+  const shield = gurpsChar.equipment.find(e => e.type === 'shield');
 
   if (primaryWeapon) {
     equipped.push({ equipmentId: primaryWeapon.id, slot: 'right_hand', ready: true });
@@ -23,8 +25,8 @@ export const createCombatant: CombatantFactory = (character, playerId, position,
     maneuver: null,
     aoaVariant: null,
     aodVariant: null,
-    currentHP: character.derived.hitPoints,
-    currentFP: character.derived.fatiguePoints,
+    currentHP: gurpsChar.derived.hitPoints,
+    currentFP: gurpsChar.derived.fatiguePoints,
     statusEffects: [],
     aimTurns: 0,
     aimTargetId: null,

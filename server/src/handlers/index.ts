@@ -1,22 +1,22 @@
-export { applyDamageToTarget, formatRoll } from './damage';
-export type { ApplyDamageResult } from './damage';
+export { applyDamageToTarget, formatRoll } from './shared/damage';
+export type { ApplyDamageResult } from './shared/damage';
 
 export { 
   handleMoveStep, 
   handleRotate, 
   handleUndoMovement, 
   handleConfirmMovement, 
-  handleSkipMovement 
-} from './movement';
-
-export { 
+  handleSkipMovement,
   handleEnterCloseCombat, 
   handleExitCloseCombat, 
   handleGrapple, 
-  handleBreakFree 
-} from './close-combat';
+  handleBreakFree,
+  handleReadyAction,
+  handleAttackAction, 
+  resolveDefenseChoice,
+} from './gurps';
 
-export { handleReadyAction } from './ready';
-
-export { handleAttackAction, resolveDefenseChoice } from './attack';
-export { handlePF2AttackAction } from './pf2-attack';
+export { 
+  handlePF2Action,
+  handlePF2AttackAction,
+} from './pf2';

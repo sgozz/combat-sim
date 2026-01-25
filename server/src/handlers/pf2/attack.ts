@@ -2,14 +2,14 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
-} from "../../../shared/types";
-import { isPF2Character } from "../../../shared/types";
-import type { PF2CharacterSheet, PF2CharacterWeapon } from "../../../shared/rulesets/pf2/characterSheet";
-import type { CombatActionPayload } from "../../../shared/rulesets/gurps/types";
-import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
-import { advanceTurn } from "../rulesetHelpers";
-import { state } from "../state";
-import { updateMatchState } from "../db";
+} from "../../../../shared/types";
+import { isPF2Character } from "../../../../shared/types";
+import type { PF2CharacterSheet, PF2CharacterWeapon } from "../../../../shared/rulesets/pf2/characterSheet";
+import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import { advanceTurn } from "../../rulesetHelpers";
+import { state } from "../../state";
+import { updateMatchState } from "../../db";
 import {
   sendMessage,
   sendToMatch,
@@ -18,8 +18,8 @@ import {
   calculateGridDistance,
   getGridSystemForMatch,
   checkVictory,
-} from "../helpers";
-import { scheduleBotTurn } from "../bot";
+} from "../../helpers";
+import { scheduleBotTurn } from "../../bot";
 
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;

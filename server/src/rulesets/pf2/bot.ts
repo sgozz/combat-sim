@@ -1,10 +1,15 @@
 import type { MatchState } from "../../../../shared/types";
+import type { PF2CharacterSheet } from "../../../../shared/rulesets/pf2/characterSheet";
 import type { CombatantState } from "../../../../shared/rulesets/gurps/types";
 import type { PF2DamageType } from "../../../../shared/rulesets/pf2/types";
 import type { BotAttackExecutor } from "../types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../../rulesetHelpers";
 import { getCharacterById, sendToMatch } from "../../helpers";
+
+const asPF2Character = (match: MatchState, characterId: string): PF2CharacterSheet | undefined => {
+  return getCharacterById(match, characterId) as PF2CharacterSheet | undefined;
+};
 
 export const executeBotAttack: BotAttackExecutor = async (
   matchId: string,
@@ -14,8 +19,8 @@ export const executeBotAttack: BotAttackExecutor = async (
   activePlayer: { id: string; name: string }
 ): Promise<MatchState> => {
   const adapter = getServerAdapter('pf2');
-  const attackerCharacter = getCharacterById(currentMatch, botCombatant.characterId);
-  const targetCharacter = getCharacterById(currentMatch, target.characterId);
+  const attackerCharacter = asPF2Character(currentMatch, botCombatant.characterId);
+  const targetCharacter = asPF2Character(currentMatch, target.characterId);
   
   if (!attackerCharacter || !targetCharacter) {
     return advanceTurn({
@@ -24,25 +29,19 @@ export const executeBotAttack: BotAttackExecutor = async (
     });
   }
 
-  const weapon = attackerCharacter.equipment[0];
+  const weapon = attackerCharacter.weapons[0];
   const weaponName = weapon?.name ?? 'Fist';
   const weaponDamage = weapon?.damage ?? '1d4';
-  const damageTypeMap: Record<string, string> = {
-    crushing: 'bludgeoning',
-    cutting: 'slashing',
-    impaling: 'piercing',
-    piercing: 'piercing',
-  };
-  const pf2DamageType: string = damageTypeMap[weapon?.damageType ?? 'crushing'] ?? 'bludgeoning';
+  const pf2DamageType: string = weapon?.damageType ?? 'bludgeoning';
 
-  const strMod = adapter.pf2!.getAbilityModifier(attackerCharacter.attributes.strength);
-  const level = 1;
+  const strMod = adapter.pf2!.getAbilityModifier(attackerCharacter.abilities.strength);
+  const level = attackerCharacter.level;
   const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
   const attacksThisTurn = botCombatant.pf2?.attacksThisTurn ?? 0;
   const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attacksThisTurn + 1, false);
   const totalAttackBonus = strMod + profBonus + mapPenalty;
   
-  const targetAC = targetCharacter.derived.dodge;
+  const targetAC = targetCharacter.derived.armorClass;
   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
   
   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weaponName}`;

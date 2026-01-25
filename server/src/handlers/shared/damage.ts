@@ -1,12 +1,12 @@
 import type {
   MatchState,
-} from "../../../shared/types";
-import { isGurpsCharacter } from "../../../shared/types";
+} from "../../../../shared/types";
+import { isGurpsCharacter } from "../../../../shared/types";
 import type {
   DamageType,
   CombatantState,
-} from "../../../shared/rulesets/gurps/types";
-import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
+} from "../../../../shared/rulesets/gurps/types";
+import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 
 export type ApplyDamageResult = {
   updatedCombatants: CombatantState[];

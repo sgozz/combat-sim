@@ -2,17 +2,22 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
-} from "../../../shared/types";
+} from "../../../../shared/types";
+import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
 import type {
   CombatActionPayload,
   EquippedItem,
   EquipmentSlot,
-} from "../../../shared/rulesets/gurps/types";
-import { advanceTurn } from "../rulesetHelpers";
-import { state } from "../state";
-import { updateMatchState } from "../db";
-import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../helpers";
-import { scheduleBotTurn } from "../bot";
+} from "../../../../shared/rulesets/gurps/types";
+import { advanceTurn } from "../../rulesetHelpers";
+import { state } from "../../state";
+import { updateMatchState } from "../../db";
+import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../../helpers";
+import { scheduleBotTurn } from "../../bot";
+
+const asGurpsCharacter = (match: MatchState, characterId: string): GurpsCharacterSheet | undefined => {
+  return getCharacterById(match, characterId) as GurpsCharacterSheet | undefined;
+};
 
 export const handleReadyAction = async (
   socket: WebSocket,
@@ -29,7 +34,7 @@ export const handleReadyAction = async (
     return;
   }
   
-  const actorCharacter = getCharacterById(match, actorCombatant.characterId);
+  const actorCharacter = asGurpsCharacter(match, actorCombatant.characterId);
   if (!actorCharacter) {
     sendMessage(socket, { type: "error", message: "Character not found." });
     return;

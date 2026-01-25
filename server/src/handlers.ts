@@ -61,6 +61,7 @@ import {
   handleReadyAction,
   handleAttackAction,
   resolveDefenseChoice,
+  handlePF2Action,
 } from "./handlers/index";
 
 export const handleMessage = async (
@@ -503,6 +504,10 @@ const handleCombatAction = async (
     return;
   }
 
+  if (match.rulesetId === 'pf2') {
+    return handlePF2Action(socket, matchId, match, player, actorCombatant, payload as Parameters<typeof handlePF2Action>[5]);
+  }
+
   if (payload.type === "select_maneuver") {
     if (match.turnMovement?.phase === 'moving') {
       sendMessage(socket, { type: "error", message: "Cannot change maneuver during movement." });
@@ -568,15 +573,19 @@ const handleCombatAction = async (
     
     const actorCharacter = getCharacterById(match, actorCombatant.characterId);
     const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
-    const baseMove = actorCharacter?.derived.basicMove ?? 5;
     
-    let basicMove = baseMove;
-    if (adapter.calculateEncumbrance) {
-      const encumbrance = adapter.calculateEncumbrance(
-        actorCharacter?.attributes.strength ?? 10, 
-        actorCharacter?.equipment ?? []
-      );
-      basicMove = Math.max(1, baseMove + encumbrance.movePenalty);
+    let basicMove = 5;
+    if (actorCharacter && 'attributes' in actorCharacter && 'equipment' in actorCharacter) {
+      const gurpsDerived = actorCharacter.derived as { basicMove?: number };
+      const baseMove = gurpsDerived.basicMove ?? 5;
+      basicMove = baseMove;
+      if (adapter.calculateEncumbrance) {
+        const encumbrance = adapter.calculateEncumbrance(
+          actorCharacter.attributes.strength ?? 10, 
+          actorCharacter.equipment ?? []
+        );
+        basicMove = Math.max(1, baseMove + encumbrance.movePenalty);
+      }
     }
     const turnMovement = adapter.initializeTurnMovement(
       adapter.gridToHex(actorCombatant.position),
@@ -809,147 +818,6 @@ const handleCombatAction = async (
      return;
    }
 
-   if (payload.type === "pf2_drop_prone") {
-     if (match.rulesetId !== 'pf2') {
-       sendMessage(socket, { type: "error", message: "Drop Prone is only available in PF2." });
-       return;
-     }
-
-     if (actorCombatant.posture === 'prone') {
-       sendMessage(socket, { type: "error", message: "Already prone." });
-       return;
-     }
-
-     const updatedCombatants = match.combatants.map((c) =>
-       c.playerId === player.id ? { ...c, posture: 'prone' as const } : c
-     );
-
-     const updated: MatchState = {
-       ...match,
-       combatants: updatedCombatants,
-       log: [...match.log, `${player.name} drops prone.`],
-     };
-     state.matches.set(matchId, updated);
-     await updateMatchState(matchId, updated);
-     await sendToMatch(matchId, { type: "match_state", state: updated });
-     return;
-   }
-
-   if (payload.type === "pf2_stand") {
-     if (match.rulesetId !== 'pf2') {
-       sendMessage(socket, { type: "error", message: "Stand is only available in PF2." });
-       return;
-     }
-
-     if (actorCombatant.posture !== 'prone') {
-       sendMessage(socket, { type: "error", message: "Can only stand when prone." });
-       return;
-     }
-
-     const actionsRemaining = actorCombatant.pf2?.actionsRemaining ?? actorCombatant.attacksRemaining;
-     if (actionsRemaining < 1) {
-       sendMessage(socket, { type: "error", message: "No actions remaining." });
-       return;
-     }
-
-     const updatedCombatants = match.combatants.map((c) => {
-       if (c.playerId === player.id) {
-         const newActionsRemaining = actionsRemaining - 1;
-         return {
-           ...c,
-           posture: 'standing' as const,
-           attacksRemaining: newActionsRemaining,
-           pf2: {
-             actionsRemaining: newActionsRemaining,
-             reactionAvailable: c.pf2?.reactionAvailable ?? true,
-             mapPenalty: c.pf2?.mapPenalty ?? 0,
-             attacksThisTurn: c.pf2?.attacksThisTurn ?? 0,
-             shieldRaised: c.pf2?.shieldRaised ?? false,
-           },
-         };
-       }
-       return c;
-     });
-
-     const updated: MatchState = {
-       ...match,
-       combatants: updatedCombatants,
-       log: [...match.log, `${player.name} stands up.`],
-     };
-     state.matches.set(matchId, updated);
-     await updateMatchState(matchId, updated);
-     await sendToMatch(matchId, { type: "match_state", state: updated });
-     return;
-   }
-
-   if (payload.type === "pf2_step") {
-     if (match.rulesetId !== 'pf2') {
-       sendMessage(socket, { type: "error", message: "Step is only available in PF2." });
-       return;
-     }
-
-     if (actorCombatant.posture === 'prone') {
-       sendMessage(socket, { type: "error", message: "Cannot Step while prone. Use Stand first." });
-       return;
-     }
-
-     const actionsRemaining = actorCombatant.pf2?.actionsRemaining ?? actorCombatant.attacksRemaining;
-     if (actionsRemaining < 1) {
-       sendMessage(socket, { type: "error", message: "No actions remaining." });
-       return;
-     }
-
-     // Validate target hex is exactly 1 square away (Chebyshev distance)
-     const dx = Math.abs(payload.to.q - actorCombatant.position.x);
-     const dz = Math.abs(payload.to.r - actorCombatant.position.z);
-     const chebyshevDistance = Math.max(dx, dz);
-
-     if (chebyshevDistance !== 1) {
-       sendMessage(socket, { type: "error", message: "Step can only move 1 square." });
-       return;
-     }
-
-     // Validate target hex is not occupied
-     const occupant = match.combatants.find(c =>
-       c.playerId !== player.id &&
-       c.position.x === payload.to.q &&
-       c.position.z === payload.to.r
-     );
-     if (occupant) {
-       sendMessage(socket, { type: "error", message: "Hex is occupied." });
-       return;
-     }
-
-     const newActionsRemaining = actionsRemaining - 1;
-     const updatedCombatants = match.combatants.map((c) => {
-       if (c.playerId === player.id) {
-         return {
-           ...c,
-           position: { x: payload.to.q, y: c.position.y, z: payload.to.r },
-           attacksRemaining: newActionsRemaining,
-           pf2: {
-             actionsRemaining: newActionsRemaining,
-             reactionAvailable: c.pf2?.reactionAvailable ?? true,
-             mapPenalty: c.pf2?.mapPenalty ?? 0,
-             attacksThisTurn: c.pf2?.attacksThisTurn ?? 0,
-             shieldRaised: c.pf2?.shieldRaised ?? false,
-           },
-         };
-       }
-       return c;
-     });
-
-     const updated: MatchState = {
-       ...match,
-       combatants: updatedCombatants,
-       log: [...match.log, `${player.name} steps to (${payload.to.q}, ${payload.to.r}).`],
-     };
-     state.matches.set(matchId, updated);
-     await updateMatchState(matchId, updated);
-     await sendToMatch(matchId, { type: "match_state", state: updated });
-     return;
-   }
-
     if (payload.type === "move") {
      if (actorCombatant.inCloseCombatWith) {
        sendMessage(socket, { type: "error", message: "Cannot move while in close combat. Use Exit Close Combat first." });
@@ -957,7 +825,7 @@ const handleCombatAction = async (
      }
      
      const actorCharacter = getCharacterById(match, actorCombatant.characterId);
-     if (!actorCharacter) {
+     if (!actorCharacter || !('attributes' in actorCharacter)) {
        sendMessage(socket, { type: "error", message: "Character not found." });
        return;
      }
@@ -975,8 +843,11 @@ const handleCombatAction = async (
      const distance = calculateHexDistance(actorCombatant.position, payload.position);
      const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
      const postureMods = adapter.getPostureModifiers!(actorCombatant.posture);
+     
+     const gurpsDerived = actorCharacter.derived as { basicMove?: number };
+     const basicMoveVal = gurpsDerived.basicMove ?? 5;
     
-    let allowed = Math.floor(actorCharacter.derived.basicMove * postureMods.moveMultiplier);
+    let allowed = Math.floor(basicMoveVal * postureMods.moveMultiplier);
     const m = actorCombatant.maneuver;
     
     if (m === 'do_nothing' || m === 'all_out_defense') {
@@ -984,7 +855,7 @@ const handleCombatAction = async (
        else allowed = Math.min(allowed, 1);
     } else if (m === 'attack' || m === 'all_out_attack' || m === 'aim') {
        if (m === 'all_out_attack') {
-         allowed = Math.min(allowed, Math.floor(actorCharacter.derived.basicMove / 2));
+         allowed = Math.min(allowed, Math.floor(basicMoveVal / 2));
        } else {
          if (actorCombatant.statusEffects.includes('has_stepped')) {
            sendMessage(socket, { type: "error", message: "Already stepped this turn." });

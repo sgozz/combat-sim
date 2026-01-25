@@ -2,12 +2,14 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
-} from "../../../shared/types";
-import type { CombatActionPayload } from "../../../shared/rulesets/gurps/types";
-import { advanceTurn } from "../rulesetHelpers";
-import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
-import { state } from "../state";
-import { updateMatchState } from "../db";
+} from "../../../../shared/types";
+import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
+import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
+import { advanceTurn } from "../../rulesetHelpers";
+import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import { state } from "../../state";
+import { updateMatchState } from "../../db";
 import { 
   sendMessage, 
   sendToMatch, 
@@ -15,9 +17,9 @@ import {
   getCharacterById,
   calculateHexDistance,
   findFreeAdjacentHex,
-} from "../helpers";
-import { scheduleBotTurn } from "../bot";
-import { formatRoll } from "./damage";
+} from "../../helpers";
+import { scheduleBotTurn } from "../../bot";
+import { formatRoll } from "../shared/damage";
 
 export const handleEnterCloseCombat = async (
   socket: WebSocket,
@@ -28,6 +30,11 @@ export const handleEnterCloseCombat = async (
   payload: CombatActionPayload & { type: "enter_close_combat" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  
+  if (match.rulesetId === 'pf2') {
+    sendMessage(socket, { type: "error", message: "Close combat not available in PF2. Use Grapple action instead." });
+    return;
+  }
   
   const adapter = getServerAdapter(match.rulesetId);
   
@@ -60,8 +67,15 @@ export const handleEnterCloseCombat = async (
     return;
   }
   
-  const attackerSkill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
-  const defenderSkill = targetCharacter.skills[0]?.level ?? targetCharacter.attributes.dexterity;
+  if (!('attributes' in attackerCharacter) || !('attributes' in targetCharacter)) {
+    sendMessage(socket, { type: "error", message: "Invalid character type." });
+    return;
+  }
+  
+  const attackerSkills = attackerCharacter.skills as Array<{ level?: number }>;
+  const defenderSkills = targetCharacter.skills as Array<{ level?: number }>;
+  const attackerSkill = attackerSkills[0]?.level ?? attackerCharacter.attributes.dexterity;
+  const defenderSkill = defenderSkills[0]?.level ?? targetCharacter.attributes.dexterity;
   
   const contest = adapter.closeCombat!.quickContest(attackerSkill, defenderSkill);
   
@@ -114,6 +128,11 @@ export const handleExitCloseCombat = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
+  
+  if (match.rulesetId === 'pf2') {
+    sendMessage(socket, { type: "error", message: "Close combat not available in PF2." });
+    return;
+  }
   
   if (!actorCombatant.inCloseCombatWith) {
     sendMessage(socket, { type: "error", message: "Not in close combat." });
@@ -212,6 +231,11 @@ export const handleGrapple = async (
   const targetCharacter = getCharacterById(match, targetCombatant.characterId);
   if (!attackerCharacter || !targetCharacter) {
     sendMessage(socket, { type: "error", message: "Character not found." });
+    return;
+  }
+  
+  if (!isGurpsCharacter(attackerCharacter) || !isGurpsCharacter(targetCharacter)) {
+    sendMessage(socket, { type: "error", message: "Grapple requires GURPS characters." });
     return;
   }
   
@@ -399,6 +423,11 @@ export const handleBreakFree = async (
   
   if (!attackerCharacter) {
     sendMessage(socket, { type: "error", message: "Character not found." });
+    return;
+  }
+  
+  if (!isGurpsCharacter(attackerCharacter)) {
+    sendMessage(socket, { type: "error", message: "Break free requires GURPS character." });
     return;
   }
   

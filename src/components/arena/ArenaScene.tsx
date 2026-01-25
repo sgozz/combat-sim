@@ -7,6 +7,7 @@ import { getHexInDirection } from '../../utils/hex'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets/gurps/types'
+import { isPF2Character, isGurpsCharacter } from '../../../shared/rulesets/characterSheet'
 import { useMemo, useState, useEffect } from 'react'
 
 type ArenaSceneProps = {
@@ -88,23 +89,33 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     if (!character) return 1
 
     let maxRange = 1
-    // Check for melee reach and ranged range
-    character.equipment.forEach(item => {
-      if (item.type === 'melee' && item.reach) {
-        // Parse reach like "1", "C,1", "1,2" - extract max numeric value
-        const reachNumbers = item.reach.split(',').map(r => r === 'C' ? 0 : parseInt(r, 10)).filter(n => !isNaN(n))
-        const itemMaxReach = Math.max(...reachNumbers, 1)
-        maxRange = Math.max(maxRange, itemMaxReach)
-      }
-      if (item.type === 'ranged' && item.range) {
-        // Parse range like "100/200" or "50"
-        const parts = item.range.split('/')
-        const itemMax = parseInt(parts[parts.length - 1], 10)
-        if (!isNaN(itemMax)) {
-          maxRange = Math.max(maxRange, itemMax)
+    
+    if (isPF2Character(character)) {
+      (character.weapons ?? []).forEach(weapon => {
+        if (weapon.traits.includes('reach')) {
+          maxRange = Math.max(maxRange, 2)
         }
-      }
-    })
+        if (weapon.traits.includes('thrown')) {
+          maxRange = Math.max(maxRange, 4)
+        }
+      })
+    }
+    else if (isGurpsCharacter(character)) {
+      (character.equipment ?? []).forEach(item => {
+        if (item.type === 'melee' && item.reach) {
+          const reachNumbers = item.reach.split(',').map((r: string) => r === 'C' ? 0 : parseInt(r, 10)).filter((n: number) => !isNaN(n))
+          const itemMaxReach = Math.max(...reachNumbers, 1)
+          maxRange = Math.max(maxRange, itemMaxReach)
+        }
+        if (item.type === 'ranged' && item.range) {
+          const parts = item.range.split('/')
+          const itemMax = parseInt(parts[parts.length - 1], 10)
+          if (!isNaN(itemMax)) {
+            maxRange = Math.max(maxRange, itemMax)
+          }
+        }
+      })
+    }
     return maxRange
   }, [playerCombatant, characters])
 

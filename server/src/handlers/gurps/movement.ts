@@ -4,15 +4,20 @@ import type {
   Player,
   HexCoord,
   TurnMovementState,
-} from "../../../shared/types";
-import type { CombatActionPayload } from "../../../shared/rulesets/gurps/types";
-import { advanceTurn } from "../rulesetHelpers";
-import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
-import type { MovementState } from "../../../shared/rulesets/serverAdapter";
-import { state } from "../state";
-import { updateMatchState } from "../db";
-import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../helpers";
-import { scheduleBotTurn } from "../bot";
+} from "../../../../shared/types";
+import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
+import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import { advanceTurn } from "../../rulesetHelpers";
+import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import type { MovementState } from "../../../../shared/rulesets/serverAdapter";
+import { state } from "../../state";
+import { updateMatchState } from "../../db";
+import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../../helpers";
+import { scheduleBotTurn } from "../../bot";
+
+const asGurpsCharacter = (match: MatchState, characterId: string): GurpsCharacterSheet | undefined => {
+  return getCharacterById(match, characterId) as GurpsCharacterSheet | undefined;
+};
 
 export const handleMoveStep = async (
   socket: WebSocket,
@@ -176,7 +181,7 @@ export const handleUndoMovement = async (
     return;
   }
   
-  const actorCharacter = getCharacterById(match, actorCombatant.characterId);
+  const actorCharacter = asGurpsCharacter(match, actorCombatant.characterId);
   const basicMove = actorCharacter?.derived.basicMove ?? 5;
   
   const adapter = getServerAdapter(match.rulesetId ?? 'gurps');

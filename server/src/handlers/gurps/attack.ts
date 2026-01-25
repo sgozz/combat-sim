@@ -2,18 +2,18 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
-} from "../../../shared/types";
+} from "../../../../shared/types";
 import type {
   CombatActionPayload,
   PendingDefense,
   DefenseType,
   DamageType,
   Reach,
-} from "../../../shared/rulesets/gurps/types";
-import { isPf2Match, getServerAdapter } from "../../../shared/rulesets/serverAdapter";
-import { advanceTurn } from "../rulesetHelpers";
-import { state } from "../state";
-import { updateMatchState } from "../db";
+} from "../../../../shared/rulesets/gurps/types";
+import { isPf2Match, getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import { advanceTurn } from "../../rulesetHelpers";
+import { state } from "../../state";
+import { updateMatchState } from "../../db";
 import { 
   sendMessage, 
   sendToMatch, 
@@ -23,11 +23,11 @@ import {
   calculateFacing,
   findRetreatHex,
   checkVictory,
-} from "../helpers";
-import { scheduleBotTurn, chooseBotDefense } from "../bot";
-import { clearDefenseTimeout } from "../timers";
-import { formatRoll, applyDamageToTarget } from "./damage";
-import { handlePF2AttackAction } from "./pf2-attack";
+} from "../../helpers";
+import { scheduleBotTurn, chooseBotDefense } from "../../bot";
+import { clearDefenseTimeout } from "../../timers";
+import { formatRoll, applyDamageToTarget } from "../shared/damage";
+import { handlePF2AttackAction } from "../pf2/attack";
 
 const BOT_DEFENSE_DELAY_MS = 800;
 
@@ -366,9 +366,14 @@ export const handleAttackAction = async (
     return;
   }
   
+  if (!('equipment' in attackerCharacter) || !('attributes' in attackerCharacter)) {
+    sendMessage(socket, { type: "error", message: "Invalid character type for GURPS attack." });
+    return;
+  }
+  
   const readyWeapon = actorCombatant.equipped.find(e => e.ready && (e.slot === 'right_hand' || e.slot === 'left_hand'));
   const weapon = readyWeapon 
-    ? attackerCharacter.equipment.find(eq => eq.id === readyWeapon.equipmentId)
+    ? attackerCharacter.equipment.find((eq: { id: string }) => eq.id === readyWeapon.equipmentId)
     : attackerCharacter.equipment[0];
   
   if (!weapon) {
@@ -405,7 +410,8 @@ export const handleAttackAction = async (
   
   const deceptiveLevel = payload.deceptiveLevel ?? 0;
   const hitLocation = payload.hitLocation ?? 'torso';
-  const baseSkill = attackerCharacter.skills[0]?.level ?? attackerCharacter.attributes.dexterity;
+  const gurpsSkills = attackerCharacter.skills as Array<{ level?: number }>;
+  const baseSkill = gurpsSkills[0]?.level ?? attackerCharacter.attributes.dexterity;
   
   const skill = adapter.combat?.calculateEffectiveSkill?.({
     baseSkill,
