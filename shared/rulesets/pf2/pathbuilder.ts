@@ -117,46 +117,49 @@ export type PathbuilderLoreTuple = [string, number];
  * Character build from Pathbuilder export
  */
 export interface PathbuilderBuild {
-  name: string;
-  class: string;
-  dualClass?: string | null;
-  level: number;
-  ancestry: string;
-  heritage?: string;
-  background?: string;
-  alignment?: string;
-  gender?: string;
-  age?: string;
-  deity?: string;
-  size?: number;
-  sizeName?: string;
-  keyability?: string;
-  languages?: string[];
-  rituals?: unknown[];
-  resistances?: unknown[];
-  inventorMods?: unknown[];
-  attributes: {
-    ancestryhp: number;
-    classhp: number;
-    bonushp: number;
-    bonushpPerLevel: number;
-    speed: number;
-    speedBonus: number;
-  };
-  abilities: PathbuilderAbilities;
-  proficiencies: PathbuilderProficiencies;
-  mods?: Record<string, unknown>;
-  feats: PathbuilderFeatTuple[];
-  specials?: string[];
-  lores: PathbuilderLoreTuple[];
-  equipmentContainers?: Record<string, unknown>;
-  equipment?: unknown[];
-  weapons: PathbuilderWeapon[];
-  armor: PathbuilderArmor[];
-  acTotal: PathbuilderACTotal;
-  focus: Record<string, Record<string, PathbuilderFocusData>>;
-  spellCasters: unknown[];
-}
+   name: string;
+   class: string;
+   dualClass?: string | null;
+   level: number;
+   ancestry: string;
+   heritage?: string;
+   background?: string;
+   alignment?: string;
+   gender?: string;
+   age?: string;
+   deity?: string;
+   size?: number;
+   sizeName?: string;
+   keyability?: string;
+   languages?: string[];
+   rituals?: unknown[];
+   resistances?: unknown[];
+   inventorMods?: unknown[];
+   attributes: {
+     ancestryhp: number;
+     classhp: number;
+     bonushp: number;
+     bonushpPerLevel: number;
+     speed: number;
+     speedBonus: number;
+   };
+   abilities: PathbuilderAbilities;
+   proficiencies: PathbuilderProficiencies;
+   mods?: Record<string, unknown>;
+   feats: PathbuilderFeatTuple[];
+   specials?: string[];
+   lores: PathbuilderLoreTuple[];
+   equipmentContainers?: Record<string, unknown>;
+   equipment?: unknown[];
+   weapons: PathbuilderWeapon[];
+   armor: PathbuilderArmor[];
+   acTotal: PathbuilderACTotal;
+   focus: Record<string, Record<string, PathbuilderFocusData>>;
+   spellCasters: unknown[];
+   pets?: unknown[];
+   familiars?: unknown[];
+   formula?: unknown[];
+ }
 
 /**
  * Top-level Pathbuilder export response

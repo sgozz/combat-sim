@@ -1553,7 +1553,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 14. Create PathbuilderImporter service
+- [x] 14. Create PathbuilderImporter service
 
   **What to do**:
   - Create `src/services/pathbuilderImporter.ts`

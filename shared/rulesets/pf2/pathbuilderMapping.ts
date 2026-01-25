@@ -192,32 +192,46 @@ const mapSpells = (build: PathbuilderBuild): PF2SpellInfo | null => {
   };
 };
 
+export const collectWarnings = (build: PathbuilderBuild): string[] => {
+  const warnings: string[] = [];
+  if (build.pets && build.pets.length > 0) {
+    warnings.push('Pets not imported');
+  }
+  if (build.familiars && build.familiars.length > 0) {
+    warnings.push('Familiars not imported');
+  }
+  if (build.formula && build.formula.length > 0) {
+    warnings.push('Formulas not imported');
+  }
+  return warnings;
+};
+
 export const mapPathbuilderToCharacter = (data: PathbuilderExport): PF2CharacterSheet => {
-  const build = data.build;
-  const abilities = mapAbilities(build);
-  
-  return {
-    id: uuid(),
-    name: build.name,
-    level: build.level,
-    class: build.class,
-    ancestry: build.ancestry,
-    heritage: build.heritage ?? '',
-    background: build.background ?? '',
-    abilities,
-    derived: calculateDerivedStats(build),
-    classHP: build.attributes.classhp,
-    saveProficiencies: {
-      fortitude: mapProficiency(build.proficiencies.fortitude ?? 0),
-      reflex: mapProficiency(build.proficiencies.reflex ?? 0),
-      will: mapProficiency(build.proficiencies.will ?? 0),
-    },
-    perceptionProficiency: mapProficiency(build.proficiencies.perception ?? 0),
-    armorProficiency: mapProficiency(build.proficiencies[build.armor.find(a => a.worn)?.prof ?? 'unarmored'] ?? 0),
-    skills: mapSkills(build.proficiencies, build.lores),
-    weapons: mapWeapons(build.weapons),
-    armor: mapArmor(build.armor),
-    feats: mapFeats(build.feats),
-    spells: mapSpells(build),
-  };
+   const build = data.build;
+   const abilities = mapAbilities(build);
+   
+   return {
+     id: uuid(),
+     name: build.name,
+     level: build.level,
+     class: build.class,
+     ancestry: build.ancestry,
+     heritage: build.heritage ?? '',
+     background: build.background ?? '',
+     abilities,
+     derived: calculateDerivedStats(build),
+     classHP: build.attributes.classhp,
+     saveProficiencies: {
+       fortitude: mapProficiency(build.proficiencies.fortitude ?? 0),
+       reflex: mapProficiency(build.proficiencies.reflex ?? 0),
+       will: mapProficiency(build.proficiencies.will ?? 0),
+     },
+     perceptionProficiency: mapProficiency(build.proficiencies.perception ?? 0),
+     armorProficiency: mapProficiency(build.proficiencies[build.armor.find(a => a.worn)?.prof ?? 'unarmored'] ?? 0),
+     skills: mapSkills(build.proficiencies, build.lores),
+     weapons: mapWeapons(build.weapons),
+     armor: mapArmor(build.armor),
+     feats: mapFeats(build.feats),
+     spells: mapSpells(build),
+   };
 };
