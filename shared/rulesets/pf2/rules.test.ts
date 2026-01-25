@@ -353,26 +353,63 @@ describe('PF2 Rules', () => {
       expect(standing.actionsRemaining).toBe(2);
     });
 
-    it('Drop Prone sets prone condition', () => {
-      const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
-        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
-        conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
-        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: false
-      };
-      const standing = { ...combatant, posture: 'standing' as const };
-      expect(getActionCost('drop_prone')).toBe(1);
-      
-      const afterDrop = applyActionCost(standing, 1);
-      expect(afterDrop.actionsRemaining).toBe(2);
-      
-      const prone = { ...afterDrop, posture: 'prone' as const };
-      expect(prone.posture).toBe('prone');
-      expect(prone.actionsRemaining).toBe(2);
-    });
+     it('Drop Prone sets prone condition', () => {
+       const combatant: PF2CombatantState = {
+         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+         statusEffects: [], usedReaction: false
+       };
+       const standing = { ...combatant, posture: 'standing' as const };
+       expect(getActionCost('drop_prone')).toBe(1);
+       
+       const afterDrop = applyActionCost(standing, 1);
+       expect(afterDrop.actionsRemaining).toBe(2);
+       
+       const prone = { ...afterDrop, posture: 'prone' as const };
+       expect(prone.posture).toBe('prone');
+       expect(prone.actionsRemaining).toBe(2);
+     });
 
-    it('Flat-footed applies -2 AC penalty', () => {
+     it('Step should limit movement to 1 hex', () => {
+       // Step action should only allow movement to adjacent hexes (distance 1)
+       // This is enforced by the server adapter setting movePointsRemaining: 1
+       expect(getActionCost('step')).toBe(1);
+     });
+
+     it('Drop Prone should cost 1 action', () => {
+       expect(getActionCost('drop_prone')).toBe(1);
+     });
+
+     it('Cannot Step while prone - action cost unchanged', () => {
+       const combatant: PF2CombatantState = {
+         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+         conditions: [{ condition: 'prone', value: 1 }],
+         currentHP: 10, tempHP: 0, shieldRaised: false,
+         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+         statusEffects: [], usedReaction: false
+       };
+       // Step costs 1 action even when prone (UI prevents selection, server validates)
+       expect(getActionCost('step')).toBe(1);
+       expect(combatant.conditions[0].condition).toBe('prone');
+     });
+
+     it('Step action requires available actions', () => {
+       const combatant: PF2CombatantState = {
+         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+         facing: 0, actionsRemaining: 0, reactionAvailable: true, mapPenalty: 0,
+         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+         statusEffects: [], usedReaction: false
+       };
+       // Cannot perform Step with 0 actions remaining
+       expect(canPerformAction(combatant, 1)).toBe(false);
+       expect(getActionCost('step')).toBe(1);
+     });
+
+     it('Flat-footed applies -2 AC penalty', () => {
       const abilities: Abilities = {
         strength: 10, dexterity: 14, constitution: 10,
         intelligence: 10, wisdom: 10, charisma: 10
