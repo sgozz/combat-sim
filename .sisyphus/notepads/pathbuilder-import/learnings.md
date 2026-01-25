@@ -437,3 +437,17 @@ pf2CalculateDerivedStats(
 ### Next Steps
 
 - Task 9: Update UI components (GurpsCharacterEditor, GurpsGameActionPanel, etc.) to use type guards
+
+
+## [2026-01-25T17:04:03+01:00] Task 9: Update PF2 UI Components
+
+**Files Updated:**
+- PF2CharacterEditor.tsx: Changed attributes → abilities, dodge → armorClass, basicMove → speed/5, advantages → feats, equipment → weapons
+- PF2GameStatusPanel.tsx: Same field updates
+- PF2ActionBar.tsx: Same field updates  
+- FloatingStatus.tsx: Added conditional FP bar rendering with isGurpsCharacter guard
+
+**Key Pattern:**
+All PF2 components now use native PF2CharacterSheet fields. Type assertions used at component entry to narrow CharacterSheet union to PF2CharacterSheet.
+
+**Errors Reduced:** 109 → 97 (12 errors fixed)

@@ -86,45 +86,45 @@ export const PF2GameStatusPanel = ({
           <div className="attributes-grid pf2-abilities">
             <div className="attr-item">
               <span className="attr-label">STR</span>
-              <span className="attr-value">{character.attributes.strength}</span>
+              <span className="attr-value">{character.abilities.strength}</span>
             </div>
             <div className="attr-item">
               <span className="attr-label">DEX</span>
-              <span className="attr-value">{character.attributes.dexterity}</span>
+              <span className="attr-value">{character.abilities.dexterity}</span>
             </div>
             <div className="attr-item">
               <span className="attr-label">CON</span>
-              <span className="attr-value">{character.attributes.health}</span>
+              <span className="attr-value">{character.abilities.constitution}</span>
             </div>
             <div className="attr-item">
               <span className="attr-label">INT</span>
-              <span className="attr-value">{character.attributes.intelligence}</span>
+              <span className="attr-value">{character.abilities.intelligence}</span>
             </div>
             <div className="attr-item">
               <span className="attr-label">WIS</span>
-              <span className="attr-value">{character.attributes.wisdom ?? 10}</span>
+              <span className="attr-value">{character.abilities.wisdom ?? 10}</span>
             </div>
             <div className="attr-item">
               <span className="attr-label">CHA</span>
-              <span className="attr-value">{character.attributes.charisma ?? 10}</span>
+              <span className="attr-value">{character.abilities.charisma ?? 10}</span>
             </div>
           </div>
           <div className="derived-stats pf2-derived">
-            <span>AC: {character.derived.dodge}</span>
-            <span>Speed: {character.derived.basicMove * 5} ft</span>
+            <span>AC: {character.derived.armorClass}</span>
+            <span>Speed: {character.derived.speed} ft</span>
           </div>
         </div>
 
         <div className="card">
           <h3>Weapons</h3>
           <div className="pf2-weapons-list">
-            {character.equipment.filter(e => e.type === 'melee' || e.type === 'ranged').map(weapon => (
+            {character.weapons.map(weapon => (
               <div key={weapon.id} className="pf2-weapon-item">
                 <span className="weapon-name">{weapon.name}</span>
                 <span className="weapon-damage">{weapon.damage}</span>
               </div>
             ))}
-            {character.equipment.filter(e => e.type === 'melee' || e.type === 'ranged').length === 0 && (
+            {character.weapons.length === 0 && (
               <div className="empty-list">Unarmed</div>
             )}
           </div>
@@ -137,7 +137,7 @@ export const PF2GameStatusPanel = ({
               {character.skills.map(skill => (
                 <div key={skill.id} className="skill-item">
                   <span className="skill-name">{skill.name}</span>
-                  <span className="skill-level">+{skill.level}</span>
+                  <span className="skill-level">+{skill.proficiency}</span>
                 </div>
               ))}
             </div>

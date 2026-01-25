@@ -1,8 +1,10 @@
 import { Tooltip } from '../../ui/Tooltip'
 import type { CharacterEditorProps } from '../types'
 import { useCharacterEditor } from '../useCharacterEditor'
+import type { PF2CharacterSheet } from '../../../../shared/rulesets/pf2/types'
 
 export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }: CharacterEditorProps) => {
+  const pf2Character = character as PF2CharacterSheet
   const {
     templateNames,
     selectedClass,
@@ -47,8 +49,8 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
           <input
             type="text"
             className="char-input"
-            value={character.name}
-            onChange={(e) => setCharacter({ ...character, name: e.target.value })}
+            value={pf2Character.name}
+            onChange={(e) => setCharacter({ ...pf2Character, name: e.target.value })}
           />
         </div>
 
@@ -58,7 +60,7 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
             {([
               { key: 'strength', label: 'STR' },
               { key: 'dexterity', label: 'DEX' },
-              { key: 'health', label: 'CON' },
+              { key: 'constitution', label: 'CON' },
               { key: 'intelligence', label: 'INT' },
               { key: 'wisdom', label: 'WIS' },
               { key: 'charisma', label: 'CHA' },
@@ -66,7 +68,7 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
               <div key={key} className="attr-row">
                 <span className="attr-name">{label}</span>
                 <button className="attr-btn" onClick={() => updateAttribute(key, -1)}>-</button>
-                <span className="attr-value">{character.attributes[key] ?? 10}</span>
+                <span className="attr-value">{pf2Character.abilities[key] ?? 10}</span>
                 <button className="attr-btn" onClick={() => updateAttribute(key, 1)}>+</button>
               </div>
             ))}
@@ -78,15 +80,15 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
           <div className="derived-grid pf2-derived-grid">
             <div className="derived-item pf2-stat">
               <span className="stat-label">HP</span>
-              <span className="stat-value">{character.derived.hitPoints}</span>
+              <span className="stat-value">{pf2Character.derived.hitPoints}</span>
             </div>
             <div className="derived-item pf2-stat">
               <span className="stat-label">AC</span>
-              <span className="stat-value">{character.derived.dodge}</span>
+              <span className="stat-value">{pf2Character.derived.armorClass}</span>
             </div>
             <div className="derived-item pf2-stat">
               <span className="stat-label">Speed</span>
-              <span className="stat-value">{character.derived.basicMove * 5} ft</span>
+              <span className="stat-value">{pf2Character.derived.speed / 5} hexes</span>
             </div>
           </div>
         </div>
@@ -97,10 +99,10 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
             <button className="add-btn" onClick={addAdvantage}>+ Add</button>
           </label>
           <div className="list-items">
-            {character.advantages.length === 0 ? (
+            {pf2Character.feats.length === 0 ? (
               <div className="empty-list">No feats added</div>
             ) : (
-              character.advantages.map((feat) => (
+              pf2Character.feats.map((feat) => (
                 <div key={feat.id} className="list-item">
                   <span>{feat.name}{feat.description ? ` (${feat.description})` : ''}</span>
                   <button className="remove-btn" onClick={() => removeAdvantage(feat.id)}>x</button>
@@ -116,13 +118,13 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
             <button className="add-btn" onClick={addSkill}>+ Add</button>
           </label>
           <div className="list-items">
-            {character.skills.length === 0 ? (
+            {pf2Character.skills.length === 0 ? (
               <div className="empty-list">No skills added</div>
             ) : (
-              character.skills.map((skill) => (
+              pf2Character.skills.map((skill) => (
                 <div key={skill.id} className="list-item">
                   <Tooltip content="Skill bonus added to d20 rolls." position="right">
-                    <span>{skill.name} (+{skill.level})</span>
+                    <span>{skill.name} (+{skill.proficiency})</span>
                   </Tooltip>
                   <button className="remove-btn" onClick={() => removeSkill(skill.id)}>x</button>
                 </div>
@@ -137,10 +139,10 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
             <button className="add-btn" onClick={addEquipment}>+ Add</button>
           </label>
           <div className="list-items">
-            {character.equipment.length === 0 ? (
+            {pf2Character.weapons.length === 0 ? (
               <div className="empty-list">No weapons added</div>
             ) : (
-              character.equipment.map((equip) => (
+              pf2Character.weapons.map((equip) => (
                 <div key={equip.id} className="list-item">
                   <Tooltip content={`Damage: ${equip.damage}`} position="right">
                     <span>{equip.name} ({equip.damage})</span>

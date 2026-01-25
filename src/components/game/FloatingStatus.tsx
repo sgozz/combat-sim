@@ -1,4 +1,5 @@
 import type { CharacterSheet } from '../../../shared/types'
+import { isGurpsCharacter } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets/gurps/types'
 
 type FloatingStatusProps = {
@@ -10,7 +11,9 @@ export const FloatingStatus = ({ combatant, character }: FloatingStatusProps) =>
   if (!combatant || !character) return null
 
   const hpPercent = Math.max(0, (combatant.currentHP / character.derived.hitPoints) * 100)
-  const fpPercent = Math.max(0, (combatant.currentFP / character.derived.fatiguePoints) * 100)
+  const fpPercent = isGurpsCharacter(character) 
+    ? Math.max(0, (combatant.currentFP / character.derived.fatiguePoints) * 100)
+    : 0
 
   let hpColor = '#4f4'
   if (hpPercent <= 20) hpColor = '#f44'
@@ -31,16 +34,18 @@ export const FloatingStatus = ({ combatant, character }: FloatingStatusProps) =>
         <span className="status-value">{combatant.currentHP}/{character.derived.hitPoints}</span>
       </div>
       
-      <div className="status-bar-row">
-        <span className="status-label">FP</span>
-        <div className="status-bar-track">
-          <div 
-            className="status-bar-fill fp" 
-            style={{ width: `${fpPercent}%` }}
-          />
+      {isGurpsCharacter(character) && (
+        <div className="status-bar-row">
+          <span className="status-label">FP</span>
+          <div className="status-bar-track">
+            <div 
+              className="status-bar-fill fp" 
+              style={{ width: `${fpPercent}%` }}
+            />
+          </div>
+          <span className="status-value">{combatant.currentFP}/{character.derived.fatiguePoints}</span>
         </div>
-        <span className="status-value">{combatant.currentFP}/{character.derived.fatiguePoints}</span>
-      </div>
+      )}
 
       {combatant.statusEffects.length > 0 && (
         <div className="status-effects">

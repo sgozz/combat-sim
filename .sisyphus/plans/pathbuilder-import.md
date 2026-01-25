@@ -1013,7 +1013,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 9. Update PF2 UI components + FloatingStatus
+- [x] 9. Update PF2 UI components + FloatingStatus
 
   **What to do**:
   
