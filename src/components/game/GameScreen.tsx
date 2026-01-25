@@ -4,6 +4,7 @@ import { ArenaScene } from '../arena/ArenaScene'
 import { TurnStepper } from './TurnStepper'
 
 import { getRulesetComponents } from '../rulesets'
+import { assertRulesetId } from '../../../shared/rulesets/defaults'
 import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
@@ -134,7 +135,7 @@ export const GameScreen = ({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  const rulesetId = matchState?.rulesetId ?? 'gurps'
+  const rulesetId = assertRulesetId(matchState?.rulesetId)
   const { GameStatusPanel, GameActionPanel, ActionBar } = useMemo(
     () => getRulesetComponents(rulesetId),
     [rulesetId]
@@ -245,7 +246,7 @@ export const GameScreen = ({
             reachableHexes={matchState?.reachableHexes ?? []}
             visualEffects={visualEffects}
             cameraMode={cameraMode}
-            rulesetId={matchState?.rulesetId ?? 'gurps'}
+            rulesetId={assertRulesetId(matchState?.rulesetId)}
             onGridClick={onGridClick}
             onCombatantClick={onCombatantClick}
           />

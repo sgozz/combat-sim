@@ -1,5 +1,6 @@
 import { Fragment, createElement } from 'react';
 import type { ReactNode } from 'react';
+import { assertRulesetId } from '../../../../shared/rulesets/defaults';
 import type { MatchState, Player, RulesetId, CharacterSheet } from '../../../../shared/types';
 import type { CombatActionPayload, ManeuverType, HitLocation, DefenseChoice, PendingDefense, CombatantState } from '../../../../shared/rulesets/gurps/types';
 import HitLocationPicker from '../../rulesets/gurps/HitLocationPicker';
@@ -223,5 +224,5 @@ const rulesetUiSlots: Record<RulesetId, RulesetUiSlots> = {
 };
 
 export const getRulesetUiSlots = (rulesetId?: RulesetId): RulesetUiSlots => {
-  return rulesetUiSlots[rulesetId ?? 'gurps'] ?? rulesetUiSlots.gurps;
+  return rulesetUiSlots[assertRulesetId(rulesetId)] ?? rulesetUiSlots.gurps;
 };

@@ -6,7 +6,7 @@ import { WelcomeScreen } from './components/WelcomeScreen'
 import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { getRulesetComponents } from './components/rulesets'
-
+import { assertRulesetId } from '../shared/rulesets/defaults'
 
 import type { GridPosition, CharacterSheet, RulesetId, PF2CharacterSheet, GurpsCharacterSheet } from '../shared/types'
 import type { CombatActionPayload } from '../shared/rulesets/gurps/types'
@@ -315,16 +315,16 @@ function AppRoutes() {
                 }
               }}
                onOpenCharacterEditor={() => {
-                 const rulesetId = matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'
-                 setEditingCharacter(createDefaultCharacter(rulesetId, user?.username ?? 'New Character'))
-                 setShowCharacterModal(true)
-               }}
+                  const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
+                  setEditingCharacter(createDefaultCharacter(rulesetId, user?.username ?? 'New Character'))
+                  setShowCharacterModal(true)
+                }}
               inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}
             />
             
-            {showCharacterModal && (() => {
-               const rulesetId = matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'
-               const { CharacterEditor } = getRulesetComponents(rulesetId)
+             {showCharacterModal && (() => {
+                const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
+                const { CharacterEditor } = getRulesetComponents(rulesetId)
                return (
                  <CharacterEditor 
                    character={editingCharacter || createDefaultCharacter(rulesetId, user?.username ?? 'New Character')}

@@ -295,7 +295,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: All modified server files
   - Pre-commit: `npx vitest run`
 
-- [ ] 2.3. Replace client defaults with assertion
+- [x] 2.3. Replace client defaults with assertion
 
   **What to do**:
   - Update `src/App.tsx`: Replace `?? 'gurps'` with proper type narrowing
