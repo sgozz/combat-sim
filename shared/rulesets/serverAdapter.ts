@@ -206,10 +206,11 @@ export type PF2Domain = {
  * Each ruleset must implement this to handle game state transitions.
  */
 export type ServerRulesetAdapter = {
-  id: RulesetId;
-  gridSystem: GridSystem;
-  /** Advances the match state to the next turn. */
-  advanceTurn: (state: MatchState) => MatchState;
+   id: RulesetId;
+   gridSystem: GridSystem;
+   hasFacingArcs: boolean;
+   /** Advances the match state to the next turn. */
+   advanceTurn: (state: MatchState) => MatchState;
   /** Initializes movement state at the start of a turn. */
   initializeTurnMovement: (
     position: HexCoord,
@@ -782,9 +783,10 @@ const gurpsCloseCombatDomain: CloseCombatDomain = {
 };
 
 const gurpsAdapter: ServerRulesetAdapter = {
-  id: 'gurps',
-  gridSystem: hexGrid,
-  advanceTurn: gurpsAdvanceTurn,
+   id: 'gurps',
+   gridSystem: hexGrid,
+   hasFacingArcs: true,
+   advanceTurn: gurpsAdvanceTurn,
   initializeTurnMovement: gurpsInitializeTurnMovement,
   calculateReachableHexesInfo: gurpsCalculateReachableHexesInfo,
   gridToHex: gurpsGridToHex,
@@ -826,9 +828,10 @@ const gurpsAdapter: ServerRulesetAdapter = {
 };
 
 const pf2Adapter: ServerRulesetAdapter = {
-   id: 'pf2',
-   gridSystem: squareGrid8,
-   advanceTurn: pf2AdvanceTurn,
+    id: 'pf2',
+    gridSystem: squareGrid8,
+    hasFacingArcs: false,
+    advanceTurn: pf2AdvanceTurn,
    initializeTurnMovement: (position, facing, maneuver, basicMove, _posture) => {
      const movePoints = maneuver === 'pf2_step' ? 1 : basicMove;
      return pf2InitializeTurnMovement(position, facing, movePoints);

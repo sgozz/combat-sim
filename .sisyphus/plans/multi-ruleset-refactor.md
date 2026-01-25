@@ -389,7 +389,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `shared/rulesets/index.ts`, test file
   - Pre-commit: `npx vitest run`
 
-- [ ] 3.2. Replace grid conditionals in ArenaScene
+- [x] 3.2. Replace grid conditionals in ArenaScene
 
   **What to do**:
   - Update `src/components/arena/ArenaScene.tsx`
@@ -417,7 +417,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `src/components/arena/ArenaScene.tsx`
   - Pre-commit: `npx vitest run`
 
-- [ ] 3.3. Replace grid conditional in MiniMap
+- [x] 3.3. Replace grid conditional in MiniMap
 
   **What to do**:
   - Update `src/components/game/MiniMap.tsx`
@@ -441,7 +441,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `src/components/game/MiniMap.tsx`
   - Pre-commit: `npx vitest run`
 
-- [ ] 3.4. Move facing arcs logic to adapter
+- [x] 3.4. Move facing arcs logic to adapter
 
   **What to do**:
   - Add `hasFacingArcs: boolean` to `ServerRulesetAdapter` interface or use existing pattern

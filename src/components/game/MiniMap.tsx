@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { GridType } from '../../../shared/grid'
 import type { MatchState } from '../../../shared/types'
+import { getGridType } from '../../../shared/rulesets'
 
 type MiniMapProps = {
   matchState: MatchState | null
@@ -71,7 +72,7 @@ function getSquarePoints(x: number, y: number, size: number) {
 }
 
 export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
-  const gridType: GridType = matchState?.rulesetId === 'pf2' ? 'square' : 'hex'
+  const gridType: GridType = matchState ? getGridType(matchState.rulesetId) : 'hex'
   const toPixel = gridType === 'hex' ? hexToPixel : squareToPixel
   
   const gridCells = useMemo(() => {

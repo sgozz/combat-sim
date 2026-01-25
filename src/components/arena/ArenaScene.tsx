@@ -8,6 +8,7 @@ import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets/gurps/types'
 import { isPF2Character, isGurpsCharacter } from '../../../shared/rulesets/characterSheet'
+import { getGridType, getServerAdapter } from '../../../shared/rulesets'
 import { useMemo, useState, useEffect } from 'react'
 
 type ArenaSceneProps = {
@@ -27,7 +28,7 @@ type ArenaSceneProps = {
 }
 
 const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: RulesetId }) => {
-  const gridSystem = rulesetId === 'pf2' ? squareGrid8 : hexGrid
+  const gridSystem = getGridType(rulesetId) === 'square' ? squareGrid8 : hexGrid
   const worldPos = gridSystem.coordToWorld({ q: effect.position.x, r: effect.position.z })
   
   let content = ''
@@ -119,10 +120,10 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     return maxRange
   }, [playerCombatant, characters])
 
-  const facingArcs = useMemo(() => {
-    const emptyArcs = { front: [], side: [], rear: [] }
-    if (!playerCombatant?.position) return emptyArcs
-    if (rulesetId === 'pf2') return emptyArcs
+   const facingArcs = useMemo(() => {
+     const emptyArcs = { front: [], side: [], rear: [] }
+     if (!playerCombatant?.position) return emptyArcs
+     if (!getServerAdapter(rulesetId).hasFacingArcs) return emptyArcs
     
     const { x: q, z: r } = playerCombatant.position
     const f = playerCombatant.facing ?? 0
@@ -148,7 +149,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
       <pointLight position={[10, 10, 10]} intensity={1} />
       
       <BattleGrid 
-        gridType={rulesetId === 'pf2' ? 'square' : 'hex'}
+        gridType={getGridType(rulesetId)}
         radius={10} 
         playerPosition={isPlayerTurn ? playerPosition : null}
         attackRange={attackRange}
@@ -168,15 +169,15 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         }}
       />
       
-      {combatants.map((combatant) => (
-        <Combatant
-          key={combatant.playerId}
-          combatant={combatant}
-          character={characters.find(c => c.id === combatant.characterId)}
-          isPlayer={combatant.playerId === playerId}
-          isSelected={combatant.playerId === selectedTargetId}
-          visualEffects={visualEffects}
-          gridType={rulesetId === 'pf2' ? 'square' : 'hex'}
+       {combatants.map((combatant) => (
+         <Combatant
+           key={combatant.playerId}
+           combatant={combatant}
+           character={characters.find(c => c.id === combatant.characterId)}
+           isPlayer={combatant.playerId === playerId}
+           isSelected={combatant.playerId === selectedTargetId}
+           visualEffects={visualEffects}
+           gridType={getGridType(rulesetId)}
           onClick={() => onCombatantClick(combatant.playerId)}
         />
       ))}
@@ -185,7 +186,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         <FloatingText key={effect.id} effect={effect} rulesetId={rulesetId} />
       ))}
 
-      {moveTarget && <MoveMarker position={moveTarget} gridType={rulesetId === 'pf2' ? 'square' : 'hex'} />}
+       {moveTarget && <MoveMarker position={moveTarget} gridType={getGridType(rulesetId)} />}
 
       <CameraControls targetPosition={activeCombatantPosition} focusPositions={focusPositions} mode={cameraMode} />
       <OrbitControls makeDefault />

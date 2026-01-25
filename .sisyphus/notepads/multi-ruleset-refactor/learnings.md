@@ -354,3 +354,57 @@ Added database migration to ensure all loaded matches have valid rulesetId value
 - Phase 2 complete (all defaults replaced with assertRulesetId)
 - Task 3.1 complete (grid type helper ready)
 - Unblocks Tasks 3.2-3.4 (grid conditional replacements can now use this helper)
+
+## Task 3.3: MiniMap.tsx Grid Type Refactor (COMPLETED)
+
+**Change**: Replaced hardcoded `matchState?.rulesetId === 'pf2' ? 'square' : 'hex'` with `getGridType()` helper.
+
+**File**: `src/components/game/MiniMap.tsx`
+- Line 4: Added import `import { getGridType } from '../../../shared/rulesets'`
+- Line 75: Changed `matchState?.rulesetId === 'pf2' ? 'square' : 'hex'` → `matchState ? getGridType(matchState.rulesetId) : 'hex'`
+
+**Verification**:
+- ✅ Grep check: `grep "=== 'pf2'" src/components/game/MiniMap.tsx` → 0 results
+- ✅ Tests: All 356 tests pass
+- ✅ Build: No MiniMap-specific TypeScript errors
+- ✅ No changes to component logic or rendering
+
+**Pattern**: Centralized grid type determination through `getGridType()` helper, enabling consistent ruleset-to-grid mapping across the codebase.
+
+## Task 3.2: ArenaScene.tsx Grid Type Refactor (COMPLETED)
+
+**Change**: Replaced all 4 hardcoded `rulesetId === 'pf2' ? 'square' : 'hex'` conditionals with `getGridType()` helper.
+
+**File**: `src/components/arena/ArenaScene.tsx`
+- Line 11: Added import `import { getGridType } from '../../../shared/rulesets'`
+- Line 31: Changed `rulesetId === 'pf2' ? squareGrid8 : hexGrid` → `getGridType(rulesetId) === 'square' ? squareGrid8 : hexGrid`
+- Line 152: Changed `gridType={rulesetId === 'pf2' ? 'square' : 'hex'}` → `gridType={getGridType(rulesetId)}`
+- Line 180: Changed `gridType={rulesetId === 'pf2' ? 'square' : 'hex'}` → `gridType={getGridType(rulesetId)}`
+- Line 189: Changed `gridType={rulesetId === 'pf2' ? 'square' : 'hex'}` → `gridType={getGridType(rulesetId)}`
+
+**Verification**:
+- ✅ Grep check: `grep "=== 'pf2'" src/components/arena/ArenaScene.tsx | grep -v "facing"` → 0 results (only line 125 facing arcs remains, as expected for Task 3.4)
+- ✅ Tests: All 356 tests pass
+- ✅ Build: No ArenaScene-specific TypeScript errors
+- ✅ No changes to 3D rendering logic, camera, or lighting
+
+**Pattern**: Centralized grid type determination through `getGridType()` helper in ArenaScene component, enabling consistent ruleset-to-grid mapping for BattleGrid, Combatant, and MoveMarker components.
+
+**Note**: Line 125 (facing arcs conditional) intentionally left unchanged - that's Task 3.4.
+
+## Task 3.4: Facing Arcs Visibility Logic (COMPLETED)
+
+**Pattern**: Moved ruleset-specific UI visibility logic from inline conditional to adapter property.
+
+**Implementation**:
+- Added `hasFacingArcs: boolean` to `ServerRulesetAdapter` interface
+- Set `hasFacingArcs: true` in gurpsAdapter (GURPS shows facing arcs)
+- Set `hasFacingArcs: false` in pf2Adapter (PF2 hides facing arcs)
+- Updated ArenaScene.tsx line 126: `if (!getServerAdapter(rulesetId).hasFacingArcs) return emptyArcs`
+
+**Verification**:
+- grep "=== 'pf2'" src/components/arena/ArenaScene.tsx → 0 results ✓
+- All 356 tests pass ✓
+- Facing arcs show for GURPS, hidden for PF2 ✓
+
+**Key Learning**: This pattern (adapter property for UI visibility) is cleaner than hardcoded rulesetId checks and scales well for future rulesets. Consider using for other UI toggles (e.g., posture system, maneuver variants).
