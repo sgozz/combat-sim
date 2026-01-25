@@ -6,6 +6,7 @@ import { state } from "./state";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { getRulesetServerFactory } from "./rulesets";
 import { getMatchMembers, findUserById, loadCharacterById } from "./db";
+import { assertRulesetId } from "../../shared/rulesets/defaults";
 
 export const createMatchState = async (
   matchId: string,
@@ -32,7 +33,7 @@ export const createMatchState = async (
     }
     
      if (!character) {
-       const factory = getRulesetServerFactory(rulesetId ?? 'gurps');
+       const factory = getRulesetServerFactory(assertRulesetId(rulesetId));
        character = factory.createDefaultCharacter(user.username);
      }
     
@@ -60,7 +61,7 @@ export const createMatchState = async (
      const finalR = r + (Math.random() < 0.5 ? 0 : 1);
      const position = { x: finalQ, y: 0, z: finalR };
      
-     const factory = getRulesetServerFactory(rulesetId ?? 'gurps');
+     const factory = getRulesetServerFactory(assertRulesetId(rulesetId));
      return factory.createCombatant(character, player?.id ?? character.id, position, facing);
    });
 

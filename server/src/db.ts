@@ -1,9 +1,10 @@
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import type { CharacterSheet, MatchState, User, MatchSummary } from "../../shared/types";
+import type { CharacterSheet, MatchState, User, MatchSummary, RulesetId } from "../../shared/types";
 import type { BetterSqliteDatabase, CharacterRow, MatchRow, MatchMemberRow, UserRow, SessionRow } from "./types";
 import { state } from "./state";
+import { assertRulesetId } from "../../shared/rulesets/defaults";
 
 const DB_PATH = path.join(process.cwd(), "data.sqlite");
 
@@ -301,7 +302,7 @@ export const buildMatchSummary = (matchRow: MatchRow, forUserId: string): MatchS
     creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
-    rulesetId: (matchRow.ruleset_id ?? 'gurps') as MatchSummary['rulesetId'],
+    rulesetId: assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined),
     status: matchRow.status as MatchSummary["status"],
     players,
     isMyTurn: activeTurnPlayerId === forUserId,
@@ -379,7 +380,7 @@ export const buildPublicMatchSummary = (matchRow: MatchRow): MatchSummary => {
     creatorId: matchRow.created_by,
     playerCount: members.length,
     maxPlayers: matchRow.max_players,
-    rulesetId: (matchRow.ruleset_id ?? 'gurps') as MatchSummary['rulesetId'],
+    rulesetId: assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined),
     status: matchRow.status as MatchSummary['status'],
     players,
     isMyTurn: false,

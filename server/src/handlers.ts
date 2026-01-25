@@ -5,10 +5,12 @@ import type {
   Player,
   HexCoord,
   User,
+  RulesetId,
 } from "../../shared/types";
 import type { CombatActionPayload } from "../../shared/rulesets/gurps/types";
 
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
+import { assertRulesetId } from "../../shared/rulesets/defaults";
 import { advanceTurn } from "./rulesetHelpers";
 import { state } from "./state";
 import { 
@@ -353,7 +355,7 @@ export const handleMessage = async (
         return;
       }
       
-      const rulesetId = (matchRow.ruleset_id ?? 'gurps') as MatchState['rulesetId'];
+      const rulesetId = assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined);
       const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, rulesetId);
       state.matches.set(message.matchId, matchState);
       await updateMatchState(message.matchId, matchState);
@@ -572,7 +574,7 @@ const handleCombatAction = async (
     logMsg += '.';
     
     const actorCharacter = getCharacterById(match, actorCombatant.characterId);
-    const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+    const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
     
     let basicMove = 5;
     if (actorCharacter && 'attributes' in actorCharacter && 'equipment' in actorCharacter) {
@@ -783,8 +785,8 @@ const handleCombatAction = async (
        return;
      }
      
-     const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
-     const isFreeChange = adapter.canChangePostureFree!(oldPosture, newPosture);
+      const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
+      const isFreeChange = adapter.canChangePostureFree!(oldPosture, newPosture);
     
     if (!isFreeChange && actorCombatant.maneuver !== 'change_posture') {
       sendMessage(socket, { type: "error", message: `Changing from ${oldPosture} to ${newPosture} requires Change Posture maneuver.` });
@@ -840,9 +842,9 @@ const handleCombatAction = async (
        return;
      }
      
-     const distance = calculateHexDistance(actorCombatant.position, payload.position);
-     const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
-     const postureMods = adapter.getPostureModifiers!(actorCombatant.posture);
+      const distance = calculateHexDistance(actorCombatant.position, payload.position);
+      const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
+      const postureMods = adapter.getPostureModifiers!(actorCombatant.posture);
      
      const gurpsDerived = actorCharacter.derived as { basicMove?: number };
      const basicMoveVal = gurpsDerived.basicMove ?? 5;

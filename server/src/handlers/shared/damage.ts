@@ -1,5 +1,6 @@
 import type {
   MatchState,
+  RulesetId,
 } from "../../../../shared/types";
 import { isGurpsCharacter } from "../../../../shared/types";
 import type {
@@ -7,6 +8,7 @@ import type {
   CombatantState,
 } from "../../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import { assertRulesetId } from "../../../../shared/rulesets/defaults";
 
 export type ApplyDamageResult = {
   updatedCombatants: CombatantState[];
@@ -33,7 +35,7 @@ export const applyDamageToTarget = (
   damageRolls: number[],
   damageModifier: number,
 ): ApplyDamageResult => {
-  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+  const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
   const targetCombatant = match.combatants.find(c => c.playerId === targetPlayerId);
   const targetCharacter = match.characters.find(c => c.id === targetCombatant?.characterId);
   

@@ -1,0 +1,248 @@
+# Learnings
+
+## 2026-01-25T19:17:30Z Task: 0.1 baseline
+- `npx vitest run`: PASS (7 files, 335 tests)
+- `npm run build`: FAIL (TypeScript union-type access errors; key files: `src/components/game/shared/useGameActions.ts`, `src/components/rulesets/gurps/*`, `src/components/rulesets/pf2/*`, `src/data/characterTemplates.ts`, `src/components/arena/Combatant.tsx`)
+- `npm run lint`: FAIL (67 errors across server/shared/src; includes unused vars, `no-empty`, `no-explicit-any`, `react-hooks/set-state-in-effect`)
+- Pattern counts (excluding node_modules/dist/.git via script):
+  - `?? 'gurps'`: 22
+  - `=== 'pf2'` (scoped to `src/` + `server/src/handlers.ts`): 10
+
+## 2026-01-25: Vitest Adapter Registry & TypeScript Assertion Patterns
+
+### Vitest Adapter Registry Test Patterns
+
+**Core Test Cases for `getAdapter(id)`:**
+```typescript
+import { expect, test, describe } from 'vitest'
+
+describe('Adapter Registry', () => {
+  test('returns correct implementation for valid ID', () => {
+    const adapter = getAdapter('gurps')
+    expect(adapter).toBeDefined()
+    expect(adapter.combat).toBeDefined()
+    expect(adapter.damage).toBeDefined()
+  })
+
+  test('throws for unknown adapter ID', () => {
+    expect(() => getAdapter('unknown')).toThrow(/adapter.*not found/i)
+  })
+
+  test('returns different instances for different IDs', () => {
+    const gurps = getAdapter('gurps')
+    const pf2 = getAdapter('pf2')
+    expect(gurps).not.toBe(pf2)
+  })
+
+  test('caches same instance for repeated calls', () => {
+    const adapter1 = getAdapter('gurps')
+    const adapter2 = getAdapter('gurps')
+    expect(adapter1).toBe(adapter2)
+  })
+})
+```
+
+**Asymmetric Matcher Patterns (from Vitest docs):**
+```typescript
+// Partial object matching for complex adapters
+expect(getAdapter('gurps')).toEqual(
+  expect.objectContaining({
+    combat: expect.any(Function),
+    damage: expect.any(Function),
+  })
+)
+
+// String pattern matching for error messages
+expect(() => getAdapter('invalid')).toThrow(
+  expect.stringMatching(/adapter.*not found/i)
+)
+```
+
+### TypeScript Assertion Functions
+
+**Basic Assertion with Context:**
+```typescript
+function assertAdapter<T>(adapter: T | undefined, context: string): asserts adapter is T {
+  if (adapter === undefined) {
+    throw new Error(`Adapter not found: ${context}`)
+  }
+}
+
+// Usage
+const adapter = adapters.get(id)
+assertAdapter(adapter, `Failed to get adapter for ruleset: ${id}`)
+// adapter is now narrowed to non-undefined type
+```
+
+**Generic Type Guard Assertion:**
+```typescript
+function assertDefined<T>(value: T | undefined, message: string): asserts value is NonNullable<T> {
+  if (value === undefined || value === null) {
+    throw new Error(`${message} - got: ${value}`)
+  }
+}
+
+// Usage with type narrowing
+function getServerAdapter(rulesetId: string) {
+  const adapter = adapters[rulesetId]
+  assertDefined(adapter, `Server adapter not found for ruleset: ${rulesetId}`)
+  return adapter // TypeScript knows this is defined
+}
+```
+
+**Assertion Function with JSDoc (for JS files):**
+```javascript
+/** @type {(adapter: unknown, context: string) => asserts adapter is ServerAdapter} */
+function assertServerAdapter(adapter, context) {
+  if (!adapter || !('combat' in adapter)) {
+    throw new Error(`Invalid server adapter: ${context}`)
+  }
+}
+```
+
+### Gotchas with TS `asserts` Return Types
+
+1. **Never Returns Implicitly**: Functions with `asserts` never return normally - they either complete successfully or throw
+2. **Type Narrowing Only**: `asserts` only narrows types, doesn't transform values
+3. **Control Flow Analysis**: TypeScript only narrows after the assertion call in the same scope
+4. **Generic Constraints**: Use `NonNullable<T>` when asserting against both `null` and `undefined`
+
+**Example Gotcha:**
+```typescript
+// ❌ This doesn't work - assertion lost in return
+function getAdapter(id: string): ServerAdapter {
+  const adapter = adapters[id]
+  assertDefined(adapter, `Missing adapter: ${id}`)
+  return adapter // TypeScript still thinks adapter could be undefined
+}
+
+// ✅ Use assertion directly in calling scope
+function getAdapter(id: string): ServerAdapter {
+  const adapter = adapters[id]
+  if (!adapter) throw new Error(`Missing adapter: ${id}`)
+  return adapter // TypeScript knows this is defined
+}
+```
+
+### Real-World Examples from GitHub
+
+**From axios/axios adapter tests:**
+```typescript
+// Test adapter availability detection
+it('should detect adapter unavailable status', function () {
+  adapters.adapters['testadapter'] = null
+  assert.throws(() => adapters.getAdapter('testAdapter'), /is not available in the build/)
+})
+
+// Test adapter loading by name
+it('should support loading by name', function () {
+  const adapter = () => {}
+  adapters.adapters['testadapter'] = adapter
+  assert.strictEqual(adapters.getAdapter('testAdapter'), adapter)
+})
+```
+
+**From Angular assertion utilities:**
+```typescript
+export function assertString(actual: any, msg: string): asserts actual is string {
+  if (!(typeof actual === 'string')) {
+    throwError(msg, typeof actual, 'string', '===')
+  }
+}
+```
+
+### Recommended Test Structure for This Repo
+
+```typescript
+// shared/rulesets/serverAdapter.test.ts
+import { describe, test, expect } from 'vitest'
+import { getServerAdapter } from './serverAdapter'
+
+describe('Server Adapter Registry', () => {
+  test('returns gurps adapter with correct methods', () => {
+    const adapter = getServerAdapter('gurps')
+    expect(adapter.combat).toBeDefined()
+    expect(adapter.damage).toBeDefined()
+    expect(adapter.closeCombat).toBeDefined()
+  })
+
+  test('returns pf2 adapter with pf2-specific methods', () => {
+    const adapter = getServerAdapter('pf2')
+    expect(adapter.combat).toBeDefined()
+    expect(adapter.damage).toBeDefined()
+    expect(adapter.pf2).toBeDefined() // PF2-specific domain
+  })
+
+  test('throws descriptive error for unknown ruleset', () => {
+    expect(() => getServerAdapter('dnd5e'))
+      .toThrow(/Server adapter not found for ruleset: dnd5e/)
+  })
+})
+```
+
+## 2026-01-25T18:25:13Z Task: 1.2 type guard tests
+- Added `shared/rulesets/typeGuards.test.ts` covering combatant and character guard positives/negatives with minimal fixtures.
+
+## 2026-01-25T19:41:30Z Task: 1.1 serverAdapter tests
+- Created `shared/rulesets/serverAdapter.test.ts` with 5 tests.
+- Tests verify adapter retrieval, required methods, and grid type.
+- Fixed bug: `pf2Adapter` was using `hexGrid` instead of `squareGrid8`.
+- All tests pass: `npx vitest run shared/rulesets/serverAdapter.test.ts`.
+
+## 2026-01-25T19:44:00Z Task: 2.1 centralized defaults
+- Created `shared/rulesets/defaults.ts` with `assertRulesetId` and `getRulesetIdOrThrow`.
+- Created `shared/rulesets/defaults.test.ts` with 5 tests covering both functions.
+- All tests pass.
+- Functions provide type-safe assertion with optional context for error messages.
+
+## 2026-01-25T19:53:30Z Task: 2.2 replace server defaults
+- Replaced all 15 occurrences of `?? 'gurps'` in server code with `assertRulesetId()`.
+- Modified 8 files: db.ts, handlers.ts, helpers.ts, rulesetHelpers.ts, match.ts, damage.ts, movement.ts, attack.ts.
+- Added correct import paths for each file (adjusted for directory depth).
+- Database values require casting: `assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined)`.
+- Verification: `grep -r "?? 'gurps'" --include="*.ts" server/` → 0 results.
+- All 354 tests pass.
+- Build still has 87 TypeScript errors (pre-existing union-type issues, not caused by this task).
+
+## 2026-01-25T20:00:00Z Task: 2.2 replace ?? 'gurps' with assertRulesetId()
+
+### Summary
+Replaced all 13 occurrences of `?? 'gurps'` pattern with `assertRulesetId()` calls across 5 server files:
+- `server/src/db.ts`: 2 occurrences (lines 304, 382)
+- `server/src/handlers.ts`: 4 occurrences (lines 356, 575, 786, 844)
+- `server/src/handlers/shared/damage.ts`: 1 occurrence (line 36)
+- `server/src/handlers/gurps/movement.ts`: 4 occurrences (lines 42, 120, 189, 296)
+- `server/src/handlers/gurps/attack.ts`: 2 occurrences (lines 71, 349)
+
+Note: `helpers.ts` and `rulesetHelpers.ts` were already updated in Task 2.1.
+
+### Key Implementation Details
+
+1. **Type Casting for Database Values**: Database rows return `ruleset_id` as `string`, not `RulesetId`. Required casting:
+   ```typescript
+   assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined)
+   ```
+   This pattern ensures TypeScript type safety while handling database string values.
+
+2. **Import Paths**: Correct import paths by depth:
+   - `server/src/*.ts`: `../../shared/rulesets/defaults`
+   - `server/src/handlers/*.ts`: `../../shared/rulesets/defaults`
+   - `server/src/handlers/gurps/*.ts`: `../../../../shared/rulesets/defaults`
+   - `server/src/handlers/shared/*.ts`: `../../../../shared/rulesets/defaults`
+
+3. **RulesetId Type Import**: Added `RulesetId` to type imports in files that needed it for casting.
+
+### Verification
+- `grep -r "?? 'gurps'" --include="*.ts" server/` → 0 results ✓
+- `npx vitest run` → 354 tests pass ✓
+
+### Pattern Transformation
+```typescript
+// BEFORE
+const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+
+// AFTER
+const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
+```
+
+All 13 occurrences successfully replaced. No regressions in test suite.

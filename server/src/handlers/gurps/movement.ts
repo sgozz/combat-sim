@@ -4,11 +4,13 @@ import type {
   Player,
   HexCoord,
   TurnMovementState,
+  RulesetId,
 } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
 import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
 import { advanceTurn } from "../../rulesetHelpers";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import { assertRulesetId } from "../../../../shared/rulesets/defaults";
 import type { MovementState } from "../../../../shared/rulesets/serverAdapter";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -34,15 +36,15 @@ export const handleMoveStep = async (
     return;
   }
   
-  if (!match.turnMovement || match.turnMovement.phase !== 'moving') {
-    sendMessage(socket, { type: "error", message: "Movement phase not active." });
-    return;
-  }
-  
-   const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
-   const occupiedHexes: HexCoord[] = match.combatants
-     .filter(c => c.playerId !== player.id)
-     .map(c => adapter.gridToHex(c.position));
+   if (!match.turnMovement || match.turnMovement.phase !== 'moving') {
+     sendMessage(socket, { type: "error", message: "Movement phase not active." });
+     return;
+   }
+   
+    const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
+    const occupiedHexes: HexCoord[] = match.combatants
+      .filter(c => c.playerId !== player.id)
+      .map(c => adapter.gridToHex(c.position));
    
     const movementState: MovementState = {
       position: match.turnMovement.currentPosition,
@@ -110,17 +112,17 @@ export const handleRotate = async (
     return;
   }
   
-  if (!match.turnMovement || match.turnMovement.phase !== 'moving') {
-    sendMessage(socket, { type: "error", message: "Movement phase not active." });
-    return;
-  }
-  
-   const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+   if (!match.turnMovement || match.turnMovement.phase !== 'moving') {
+     sendMessage(socket, { type: "error", message: "Movement phase not active." });
+     return;
+   }
    
-    const movementState: MovementState = {
-      position: match.turnMovement.currentPosition,
-      facing: match.turnMovement.currentFacing,
-      movePointsRemaining: match.turnMovement.movePointsRemaining,
+    const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
+    
+     const movementState: MovementState = {
+       position: match.turnMovement.currentPosition,
+       facing: match.turnMovement.currentFacing,
+       movePointsRemaining: match.turnMovement.movePointsRemaining,
       freeRotationUsed: match.turnMovement.freeRotationUsed,
       movedBackward: match.turnMovement.movedBackward,
     };
@@ -181,10 +183,10 @@ export const handleUndoMovement = async (
     return;
   }
   
-  const actorCharacter = asGurpsCharacter(match, actorCombatant.characterId);
-  const basicMove = actorCharacter?.derived.basicMove ?? 5;
-  
-  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+   const actorCharacter = asGurpsCharacter(match, actorCombatant.characterId);
+   const basicMove = actorCharacter?.derived.basicMove ?? 5;
+   
+   const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
   const resetTurnMovement = adapter.initializeTurnMovement(
     match.turnMovement.startPosition,
     match.turnMovement.startFacing,
@@ -291,7 +293,7 @@ export const handleSkipMovement = async (
   if (!actorCombatant) return;
   
   if (match.turnMovement) {
-    const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+    const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
     const updatedCombatants = match.combatants.map((c) =>
       c.playerId === player.id
         ? { 

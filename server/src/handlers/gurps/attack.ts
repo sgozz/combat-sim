@@ -2,6 +2,7 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
+  RulesetId,
 } from "../../../../shared/types";
 import type {
   CombatActionPayload,
@@ -11,6 +12,7 @@ import type {
   Reach,
 } from "../../../../shared/rulesets/gurps/types";
 import { isPf2Match, getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
+import { assertRulesetId } from "../../../../shared/rulesets/defaults";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -66,7 +68,7 @@ export const resolveDefenseChoice = async (
   const pending = match.pendingDefense;
   if (!pending) return;
   
-  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+  const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
   
   clearDefenseTimeout(matchId);
   
@@ -344,7 +346,7 @@ export const handleAttackAction = async (
     return handlePF2AttackAction(socket, matchId, match, player, actorCombatant, payload);
   }
   
-  const adapter = getServerAdapter(match.rulesetId ?? 'gurps');
+  const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
   
   if (actorCombatant.inCloseCombatWith && actorCombatant.inCloseCombatWith !== payload.targetId) {
     sendMessage(socket, { type: "error", message: "In close combat - can only attack your close combat opponent." });

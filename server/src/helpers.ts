@@ -4,6 +4,7 @@ import type { CombatantState } from "../../shared/rulesets/gurps/types";
 import type { GridSystem, GridCoord } from "../../shared/grid";
 import { hexGrid } from "../../shared/grid";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
+import { assertRulesetId } from "../../shared/rulesets/defaults";
 import { state } from "./state";
 import { getMatchMembers } from "./db";
 
@@ -63,7 +64,7 @@ export const calculateGridDistance = (
 };
 
 export const getGridSystemForMatch = (match: MatchState): GridSystem => {
-  return getServerAdapter(match.rulesetId ?? 'gurps').gridSystem;
+  return getServerAdapter(assertRulesetId(match.rulesetId)).gridSystem;
 };
 
 export const calculateHexDistance = (from: GridPosition, to: GridPosition) => {
