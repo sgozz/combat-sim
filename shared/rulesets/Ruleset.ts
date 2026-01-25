@@ -55,4 +55,5 @@ export type RulesetUIAdapter = {
   getAoaVariants: () => RulesetVariant[];
   getAodVariants: () => RulesetVariant[];
   getManeuverInstructions: (maneuver: ManeuverType | null) => ManeuverInstruction | null;
+  getTemplateNames: () => string[];
 };

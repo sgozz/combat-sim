@@ -5,7 +5,8 @@ import type { Attributes, Skill, Equipment, Advantage, Disadvantage, DamageType 
 import type { PF2Skill, Proficiency, Abilities } from '../../../shared/rulesets/pf2/types'
 import { calculateDerivedStats as gurpsCalculateDerivedStats, calculateTotalPoints } from '../../../shared/rulesets/gurps/rules'
 import { calculateDerivedStats as pf2CalculateDerivedStats } from '../../../shared/rulesets/pf2/rules'
-import { getTemplatesForRuleset, TEMPLATE_NAMES, PF2_TEMPLATE_NAMES } from '../../data/characterTemplates'
+import { getTemplatesForRuleset } from '../../data/characterTemplates'
+import { rulesets } from '../../../shared/rulesets'
 import { uuid } from '../../utils/uuid'
 
 export type UseCharacterEditorProps = {
@@ -16,14 +17,14 @@ export type UseCharacterEditorProps = {
 
 export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCharacterEditorProps) => {
   const templates = getTemplatesForRuleset(rulesetId)
-  const templateNames = rulesetId === 'pf2' ? PF2_TEMPLATE_NAMES : TEMPLATE_NAMES
+  const templateNames = rulesets[rulesetId].ui.getTemplateNames()
   const [selectedClass, setSelectedClass] = useState<string>('fighter')
   
   const loadTemplate = (templateKey: string) => {
     const template = templates[templateKey]
     if (!template) return
     
-    if (rulesetId === 'pf2' && 'abilities' in template) {
+    if ('abilities' in template) {
       const pf2Template = template as Omit<import('../../../shared/rulesets/pf2/characterSheet').PF2CharacterSheet, 'id'>
       setCharacter({
         ...pf2Template,
@@ -33,7 +34,7 @@ export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCh
         feats: pf2Template.feats.map(f => ({ ...f, id: uuid() })),
       } as CharacterSheet)
       setSelectedClass(templateKey)
-    } else if (rulesetId === 'gurps' && 'attributes' in template) {
+    } else if ('attributes' in template) {
       const gurpsTemplate = template as Omit<import('../../../shared/rulesets/gurps/characterSheet').GurpsCharacterSheet, 'id'>
       setCharacter({
         ...gurpsTemplate,

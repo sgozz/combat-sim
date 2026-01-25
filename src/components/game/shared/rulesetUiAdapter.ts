@@ -9,4 +9,5 @@ export const getRulesetUiAdapter = (): RulesetUIAdapter => ({
   getAoaVariants: () => [],
   getAodVariants: () => [],
   getManeuverInstructions: () => null,
+  getTemplateNames: () => [],
 });

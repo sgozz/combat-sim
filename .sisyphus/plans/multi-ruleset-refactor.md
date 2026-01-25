@@ -699,7 +699,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `src/App.tsx`, `shared/rulesets/Ruleset.ts`, ruleset bundles
   - Pre-commit: `npx vitest run`
 
-- [ ] 6.2. Move template selection to registry
+- [x] 6.2. Move template selection to registry
 
   **What to do**:
   - Update `src/components/rulesets/useCharacterEditor.ts`

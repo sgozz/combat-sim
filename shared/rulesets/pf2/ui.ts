@@ -1,5 +1,6 @@
 import type { RulesetUIAdapter, RulesetManeuver, ManeuverInstruction } from '../Ruleset';
 import type { ManeuverType } from '../gurps/types';
+import { PF2_TEMPLATE_NAMES } from '../../../src/data/pf2CharacterTemplates';
 
 const PF2_ACTIONS: RulesetManeuver[] = [
   { type: 'move', label: 'Stride', shortLabel: 'Stride', icon: '🏃', desc: 'Move up to your Speed.', key: '1' },
@@ -53,4 +54,5 @@ export const pf2UiAdapter: RulesetUIAdapter = {
   getAoaVariants: () => [],
   getAodVariants: () => [],
   getManeuverInstructions,
+  getTemplateNames: () => PF2_TEMPLATE_NAMES,
 };

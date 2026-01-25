@@ -1,5 +1,6 @@
 import type { RulesetUIAdapter } from '../Ruleset';
 import type { ManeuverType } from './types';
+import { TEMPLATE_NAMES } from '../../../src/data/characterTemplates';
 
 const MANEUVERS = [
   { type: 'move', label: 'Move', shortLabel: 'Move', icon: '🏃', desc: 'Full move. No attack. Active defense allowed.', key: '1' },
@@ -69,4 +70,5 @@ export const gurpsUiAdapter: RulesetUIAdapter = {
   getAoaVariants: () => [...AOA_VARIANTS],
   getAodVariants: () => [...AOD_VARIANTS],
   getManeuverInstructions,
+  getTemplateNames: () => TEMPLATE_NAMES,
 };
