@@ -39,7 +39,7 @@ export type ManeuverInstruction = {
 
 export type Ruleset = {
   id: RulesetId;
-  getDerivedStats: (attributes: CharacterSheet['attributes']) => CharacterSheet['derived'];
+  getDerivedStats: (character: CharacterSheet) => CharacterSheet['derived'];
   getInitialCombatantState: (character: CharacterSheet) => Omit<CombatantState, 'playerId' | 'characterId' | 'position' | 'facing'>;
   getAvailableActions: (state: MatchState, actorId: string) => RulesetAction[];
   getCombatPreview: (state: MatchState, actorId: string, targetId: string, actionType: string) => RulesetCombatPreview | null;

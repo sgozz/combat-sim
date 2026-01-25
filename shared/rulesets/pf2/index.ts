@@ -2,7 +2,7 @@ import type { Ruleset } from '../Ruleset';
 import { pf2UiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
 import type { MatchState, CharacterSheet } from '../../types';
-import type { Abilities } from './types';
+import { isPF2Character } from '../../types';
 export type {
   PF2Abilities,
   PF2CharacterDerivedStats,
@@ -15,22 +15,19 @@ export type {
 
 export const pf2Ruleset: Ruleset = {
   id: 'pf2',
-  getDerivedStats: (attributes) => {
-    const abilities: Abilities = {
-      strength: attributes.strength,
-      dexterity: attributes.dexterity,
-      constitution: attributes.health,
-      intelligence: attributes.intelligence,
-      wisdom: attributes.wisdom ?? 10,
-      charisma: attributes.charisma ?? 10,
-    };
-    const stats = calculateDerivedStats(abilities, 1, 8);
+  getDerivedStats: (character: CharacterSheet) => {
+    if (!isPF2Character(character)) {
+      throw new Error('Expected PF2 character');
+    }
+    const stats = calculateDerivedStats(character.abilities, character.level, character.classHP);
     return {
       hitPoints: stats.hitPoints,
-      fatiguePoints: 0,
-      basicSpeed: stats.speed / 5,
-      basicMove: Math.floor(stats.speed / 5),
-      dodge: stats.armorClass,
+      armorClass: stats.armorClass,
+      speed: stats.speed,
+      fortitudeSave: stats.fortitudeSave,
+      reflexSave: stats.reflexSave,
+      willSave: stats.willSave,
+      perception: stats.perception,
     };
   },
   getInitialCombatantState: (character: CharacterSheet) => ({
@@ -39,7 +36,7 @@ export const pf2Ruleset: Ruleset = {
     aoaVariant: null,
     aodVariant: null,
     currentHP: character.derived.hitPoints,
-    currentFP: character.derived.fatiguePoints,
+    currentFP: 0,
     statusEffects: [],
     aimTurns: 0,
     aimTargetId: null,

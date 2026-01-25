@@ -851,7 +851,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 5. Update Ruleset.ts contract
+- [x] 5. Update Ruleset.ts contract
 
   **What to do**:
   - Update `shared/rulesets/Ruleset.ts` signature:

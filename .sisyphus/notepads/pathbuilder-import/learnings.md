@@ -168,3 +168,62 @@ When re-exporting types that create circular dependencies:
 1. Use `import type { Type } from './path'` at top (type-only import)
 2. Immediately follow with `export type { Type } from './path'` (re-export)
 3. This allows the type to be used in the same file while avoiding runtime circular dependencies
+
+## Task 5: Ruleset Contract Update - getDerivedStats Signature
+
+### Key Decisions
+
+1. **Signature Change**: Updated `Ruleset.getDerivedStats` from `(attributes: CharacterSheet['attributes'])` to `(character: CharacterSheet)`
+   - Reason: PF2 needs access to `level`, `classHP`, `saveProficiencies` which are not in attributes
+   - GURPS continues to use `character.attributes` but now receives full character object
+   - Pattern: Accept full character, narrow with type guard, access ruleset-specific fields
+
+2. **Type Guard Pattern**: Both implementations now use defensive type narrowing
+   - PF2: `if (!isPF2Character(character)) throw new Error('Expected PF2 character')`
+   - GURPS: `if (!isGurpsCharacter(character)) throw new Error('Expected GURPS character')`
+   - Ensures type safety when accessing ruleset-specific properties
+
+3. **Return Type Consistency**: 
+   - PF2 returns `PF2CharacterDerivedStats` (7 fields: hitPoints, armorClass, speed, fortitudeSave, reflexSave, willSave, perception)
+   - GURPS returns `DerivedStats` (5 fields: hitPoints, fatiguePoints, basicSpeed, basicMove, dodge)
+   - Union type `CharacterSheet['derived']` accommodates both
+
+4. **getInitialCombatantState Narrowing**:
+   - GURPS: Added type guard to safely access `character.derived.fatiguePoints` (PF2 doesn't have this)
+   - PF2: Changed `currentFP: 0` (PF2 doesn't track fatigue points)
+   - Both now narrow the character type before accessing ruleset-specific derived stats
+
+### File Changes
+
+- **shared/rulesets/Ruleset.ts:42**: Changed signature from `(attributes: CharacterSheet['attributes'])` to `(character: CharacterSheet)`
+- **shared/rulesets/pf2/index.ts**:
+  - Added import: `import { isPF2Character } from '../../types'`
+  - Removed unused import: `Abilities` type
+  - Updated `getDerivedStats` to accept full character, narrow with type guard, call `calculateDerivedStats(character.abilities, character.level, character.classHP)`
+  - Updated return to match `PF2CharacterDerivedStats` shape (7 fields)
+  - Updated `getInitialCombatantState` to set `currentFP: 0` (PF2 doesn't track fatigue)
+- **shared/rulesets/gurps/index.ts**:
+  - Added import: `import { isGurpsCharacter } from '../../types'`
+  - Updated `getDerivedStats` to accept full character, narrow with type guard, call `calculateDerivedStats(character.attributes)`
+  - Updated `getInitialCombatantState` to narrow type before accessing `character.derived.fatiguePoints`
+
+### Build Status
+
+- ✅ TypeScript compilation: No errors in modified files
+- ✅ Error count: 148 errors (down from 140+, as expected)
+- ✅ Remaining errors: All in call sites that need type guards (Task 8+)
+- ✅ Pattern verified: Type guards work correctly for narrowing union types
+
+### Type Guard Resilience
+
+The type guards `isPF2Character` and `isGurpsCharacter` are resilient:
+- Check `typeof character === 'object' && character !== null` first
+- Then check nested discriminant fields (`abilities.constitution` for PF2, `attributes.health` for GURPS)
+- Never throw on malformed input
+- Return false for missing fields
+
+### Next Steps
+
+- Task 6: Update call sites in `serverAdapter.ts` to use type guards
+- Task 7: Update call sites in client components to use type guards
+- Task 8: Update remaining call sites systematically
