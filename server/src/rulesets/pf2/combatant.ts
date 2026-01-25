@@ -5,7 +5,7 @@ import type { CombatantFactory } from "../types";
 export const createCombatant: CombatantFactory = (character, playerId, position, facing) => {
   const equipped: EquippedItem[] = [];
   const pf2Character = character as PF2CharacterSheet;
-  const primaryWeapon = pf2Character.weapons[0];
+  const primaryWeapon = pf2Character.weapons?.[0];
 
   if (primaryWeapon) {
     equipped.push({ equipmentId: primaryWeapon.id, slot: "right_hand", ready: true });
