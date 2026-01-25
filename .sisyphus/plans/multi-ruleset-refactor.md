@@ -501,7 +501,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: GURPS component files
   - Pre-commit: `npx vitest run`
 
-- [ ] 4.2. Fix useGameActions type guards
+- [x] 4.2. Fix useGameActions type guards
 
   **What to do**:
   - Update `src/components/game/shared/useGameActions.ts`

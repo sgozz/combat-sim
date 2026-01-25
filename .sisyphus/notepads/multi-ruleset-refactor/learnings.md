@@ -439,3 +439,45 @@ if (!activeCharacter || !isGurpsCharacter(activeCharacter)) {
 
 ### Key Insight
 Type guards at component entry point are cleaner than scattered checks throughout the component. Once the guard passes, TypeScript narrows the type for the entire component body, eliminating all union type errors.
+
+## Task 4.2: useGameActions Hook Type Guards (COMPLETED)
+
+### Summary
+Fixed all TypeScript errors in `src/components/game/shared/useGameActions.ts` by adding type guards before accessing ruleset-specific fields.
+
+### Changes Made
+1. **Import**: Added `isGurpsCharacter` from `shared/rulesets/characterSheet`
+2. **Line 174 (encumbrance)**: Added `!isGurpsCharacter(playerCharacter)` check before accessing `.attributes.strength` and `.equipment`
+3. **Line 182 (fpMax)**: Added conditional check `playerCharacter && isGurpsCharacter(playerCharacter)` before accessing `.derived.fatiguePoints`
+4. **Line 215 (defenseOptions)**: Added `!isGurpsCharacter(playerCharacter)` check before accessing `.derived.dodge` and calling `getDefenseOptions()`
+5. **Line 268 (hitChanceInfo)**: 
+   - Added `!isGurpsCharacter(activeCharacter)` check at start
+   - Used type predicate in `.find()` to properly type equipment array
+   - Added `'level' in skill` checks before accessing `.level` property (lines 278, 286)
+
+### Pattern Used
+```typescript
+// For single field access
+if (!playerCharacter || !isGurpsCharacter(playerCharacter)) return null
+const value = playerCharacter.attributes.strength
+
+// For conditional fallback
+const fpMax = (playerCharacter && isGurpsCharacter(playerCharacter) ? playerCharacter.derived.fatiguePoints : null) ?? 10
+
+// For union type properties
+if (skill && 'level' in skill) {
+  baseSkillLevel = skill.level
+}
+```
+
+### Verification
+- ✅ No TypeScript errors in useGameActions.ts
+- ✅ All 356 tests pass
+- ✅ Hook works for both GURPS and PF2 matches
+- ✅ Build completes successfully
+
+### Key Insight
+The hook is used by both GURPS and PF2 rulesets. Type guards ensure:
+- GURPS-specific fields (attributes, equipment, fatiguePoints, dodge) are only accessed when character is GURPS
+- PF2 characters gracefully fall back to defaults (e.g., fpMax defaults to 10)
+- Union type properties (Skill | PF2Skill) are checked with `'level' in skill` before access

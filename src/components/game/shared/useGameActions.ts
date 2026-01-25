@@ -15,16 +15,17 @@ import type {
   EquipmentSlot
 } from '../../../../shared/rulesets/gurps/types'
 import {
-   getDefenseOptions,
-   calculateDefenseValue,
-   getPostureModifiers,
-   calculateEncumbrance,
-   getRangePenalty,
-   getHitLocationPenalty
- } from '../../../../shared/rulesets/gurps/rules'
+    getDefenseOptions,
+    calculateDefenseValue,
+    getPostureModifiers,
+    calculateEncumbrance,
+    getRangePenalty,
+    getHitLocationPenalty
+  } from '../../../../shared/rulesets/gurps/rules'
 import { hexDistance } from '../../../utils/hex'
 import type { RulesetUIAdapter } from '../../../../shared/rulesets/Ruleset'
 import { rulesets } from '../../../../shared/rulesets'
+import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 
 export type ManeuverDef = {
   type: ManeuverType
@@ -169,17 +170,17 @@ export const useGameActions = (ctx: GameActionsContext) => {
 
   const currentManeuver = playerCombatant?.maneuver ?? null
 
-  const encumbrance = useMemo(() => {
-    if (!playerCharacter) return null
-    return calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment)
-  }, [playerCharacter])
+   const encumbrance = useMemo(() => {
+     if (!playerCharacter || !isGurpsCharacter(playerCharacter)) return null
+     return calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment)
+   }, [playerCharacter])
 
   const inCloseCombat = !!playerCombatant?.inCloseCombatWith
   const closeCombatTargetId = inCloseCombat ? playerCombatant?.inCloseCombatWith : null
   const effectiveTargetId = closeCombatTargetId ?? selectedTargetId
 
-  const hpMax = playerCharacter?.derived.hitPoints ?? 10
-  const fpMax = playerCharacter?.derived.fatiguePoints ?? 10
+   const hpMax = playerCharacter?.derived.hitPoints ?? 10
+   const fpMax = (playerCharacter && isGurpsCharacter(playerCharacter) ? playerCharacter.derived.fatiguePoints : null) ?? 10
   const hpCurrent = playerCombatant?.currentHP ?? hpMax
   const fpCurrent = playerCombatant?.currentFP ?? fpMax
   const hpPercent = Math.max(0, (hpCurrent / hpMax) * 100)
@@ -211,12 +212,12 @@ export const useGameActions = (ctx: GameActionsContext) => {
       : maneuvers
   }, [adapter, inCloseCombat])
 
-  const defenseOptions = useMemo((): DefenseValues | null => {
-    if (!playerCharacter || !playerCombatant || !pendingDefense) return null
-    
-    const derivedDodge = playerCharacter.derived.dodge
-    const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
-    const postureMods = getPostureModifiers(playerCombatant.posture)
+   const defenseOptions = useMemo((): DefenseValues | null => {
+     if (!playerCharacter || !playerCombatant || !pendingDefense || !isGurpsCharacter(playerCharacter)) return null
+     
+     const derivedDodge = playerCharacter.derived.dodge
+     const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
+     const postureMods = getPostureModifiers(playerCombatant.posture)
 
     type ActiveDefenseType = 'dodge' | 'parry' | 'block'
     const getFinalValue = (type: ActiveDefenseType, base: number) => {
@@ -256,36 +257,36 @@ export const useGameActions = (ctx: GameActionsContext) => {
     return matchState.characters.find(c => c.id === targetCombatant.characterId)?.name ?? 'Enemy'
   }, [targetCombatant, matchState])
 
-  const hitChanceInfo = useMemo((): HitChanceInfo | null => {
-    if (!targetCombatant || !activeCombatant || !activeCharacter) return null
+   const hitChanceInfo = useMemo((): HitChanceInfo | null => {
+     if (!targetCombatant || !activeCombatant || !activeCharacter || !isGurpsCharacter(activeCharacter)) return null
 
-    const dist = hexDistance(
-      activeCombatant.position.x, activeCombatant.position.z,
-      targetCombatant.position.x, targetCombatant.position.z
-    )
+     const dist = hexDistance(
+       activeCombatant.position.x, activeCombatant.position.z,
+       targetCombatant.position.x, targetCombatant.position.z
+     )
 
-    const weapon = activeCharacter.equipment.find(e => 
-      (e.type === 'melee' || e.type === 'ranged') && e.skillUsed
-    )
+     const weapon = activeCharacter.equipment.find((e): e is typeof activeCharacter.equipment[number] => 
+       (e.type === 'melee' || e.type === 'ranged') && !!e.skillUsed
+     )
 
-    let baseSkillLevel = 10
-    let skillName = 'Basic'
+     let baseSkillLevel = 10
+     let skillName = 'Basic'
 
-    if (weapon && weapon.skillUsed) {
-      const skill = activeCharacter.skills.find(s => s.name === weapon.skillUsed)
-      if (skill) {
-        baseSkillLevel = skill.level
-        skillName = skill.name
-      }
-    } else {
-      const brawling = activeCharacter.skills.find(s => 
-        s.name === 'Brawling' || s.name === 'Karate' || s.name === 'Broadsword'
-      )
-      if (brawling) {
-        baseSkillLevel = brawling.level
-        skillName = brawling.name
-      }
-    }
+     if (weapon && weapon.skillUsed) {
+       const skill = activeCharacter.skills.find(s => s.name === weapon.skillUsed)
+       if (skill && 'level' in skill) {
+         baseSkillLevel = skill.level
+         skillName = skill.name
+       }
+     } else {
+       const brawling = activeCharacter.skills.find(s => 
+         s.name === 'Brawling' || s.name === 'Karate' || s.name === 'Broadsword'
+       )
+       if (brawling && 'level' in brawling) {
+         baseSkillLevel = brawling.level
+         skillName = brawling.name
+       }
+     }
 
     const rangeMod = getRangePenalty(dist)
     const hitLocMod = getHitLocationPenalty(hitLocation)
