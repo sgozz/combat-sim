@@ -85,6 +85,13 @@ export const initializeDatabase = (): BetterSqliteDatabase => {
     db.exec("ALTER TABLE matches ADD COLUMN ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
   }
 
+  // Migration: Ensure all matches have a valid rulesetId (set NULL values to 'gurps')
+  db.exec(`
+    UPDATE matches 
+    SET ruleset_id = 'gurps' 
+    WHERE ruleset_id IS NULL;
+  `);
+
   return db;
 };
 

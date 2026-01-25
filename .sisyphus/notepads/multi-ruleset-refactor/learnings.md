@@ -287,3 +287,46 @@ Replaced all 5 occurrences of `?? 'gurps'` pattern with `assertRulesetId()` call
 - No regressions in test suite
 - UI components properly handle optional matchState with fallback to currentMatch
 - Registry lookup in rulesetUiSlots maintains fallback to gurps for safety
+
+## 2026-01-25T20:10:00Z Task: 2.4 database migration for rulesetId
+
+### Summary
+Added database migration to ensure all loaded matches have valid rulesetId values.
+
+### Changes Made
+- **File**: `server/src/db.ts` (lines 88-93)
+- **Migration**: Added `UPDATE matches SET ruleset_id = 'gurps' WHERE ruleset_id IS NULL;`
+- **Location**: After existing migration check (line 86), before return statement
+- **Idempotency**: Safe to run multiple times (WHERE clause ensures only NULL values updated)
+
+### Implementation Details
+
+1. **Migration Placement**: Added after the column existence check but before returning the database instance. This ensures:
+   - Column exists (created if missing)
+   - All NULL values are set to 'gurps' on every initialization
+   - Idempotent: subsequent runs only update rows that are still NULL
+
+2. **Schema Preservation**: Kept `DEFAULT 'gurps'` in schema (line 58) for backward compatibility with existing databases that may not have the column yet.
+
+3. **Load Functions**: Already using `assertRulesetId()` at lines 305 and 383:
+   ```typescript
+   rulesetId: assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined)
+   ```
+   Migration ensures database values are never NULL, so assertion always succeeds.
+
+### Verification
+- ✓ Server builds: `npm run build` → 198.2kb bundle, 7ms
+- ✓ Server starts: `node dist/index.js` → "Loaded 65 users, 75 characters, 71 active matches"
+- ✓ Tests pass: `npx vitest run` → 354 tests pass (10 files, 1.02s)
+- ✓ No regressions: All tests from Tasks 2.1-2.3 still passing
+
+### Migration Safety
+- **Idempotent**: WHERE clause ensures only NULL values are updated
+- **Non-destructive**: Only sets NULL to 'gurps', doesn't modify existing values
+- **Backward compatible**: Works with databases that have/don't have ruleset_id column
+- **Deterministic**: Always sets to 'gurps' (default ruleset)
+
+### Notes
+- Migration runs on every server startup (safe due to idempotency)
+- Ensures database consistency even if old code inserted NULL values
+- Combined with assertRulesetId() in load functions, guarantees type safety

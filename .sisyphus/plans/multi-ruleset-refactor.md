@@ -324,7 +324,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: All modified client files
   - Pre-commit: `npx vitest run`
 
-- [ ] 2.4. Handle database migration for rulesetId
+- [x] 2.4. Handle database migration for rulesetId
 
   **What to do**:
   - Update `server/src/db.ts`: Keep `DEFAULT 'gurps'` in schema (for backward compat)
