@@ -1,7 +1,7 @@
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, RulesetId, CharacterSheet, GridPosition } from '../types';
 import type { ManeuverType, Posture, Equipment, Attributes, DerivedStats, Reach, ShieldSize, DamageType, HitLocation, CombatantState, DefenseType } from './gurps/types';
 import type { GridSystem } from '../grid';
-import { hexGrid } from '../grid';
+import { hexGrid, squareGrid8 } from '../grid';
 import { isGurpsCharacter } from '../types';
 
 export type MovementState = {
@@ -827,7 +827,7 @@ const gurpsAdapter: ServerRulesetAdapter = {
 
 const pf2Adapter: ServerRulesetAdapter = {
    id: 'pf2',
-   gridSystem: hexGrid,
+   gridSystem: squareGrid8,
    advanceTurn: pf2AdvanceTurn,
    initializeTurnMovement: (position, facing, maneuver, basicMove, _posture) => {
      const movePoints = maneuver === 'pf2_step' ? 1 : basicMove;
