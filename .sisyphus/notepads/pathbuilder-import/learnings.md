@@ -510,3 +510,14 @@ When creating PF2 characters in server code:
 
 - Task 11: Update match.ts to use factory pattern for initial combatant creation
 - Client-side errors (97) will be fixed in subsequent tasks with type guards
+
+
+## [2026-01-25T17:14:07+01:00] Task 11: Server CharacterSheet Union Handling
+
+**Files Updated:**
+- match.ts: Initiative calculation with type guards (PF2: perception+DEX, GURPS: basicSpeed+DEX)
+- handlers/damage.ts: HT calculation with type guard
+- bot.ts: Movement calculation with type guard (PF2: speed/5, GURPS: basicMove)
+- handlers/pf2-attack.ts: Removed workarounds, uses native PF2 fields
+
+**Result:** Server builds with 0 errors. Client has 97 errors in GURPS components (expected, need internal assertions).

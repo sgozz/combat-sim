@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CharacterSheet, MatchState, User, RulesetId } from "../../shared/types";
+import { isPF2Character, isGurpsCharacter } from "../../shared/types";
 import type { CombatantState, DefenseType, DamageType, PendingDefense } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
@@ -121,7 +122,9 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
       }
 
     const botCharacter = getCharacterById(currentMatch, botCombatant.characterId);
-    const maxMove = botCharacter?.derived.basicMove ?? 5;
+    const maxMove = botCharacter && isPF2Character(botCharacter)
+      ? Math.floor((botCharacter.derived.speed ?? 25) / 5)
+      : (botCharacter?.derived.basicMove ?? 5);
     const newPosition = computeGridMoveToward(botCombatant.position, target.position, maxMove, gridSystem);
     const newFacing = calculateFacing(botCombatant.position, newPosition);
 
@@ -149,6 +152,10 @@ export const chooseBotDefense = (
    defenderCharacter: CharacterSheet,
    defenderCombatant: CombatantState
  ): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
+   if (!isGurpsCharacter(defenderCharacter)) {
+     return { defenseType: 'none', retreat: false, dodgeAndDrop: false };
+   }
+   
    const adapter = getServerAdapter('gurps');
    const encumbrance = adapter.calculateEncumbrance!(
      defenderCharacter.attributes.strength,

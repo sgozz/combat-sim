@@ -3,6 +3,8 @@ import type {
   MatchState,
   Player,
 } from "../../../shared/types";
+import { isPF2Character } from "../../../shared/types";
+import type { PF2CharacterSheet, PF2CharacterWeapon } from "../../../shared/rulesets/pf2/characterSheet";
 import type { CombatActionPayload } from "../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../rulesetHelpers";
@@ -22,43 +24,27 @@ import { scheduleBotTurn } from "../bot";
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;
 
-const getPF2Abilities = (attributes: { strength: number; dexterity: number; intelligence: number; health: number; wisdom?: number; charisma?: number }) => ({
-  strength: attributes.strength,
-  dexterity: attributes.dexterity,
-  constitution: attributes.health,
-  intelligence: attributes.intelligence,
-  wisdom: attributes.wisdom ?? 10,
-  charisma: attributes.charisma ?? 10,
-});
-
-const getWeaponInfo = (character: { equipment: { name: string; damage?: string; damageType?: string }[] }) => {
-  const weapon = character.equipment[0];
+const getWeaponInfo = (character: PF2CharacterSheet): { name: string; damage: string; damageType: PF2DamageType; traits: string[] } => {
+  const weapon: PF2CharacterWeapon | undefined = character.weapons[0];
   if (!weapon) {
     return {
       name: 'Fist',
       damage: '1d4',
-      damageType: 'bludgeoning' as PF2DamageType,
-      traits: ['agile', 'finesse', 'unarmed'] as string[],
+      damageType: 'bludgeoning',
+      traits: ['agile', 'finesse', 'unarmed'],
     };
   }
   
-  const damageTypeMap: Record<string, PF2DamageType> = {
-    crushing: 'bludgeoning',
-    cutting: 'slashing',
-    impaling: 'piercing',
-    piercing: 'piercing',
-  };
-  
   return {
     name: weapon.name,
-    damage: weapon.damage ?? '1d4',
-    damageType: damageTypeMap[weapon.damageType ?? 'crushing'] ?? 'bludgeoning',
-    traits: [] as string[],
+    damage: weapon.damage,
+    damageType: weapon.damageType,
+    traits: weapon.traits,
   };
 };
 
-const calculateAC = (character: { derived: { dodge: number } }) => {
-  return character.derived.dodge;
+const calculateAC = (character: PF2CharacterSheet): number => {
+  return character.derived.armorClass;
 };
 
 const formatDegree = (degree: DegreeOfSuccess): string => {
@@ -114,8 +100,13 @@ export const handlePF2AttackAction = async (
     return;
   }
 
+   if (!isPF2Character(attackerCharacter) || !isPF2Character(targetCharacter)) {
+     sendMessage(socket, { type: "error", message: "PF2 attack requires PF2 characters." });
+     return;
+   }
+
    const weapon = getWeaponInfo(attackerCharacter);
-   const abilities = getPF2Abilities(attackerCharacter.attributes);
+   const abilities = attackerCharacter.abilities;
    let targetAC = calculateAC(targetCharacter);
 
    if (targetCombatant.posture === 'prone') {
@@ -127,7 +118,7 @@ export const handlePF2AttackAction = async (
    const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
    const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
   
-   const level = 1;
+   const level = attackerCharacter.level;
    const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
   
    const attackNumber = actorCombatant.pf2?.attacksThisTurn ?? 0;

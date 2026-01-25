@@ -1174,7 +1174,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 11. Update match.ts + handlers + bot.ts for CharacterSheet union
+- [x] 11. Update match.ts + handlers + bot.ts for CharacterSheet union
 
   **What to do**:
   

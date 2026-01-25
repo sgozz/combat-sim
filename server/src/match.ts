@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CharacterSheet, MatchState, Player } from "../../shared/types";
+import { isPF2Character } from "../../shared/types";
 import type { CombatantState, EquippedItem } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
@@ -66,16 +67,32 @@ export const createMatchState = async (
   const initiativeOrder = combatants
     .map(c => {
       const char = characters.find(ch => ch.id === c.characterId);
+      // Calculate initiative based on ruleset
+      let initiative: number;
+      let tiebreaker: number;
+      if (char && isPF2Character(char)) {
+        // PF2: perception + DEX modifier
+        const dexMod = Math.floor((char.abilities.dexterity - 10) / 2);
+        initiative = char.derived.perception + dexMod;
+        tiebreaker = char.abilities.dexterity;
+      } else if (char) {
+        // GURPS: basicSpeed + dexterity/100 for tiebreaker
+        initiative = char.derived.basicSpeed ?? 5;
+        tiebreaker = char.attributes.dexterity ?? 10;
+      } else {
+        initiative = 5;
+        tiebreaker = 10;
+      }
       return {
         playerId: c.playerId,
-        basicSpeed: char?.derived.basicSpeed ?? 5,
-        dexterity: char?.attributes.dexterity ?? 10,
+        initiative,
+        tiebreaker,
         random: Math.random(),
       };
     })
     .sort((a, b) => {
-      if (b.basicSpeed !== a.basicSpeed) return b.basicSpeed - a.basicSpeed;
-      if (b.dexterity !== a.dexterity) return b.dexterity - a.dexterity;
+      if (b.initiative !== a.initiative) return b.initiative - a.initiative;
+      if (b.tiebreaker !== a.tiebreaker) return b.tiebreaker - a.tiebreaker;
       return b.random - a.random;
     });
   

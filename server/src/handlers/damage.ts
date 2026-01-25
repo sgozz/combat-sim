@@ -1,6 +1,7 @@
 import type {
   MatchState,
 } from "../../../shared/types";
+import { isGurpsCharacter } from "../../../shared/types";
 import type {
   DamageType,
   CombatantState,
@@ -53,7 +54,9 @@ export const applyDamageToTarget = (
     : `(${damageFormula}: [${rolls}]${mod} ${damageType}${hitLocStr} = ${finalDamage})`;
 
   const targetMaxHP = targetCharacter.derived.hitPoints;
-  const targetHT = targetCharacter.attributes.health;
+  const targetHT = isGurpsCharacter(targetCharacter) 
+    ? targetCharacter.attributes.health 
+    : targetCharacter.abilities.constitution;
   const majorWoundThreshold = Math.floor(targetMaxHP / 2);
   const isMajorWound = finalDamage > majorWoundThreshold;
   
