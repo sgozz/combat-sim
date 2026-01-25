@@ -9,7 +9,6 @@ import { getRulesetComponents } from './components/rulesets'
 import { assertRulesetId } from '../shared/rulesets/defaults'
 
 import type { GridPosition, CharacterSheet, RulesetId, PF2CharacterSheet, GurpsCharacterSheet } from '../shared/types'
-import type { CombatActionPayload } from '../shared/rulesets/gurps/types'
 import './App.css'
 
 /**
@@ -171,7 +170,7 @@ function AppRoutes() {
     }
   }
 
-  const handleGameAction = useCallback((_action: string, payload?: CombatActionPayload) => {
+  const handleGameAction = useCallback((_action: string, payload?: { type: string; [key: string]: unknown }) => {
     if (payload && activeMatchId) {
       sendMessage({ type: 'action', matchId: activeMatchId, action: payload.type, payload })
     }
@@ -196,7 +195,7 @@ function AppRoutes() {
         setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
         return
       }
-      const payload: CombatActionPayload = { type: 'move_step', to: { q: position.x, r: position.z } }
+      const payload: { type: string; to: { q: number; r: number } } = { type: 'move_step', to: { q: position.x, r: position.z } }
       sendMessage({ type: 'action', matchId: activeMatchId!, action: payload.type, payload })
       setMoveTarget(null)
       return

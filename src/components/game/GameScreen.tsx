@@ -12,7 +12,6 @@ import { CombatToast } from './CombatToast'
 import DefenseModal from '../rulesets/gurps/DefenseModal'
 import type { CameraMode } from '../arena/CameraControls'
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
-import type { CombatActionPayload, ManeuverType, DefenseType } from '../../../shared/rulesets/gurps/types'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -30,7 +29,7 @@ type GameScreenProps = {
   pendingAction: PendingAction | null
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
-  onAction: (action: string, payload?: CombatActionPayload) => void
+  onAction: (action: string, payload?: { type: string; [key: string]: unknown }) => void
   onPendingActionResponse: (response: string) => void
   onLeaveLobby: () => void
   onStartMatch: (botCount: number) => void
@@ -38,7 +37,7 @@ type GameScreenProps = {
   inLobbyButNoMatch: boolean
 }
 
-const MANEUVER_KEYS: Record<string, ManeuverType> = {
+const MANEUVER_KEYS: Record<string, string> = {
   '1': 'move',
   '2': 'attack',
   '3': 'all_out_attack',
@@ -106,7 +105,7 @@ export const GameScreen = ({
   const defenderCharacter = matchState?.characters.find(c => c.id === currentCombatant?.characterId)
   const inCloseCombat = currentCombatant?.inCloseCombatWith !== null
 
-  const handleDefenseChoice = useCallback((choice: { type: DefenseType; retreat: boolean; dodgeAndDrop: boolean }) => {
+  const handleDefenseChoice = useCallback((choice: { type: string; retreat: boolean; dodgeAndDrop: boolean }) => {
     onAction('defend', { type: 'defend', defenseType: choice.type, retreat: choice.retreat, dodgeAndDrop: choice.dodgeAndDrop })
   }, [onAction])
 

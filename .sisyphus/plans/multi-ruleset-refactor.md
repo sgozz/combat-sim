@@ -528,7 +528,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `src/components/game/shared/useGameActions.ts`
   - Pre-commit: `npx vitest run`
 
-- [ ] 4.3. Replace GURPS imports in shared code
+- [x] 4.3. Replace GURPS imports in shared code
 
   **What to do**:
   - Update `src/components/game/TurnStepper.tsx`: Import from base types, not GURPS

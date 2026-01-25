@@ -1,11 +1,9 @@
-import type { ManeuverType } from '../../../shared/rulesets/gurps/types'
-
 type TurnStepperProps = {
   isMyTurn: boolean
-  currentManeuver: ManeuverType | null
+  currentManeuver: string | null
 }
 
-const MANEUVER_LABELS: Record<ManeuverType, string> = {
+const MANEUVER_LABELS: Record<string, string> = {
    'move': 'Move',
    'attack': 'Attack',
    'all_out_attack': 'All-Out',

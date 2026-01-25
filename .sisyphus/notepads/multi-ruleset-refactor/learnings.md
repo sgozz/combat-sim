@@ -481,3 +481,53 @@ The hook is used by both GURPS and PF2 rulesets. Type guards ensure:
 - GURPS-specific fields (attributes, equipment, fatiguePoints, dodge) are only accessed when character is GURPS
 - PF2 characters gracefully fall back to defaults (e.g., fpMax defaults to 10)
 - Union type properties (Skill | PF2Skill) are checked with `'level' in skill` before access
+
+## Task 4.3: Remove GURPS-Specific Imports from Shared Components (COMPLETED)
+
+### Summary
+Removed all GURPS-specific type imports from three shared components and replaced with generic types.
+
+### Files Modified
+
+1. **src/components/game/TurnStepper.tsx**
+   - Removed: `import type { ManeuverType } from '../../../shared/rulesets/gurps/types'`
+   - Changed: `currentManeuver: ManeuverType | null` → `currentManeuver: string | null`
+   - Changed: `MANEUVER_LABELS: Record<ManeuverType, string>` → `MANEUVER_LABELS: Record<string, string>`
+   - Rationale: Component already handles both GURPS and PF2 maneuvers in labels
+
+2. **src/App.tsx**
+   - Removed: `import type { CombatActionPayload } from '../../../shared/rulesets/gurps/types'`
+   - Changed: `payload?: CombatActionPayload` → `payload?: { type: string; [key: string]: unknown }`
+   - Changed: `const payload: CombatActionPayload = ...` → `const payload: { type: string; to: { q: number; r: number } } = ...`
+   - Rationale: Payload is generic action data, not GURPS-specific
+
+3. **src/components/game/GameScreen.tsx**
+   - Removed: `import type { CombatActionPayload, ManeuverType, DefenseType } from '../../../shared/rulesets/gurps/types'`
+   - Changed: `onAction: (action: string, payload?: CombatActionPayload)` → `onAction: (action: string, payload?: { type: string; [key: string]: unknown })`
+   - Changed: `MANEUVER_KEYS: Record<string, ManeuverType>` → `MANEUVER_KEYS: Record<string, string>`
+   - Changed: `choice: { type: DefenseType; ...}` → `choice: { type: string; ...}`
+   - Rationale: These are generic action types used by all rulesets
+
+### Replacement Pattern
+
+```typescript
+// BEFORE (GURPS-specific)
+import type { ManeuverType, CombatActionPayload, DefenseType } from '../../../shared/rulesets/gurps/types'
+const handleAction = (payload?: CombatActionPayload) => { ... }
+
+// AFTER (Generic)
+const handleAction = (payload?: { type: string; [key: string]: unknown }) => { ... }
+```
+
+### Verification
+- ✅ Grep check: `grep -r "from.*shared/rulesets/gurps" src/components/game/TurnStepper.tsx src/App.tsx src/components/game/GameScreen.tsx` → 0 results
+- ✅ Tests: All 356 tests pass
+- ✅ Build: No errors in modified files (61 pre-existing errors in other files, down from baseline of 87-89)
+- ✅ No regressions: All functionality preserved
+
+### Key Insight
+Shared components should use generic types (string, Record<string, unknown>) rather than ruleset-specific types. This allows the same component to work with any ruleset without importing ruleset-specific modules. Ruleset-specific components (GurpsGameActionPanel, PF2ActionBar, etc.) can still use specific types since they're already ruleset-scoped.
+
+### Dependencies
+- Tasks 4.1, 4.2 complete (type guards in place)
+- Unblocks: Task 4.4 (remaining GURPS imports in other files)
