@@ -795,12 +795,13 @@ const gurpsAdapter: ServerRulesetAdapter = {
 };
 
 const pf2Adapter: ServerRulesetAdapter = {
-  id: 'pf2',
-  gridSystem: hexGrid,
-  advanceTurn: pf2AdvanceTurn,
-  initializeTurnMovement: (position, facing, _maneuver, basicMove, _posture) => {
-    return pf2InitializeTurnMovement(position, facing, basicMove);
-  },
+   id: 'pf2',
+   gridSystem: hexGrid,
+   advanceTurn: pf2AdvanceTurn,
+   initializeTurnMovement: (position, facing, maneuver, basicMove, _posture) => {
+     const movePoints = maneuver === 'pf2_step' ? 1 : basicMove;
+     return pf2InitializeTurnMovement(position, facing, movePoints);
+   },
   calculateReachableHexesInfo: pf2CalculateReachableHexesInfo,
   gridToHex: pf2GridToHex,
   hexToGrid: pf2HexToGrid,

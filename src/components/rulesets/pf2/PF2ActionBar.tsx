@@ -192,7 +192,7 @@ export const PF2ActionBar = ({
             <button
               className="action-bar-btn"
               disabled={actionsRemaining === 0 || playerCombatant.posture === 'prone'}
-              onClick={() => onAction('pf2_step', { type: 'pf2_step', to: { q: 0, r: 0 } })}
+              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'pf2_step' })}
             >
               <span className="action-bar-icon">👣</span>
               <span className="action-bar-label">Step</span>

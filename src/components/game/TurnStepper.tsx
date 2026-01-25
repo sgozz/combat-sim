@@ -6,17 +6,18 @@ type TurnStepperProps = {
 }
 
 const MANEUVER_LABELS: Record<ManeuverType, string> = {
-  'move': 'Move',
-  'attack': 'Attack',
-  'all_out_attack': 'All-Out',
-  'all_out_defense': 'Defend',
-  'move_and_attack': 'Rush',
-  'aim': 'Aim',
-  'evaluate': 'Evaluate',
-  'ready': 'Ready',
-  'wait': 'Wait',
-  'change_posture': 'Posture',
-  'do_nothing': 'Pass',
+   'move': 'Move',
+   'attack': 'Attack',
+   'all_out_attack': 'All-Out',
+   'all_out_defense': 'Defend',
+   'move_and_attack': 'Rush',
+   'aim': 'Aim',
+   'evaluate': 'Evaluate',
+   'ready': 'Ready',
+   'wait': 'Wait',
+   'change_posture': 'Posture',
+   'do_nothing': 'Pass',
+   'pf2_step': 'Step',
 }
 
 export const TurnStepper = ({ isMyTurn, currentManeuver }: TurnStepperProps) => {

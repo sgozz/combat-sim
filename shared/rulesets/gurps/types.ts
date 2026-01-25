@@ -107,7 +107,7 @@ export type EquippedItem = {
 
 export type ReadyAction = 'draw' | 'sheathe' | 'pickup' | 'reload' | 'prepare';
 
-export type ManeuverType = 
+export type ManeuverType =
   | 'do_nothing' 
   | 'move' 
   | 'aim' 
@@ -118,7 +118,8 @@ export type ManeuverType =
   | 'attack' 
   | 'all_out_attack' 
   | 'all_out_defense' 
-  | 'move_and_attack';
+  | 'move_and_attack'
+  | 'pf2_step';
 
 export type WaitTriggerCondition = 
   | 'enemy_moves_adjacent'

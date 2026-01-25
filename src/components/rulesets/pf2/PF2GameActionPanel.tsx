@@ -110,7 +110,7 @@ export const PF2GameActionPanel = ({
             <button 
               className="pf2-action-btn step"
               disabled={actionsRemaining === 0 || combatant.posture === 'prone'}
-              onClick={() => onAction('pf2_step', { type: 'pf2_step', to: { q: 0, r: 0 } })}
+              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'pf2_step' })}
             >
               <span className="pf2-action-icon">👣</span>
               <span className="pf2-action-label">Step</span>
