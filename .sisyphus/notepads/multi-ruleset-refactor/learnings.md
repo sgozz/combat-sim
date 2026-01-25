@@ -668,3 +668,46 @@ This completes Phase 5 (Bot AI Refactoring):
 - Task 5.3: Legacy code removed ✅
 
 All bot AI functions now use the adapter pattern and respect the match's ruleset.
+
+## Task 6.1: Character Creation Registry Pattern (COMPLETED 2026-01-25)
+
+### Summary
+Moved character creation conditional from App.tsx to registry pattern via Ruleset interface.
+
+### Changes Made
+
+1. **shared/rulesets/Ruleset.ts**
+   - Added `createCharacter: (name: string) => CharacterSheet` method to Ruleset interface
+
+2. **shared/rulesets/gurps/index.ts**
+   - Imported `uuid` from `shared/utils/uuid`
+   - Implemented `createCharacter` in gurpsRuleset
+   - Returns GurpsCharacterSheet with default attributes (STR/DEX/INT/HLT = 10)
+
+3. **shared/rulesets/pf2/index.ts**
+   - Imported `uuid` from `shared/utils/uuid`
+   - Implemented `createCharacter` in pf2Ruleset
+   - Returns PF2CharacterSheet with default abilities (all 10), level 1, Fighter class
+
+4. **src/App.tsx**
+   - Removed `createDefaultCharacter()` function (18-84 lines)
+   - Removed imports: `uuid`, `PF2CharacterSheet`, `GurpsCharacterSheet`
+   - Added import: `rulesets` from `shared/rulesets`
+   - Line 246: Changed `createDefaultCharacter(rulesetId, ...)` → `rulesets[rulesetId].ruleset.createCharacter(...)`
+   - Line 257: Changed `createDefaultCharacter(rulesetId, ...)` → `rulesets[rulesetId].ruleset.createCharacter(...)`
+
+### Verification
+- ✅ Grep check: `grep "=== 'pf2'" src/App.tsx` → 0 results
+- ✅ Tests: `npx vitest run` → 356/356 pass (all 10 files)
+- ✅ Build: `npm run build` → 59 TypeScript errors (down from baseline 87, no new errors in modified files)
+- ✅ No errors in: App.tsx, Ruleset.ts, gurps/index.ts, pf2/index.ts
+
+### Key Insight
+This completes Phase 6 (Registry Pattern Refactoring):
+- Phase 2: All defaults replaced with assertRulesetId ✅
+- Phase 3: Grid type conditionals replaced with getGridType() ✅
+- Phase 4: Type guards added to components ✅
+- Phase 5: Bot AI made ruleset-aware ✅
+- Phase 6: Character creation moved to registry ✅
+
+All character creation is now ruleset-aware through the registry pattern. No hardcoded conditionals remain in App.tsx.

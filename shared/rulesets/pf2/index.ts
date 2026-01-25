@@ -3,6 +3,7 @@ import { pf2UiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
 import type { MatchState, CharacterSheet } from '../../types';
 import { isPF2Character } from '../../types';
+import { uuid } from '../../utils/uuid';
 export type {
   PF2Abilities,
   PF2CharacterDerivedStats,
@@ -56,6 +57,45 @@ export const pf2Ruleset: Ruleset = {
   }),
   getAvailableActions: (_state: MatchState) => [],
   getCombatPreview: () => null,
+  createCharacter: (name: string): CharacterSheet => ({
+    id: uuid(),
+    name: name || 'New PF2 Character',
+    level: 1,
+    class: 'Fighter',
+    ancestry: 'Human',
+    heritage: 'Versatile Heritage',
+    background: 'Warrior',
+    abilities: {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      wisdom: 10,
+      charisma: 10,
+    },
+    derived: {
+      hitPoints: 10,
+      armorClass: 10,
+      speed: 25,
+      fortitudeSave: 0,
+      reflexSave: 0,
+      willSave: 0,
+      perception: 0,
+    },
+    classHP: 10,
+    saveProficiencies: {
+      fortitude: 'trained',
+      reflex: 'trained',
+      will: 'trained',
+    },
+    perceptionProficiency: 'trained',
+    armorProficiency: 'trained',
+    skills: [],
+    weapons: [],
+    armor: null,
+    feats: [],
+    spells: null,
+  } as any),
 };
 
 export const pf2Bundle = {

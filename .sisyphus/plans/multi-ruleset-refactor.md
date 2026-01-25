@@ -672,7 +672,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
 ### Phase 6: Remove Remaining Scattered Conditionals
 
-- [ ] 6.1. Move character creation conditional to registry
+- [x] 6.1. Move character creation conditional to registry
 
   **What to do**:
   - Update `src/App.tsx:20` - Move `if (rulesetId === 'pf2')` character creation to registry

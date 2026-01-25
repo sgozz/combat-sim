@@ -43,6 +43,7 @@ export type Ruleset = {
   getInitialCombatantState: (character: CharacterSheet) => Omit<CombatantState, 'playerId' | 'characterId' | 'position' | 'facing'>;
   getAvailableActions: (state: MatchState, actorId: string) => RulesetAction[];
   getCombatPreview: (state: MatchState, actorId: string, targetId: string, actionType: string) => RulesetCombatPreview | null;
+  createCharacter: (name: string) => CharacterSheet;
 };
 
 export type RulesetUIAdapter = {

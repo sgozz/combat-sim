@@ -3,6 +3,7 @@ import { gurpsUiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
 import type { MatchState, CharacterSheet } from '../../types';
 import { isGurpsCharacter } from '../../types';
+import { uuid } from '../../utils/uuid';
 
 export const gurpsRuleset: Ruleset = {
   id: 'gurps',
@@ -43,6 +44,28 @@ export const gurpsRuleset: Ruleset = {
   },
   getAvailableActions: (_state: MatchState) => [],
   getCombatPreview: () => null,
+  createCharacter: (name: string): CharacterSheet => ({
+    id: uuid(),
+    name: name || 'New Character',
+    attributes: {
+      strength: 10,
+      dexterity: 10,
+      intelligence: 10,
+      health: 10,
+    },
+    derived: {
+      hitPoints: 10,
+      fatiguePoints: 10,
+      basicSpeed: 5,
+      basicMove: 5,
+      dodge: 8,
+    },
+    skills: [],
+    advantages: [],
+    disadvantages: [],
+    equipment: [],
+    pointsTotal: 100,
+  } as any),
 };
 
 export const gurpsBundle = {

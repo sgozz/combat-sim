@@ -1,87 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
-import { uuid } from './utils/uuid'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { getRulesetComponents } from './components/rulesets'
 import { assertRulesetId } from '../shared/rulesets/defaults'
+import { rulesets } from '../shared/rulesets'
 
-import type { GridPosition, CharacterSheet, RulesetId, PF2CharacterSheet, GurpsCharacterSheet } from '../shared/types'
+import type { GridPosition, CharacterSheet, RulesetId } from '../shared/types'
 import './App.css'
-
-/**
- * Create a default character sheet with the correct shape for the given ruleset.
- * PF2 characters have abilities (constitution, etc.), GURPS have attributes (health, etc.).
- */
-const createDefaultCharacter = (rulesetId: RulesetId, username: string): CharacterSheet => {
-  if (rulesetId === 'pf2') {
-    return {
-      id: uuid(),
-      name: username || 'New PF2 Character',
-      level: 1,
-      class: 'Fighter',
-      ancestry: 'Human',
-      heritage: 'Versatile Heritage',
-      background: 'Warrior',
-      abilities: {
-        strength: 10,
-        dexterity: 10,
-        constitution: 10,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 10,
-      },
-      derived: {
-        hitPoints: 10,
-        armorClass: 10,
-        speed: 25,
-        fortitudeSave: 0,
-        reflexSave: 0,
-        willSave: 0,
-        perception: 0,
-      },
-      classHP: 10,
-      saveProficiencies: {
-        fortitude: 'trained',
-        reflex: 'trained',
-        will: 'trained',
-      },
-      perceptionProficiency: 'trained',
-      armorProficiency: 'trained',
-      skills: [],
-      weapons: [],
-      armor: null,
-      feats: [],
-      spells: null,
-    } as PF2CharacterSheet
-  } else {
-    // GURPS default character
-    return {
-      id: uuid(),
-      name: username || 'New Character',
-      attributes: {
-        strength: 10,
-        dexterity: 10,
-        intelligence: 10,
-        health: 10,
-      },
-      derived: {
-        hitPoints: 10,
-        fatiguePoints: 10,
-        basicSpeed: 5,
-        basicMove: 5,
-        dodge: 8,
-      },
-      skills: [],
-      advantages: [],
-      disadvantages: [],
-      equipment: [],
-      pointsTotal: 100,
-    } as GurpsCharacterSheet
-  }
-}
 
 function AppRoutes() {
   const navigate = useNavigate()
@@ -314,20 +242,20 @@ function AppRoutes() {
                 }
               }}
                onOpenCharacterEditor={() => {
-                  const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
-                  setEditingCharacter(createDefaultCharacter(rulesetId, user?.username ?? 'New Character'))
-                  setShowCharacterModal(true)
-                }}
+                   const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
+                   setEditingCharacter(rulesets[rulesetId].ruleset.createCharacter(user?.username ?? 'New Character'))
+                   setShowCharacterModal(true)
+                 }}
               inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}
             />
             
              {showCharacterModal && (() => {
                 const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
                 const { CharacterEditor } = getRulesetComponents(rulesetId)
-               return (
-                 <CharacterEditor 
-                   character={editingCharacter || createDefaultCharacter(rulesetId, user?.username ?? 'New Character')}
-                   setCharacter={setEditingCharacter}
+                return (
+                  <CharacterEditor 
+                    character={editingCharacter || rulesets[rulesetId].ruleset.createCharacter(user?.username ?? 'New Character')}
+                    setCharacter={setEditingCharacter}
                    onSave={() => {
                      if (editingCharacter && activeMatchId) {
                        sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
