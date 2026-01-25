@@ -22,6 +22,14 @@
 - Workaround: Orchestrator implementing tasks directly (violates pattern but unblocks progress).
 - Impact: Tasks 1.1 and 1.2 completed directly by orchestrator instead of via delegation.
 
+## 2026-01-25T20:29:00Z GameScreen assertRulesetId Crash
+- **Issue**: `Uncaught Error: Ruleset ID is required but was undefined` in GameScreen.tsx:137
+- **Root Cause**: Task 2.3 replaced `?? 'gurps'` with `assertRulesetId()` without considering that `matchState` can be undefined during initial render
+- **Impact**: Client crashes immediately on load before match data arrives
+- **Solution**: Revert to `matchState?.rulesetId ?? 'gurps'` fallback pattern in UI components
+- **Lesson**: UI components need graceful handling of loading states; assertRulesetId is too strict for client-side code
+- **Status**: RESOLVED
+
 ## 2026-01-25T20:25:00Z Server/Client Startup Issue
 - **Issue**: Server fails with `EADDRINUSE: address already in use :::8080`
 - **Root Cause**: Old dev server processes still running on ports 8080 (server) and 5173 (client)

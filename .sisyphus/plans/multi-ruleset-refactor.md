@@ -642,7 +642,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `server/src/bot.ts`
   - Pre-commit: `npx vitest run`
 
-- [ ] 5.3. Remove legacy chooseBotDefense if unused
+- [x] 5.3. Remove legacy chooseBotDefense if unused
 
   **What to do**:
   - Search for usages: `grep -r "chooseBotDefense" server/`

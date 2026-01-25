@@ -637,3 +637,34 @@ This pattern (explicit parameter instead of hardcoded adapter) ensures:
 - Task 5.1 complete (bot character creation ruleset-aware)
 - Phase 5 Task 5.2 complete
 - Unblocks: Task 5.3+ (remaining bot AI refactoring)
+
+## Task 5.3: Remove Legacy chooseBotDefense (COMPLETED 2026-01-25)
+
+### Summary
+Removed legacy `chooseBotDefense` function from `server/src/rulesets/gurps/bot.ts` that was no longer used.
+
+### Situation Analysis
+Found TWO definitions of `chooseBotDefense`:
+1. **`server/src/bot.ts` (lines 151-191)**: Current, used version with `rulesetId` parameter (updated in Task 5.2)
+2. **`server/src/rulesets/gurps/bot.ts` (lines 120-155)**: Legacy, UNUSED version with hardcoded `'gurps'` adapter
+
+Call site in `server/src/handlers/gurps/attack.ts` imports from `server/src/bot.ts` only.
+
+### Changes Made
+- **File**: `server/src/rulesets/gurps/bot.ts`
+- **Removed**: Lines 120-155 (entire `chooseBotDefense` function)
+- **Reason**: Function was dead code, replaced by ruleset-aware version in `bot.ts`
+
+### Verification
+- ✅ Grep check: `grep -rn "chooseBotDefense" server/src/` → 3 results (1 definition in bot.ts, 1 import + 1 call in attack.ts)
+- ✅ Tests: `npx vitest run` → 356/356 pass
+- ✅ Server build: `npm run build` → 198.3kb bundle, 8ms
+- ✅ No regressions: All tests from Tasks 5.1-5.2 still passing
+
+### Key Insight
+This completes Phase 5 (Bot AI Refactoring):
+- Task 5.1: Bot character creation is ruleset-aware ✅
+- Task 5.2: Bot defense selection uses adapter ✅
+- Task 5.3: Legacy code removed ✅
+
+All bot AI functions now use the adapter pattern and respect the match's ruleset.

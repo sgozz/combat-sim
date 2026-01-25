@@ -117,39 +117,4 @@ export const executeBotAttack: BotAttackExecutor = async (
   return updated;
 };
 
-export const chooseBotDefense = (
-  defenderCharacter: GurpsCharacterSheet,
-  defenderCombatant: CombatantState
-): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
-  const adapter = getServerAdapter('gurps');
-  const encumbrance = adapter.calculateEncumbrance!(
-    defenderCharacter.attributes.strength,
-    defenderCharacter.equipment
-  );
-  const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
-  const options = adapter.getDefenseOptions!(defenderCharacter, effectiveDodge);
-  
-  const defenses: { type: DefenseType; value: number }[] = [
-    { type: 'dodge', value: options.dodge }
-  ];
-  
-  if (options.block) {
-    defenses.push({ type: 'block', value: options.block.value });
-  }
-  
-  if (options.parry) {
-    const alreadyUsed = defenderCombatant.parryWeaponsUsedThisTurn.includes(options.parry.weapon);
-    const parryValue = alreadyUsed ? options.parry.value - 4 : options.parry.value;
-    defenses.push({ type: 'parry', value: parryValue });
-  }
-  
-  defenses.sort((a, b) => b.value - a.value);
-  const bestDefense = defenses[0];
-  const canRetreat = !defenderCombatant.retreatedThisTurn;
-  
-  return {
-    defenseType: bestDefense.type,
-    retreat: canRetreat,
-    dodgeAndDrop: false,
-  };
-};
+
