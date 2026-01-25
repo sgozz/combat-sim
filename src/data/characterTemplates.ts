@@ -1,4 +1,5 @@
 import type { CharacterSheet } from '../../shared/types'
+import type { GurpsCharacterSheet } from '../../shared/rulesets/gurps/characterSheet'
 import { calculateDerivedStats } from '../../shared/rulesets/gurps/rules'
 import { uuid } from '../utils/uuid'
 
@@ -9,7 +10,7 @@ const createTemplate = (
   equipment: { name: string; damage: string; damageType: 'crushing' | 'cutting' | 'impaling'; reach: 'C' | '1' | '2' | 'C,1' | '1,2'; parry: number }[],
   advantages: { name: string; description?: string }[],
   disadvantages: { name: string; description?: string }[]
-): Omit<CharacterSheet, 'id'> => ({
+): Omit<GurpsCharacterSheet, 'id'> => ({
   name,
   attributes,
   derived: calculateDerivedStats(attributes),
@@ -20,7 +21,7 @@ const createTemplate = (
   pointsTotal: 100,
 })
 
-export const CHARACTER_TEMPLATES: Record<string, Omit<CharacterSheet, 'id'>> = {
+export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>> = {
   knight: createTemplate(
     'Sir Aldric',
     { strength: 13, dexterity: 12, intelligence: 10, health: 12 },
@@ -153,7 +154,7 @@ import type { RulesetId } from '../../shared/types'
 
 export const getTemplatesForRuleset = (rulesetId: RulesetId): Record<string, Omit<CharacterSheet, 'id'>> => {
   if (rulesetId === 'pf2') {
-    return PF2_CHARACTER_TEMPLATES
+    return PF2_CHARACTER_TEMPLATES as Record<string, Omit<CharacterSheet, 'id'>>
   }
-  return CHARACTER_TEMPLATES
+  return CHARACTER_TEMPLATES as Record<string, Omit<CharacterSheet, 'id'>>
 }

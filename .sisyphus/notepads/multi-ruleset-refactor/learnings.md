@@ -531,3 +531,32 @@ Shared components should use generic types (string, Record<string, unknown>) rat
 ### Dependencies
 - Tasks 4.1, 4.2 complete (type guards in place)
 - Unblocks: Task 4.4 (remaining GURPS imports in other files)
+
+## Task 4.4: Fixed characterTemplates.ts TypeScript Error
+
+**Problem**: `attributes` field doesn't exist on `CharacterSheet` union type because:
+- `CharacterSheet = PF2CharacterSheet | GurpsCharacterSheet`
+- `GurpsCharacterSheet` has `attributes` field
+- `PF2CharacterSheet` has `abilities` field (not `attributes`)
+- Templates were using `Omit<CharacterSheet, 'id'>` which doesn't work for union types with different fields
+
+**Solution**: Use ruleset-specific types
+1. Changed GURPS templates to use `Omit<GurpsCharacterSheet, 'id'>` return type
+2. Changed PF2 templates to use `Omit<PF2CharacterSheet, 'id'>` return type
+3. Updated `getTemplatesForRuleset()` to cast results back to `Omit<CharacterSheet, 'id'>` for compatibility
+4. Fixed PF2 template structure to match `PF2CharacterSheet` exactly:
+   - Added `level`, `class`, `ancestry`, `heritage`, `background` fields
+   - Changed `attributes` to `abilities` with proper structure
+   - Updated derived stats calculation to match `PF2CharacterDerivedStats`
+   - Added `classHP`, `saveProficiencies`, `perceptionProficiency`, `armorProficiency`
+   - Changed `skills` to include `ability` field (required by `PF2Skill`)
+   - Changed `equipment` to `weapons` with proper `PF2CharacterWeapon` structure
+   - Changed `advantages` to `feats` with proper `PF2Feat` structure
+
+**Result**: 
+- ✅ characterTemplates.ts error fixed
+- ✅ pf2CharacterTemplates.ts error fixed
+- ✅ All 356 tests pass
+- ✅ Build succeeds (other pre-existing errors unrelated to this task)
+
+**Key Learning**: When working with union types in TypeScript, use type-specific implementations rather than trying to satisfy the union with a single implementation.

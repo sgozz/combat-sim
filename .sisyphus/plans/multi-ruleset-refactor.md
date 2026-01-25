@@ -557,7 +557,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `TurnStepper.tsx`, `App.tsx`, `GameScreen.tsx`
   - Pre-commit: `npx vitest run`
 
-- [ ] 4.4. Fix characterTemplates type safety
+- [x] 4.4. Fix characterTemplates type safety
 
   **What to do**:
   - Update `src/data/characterTemplates.ts`
