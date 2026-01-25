@@ -823,7 +823,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ### Phase B: Shared Contract Updates
 
-- [ ] 4. Update shared/types.ts exports
+- [x] 4. Update shared/types.ts exports
 
   **What to do**:
   - Remove CharacterSheet definition from `shared/types.ts` (lines 51-61)

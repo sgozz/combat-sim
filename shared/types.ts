@@ -1,4 +1,10 @@
-import type { Attributes, DerivedStats, Skill, Advantage, Disadvantage, Equipment, CombatantState, PendingDefense, CombatActionPayload } from './rulesets/gurps/types';
+import type { CombatantState, PendingDefense, CombatActionPayload } from './rulesets/gurps/types';
+import type { CharacterSheet } from './rulesets/characterSheet';
+
+export { isPF2Character, isGurpsCharacter } from './rulesets/characterSheet';
+export type { CharacterSheet } from './rulesets/characterSheet';
+export type { PF2CharacterSheet } from './rulesets/pf2/characterSheet';
+export type { GurpsCharacterSheet } from './rulesets/gurps/characterSheet';
 
 export type Id = string;
 
@@ -46,18 +52,6 @@ export type ReachableHexInfo = {
   r: number;
   cost: number;
   finalFacing: number;
-};
-
-export type CharacterSheet = {
-  id: Id;
-  name: string;
-  attributes: Attributes;
-  derived: DerivedStats;
-  skills: Skill[];
-  advantages: Advantage[];
-  disadvantages: Disadvantage[];
-  equipment: Equipment[];
-  pointsTotal: number;
 };
 
 export type MatchStatus = "waiting" | "active" | "paused" | "finished";
@@ -126,21 +120,21 @@ export type PendingAction =
   | { type: 'exit_close_combat_request'; exitingId: Id; targetId: Id };
 
 export type ServerToClientMessage =
-  | { type: "auth_ok"; user: User; sessionToken: string }
-  | { type: "session_invalid" }
-  | { type: "my_matches"; matches: MatchSummary[] }
-  | { type: "public_matches"; matches: MatchSummary[] }
-  | { type: "match_created"; match: MatchSummary }
-  | { type: "match_joined"; matchId: Id }
-  | { type: "match_left"; matchId: Id }
-  | { type: "match_state"; state: MatchState }
-  | { type: "spectating"; matchId: Id }
-  | { type: "stopped_spectating"; matchId: Id }
-  | { type: "match_updated"; match: MatchSummary }
-  | { type: "player_joined"; matchId: Id; player: Player }
-  | { type: "player_left"; matchId: Id; playerId: Id; playerName: string }
-  | { type: "player_disconnected"; matchId: Id; playerId: Id; playerName: string }
-  | { type: "player_reconnected"; matchId: Id; playerId: Id; playerName: string }
-  | { type: "visual_effect"; matchId: Id; effect: VisualEffect }
-  | { type: "pending_action"; matchId: Id; action: PendingAction }
-  | { type: "error"; message: string };
+   | { type: "auth_ok"; user: User; sessionToken: string }
+   | { type: "session_invalid" }
+   | { type: "my_matches"; matches: MatchSummary[] }
+   | { type: "public_matches"; matches: MatchSummary[] }
+   | { type: "match_created"; match: MatchSummary }
+   | { type: "match_joined"; matchId: Id }
+   | { type: "match_left"; matchId: Id }
+   | { type: "match_state"; state: MatchState }
+   | { type: "spectating"; matchId: Id }
+   | { type: "stopped_spectating"; matchId: Id }
+   | { type: "match_updated"; match: MatchSummary }
+   | { type: "player_joined"; matchId: Id; player: Player }
+   | { type: "player_left"; matchId: Id; playerId: Id; playerName: string }
+   | { type: "player_disconnected"; matchId: Id; playerId: Id; playerName: string }
+   | { type: "player_reconnected"; matchId: Id; playerId: Id; playerName: string }
+   | { type: "visual_effect"; matchId: Id; effect: VisualEffect }
+   | { type: "pending_action"; matchId: Id; action: PendingAction }
+   | { type: "error"; message: string };

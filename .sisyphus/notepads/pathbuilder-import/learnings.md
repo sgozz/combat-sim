@@ -123,3 +123,48 @@
 ### Next Steps
 - Task 4: Update `shared/types.ts` to remove `CharacterSheet` and import from `characterSheet.ts`
 - Task 5: Update all imports across codebase to use new union type
+
+## Task 4: CharacterSheet Re-export Integration
+
+### Key Decisions
+
+1. **Circular Dependency Resolution**: 
+   - Initial attempt to re-export at top of `shared/types.ts` failed due to circular dependency
+   - Root cause: `pf2/characterSheet.ts` and `gurps/characterSheet.ts` both import from `../../types`
+   - Solution: Use `import type` at top (type-only import, no runtime circular dependency) + re-export
+   - Pattern: `import type { CharacterSheet } from './rulesets/characterSheet'` + `export type { CharacterSheet } from './rulesets/characterSheet'`
+
+2. **Import Placement**: 
+   - Re-exports must be at TOP of file (after other imports) to be available for types used in the same file
+   - This works because TypeScript processes imports/exports before type checking the rest of the file
+
+3. **Backward Compatibility**:
+   - `CharacterSheet` remains importable from `shared/types` as before
+   - Type guards `isPF2Character` and `isGurpsCharacter` are now re-exported as value exports
+   - Specific types `PF2CharacterSheet` and `GurpsCharacterSheet` are re-exported for direct access
+
+### File Changes
+
+- **Removed**: Old `CharacterSheet` definition from `shared/types.ts:51-61` (11 lines)
+- **Added**: Re-exports at `shared/types.ts:4-7` (4 lines)
+  - `export { isPF2Character, isGurpsCharacter }` (value exports - functions)
+  - `export type { CharacterSheet }` (type export - union)
+  - `export type { PF2CharacterSheet, GurpsCharacterSheet }` (type exports - specific types)
+
+### Verification Results
+
+- ✅ TypeScript compilation: No errors in `shared/types.ts`
+- ✅ Tests: All 272 tests pass (including 23 CharacterSheet tests)
+- ✅ Backward compatibility: `CharacterSheet` importable from `shared/types`
+- ✅ Type guards: Both `isPF2Character` and `isGurpsCharacter` available
+
+### Remaining Build Errors
+
+Build shows errors in other files (e.g., `serverAdapter.ts`, `rules.ts`, components) because they access ruleset-specific properties without type guards. These are expected and will be fixed in subsequent tasks. The task requirement was only to update `shared/types.ts`, which is complete.
+
+### Pattern for Future Re-exports
+
+When re-exporting types that create circular dependencies:
+1. Use `import type { Type } from './path'` at top (type-only import)
+2. Immediately follow with `export type { Type } from './path'` (re-export)
+3. This allows the type to be used in the same file while avoiding runtime circular dependencies
