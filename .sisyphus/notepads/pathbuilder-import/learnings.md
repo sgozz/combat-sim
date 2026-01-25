@@ -451,3 +451,62 @@ pf2CalculateDerivedStats(
 All PF2 components now use native PF2CharacterSheet fields. Type assertions used at component entry to narrow CharacterSheet union to PF2CharacterSheet.
 
 **Errors Reduced:** 109 → 97 (12 errors fixed)
+
+## Task 10: Server-Side PF2 Character and Combatant Factories
+
+### Key Decisions
+
+1. **PF2 Character Factory**: Replaced GURPS-shaped factory with native PF2CharacterSheet
+   - Imports `PF2CharacterSheet` type from `shared/rulesets/pf2/characterSheet`
+   - Creates complete PF2 character with all required fields
+   - Default: Level 1 Fighter with 14 CON, 20 HP, AC 14
+   - Includes all 7 derived stats: hitPoints, armorClass, speed, fortitudeSave, reflexSave, willSave, perception
+   - Includes recalculation fields: classHP, saveProficiencies, perceptionProficiency, armorProficiency
+   - Includes equipment: 1 Longsword in weapons array, no armor, no feats, no spells
+
+2. **PF2 Combatant Factory**: Updated to read from weapons[0]
+   - Changed from `character.equipment.find()` to `character.weapons[0]`
+   - Casts character to `PF2CharacterSheet` for type safety
+   - Sets `currentFP: 0` (PF2 doesn't track fatigue points)
+   - Removed shield handling (not in initial PF2 implementation)
+   - Maintains all GURPS-compatible fields for CombatantState
+
+3. **Bot Factory Pattern**: Already correct in `server/src/bot.ts`
+   - `createBotCharacter` uses `getRulesetServerFactory(rulesetId)`
+   - Calls `factory.createDefaultCharacter(name)`
+   - No changes needed - pattern already in place
+
+### File Changes
+
+- **server/src/rulesets/pf2/character.ts**: Complete rewrite (36 → 56 lines)
+  - Removed GURPS-style attributes, advantages, disadvantages, pointsTotal
+  - Added PF2-native fields: level, class, ancestry, heritage, background, abilities, classHP, saveProficiencies, etc.
+  - Added weapons array with Longsword default
+  - Added armor, feats, spells fields (null/empty for defaults)
+
+- **server/src/rulesets/pf2/combatant.ts**: Updated weapon access (53 → 43 lines)
+  - Changed import from `CharacterSheet` to `PF2CharacterSheet`
+  - Changed weapon lookup from `character.equipment.find()` to `character.weapons[0]`
+  - Removed shield handling
+  - Set `currentFP: 0` instead of `character.derived.fatiguePoints`
+
+- **server/src/bot.ts**: No changes (already uses factory pattern)
+
+### Build Results
+
+- ✅ Server build: Succeeds (194.5kb bundle)
+- ✅ Client build: 97 errors (expected - client components still need type guards)
+- ✅ No regressions in server-side code
+
+### Type Safety Pattern
+
+When creating PF2 characters in server code:
+1. Import `PF2CharacterSheet` from `shared/rulesets/pf2/characterSheet`
+2. Use factory function: `createDefaultCharacter(name)`
+3. Return type is `PF2CharacterSheet` (not union)
+4. All fields are required and type-checked at compile time
+
+### Next Steps
+
+- Task 11: Update match.ts to use factory pattern for initial combatant creation
+- Client-side errors (97) will be fixed in subsequent tasks with type guards

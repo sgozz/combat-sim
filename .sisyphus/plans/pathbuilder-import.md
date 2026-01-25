@@ -1078,7 +1078,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ### Phase D: Server Updates
 
-- [ ] 10. Update server PF2 character/combatant factories
+- [x] 10. Update server PF2 character/combatant factories
 
   **What to do**:
   

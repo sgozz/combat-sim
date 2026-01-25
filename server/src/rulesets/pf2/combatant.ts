@@ -1,17 +1,14 @@
-import type { CharacterSheet } from "../../../../shared/types";
+import type { PF2CharacterSheet } from "../../../../shared/rulesets/pf2/characterSheet";
 import type { CombatantState, EquippedItem } from "../../../../shared/rulesets/gurps/types";
 import type { CombatantFactory } from "../types";
 
 export const createCombatant: CombatantFactory = (character, playerId, position, facing) => {
   const equipped: EquippedItem[] = [];
-  const primaryWeapon = character.equipment.find(e => e.type === 'melee' || e.type === 'ranged');
-  const shield = character.equipment.find(e => e.type === 'shield');
+  const pf2Character = character as PF2CharacterSheet;
+  const primaryWeapon = pf2Character.weapons[0];
 
   if (primaryWeapon) {
-    equipped.push({ equipmentId: primaryWeapon.id, slot: 'right_hand', ready: true });
-  }
-  if (shield) {
-    equipped.push({ equipmentId: shield.id, slot: 'left_hand', ready: true });
+    equipped.push({ equipmentId: primaryWeapon.id, slot: "right_hand", ready: true });
   }
 
   return {
@@ -19,12 +16,12 @@ export const createCombatant: CombatantFactory = (character, playerId, position,
     characterId: character.id,
     position,
     facing,
-    posture: 'standing' as const,
+    posture: "standing" as const,
     maneuver: null,
     aoaVariant: null,
     aodVariant: null,
     currentHP: character.derived.hitPoints,
-    currentFP: character.derived.fatiguePoints,
+    currentFP: 0,
     statusEffects: [],
     aimTurns: 0,
     aimTargetId: null,
