@@ -34,24 +34,24 @@ import { handlePF2AttackAction } from "../pf2/attack";
 const BOT_DEFENSE_DELAY_MS = 800;
 
 const scheduleBotDefense = (matchId: string, match: MatchState, defenderId: string) => {
-  setTimeout(async () => {
-    const currentMatch = state.matches.get(matchId);
-    if (!currentMatch?.pendingDefense) return;
-    
-    const defenderCombatant = currentMatch.combatants.find(c => c.playerId === defenderId);
-    const defenderCharacter = currentMatch.characters.find(c => c.id === defenderCombatant?.characterId);
-    
-    if (!defenderCombatant || !defenderCharacter) {
-      await resolveDefenseChoice(matchId, currentMatch, {
-        type: 'defend',
-        defenseType: 'dodge',
-        retreat: false,
-        dodgeAndDrop: false,
-      });
-      return;
-    }
-    
-    const choice = chooseBotDefense(defenderCharacter, defenderCombatant);
+   setTimeout(async () => {
+     const currentMatch = state.matches.get(matchId);
+     if (!currentMatch?.pendingDefense) return;
+     
+     const defenderCombatant = currentMatch.combatants.find(c => c.playerId === defenderId);
+     const defenderCharacter = currentMatch.characters.find(c => c.id === defenderCombatant?.characterId);
+     
+     if (!defenderCombatant || !defenderCharacter) {
+       await resolveDefenseChoice(matchId, currentMatch, {
+         type: 'defend',
+         defenseType: 'dodge',
+         retreat: false,
+         dodgeAndDrop: false,
+       });
+       return;
+     }
+     
+     const choice = chooseBotDefense(defenderCharacter, defenderCombatant, currentMatch.rulesetId);
     
     await resolveDefenseChoice(matchId, currentMatch, {
       type: 'defend',

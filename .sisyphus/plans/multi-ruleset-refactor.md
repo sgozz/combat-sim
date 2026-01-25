@@ -614,7 +614,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `server/src/bot.ts`, caller files
   - Pre-commit: `npx vitest run`
 
-- [ ] 5.2. Make bot defense selection ruleset-aware
+- [x] 5.2. Make bot defense selection ruleset-aware
 
   **What to do**:
   - Update `server/src/bot.ts:159` - Use `getServerAdapter(rulesetId)` instead of hardcoded GURPS

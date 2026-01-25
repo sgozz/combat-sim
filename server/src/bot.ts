@@ -149,14 +149,15 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
 };
 
 export const chooseBotDefense = (
-   defenderCharacter: CharacterSheet,
-   defenderCombatant: CombatantState
- ): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
-   if (!isGurpsCharacter(defenderCharacter)) {
-     return { defenseType: 'none', retreat: false, dodgeAndDrop: false };
-   }
-   
-   const adapter = getServerAdapter('gurps');
+    defenderCharacter: CharacterSheet,
+    defenderCombatant: CombatantState,
+    rulesetId: RulesetId
+  ): { defenseType: DefenseType; retreat: boolean; dodgeAndDrop: boolean } => {
+    if (!isGurpsCharacter(defenderCharacter)) {
+      return { defenseType: 'none', retreat: false, dodgeAndDrop: false };
+    }
+    
+    const adapter = getServerAdapter(rulesetId);
    const encumbrance = adapter.calculateEncumbrance!(
      defenderCharacter.attributes.strength,
      defenderCharacter.equipment

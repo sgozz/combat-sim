@@ -600,3 +600,40 @@ This pattern (explicit parameter instead of default) ensures:
 - Phase 4 complete (all type guards added)
 - Phase 5 Task 5.1 complete
 - Unblocks: Task 5.2+ (remaining bot AI refactoring)
+
+## Task 5.2: Bot Defense Selection Ruleset-Aware (COMPLETED 2026-01-25)
+
+### Summary
+Made bot defense selection use dynamic adapter instead of hardcoded GURPS.
+
+### Changes Made
+
+1. **server/src/bot.ts - chooseBotDefense Function**
+   - Line 151-154: Added `rulesetId: RulesetId` parameter to function signature
+   - Line 159: Changed: `const adapter = getServerAdapter('gurps')`
+   - To: `const adapter = getServerAdapter(rulesetId)`
+   - Enables ruleset-aware defense selection
+
+2. **server/src/handlers/gurps/attack.ts - Call Site Update**
+   - Line 54: Updated call to pass rulesetId
+   - Changed: `const choice = chooseBotDefense(defenderCharacter, defenderCombatant)`
+   - To: `const choice = chooseBotDefense(defenderCharacter, defenderCombatant, currentMatch.rulesetId)`
+   - Ensures correct adapter is used for the match's ruleset
+
+### Verification
+- ✅ Server build: `npm run build` → 198.3kb bundle, 7ms
+- ✅ Tests: `npx vitest run` → 356 tests pass (all 10 files)
+- ✅ No regressions: All tests from previous tasks still passing
+- ✅ Type safety: TypeScript enforces rulesetId parameter at all call sites
+
+### Key Insight
+This pattern (explicit parameter instead of hardcoded adapter) ensures:
+- Bot defense selection respects the match's ruleset
+- GURPS bots use GURPS defense logic (dodge, block, parry)
+- PF2 bots gracefully handle null defense (already returns 'none' for non-GURPS characters)
+- Adapter pattern scales for future rulesets without code changes
+
+### Dependencies
+- Task 5.1 complete (bot character creation ruleset-aware)
+- Phase 5 Task 5.2 complete
+- Unblocks: Task 5.3+ (remaining bot AI refactoring)

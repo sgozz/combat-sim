@@ -21,3 +21,14 @@
 - This block triggers automatic refusal regardless of prompt content.
 - Workaround: Orchestrator implementing tasks directly (violates pattern but unblocks progress).
 - Impact: Tasks 1.1 and 1.2 completed directly by orchestrator instead of via delegation.
+
+## 2026-01-25T20:25:00Z Server/Client Startup Issue
+- **Issue**: Server fails with `EADDRINUSE: address already in use :::8080`
+- **Root Cause**: Old dev server processes still running on ports 8080 (server) and 5173 (client)
+- **Solution**: Kill processes before starting:
+  ```bash
+  lsof -ti:8080 | xargs -r kill -9  # Server port
+  lsof -ti:5173 | xargs -r kill -9  # Client port
+  ```
+- **Verification**: Both server and client start successfully after cleanup
+- **Status**: RESOLVED
