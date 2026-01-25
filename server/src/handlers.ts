@@ -345,8 +345,10 @@ export const handleMessage = async (
       const maxBots = matchRow.max_players - members.length;
       const botsToAdd = Math.min(Math.max(0, requestedBots), maxBots);
       
+      const rulesetId = assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined);
+      
       for (let i = 0; i < botsToAdd; i++) {
-        await addBotToMatch(message.matchId);
+        await addBotToMatch(message.matchId, rulesetId);
       }
       
       const finalMembers = await getMatchMembers(message.matchId);
@@ -354,8 +356,6 @@ export const handleMessage = async (
         sendMessage(socket, { type: "error", message: "Need at least 2 players to start." });
         return;
       }
-      
-      const rulesetId = assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined);
       const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, rulesetId);
       state.matches.set(message.matchId, matchState);
       await updateMatchState(message.matchId, matchState);

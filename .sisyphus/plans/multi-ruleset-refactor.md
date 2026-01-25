@@ -587,7 +587,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
 ### Phase 5: Refactor Bot AI
 
-- [ ] 5.1. Make bot character creation ruleset-aware
+- [x] 5.1. Make bot character creation ruleset-aware
 
   **What to do**:
   - Update `server/src/bot.ts:25` - Remove default `'gurps'` parameter

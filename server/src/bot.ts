@@ -22,7 +22,7 @@ import { getRulesetServerFactory } from "./rulesets";
 const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
   `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
 
-export const createBotCharacter = (name: string, rulesetId: RulesetId = 'gurps'): CharacterSheet => {
+export const createBotCharacter = (name: string, rulesetId: RulesetId): CharacterSheet => {
   const factory = getRulesetServerFactory(rulesetId);
   return factory.createDefaultCharacter(name);
 };
@@ -34,9 +34,9 @@ export const createBot = async (): Promise<User> => {
   return bot;
 };
 
-export const addBotToMatch = async (matchId: string): Promise<{ bot: User; character: CharacterSheet }> => {
+export const addBotToMatch = async (matchId: string, rulesetId: RulesetId): Promise<{ bot: User; character: CharacterSheet }> => {
   const bot = await createBot();
-  const character = createBotCharacter(bot.username);
+  const character = createBotCharacter(bot.username, rulesetId);
   await upsertCharacter(character, bot.id);
   state.characters.set(character.id, character);
   await addMatchMember(matchId, bot.id, character.id);

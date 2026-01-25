@@ -560,3 +560,43 @@ Shared components should use generic types (string, Record<string, unknown>) rat
 - ✅ Build succeeds (other pre-existing errors unrelated to this task)
 
 **Key Learning**: When working with union types in TypeScript, use type-specific implementations rather than trying to satisfy the union with a single implementation.
+
+## Task 5.1: Bot Character Creation Ruleset-Aware (COMPLETED 2026-01-25)
+
+### Summary
+Made bot character creation explicitly require `rulesetId` parameter instead of defaulting to 'gurps'.
+
+### Changes Made
+
+1. **server/src/bot.ts - Function Signature**
+   - Line 25: Removed default parameter `= 'gurps'`
+   - Changed: `createBotCharacter(name: string, rulesetId: RulesetId = 'gurps')`
+   - To: `createBotCharacter(name: string, rulesetId: RulesetId)`
+
+2. **server/src/bot.ts - addBotToMatch Function**
+   - Line 37: Added `rulesetId: RulesetId` parameter to function signature
+   - Line 39: Updated call to pass rulesetId: `createBotCharacter(bot.username, rulesetId)`
+
+3. **server/src/handlers.ts - Caller Update**
+   - Lines 343-359: Moved `rulesetId` extraction before bot creation loop
+   - Changed: `await addBotToMatch(message.matchId)` 
+   - To: `await addBotToMatch(message.matchId, rulesetId)`
+   - Ensures bots are created with correct ruleset for the match
+
+### Verification
+- ✅ Server build: `npm run build` → 198.3kb bundle, 7ms
+- ✅ Tests: `npx vitest run` → 356 tests pass (all 10 files)
+- ✅ No regressions: All tests from previous tasks still passing
+- ✅ Type safety: TypeScript enforces explicit rulesetId at all call sites
+
+### Key Insight
+This pattern (explicit parameter instead of default) ensures:
+- Bot characters are always created with the correct ruleset
+- No silent fallback to GURPS if rulesetId is missing
+- Type system enforces the requirement at compile time
+- Matches the pattern established in Phase 2 (assertRulesetId for defaults)
+
+### Dependencies
+- Phase 4 complete (all type guards added)
+- Phase 5 Task 5.1 complete
+- Unblocks: Task 5.2+ (remaining bot AI refactoring)
