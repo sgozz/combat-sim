@@ -1710,13 +1710,13 @@ cd server && npm run build  # Server build successful
 ```
 
 ### Final Checklist
-- [ ] All "Must Have" present
-- [ ] All "Must NOT Have" absent
-- [ ] PF2 characters use `abilities.constitution`
-- [ ] GURPS characters use `attributes.health`
-- [ ] Type guards correctly discriminate union
-- [ ] Can import via Pathbuilder ID
-- [ ] Can import via JSON file
-- [ ] Preview displays before import
-- [ ] GURPS matches still work (no regression)
-- [ ] PF2 matches work with new character shape
+- [x] All "Must Have" present - ✅ Verified: PF2CharacterSheet, type guards, API fetch, file upload, preview
+- [x] All "Must NOT Have" absent - ✅ Verified: pets/familiars/formulas only warned, not imported
+- [x] PF2 characters use `abilities.constitution` - ✅ Verified in shared/rulesets/pf2/characterSheet.ts
+- [x] GURPS characters use `attributes.health` - ✅ Verified in shared/rulesets/gurps/types.ts
+- [x] Type guards correctly discriminate union - ✅ Verified: 23 tests passing
+- [x] Can import via Pathbuilder ID - ✅ Implemented in fetchFromAPI (17 tests)
+- [x] Can import via JSON file - ✅ Implemented in parseFromFile (17 tests)
+- [x] Preview displays before import - ✅ Implemented in PathbuilderImport.tsx
+- [ ] GURPS matches still work (no regression) - REQUIRES MANUAL QA
+- [ ] PF2 matches work with new character shape - REQUIRES MANUAL QA
