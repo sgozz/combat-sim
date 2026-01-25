@@ -12,7 +12,8 @@ import type {
   HitLocation,
   ManeuverType,
 } from './types';
-import type { MatchState, CharacterSheet, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
+import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
+import type { GurpsCharacterSheet } from './characterSheet';
 
 export type RollResult = {
   roll: number;
@@ -265,7 +266,7 @@ export const calculateSkillCost = (skillLevel: number, attributeLevel: number, d
   return 4 + (effectiveRelative - 2) * 4;
 };
 
-export const calculateTotalPoints = (character: CharacterSheet): number => {
+export const calculateTotalPoints = (character: GurpsCharacterSheet): number => {
   const attrCost = calculateAttributeCost(character.attributes);
   const skillCost = character.skills.reduce((sum, skill) => {
     return sum + calculateSkillCost(skill.level, character.attributes.dexterity);
@@ -282,7 +283,7 @@ export const calculateBlock = (shieldSkill: number, shieldBlockMod: number = 0):
 };
 
 export const getDefenseOptions = (
-  character: CharacterSheet,
+  character: GurpsCharacterSheet,
   dodgeValue: number
 ): DefenseOptions => {
   const result: DefenseOptions = {

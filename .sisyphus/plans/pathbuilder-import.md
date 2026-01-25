@@ -895,7 +895,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 6. Update ruleset bundles + serverAdapter
+- [x] 6. Update ruleset bundles + serverAdapter
 
   **What to do**:
   

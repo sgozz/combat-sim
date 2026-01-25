@@ -227,3 +227,70 @@ The type guards `isPF2Character` and `isGurpsCharacter` are resilient:
 - Task 6: Update call sites in `serverAdapter.ts` to use type guards
 - Task 7: Update call sites in client components to use type guards
 - Task 8: Update remaining call sites systematically
+
+## Task 6: Ruleset Bundles and ServerAdapter Union Type Handling
+
+### Key Decisions
+
+1. **GURPS Rules Type Narrowing**: Updated `calculateTotalPoints` and `getDefenseOptions` in `shared/rulesets/gurps/rules.ts`
+   - Changed parameter type from `CharacterSheet` (union) to `GurpsCharacterSheet` (specific)
+   - Reason: These functions are GURPS-specific and should only accept GURPS characters
+   - Pattern: Import `GurpsCharacterSheet` from `./characterSheet`, use as parameter type
+   - Removed unused `CharacterSheet` import from `shared/types`
+
+2. **ServerAdapter Type Guard Pattern**: Added defensive type guards in `shared/rulesets/serverAdapter.ts`
+   - Functions `gurpsSelectBotDefense` and `gurpsResolveDefense` now check `isGurpsCharacter()` at entry
+   - If character is not GURPS type, return safe default values instead of crashing
+   - Pattern: `if (!isGurpsCharacter(character)) { return defaultValue; }`
+   - Enables graceful degradation if wrong ruleset character is passed
+
+3. **Wrapper Function Pattern**: Created `gurpsGetDefenseOptionsWrapper` to bridge type mismatch
+   - Problem: `gurpsGetDefenseOptions` now expects `GurpsCharacterSheet`, but adapter interface expects `CharacterSheet`
+   - Solution: Wrapper function accepts `CharacterSheet`, narrows with type guard, calls original function
+   - Pattern:
+     ```typescript
+     const gurpsGetDefenseOptionsWrapper = (character: CharacterSheet, dodgeValue: number): GurpsDefenseOptions => {
+       if (!isGurpsCharacter(character)) {
+         return { dodge: dodgeValue, parry: null, block: null };
+       }
+       return gurpsGetDefenseOptions(character, dodgeValue);
+     };
+     ```
+   - Used in both `gurpsCombatDomain` and `gurpsAdapter` to satisfy interface contract
+
+### File Changes
+
+- **shared/rulesets/gurps/rules.ts**:
+  - Line 16: Added import `import type { GurpsCharacterSheet } from './characterSheet'`
+  - Line 15: Removed unused `CharacterSheet` import
+  - Line 268: Changed `calculateTotalPoints(character: CharacterSheet)` → `calculateTotalPoints(character: GurpsCharacterSheet)`
+  - Line 284: Changed `getDefenseOptions(character: CharacterSheet, ...)` → `getDefenseOptions(character: GurpsCharacterSheet, ...)`
+
+- **shared/rulesets/serverAdapter.ts**:
+  - Line 5: Added import `import { isGurpsCharacter } from '../types'`
+  - Lines 440-457: Added type guard in `gurpsSelectBotDefense` with safe default return
+  - Lines 617-634: Added type guard in `gurpsResolveDefense` with safe default return
+  - Line 710: Added type guard for `attackerCharacter.equipment` access: `isGurpsCharacter(attackerCharacter) ? ... : false`
+  - Lines 739-743: Created `gurpsGetDefenseOptionsWrapper` function
+  - Line 751: Updated `gurpsCombatDomain.getDefenseOptions` to use wrapper
+  - Line 807: Updated `gurpsAdapter.getDefenseOptions` to use wrapper
+
+### Build Results
+
+- ✅ TypeScript errors: Reduced from ~140 to 132 errors
+- ✅ Tests: All 272 tests pass (no regressions)
+- ✅ Remaining errors: All in client components (Tasks 7-9)
+
+### Type Guard Resilience
+
+All type guards follow the defensive pattern:
+1. Check `typeof character === 'object' && character !== null` (implicit in `isGurpsCharacter`)
+2. Check nested discriminant field (`attributes.health` for GURPS)
+3. Return false for malformed input (never throw)
+4. Caller provides safe default when guard fails
+
+### Next Steps
+
+- Task 7: Update client components to use type guards (ArenaScene, Combatant, FloatingStatus, etc.)
+- Task 8: Update game action components (useGameActions, DefenseModal, GurpsActionBar, etc.)
+- Task 9: Update character editor components (GurpsCharacterEditor, GurpsGameActionPanel)

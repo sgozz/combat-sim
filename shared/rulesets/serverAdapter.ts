@@ -2,6 +2,7 @@ import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, Ruleset
 import type { ManeuverType, Posture, Equipment, Attributes, DerivedStats, Reach, ShieldSize, DamageType, HitLocation, CombatantState, DefenseType } from './gurps/types';
 import type { GridSystem } from '../grid';
 import { hexGrid } from '../grid';
+import { isGurpsCharacter } from '../types';
 
 export type MovementState = {
   position: HexCoord;
@@ -440,6 +441,17 @@ const pf2DamageDomain: DamageDomain = {
 const gurpsSelectBotDefense = (options: BotDefenseOptions): BotDefenseResult => {
   const { targetCharacter, targetCombatant, attackerPosition, distance, relativeDir, isRanged, findRetreatHex } = options;
   
+  if (!isGurpsCharacter(targetCharacter)) {
+    return {
+      defenseType: 'dodge',
+      defenseLabel: 'Dodge',
+      finalDefenseValue: 10,
+      canRetreat: false,
+      retreatHex: null,
+      parryWeaponName: null,
+    };
+  }
+  
   const targetEncumbrance = gurpsCalculateEncumbrance(
     targetCharacter.attributes.strength,
     targetCharacter.equipment
@@ -617,6 +629,18 @@ const gurpsGetDefenderManeuverInfo = (combatant: CombatantState): ManeuverInfo =
 const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResolutionResult => {
   const { defenderCharacter, defenderCombatant, attackerCombatant, attackerCharacter, defenseChoice, deceptivePenalty } = options;
   
+  if (!isGurpsCharacter(defenderCharacter)) {
+    return {
+      baseDefense: 0,
+      defenseLabel: 'Unavailable',
+      finalDefenseValue: 3,
+      canRetreat: false,
+      parryWeaponName: null,
+      sameWeaponParry: false,
+      inCloseCombat: false,
+    };
+  }
+  
   const defenderEncumbrance = gurpsCalculateEncumbrance(
     defenderCharacter.attributes.strength,
     defenderCharacter.equipment
@@ -683,7 +707,7 @@ const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResoluti
     }
   }
   
-  const isRanged = attackerCharacter.equipment[0]?.type === 'ranged';
+  const isRanged = isGurpsCharacter(attackerCharacter) ? attackerCharacter.equipment[0]?.type === 'ranged' : false;
   const defenderPosture = gurpsGetPostureModifiers(defenderCombatant.posture);
   defenseMod += isRanged ? defenderPosture.defenseVsRanged : defenderPosture.defenseVsMelee;
   
@@ -712,11 +736,18 @@ const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResoluti
   };
 };
 
+const gurpsGetDefenseOptionsWrapper = (character: CharacterSheet, dodgeValue: number): GurpsDefenseOptions => {
+  if (!isGurpsCharacter(character)) {
+    return { dodge: dodgeValue, parry: null, block: null };
+  }
+  return gurpsGetDefenseOptions(character, dodgeValue);
+};
+
 const gurpsCombatDomain: CombatDomain = {
   resolveAttackRoll: gurpsResolveAttackRoll,
   resolveDefenseRoll: gurpsResolveDefenseRoll,
   calculateDefenseValue: gurpsCalculateDefenseValue,
-  getDefenseOptions: gurpsGetDefenseOptions,
+  getDefenseOptions: gurpsGetDefenseOptionsWrapper,
   getRangePenalty: gurpsGetRangePenalty,
   getPostureModifiers: gurpsGetPostureModifiers,
   canAttackAtDistance: gurpsCanAttackAtDistance,
@@ -770,11 +801,11 @@ const gurpsAdapter: ServerRulesetAdapter = {
   closeCombat: gurpsCloseCombatDomain,
   pf2: undefined,
   
-  resolveAttackRoll: gurpsResolveAttackRoll,
-  resolveDefenseRoll: gurpsResolveDefenseRoll,
-  calculateDefenseValue: gurpsCalculateDefenseValue,
-  getDefenseOptions: gurpsGetDefenseOptions,
-  getRangePenalty: gurpsGetRangePenalty,
+   resolveAttackRoll: gurpsResolveAttackRoll,
+   resolveDefenseRoll: gurpsResolveDefenseRoll,
+   calculateDefenseValue: gurpsCalculateDefenseValue,
+   getDefenseOptions: gurpsGetDefenseOptionsWrapper,
+   getRangePenalty: gurpsGetRangePenalty,
   canAttackAtDistance: gurpsCanAttackAtDistance,
   getCloseCombatAttackModifiers: gurpsGetCloseCombatAttackModifiers,
   getCloseCombatDefenseModifiers: gurpsGetCloseCombatDefenseModifiers,
