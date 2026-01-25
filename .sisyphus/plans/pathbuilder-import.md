@@ -944,7 +944,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ### Phase C: Client Updates
 
-- [ ] 7. Update App.tsx for ruleset-aware character creation
+- [x] 7. Update App.tsx for ruleset-aware character creation
 
   **What to do**:
   - When opening editor for PF2 match, create PF2-shaped default character

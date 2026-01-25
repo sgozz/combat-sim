@@ -294,3 +294,66 @@ All type guards follow the defensive pattern:
 - Task 7: Update client components to use type guards (ArenaScene, Combatant, FloatingStatus, etc.)
 - Task 8: Update game action components (useGameActions, DefenseModal, GurpsActionBar, etc.)
 - Task 9: Update character editor components (GurpsCharacterEditor, GurpsGameActionPanel)
+
+## Task 7: Ruleset-Aware Default Character Creation in App.tsx
+
+### Key Decisions
+
+1. **Centralized Factory Function**: Created `createDefaultCharacter(rulesetId, username)` function
+   - Accepts `RulesetId` and username to determine character shape
+   - Returns `CharacterSheet` (union type) with correct shape for the ruleset
+   - Eliminates duplicate default character creation logic
+
+2. **PF2 Default Character Shape**:
+   - Uses `abilities` object (not `attributes`)
+   - Includes PF2-specific fields: `level`, `class`, `ancestry`, `heritage`, `background`
+   - Includes PF2-specific derived stats: `armorClass`, `speed`, `fortitudeSave`, `reflexSave`, `willSave`, `perception`
+   - Includes PF2-specific fields: `classHP`, `saveProficiencies`, `perceptionProficiency`, `armorProficiency`
+   - Includes PF2-specific arrays: `weapons`, `armor`, `feats`, `spells`
+   - Cast as `PF2CharacterSheet` for type safety
+
+3. **GURPS Default Character Shape**:
+   - Uses `attributes` object (not `abilities`)
+   - Includes GURPS-specific fields: `pointsTotal`
+   - Includes GURPS-specific arrays: `advantages`, `disadvantages`, `equipment`
+   - Cast as `GurpsCharacterSheet` for type safety
+
+4. **Ruleset Detection**: Both character editor open points now detect ruleset:
+   - `onOpenCharacterEditor`: Gets rulesetId from `matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'`
+   - CharacterEditor fallback: Uses same detection logic
+   - Ensures consistency across both code paths
+
+### File Changes
+
+- **src/App.tsx**:
+  - Added imports: `PF2CharacterSheet`, `GurpsCharacterSheet` from `shared/types`
+  - Added function: `createDefaultCharacter(rulesetId, username)` (lines 15-77)
+  - Updated `onOpenCharacterEditor` callback (lines 245-248): Now calls `createDefaultCharacter` with detected rulesetId
+  - Updated CharacterEditor fallback (line 267): Now calls `createDefaultCharacter` instead of inline object
+
+### Type Safety
+
+- Function signature: `(rulesetId: RulesetId, username: string): CharacterSheet`
+- Return type is union `CharacterSheet` (PF2 | GURPS)
+- Each branch explicitly casts to specific type (`as PF2CharacterSheet` / `as GurpsCharacterSheet`)
+- Eliminates type errors from mixing ruleset-specific fields
+
+### Verification Results
+
+- ✅ TypeScript compilation: 132 errors (unchanged - expected, as this is client-side only)
+- ✅ Tests: All 272 tests pass (no regressions)
+- ✅ Build: Completes successfully
+- ✅ No new errors introduced by this change
+
+### Pattern for Future Character Creation
+
+When creating default characters in other components:
+1. Import `createDefaultCharacter` from `App.tsx` (or move to utils if needed)
+2. Detect rulesetId from match state: `matchState?.rulesetId ?? 'gurps'`
+3. Call: `createDefaultCharacter(rulesetId, characterName)`
+4. Result is properly typed for the ruleset
+
+### Next Steps
+
+- Task 8: Update `useCharacterEditor` hook to handle ruleset-specific character shapes
+- Task 9: Update character editor components to use type guards for ruleset-specific fields

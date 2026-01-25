@@ -8,9 +8,81 @@ import { GameScreen } from './components/game/GameScreen'
 import { getRulesetComponents } from './components/rulesets'
 
 
-import type { GridPosition, CharacterSheet, RulesetId } from '../shared/types'
+import type { GridPosition, CharacterSheet, RulesetId, PF2CharacterSheet, GurpsCharacterSheet } from '../shared/types'
 import type { CombatActionPayload } from '../shared/rulesets/gurps/types'
 import './App.css'
+
+/**
+ * Create a default character sheet with the correct shape for the given ruleset.
+ * PF2 characters have abilities (constitution, etc.), GURPS have attributes (health, etc.).
+ */
+const createDefaultCharacter = (rulesetId: RulesetId, username: string): CharacterSheet => {
+  if (rulesetId === 'pf2') {
+    return {
+      id: uuid(),
+      name: username || 'New PF2 Character',
+      level: 1,
+      class: 'Fighter',
+      ancestry: 'Human',
+      heritage: 'Versatile Heritage',
+      background: 'Warrior',
+      abilities: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      derived: {
+        hitPoints: 10,
+        armorClass: 10,
+        speed: 25,
+        fortitudeSave: 0,
+        reflexSave: 0,
+        willSave: 0,
+        perception: 0,
+      },
+      classHP: 10,
+      saveProficiencies: {
+        fortitude: 'trained',
+        reflex: 'trained',
+        will: 'trained',
+      },
+      perceptionProficiency: 'trained',
+      armorProficiency: 'trained',
+      skills: [],
+      weapons: [],
+      armor: null,
+      feats: [],
+      spells: null,
+    } as PF2CharacterSheet
+  } else {
+    // GURPS default character
+    return {
+      id: uuid(),
+      name: username || 'New Character',
+      attributes: {
+        strength: 10,
+        dexterity: 10,
+        intelligence: 10,
+        health: 10,
+      },
+      derived: {
+        hitPoints: 10,
+        fatiguePoints: 10,
+        basicSpeed: 5,
+        basicMove: 5,
+        dodge: 8,
+      },
+      skills: [],
+      advantages: [],
+      disadvantages: [],
+      equipment: [],
+      pointsTotal: 100,
+    } as GurpsCharacterSheet
+  }
+}
 
 function AppRoutes() {
   const navigate = useNavigate()
@@ -242,54 +314,35 @@ function AppRoutes() {
                   sendMessage({ type: 'start_combat', matchId: activeMatchId, botCount })
                 }
               }}
-              onOpenCharacterEditor={() => {
-                setEditingCharacter({
-                  id: uuid(),
-                  name: user?.username ?? 'New Character',
-                  attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
-                  derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
-                  skills: [],
-                  advantages: [],
-                  disadvantages: [],
-                  equipment: [],
-                  pointsTotal: 100
-                })
-                setShowCharacterModal(true)
-              }}
+               onOpenCharacterEditor={() => {
+                 const rulesetId = matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'
+                 setEditingCharacter(createDefaultCharacter(rulesetId, user?.username ?? 'New Character'))
+                 setShowCharacterModal(true)
+               }}
               inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}
             />
             
             {showCharacterModal && (() => {
-              const rulesetId = matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'
-              const { CharacterEditor } = getRulesetComponents(rulesetId)
-              return (
-                <CharacterEditor 
-                  character={editingCharacter || {
-                     id: uuid(),
-                     name: user?.username ?? 'New Character',
-                     attributes: { strength: 10, dexterity: 10, intelligence: 10, health: 10 },
-                     derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5, basicMove: 5, dodge: 8 },
-                     skills: [],
-                     advantages: [],
-                     disadvantages: [],
-                     equipment: [],
-                     pointsTotal: 100
-                  }}
-                  setCharacter={setEditingCharacter}
-                  onSave={() => {
-                    if (editingCharacter && activeMatchId) {
-                      sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
-                      setShowCharacterModal(false)
-                      setEditingCharacter(null)
-                    }
-                  }}
-                  onCancel={() => {
-                    setShowCharacterModal(false)
-                    setEditingCharacter(null)
-                  }}
-                />
-              )
-            })()}
+               const rulesetId = matchState?.rulesetId ?? currentMatch?.rulesetId ?? 'gurps'
+               const { CharacterEditor } = getRulesetComponents(rulesetId)
+               return (
+                 <CharacterEditor 
+                   character={editingCharacter || createDefaultCharacter(rulesetId, user?.username ?? 'New Character')}
+                   setCharacter={setEditingCharacter}
+                   onSave={() => {
+                     if (editingCharacter && activeMatchId) {
+                       sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
+                       setShowCharacterModal(false)
+                       setEditingCharacter(null)
+                     }
+                   }}
+                   onCancel={() => {
+                     setShowCharacterModal(false)
+                     setEditingCharacter(null)
+                   }}
+                 />
+               )
+             })()}
           </>
         )
       } />
