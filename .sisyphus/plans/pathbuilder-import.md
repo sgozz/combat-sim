@@ -967,7 +967,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ---
 
-- [ ] 8. Update useCharacterEditor for PF2 branch
+- [x] 8. Update useCharacterEditor for PF2 branch
 
   **What to do**:
   - Add PF2 branch in `updateAttribute`:

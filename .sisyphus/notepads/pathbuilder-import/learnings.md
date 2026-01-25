@@ -357,3 +357,83 @@ When creating default characters in other components:
 
 - Task 8: Update `useCharacterEditor` hook to handle ruleset-specific character shapes
 - Task 9: Update character editor components to use type guards for ruleset-specific fields
+
+## Task 8: useCharacterEditor Hook - Ruleset-Aware Type Branching
+
+### Key Decisions
+
+1. **Import Pattern**: Added both type guards and ruleset-specific `calculateDerivedStats` functions
+   - `isPF2Character`, `isGurpsCharacter` from `shared/types`
+   - `gurpsCalculateDerivedStats` from `shared/rulesets/gurps/rules`
+   - `pf2CalculateDerivedStats` from `shared/rulesets/pf2/rules`
+   - PF2-specific types: `PF2Skill`, `Proficiency`, `Abilities`
+
+2. **updateAttribute Function**: Full PF2/GURPS branching
+   - PF2 branch: Uses `abilities` object, calls `pf2CalculateDerivedStats` with all 8 required parameters
+   - GURPS branch: Uses `attributes` object, calls `gurpsCalculateDerivedStats` with single parameter
+   - Both branches properly narrow the character type before accessing ruleset-specific fields
+
+3. **loadTemplate Function**: Uses `rulesetId` + discriminant check pattern
+   - Cannot use type guards directly on `Omit<CharacterSheet, 'id'>` templates
+   - Pattern: `if (rulesetId === 'pf2' && 'abilities' in template)`
+   - Casts template to specific type, then casts result back to `CharacterSheet`
+
+4. **Skill Functions**: Separate PF2/GURPS branches
+   - PF2: Creates `PF2Skill` with `ability` and `proficiency` fields
+   - GURPS: Creates `Skill` with `level` field
+   - Both use type guards to narrow before accessing skills array
+
+5. **GURPS-Only Functions**: Early return pattern
+   - `addEquipment`, `removeEquipment`: `if (!isGurpsCharacter(character)) return`
+   - `addAdvantage`, `removeAdvantage`: Same pattern
+   - `addDisadvantage`, `removeDisadvantage`: Same pattern
+   - PF2 doesn't have these fields (uses `weapons`, `armor`, `feats` instead)
+
+6. **totalPoints Calculation**: Conditional with type guard
+   - `isGurpsCharacter(character) ? calculateTotalPoints(character) : 0`
+   - PF2 doesn't use point-buy system, returns 0
+
+### File Changes
+
+- **src/components/rulesets/useCharacterEditor.ts**: Complete rewrite with type branching
+  - Lines 1-9: Updated imports
+  - Lines 49-79: `updateAttribute` with PF2/GURPS branches
+  - Lines 81-111: `addSkill`/`removeSkill` with type guards
+  - Lines 113-137: `addEquipment`/`removeEquipment` (GURPS-only)
+  - Lines 139-167: Advantage/disadvantage functions (GURPS-only)
+  - Line 169: `totalPoints` with type guard
+
+### Verification Results
+
+- ✅ No TypeScript errors in `useCharacterEditor.ts`
+- ✅ All 272 tests pass (no regressions)
+- ✅ Build error count: 109 (down from 132 - 23 errors fixed)
+- ✅ Remaining errors are in other components (Task 9)
+
+### Pattern for Template Loading
+
+When loading templates with union types:
+1. Check `rulesetId` first (known at runtime)
+2. Check discriminant field: `'abilities' in template` or `'attributes' in template`
+3. Cast to specific template type: `template as Omit<PF2CharacterSheet, 'id'>`
+4. Spread and add `id`, then cast result: `{ ...template, id } as CharacterSheet`
+
+### PF2 calculateDerivedStats Parameters
+
+All 8 parameters must be passed:
+```typescript
+pf2CalculateDerivedStats(
+  abilities,           // Abilities object
+  level,               // Character level
+  classHP,             // Base HP from class
+  armor?.acBonus ?? 0, // Armor AC bonus
+  armor?.dexCap ?? null, // Armor dex cap
+  saveProficiencies,   // Record of fort/ref/will proficiencies
+  perceptionProficiency, // Perception proficiency
+  armorProficiency     // Armor proficiency for AC calculation
+)
+```
+
+### Next Steps
+
+- Task 9: Update UI components (GurpsCharacterEditor, GurpsGameActionPanel, etc.) to use type guards
