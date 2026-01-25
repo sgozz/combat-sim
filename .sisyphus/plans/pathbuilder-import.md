@@ -1237,7 +1237,7 @@ Phase E: Pathbuilder Import (Tasks 12-15)
 
 ### Phase E: Pathbuilder Import
 
-- [ ] 12. Create shared UUID utility + Pathbuilder types + validation
+- [x] 12. Create shared UUID utility + Pathbuilder types + validation
 
   **What to do**:
   
