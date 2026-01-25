@@ -3,6 +3,15 @@ import { pf2UiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
 import type { MatchState, CharacterSheet } from '../../types';
 import type { Abilities } from './types';
+export type {
+  PF2Abilities,
+  PF2CharacterDerivedStats,
+  PF2CharacterWeapon,
+  PF2CharacterArmor,
+  PF2Feat,
+  PF2SpellInfo,
+  PF2CharacterSheet,
+} from './characterSheet';
 
 export const pf2Ruleset: Ruleset = {
   id: 'pf2',
