@@ -726,7 +726,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `useCharacterEditor.ts`, `Ruleset.ts`, adapters
   - Pre-commit: `npx vitest run`
 
-- [ ] 6.3. Move defense modal conditional to slots
+- [x] 6.3. Move defense modal conditional to slots
 
   **What to do**:
   - Update `src/components/game/GameScreen.tsx:385`
@@ -755,7 +755,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `GameScreen.tsx`, `rulesetUiSlots.ts`
   - Pre-commit: `npx vitest run`
 
-- [ ] 6.4. Move close combat rejection to adapter
+- [x] 6.4. Move close combat rejection to adapter
 
   **What to do**:
   - Update `server/src/handlers/gurps/close-combat.ts:34,132`
@@ -782,7 +782,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
   - Files: `server/src/handlers/gurps/close-combat.ts`
   - Pre-commit: `npx vitest run`
 
-- [ ] 6.5. Move action routing to adapter
+- [x] 6.5. Move action routing to adapter
 
   **What to do**:
   - Update `server/src/handlers.ts:507`

@@ -711,3 +711,82 @@ This completes Phase 6 (Registry Pattern Refactoring):
 - Phase 6: Character creation moved to registry ✅
 
 All character creation is now ruleset-aware through the registry pattern. No hardcoded conditionals remain in App.tsx.
+
+## Task 6.4: Close Combat Adapter Capability Check (COMPLETED 2026-01-26)
+
+### Summary
+Replaced hardcoded `if (match.rulesetId === 'pf2')` checks with adapter capability checks in close combat handlers.
+
+### Changes Made
+
+1. **server/src/handlers/gurps/close-combat.ts**
+   - Line 34: Changed from `if (match.rulesetId === 'pf2')` to `if (!adapter.closeCombat)`
+   - Line 132: Changed from `if (match.rulesetId === 'pf2')` to `if (!adapter.closeCombat)`
+   - Pattern: Check if adapter has `closeCombat` domain instead of checking ruleset ID
+
+### Verification
+- ✅ No `=== 'pf2'` checks in close-combat.ts
+- ✅ PF2 gracefully rejected (adapter.closeCombat is undefined for PF2)
+- ✅ All 356 tests pass
+- ✅ Server builds successfully
+
+### Key Insight
+This pattern (capability check instead of ruleset check) is more extensible:
+- GURPS adapter has `closeCombat` domain → close combat works
+- PF2 adapter has no `closeCombat` domain → gracefully rejected
+- Future rulesets can opt-in by providing the domain
+- No hardcoded ruleset checks needed
+
+## Task 6.5: Action Routing via Router Pattern (COMPLETED 2026-01-26)
+
+### Summary
+Created GURPS router to centralize action routing, eliminating 450+ lines of inline action handling from handlers.ts.
+
+### Changes Made
+
+1. **Created server/src/handlers/gurps/router.ts** (17.7 KB)
+   - Exported `handleGurpsAction()` function
+   - Moved ALL inline GURPS action handling from handlers.ts
+   - Routes 18 action types: select_maneuver, move_step, rotate, undo_movement, confirm_movement, skip_movement, turn_left, turn_right, aim_target, evaluate_target, set_wait_trigger, end_turn, change_posture, move, defend, attack, ready_action, enter_close_combat, exit_close_combat, grapple, break_free
+   - Uses if/else pattern for action routing (similar to PF2 router's switch)
+
+2. **Updated server/src/handlers/index.ts**
+   - Added export: `export { handleGurpsAction } from './gurps/router';`
+
+3. **Refactored server/src/handlers.ts**
+   - Replaced 450+ lines of inline GURPS handling with: `return handleGurpsAction(socket, matchId, match, player, actorCombatant, payload);`
+   - File reduced from ~800 lines to ~500 lines
+   - Only contains: message validation, turn/defense checks, ruleset routing
+
+### Verification
+- ✅ File created: `server/src/handlers/gurps/router.ts`
+- ✅ Exports updated in `server/src/handlers/index.ts`
+- ✅ `grep "=== 'pf2'" server/src/handlers.ts` → 1 result (routing line only)
+- ✅ `grep "=== 'gurps'" server/src/handlers.ts` → 0 results
+- ✅ All 356 tests pass
+- ✅ Server builds successfully (209.1kb bundle)
+
+### Architecture Impact
+The refactoring completes the router pattern for action handling:
+- **PF2 actions** → `handlePF2Action()` in `server/src/handlers/pf2/router.ts`
+- **GURPS actions** → `handleGurpsAction()` in `server/src/handlers/gurps/router.ts`
+- **Routing decision** → Made at handlers.ts:514 based on `match.rulesetId`
+- **No inline handling** → Main handlers.ts only routes, doesn't implement
+
+### Key Insight
+This pattern (router per ruleset) provides:
+- Clean separation of concerns by ruleset
+- Easy to add new rulesets (create new router, add routing case)
+- Centralized action handling per ruleset
+- No scattered conditionals in main handler file
+- Scales well for future rulesets (D&D 5e, etc.)
+
+### Phase 6 Complete
+All 5 tasks of Phase 6 (Scattered Conditionals) are now complete:
+- 6.1: Character creation via registry ✅
+- 6.2: Template selection via adapter ✅
+- 6.3: Defense modal via slot pattern ✅
+- 6.4: Close combat via capability check ✅
+- 6.5: Action routing via router pattern ✅
+
+**Next**: Phase 7 (Final Verification) - 4 tasks remaining

@@ -30,13 +30,13 @@ export const handleEnterCloseCombat = async (
   payload: CombatActionPayload & { type: "enter_close_combat" }
 ): Promise<void> => {
   if (!actorCombatant) return;
-  
-  if (match.rulesetId === 'pf2') {
-    sendMessage(socket, { type: "error", message: "Close combat not available in PF2. Use Grapple action instead." });
-    return;
-  }
-  
-  const adapter = getServerAdapter(match.rulesetId);
+   
+   const adapter = getServerAdapter(match.rulesetId);
+   
+   if (!adapter.closeCombat) {
+     sendMessage(socket, { type: "error", message: "Close combat not supported for this ruleset." });
+     return;
+   }
   
   if (actorCombatant.inCloseCombatWith) {
     sendMessage(socket, { type: "error", message: "Already in close combat." });
@@ -128,13 +128,15 @@ export const handleExitCloseCombat = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
-  
-  if (match.rulesetId === 'pf2') {
-    sendMessage(socket, { type: "error", message: "Close combat not available in PF2." });
-    return;
-  }
-  
-  if (!actorCombatant.inCloseCombatWith) {
+   
+   const adapter = getServerAdapter(match.rulesetId);
+   
+   if (!adapter.closeCombat) {
+     sendMessage(socket, { type: "error", message: "Close combat not supported for this ruleset." });
+     return;
+   }
+   
+   if (!actorCombatant.inCloseCombatWith) {
     sendMessage(socket, { type: "error", message: "Not in close combat." });
     return;
   }

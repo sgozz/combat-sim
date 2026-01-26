@@ -16,6 +16,8 @@ export {
   resolveDefenseChoice,
 } from './gurps';
 
+export { handleGurpsAction } from './gurps/router';
+
 export { 
   handlePF2Action,
   handlePF2AttackAction,
