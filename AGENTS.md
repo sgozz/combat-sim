@@ -21,17 +21,23 @@ The simulator supports multiple tabletop RPG systems through a decoupled archite
 1.  **Type System Abstraction**:
     - `BaseCombatantState` (`shared/rulesets/base/types.ts`): Universal fields (HP, position, facing) shared by all systems.
     - Ruleset-specific states (e.g., `GurpsCombatantState`) extend the base state with system-specific fields (maneuvers, fatigue, etc.).
-    - **Type Guards**: `isGurpsCombatant()` and `isPF2Combatant()` are used to safely access ruleset-specific data.
+    - **Type Guards**: `isGurpsCombatant()`, `isPF2Combatant()`, `isGurpsCharacter()`, and `isPF2Character()` are used to safely access ruleset-specific data.
 
 2.  **Server Adapter Pattern** (`shared/rulesets/serverAdapter.ts`):
     - The `ServerRulesetAdapter` interface defines the contract for server-side logic (turn advancement, movement validation, combat resolution).
     - `getServerAdapter(rulesetId)` returns the appropriate implementation.
-    - Logic is grouped into domains: `combat`, `damage`, `closeCombat`, `pf2`.
+    - **Grid Type**: `getGridType(rulesetId)` returns `'hex'` or `'square'` based on the adapter's configuration.
+    - **Capability Checks**: Use adapter properties (e.g., `adapter.closeCombat`) to check for optional feature support instead of hardcoding ruleset IDs.
 
 3.  **Component Registry** (`shared/rulesets/index.ts`):
     - Rulesets are registered in a central registry.
-    - `Ruleset` interface: Handles data derivation and initial state.
+    - `Ruleset` interface: Handles data derivation, initial state, and **character creation** (`createCharacter(name)`).
     - `RulesetUIAdapter` interface: Provides UI-specific configuration (maneuvers, action layouts, instructions).
+    - **UI Slots**: `rulesetUiSlots` registry provides ruleset-specific UI components (e.g., defense modals).
+
+4.  **Router Pattern** (`server/src/handlers/{ruleset}/router.ts`):
+    - Each ruleset has a dedicated router for handling its specific actions.
+    - `handleGurpsAction()` and `handlePF2Action()` encapsulate ruleset-specific logic, keeping the main `handlers.ts` clean.
 
 ### Directory Structure
 ```
@@ -41,15 +47,19 @@ shared/rulesets/
     types.ts             # GURPS-specific state and types
     rules.ts             # GURPS combat and movement logic
     ui.ts                # GURPS UI adapter implementation
-    index.ts             # GURPS bundle export
+    index.ts             # GURPS bundle export (includes createCharacter)
   pf2/                   # Pathfinder 2e implementation
     types.ts
     rules.ts
     ui.ts
     index.ts
-  serverAdapter.ts       # Server-side adapter pattern
+  serverAdapter.ts       # Server-side adapter pattern & grid helpers
   Ruleset.ts             # Core interfaces (Ruleset, RulesetUIAdapter)
+  defaults.ts            # Centralized defaults (assertRulesetId)
   index.ts               # Ruleset registry and type guards
+server/src/handlers/
+  gurps/router.ts        # GURPS action router
+  pf2/router.ts          # PF2 action router
 ```
 
 ### Adding a New Ruleset (e.g., D&D 5e)
@@ -59,11 +69,22 @@ shared/rulesets/
 3.  **Implement Rules**: Create `rules.ts`. Implement movement, turn logic, and combat functions.
 4.  **Create UI Adapter**: Create `ui.ts`. Implement `RulesetUIAdapter` to define how the system appears in the HUD.
 5.  **Implement Server Adapter**: In `shared/rulesets/serverAdapter.ts`, create a `dnd5eAdapter` and add it to the `adapters` record.
-6.  **Register Ruleset**: In `shared/rulesets/index.ts`:
-    - Create a `dnd5eBundle`.
+6.  **Create Router**: Create `server/src/handlers/dnd5e/router.ts` with `handleDnD5eAction()`.
+7.  **Register Ruleset**: In `shared/rulesets/index.ts`:
+    - Create a `dnd5eBundle` (implementing `createCharacter`).
     - Add it to the `rulesets` record.
     - Add a type guard `isDnD5eCombatant()`.
-7.  **Add Tests**: Create `shared/rulesets/dnd5e/rules.test.ts` to verify the logic.
+8.  **Update Routing**: In `server/src/handlers.ts`, add a routing case for `'dnd5e'` that calls `handleDnD5eAction()`.
+9.  **Add UI Slots**: If needed, add D&D 5e specific components to `src/components/game/shared/rulesetUiSlots.ts`.
+10. **Add Tests**: Create `shared/rulesets/dnd5e/rules.test.ts` to verify the logic.
+
+### Key Patterns & Best Practices
+
+- **No Hardcoded Defaults**: Use `assertRulesetId(id)` instead of `id ?? 'gurps'`.
+- **No Hardcoded Conditionals**: Use the adapter or registry pattern instead of `if (rulesetId === 'pf2')`.
+- **Capability Checks**: Check for domain existence (e.g., `if (adapter.closeCombat)`) rather than ruleset identity.
+- **Type Safety**: Always use type guards (`isGurpsCharacter`) at component/function entry points to safely access ruleset-specific fields.
+- **Generic Shared Components**: Shared components should use generic types (e.g., `string` for maneuvers) and rely on the registry for specific data.
 
 ## Node Version
 **Required**: Node 22.12.0+ (Vite 7 requirement)
