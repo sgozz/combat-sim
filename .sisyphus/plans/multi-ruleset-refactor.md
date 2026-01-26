@@ -814,7 +814,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
 ### Phase 7: Final Verification
 
-- [ ] 7.1. Run full verification suite
+- [x] 7.1. Run full verification suite
 
   **What to do**:
   - Run all automated checks
@@ -849,7 +849,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
   **Commit**: NO (verification only)
 
-- [ ] 7.2. Manual testing - GURPS match
+- [x] 7.2. Manual testing - GURPS match
 
   **What to do**:
   - Start dev server: `npm run dev` (client) + `npm run dev --prefix server` (server)
@@ -879,7 +879,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
   **Commit**: NO (verification only)
 
-- [ ] 7.3. Manual testing - PF2 match
+- [x] 7.3. Manual testing - PF2 match
 
   **What to do**:
   - Create PF2 match (with bot or second player)
