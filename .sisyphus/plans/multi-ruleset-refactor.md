@@ -49,13 +49,13 @@ Refactor the combat simulator to have clean ruleset separation, eliminating all 
 7. Database migration for `rulesetId` requirement
 
 ### Definition of Done
-- [ ] `grep -r "?? 'gurps'" --include="*.ts" . | wc -l` returns 0 (or 1 for explicit default function)
-- [ ] `grep -r "=== 'pf2'" --include="*.ts" src/ server/src/handlers.ts` returns 0
-- [ ] `npm run build` succeeds with 0 TypeScript errors
-- [ ] `npx vitest run` passes all tests
-- [ ] `npm run lint` exits 0
-- [ ] Manual test: GURPS match with bot works (bot attacks and defends)
-- [ ] Manual test: PF2 match works (movement and attacks function)
+- [x] `grep -r "?? 'gurps'" --include="*.ts" . | wc -l` returns 0 (or 1 for explicit default function)
+- [x] `grep -r "=== 'pf2'" --include="*.ts" src/ server/src/handlers.ts` returns 0
+- [x] `npm run build` succeeds with 0 TypeScript errors
+- [x] `npx vitest run` passes all tests
+- [x] `npm run lint` exits 0
+- [x] Manual test: GURPS match with bot works (bot attacks and defends)
+- [x] Manual test: PF2 match works (movement and attacks function)
 
 ### Must Have
 - Centralized default ruleset function (not scattered `?? 'gurps'`)
@@ -981,9 +981,9 @@ grep -r "=== 'gurps'" --include="*.ts" src/ | wc -l                      # Expec
 ```
 
 ### Final Checklist
-- [ ] All "Must Have" deliverables present
-- [ ] All "Must NOT Have" guardrails respected (no PF2 feature implementation)
-- [ ] All 24 tasks completed
-- [ ] All tests pass
-- [ ] Manual testing confirms both rulesets work
-- [ ] AGENTS.md updated with new patterns
+- [x] All "Must Have" deliverables present
+- [x] All "Must NOT Have" guardrails respected (no PF2 feature implementation)
+- [x] All 26 tasks completed
+- [x] All tests pass
+- [x] Manual testing confirms both rulesets work
+- [x] AGENTS.md updated with new patterns
