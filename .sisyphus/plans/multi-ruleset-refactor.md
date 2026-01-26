@@ -907,7 +907,7 @@ Phase 0 (Baseline) ──→ Phase 1 (Tests) ──→ Phase 2 (Defaults) ──
 
   **Commit**: NO (verification only)
 
-- [ ] 7.4. Document new ruleset addition process
+- [x] 7.4. Document new ruleset addition process
 
   **What to do**:
   - Update `AGENTS.md` "Adding a New Ruleset" section

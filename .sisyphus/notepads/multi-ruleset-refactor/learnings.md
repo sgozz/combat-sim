@@ -1066,3 +1066,17 @@ The refactoring successfully enabled PF2 as a playable ruleset with correct grid
 
 **Key Achievement**: PF2 is now a first-class ruleset with proper square grid support and action economy display, demonstrating successful multi-ruleset architecture.
 
+
+## Task 7.4: Documentation Update (COMPLETED 2026-01-26)
+
+### Changes Made
+- Updated AGENTS.md "Adding a New Ruleset" section
+- Documented new patterns: registry, adapter, router, capability checks, slots
+- Provided step-by-step guide for adding D&D 5e
+- Removed outdated references to hardcoded conditionals
+
+### Key Documentation
+- Registry pattern for character creation
+- Adapter pattern for grid type and capabilities
+- Router pattern for action handling
+- Type guards for safe ruleset-specific access
