@@ -4,6 +4,7 @@ import { assertRulesetId } from '../../../../shared/rulesets/defaults';
 import type { MatchState, Player, RulesetId, CharacterSheet } from '../../../../shared/types';
 import type { CombatActionPayload, ManeuverType, HitLocation, DefenseChoice, PendingDefense, CombatantState } from '../../../../shared/rulesets/gurps/types';
 import HitLocationPicker from '../../rulesets/gurps/HitLocationPicker';
+import DefenseModal from '../../rulesets/gurps/DefenseModal';
 
 export type AttackUiOptions = {
   hitLocation: HitLocation;
@@ -38,6 +39,7 @@ export type RulesetUiSlots = {
   renderActionPanelHeader?: (ctx: RulesetUiSlotContext) => ReactNode;
   renderActionConfiguration?: (ctx: RulesetUiSlotContext) => ReactNode;
   renderDefenseOptions?: (ctx: RulesetDefenseSlotContext) => ReactNode;
+  DefenseModal?: ((props: { pendingDefense: PendingDefense; character: CharacterSheet; combatant: CombatantState; attackerName: string; inCloseCombat: boolean; onDefend: (choice: DefenseChoice) => void; rulesetId?: RulesetId }) => ReactNode) | null;
 };
 
 const GurpsActionConfiguration = ({
@@ -208,6 +210,8 @@ const rulesetUiSlots: Record<RulesetId, RulesetUiSlots> = {
         currentManeuver: ctx.currentManeuver,
         attackOptions: ctx.attackOptions,
       }),
+    DefenseModal: (props) =>
+      createElement(DefenseModal, props),
   },
   pf2: {
     renderActionPanelHeader: (ctx) =>
@@ -220,6 +224,7 @@ const rulesetUiSlots: Record<RulesetId, RulesetUiSlots> = {
         matchState: ctx.matchState,
         player: ctx.player,
       }),
+    DefenseModal: null,
   },
 };
 

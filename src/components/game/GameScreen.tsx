@@ -9,7 +9,7 @@ import { InitiativeTracker } from './InitiativeTracker'
 import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 
-import DefenseModal from '../rulesets/gurps/DefenseModal'
+import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 import type { CameraMode } from '../arena/CameraControls'
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
 
@@ -382,17 +382,20 @@ export const GameScreen = ({
         </div>
       )}
 
-      {isDefending && pendingDefense && defenderCharacter && currentCombatant && matchState?.rulesetId !== 'pf2' && (
-        <DefenseModal
-          pendingDefense={pendingDefense}
-          character={defenderCharacter}
-          combatant={currentCombatant}
-          attackerName={attackerPlayer?.name ?? 'Unknown'}
-          inCloseCombat={inCloseCombat}
-          onDefend={handleDefenseChoice}
-          rulesetId={matchState?.rulesetId}
-        />
-      )}
+      {isDefending && pendingDefense && defenderCharacter && currentCombatant && (() => {
+        const { DefenseModal: DefenseModalSlot } = getRulesetUiSlots(matchState?.rulesetId);
+        return DefenseModalSlot ? (
+          <DefenseModalSlot
+            pendingDefense={pendingDefense}
+            character={defenderCharacter}
+            combatant={currentCombatant}
+            attackerName={attackerPlayer?.name ?? 'Unknown'}
+            inCloseCombat={inCloseCombat}
+            onDefend={handleDefenseChoice}
+            rulesetId={matchState?.rulesetId}
+          />
+        ) : null;
+      })()}
 
       {pendingAction?.type === 'exit_close_combat_request' && pendingAction.targetId === player?.id && (
         <div className="modal-overlay">
