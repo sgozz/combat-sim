@@ -443,7 +443,7 @@ export const GurpsActionBar = ({
                   setShowWaitPicker(true)
                   onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'wait' })
                 } else {
-                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
+                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type as ManeuverType })
                   setShowManeuvers(false)
                 }
               }}

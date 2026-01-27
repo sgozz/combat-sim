@@ -1,5 +1,4 @@
 import type { RulesetUIAdapter, RulesetManeuver, ManeuverInstruction } from '../Ruleset';
-import type { ManeuverType } from '../gurps/types';
 import { PF2_TEMPLATE_NAMES } from './templateNames';
 
 const PF2_ACTIONS: RulesetManeuver[] = [
@@ -18,9 +17,9 @@ const PF2_SKILL_ACTIONS: RulesetManeuver[] = [
   { type: 'move_and_attack', label: 'Tumble Through', shortLabel: 'Tumble', icon: '🤸', desc: 'Move through enemy space.', key: '-' },
 ];
 
-const CLOSE_COMBAT_ACTIONS: ManeuverType[] = ['attack', 'all_out_attack'];
+const CLOSE_COMBAT_ACTIONS: string[] = ['attack', 'all_out_attack'];
 
-const getManeuverInstructions = (maneuver: ManeuverType | null): ManeuverInstruction | null => {
+const getManeuverInstructions = (maneuver: string | null): ManeuverInstruction | null => {
   switch (maneuver) {
     case 'move':
       return { text: 'Click a hex to Stride. Costs 1 action.', canAttack: false, canMove: true, isStep: false };

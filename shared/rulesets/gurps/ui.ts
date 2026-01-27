@@ -1,5 +1,4 @@
 import type { RulesetUIAdapter } from '../Ruleset';
-import type { ManeuverType } from './types';
 import { TEMPLATE_NAMES } from './templateNames';
 
 const MANEUVERS = [
@@ -30,9 +29,9 @@ const AOD_VARIANTS = [
   { variant: 'double', label: 'Double Defense', desc: 'Two different defenses vs same attack' },
 ] as const;
 
-const CLOSE_COMBAT_MANEUVERS: ManeuverType[] = ['attack', 'all_out_attack', 'all_out_defense'];
+const CLOSE_COMBAT_MANEUVERS: string[] = ['attack', 'all_out_attack', 'all_out_defense'];
 
-const getManeuverInstructions = (maneuver: ManeuverType | null) => {
+const getManeuverInstructions = (maneuver: string | null) => {
   switch (maneuver) {
     case 'move':
       return { text: 'Click a hex to move. Full movement allowed.', canAttack: false, canMove: true, isStep: false };

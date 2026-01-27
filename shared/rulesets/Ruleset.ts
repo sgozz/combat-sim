@@ -1,6 +1,5 @@
 import type { CharacterSheet, MatchState, RulesetId } from '../types';
-import type { GurpsCombatantState, ManeuverType, AOAVariant, AODVariant } from './gurps/types';
-import type { PF2CombatantState } from './pf2/types';
+import type { BaseCombatantState } from './base/types';
 
 export type RulesetAction = {
   type: string;
@@ -15,7 +14,7 @@ export type RulesetCombatPreview = {
 };
 
 export type RulesetManeuver = {
-  type: ManeuverType;
+  type: string;
   label: string;
   shortLabel: string;
   icon: string;
@@ -24,7 +23,7 @@ export type RulesetManeuver = {
 };
 
 export type RulesetVariant = {
-  variant: AOAVariant | AODVariant;
+  variant: string;
   label: string;
   desc: string;
 };
@@ -41,7 +40,7 @@ export type ManeuverInstruction = {
 export type Ruleset = {
   id: RulesetId;
   getDerivedStats: (character: CharacterSheet) => CharacterSheet['derived'];
-  getInitialCombatantState: (character: CharacterSheet) => Omit<GurpsCombatantState | PF2CombatantState, 'playerId' | 'characterId' | 'position' | 'facing'>;
+  getInitialCombatantState: (character: CharacterSheet) => Omit<BaseCombatantState, 'playerId' | 'characterId' | 'position' | 'facing'> & Record<string, unknown>;
   getAvailableActions: (state: MatchState, actorId: string) => RulesetAction[];
   getCombatPreview: (state: MatchState, actorId: string, targetId: string, actionType: string) => RulesetCombatPreview | null;
   createCharacter: (name: string) => CharacterSheet;
@@ -52,9 +51,9 @@ export type RulesetUIAdapter = {
   getActionLabels: () => Record<string, string>;
   getActionTooltips: () => Record<string, string>;
   getManeuvers: () => RulesetManeuver[];
-  getCloseCombatManeuvers: () => ManeuverType[];
+  getCloseCombatManeuvers: () => string[];
   getAoaVariants: () => RulesetVariant[];
   getAodVariants: () => RulesetVariant[];
-  getManeuverInstructions: (maneuver: ManeuverType | null) => ManeuverInstruction | null;
+  getManeuverInstructions: (maneuver: string | null) => ManeuverInstruction | null;
   getTemplateNames: () => string[];
 };

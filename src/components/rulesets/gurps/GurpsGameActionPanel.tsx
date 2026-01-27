@@ -6,7 +6,7 @@ import { ReadyPanel } from './ReadyPanel'
 import { getHitProbability } from '../../game/shared/useGameActions'
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
 import type { GameActionPanelProps } from '../types'
-import type { HitLocation, ReadyAction, EquipmentSlot, WaitTrigger, AOAVariant, AODVariant } from '../../../../shared/rulesets/gurps/types'
+import type { ManeuverType, HitLocation, ReadyAction, EquipmentSlot, WaitTrigger, AOAVariant, AODVariant } from '../../../../shared/rulesets/gurps/types'
 import { hexDistance } from '../../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../../shared/rulesets/gurps/rules'
 import { rulesets } from '../../../../shared/rulesets'
@@ -179,7 +179,7 @@ export const GurpsGameActionPanel = ({
                     } else if (m.type === 'all_out_defense') {
                       setShowAODVariantPicker(true)
                     } else {
-                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type })
+                      onAction('select_maneuver', { type: 'select_maneuver', maneuver: m.type as ManeuverType })
                     }
                   }}
                 >
