@@ -10,7 +10,7 @@ import type {
   PF2DamageType,
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
-import { isPF2Combatant } from '../index';
+import { isPF2Combatant } from '../guards';
 
 export type D20RollResult = {
   roll: number;

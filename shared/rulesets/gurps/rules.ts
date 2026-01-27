@@ -14,7 +14,7 @@ import type {
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
 import type { GurpsCharacterSheet } from './characterSheet';
-import { isGurpsCombatant } from '../index';
+import { isGurpsCombatant } from '../guards';
 
 export type RollResult = {
   roll: number;

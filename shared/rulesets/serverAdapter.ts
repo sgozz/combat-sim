@@ -4,7 +4,7 @@ import type { CombatantState } from './index';
 import type { GridSystem } from '../grid';
 import { hexGrid, squareGrid8 } from '../grid';
 import { isGurpsCharacter } from '../types';
-import { isGurpsCombatant } from './index';
+import { isGurpsCombatant } from './guards';
 
 export type MovementState = {
   position: HexCoord;
