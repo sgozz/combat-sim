@@ -10,6 +10,7 @@ import type {
   PF2DamageType,
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
+import { isPF2Combatant } from '../index';
 
 export type D20RollResult = {
   roll: number;
@@ -356,21 +357,17 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const round = nextIndex === 0 ? state.round + 1 : state.round;
   const nextPlayerId = state.players[nextIndex]?.id ?? '';
   
-  const updatedCombatants = state.combatants.map(c => {
-    if (c.playerId === nextPlayerId && c.pf2) {
-      return {
-        ...c,
-        attacksRemaining: 3,
-        pf2: {
-          ...c.pf2,
-          actionsRemaining: 3,
-          reactionAvailable: true,
-          mapPenalty: 0,
-          attacksThisTurn: 0,
-          shieldRaised: false,
-        },
-      };
-    }
+   const updatedCombatants = state.combatants.map(c => {
+     if (c.playerId === nextPlayerId && isPF2Combatant(c)) {
+       return {
+         ...c,
+         attacksRemaining: 3,
+         actionsRemaining: 3,
+         reactionAvailable: true,
+         mapPenalty: 0,
+         shieldRaised: false,
+       };
+     }
     return c;
   });
   

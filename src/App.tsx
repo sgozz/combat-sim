@@ -6,7 +6,7 @@ import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { getRulesetComponents } from './components/rulesets'
 import { assertRulesetId } from '../shared/rulesets/defaults'
-import { rulesets } from '../shared/rulesets'
+import { rulesets, isGurpsCombatant } from '../shared/rulesets'
 
 import type { GridPosition, CharacterSheet, RulesetId } from '../shared/types'
 import './App.css'
@@ -110,10 +110,10 @@ function AppRoutes() {
     const currentCombatant = matchState.combatants.find((c) => c.playerId === user.id)
     if (!currentCombatant) return
     
-    if (currentCombatant.inCloseCombatWith) {
-      setLogs((prev) => [...prev, 'Cannot move while in close combat. Use Exit Close Combat first.'])
-      return
-    }
+     if (isGurpsCombatant(currentCombatant) && currentCombatant.inCloseCombatWith) {
+       setLogs((prev) => [...prev, 'Cannot move while in close combat. Use Exit Close Combat first.'])
+       return
+     }
     
     if (matchState.turnMovement?.phase === 'moving') {
       const reachable = matchState.reachableHexes?.some(

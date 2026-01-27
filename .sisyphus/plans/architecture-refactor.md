@@ -188,7 +188,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 2. Update CharacterSheet as discriminated union
+- [x] 2. Update CharacterSheet as discriminated union
 
   **What to do**:
   - Modify `shared/rulesets/gurps/types.ts` - add explicit `rulesetId: 'gurps'` to `GurpsCharacterSheet`
@@ -237,7 +237,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 3. Update CombatantState as discriminated union
+- [x] 3. Update CombatantState as discriminated union
 
   **What to do**:
   - Modify `shared/rulesets/gurps/types.ts` - ensure `GurpsCombatantState` has `rulesetId: 'gurps'`

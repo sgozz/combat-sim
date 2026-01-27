@@ -12,6 +12,7 @@ import { CombatToast } from './CombatToast'
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 import type { CameraMode } from '../arena/CameraControls'
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
+import { isGurpsCombatant } from '../../../shared/rulesets'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -73,8 +74,8 @@ export const GameScreen = ({
   void _lobbyId
   const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
   const hasSeenMatchStart = useRef(false)
-  const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
-  const currentManeuver = currentCombatant?.maneuver ?? null
+   const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
+   const currentManeuver = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.maneuver : null
 
   useEffect(() => {
     if (matchState?.status === 'active' && !hasSeenMatchStart.current) {
@@ -103,7 +104,7 @@ export const GameScreen = ({
   const isDefending = pendingDefense?.defenderId === player?.id
   const attackerPlayer = matchState?.players.find(p => p.id === pendingDefense?.attackerId)
   const defenderCharacter = matchState?.characters.find(c => c.id === currentCombatant?.characterId)
-  const inCloseCombat = currentCombatant?.inCloseCombatWith !== null
+   const inCloseCombat = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.inCloseCombatWith !== null : false
 
   const handleDefenseChoice = useCallback((choice: { type: string; retreat: boolean; dodgeAndDrop: boolean }) => {
     onAction('defend', { type: 'defend', defenseType: choice.type, retreat: choice.retreat, dodgeAndDrop: choice.dodgeAndDrop })
@@ -145,16 +146,16 @@ export const GameScreen = ({
 
   return (
     <div className="app-container">
-      {canRenderPanels ? (
-        <GameStatusPanel
-          matchState={matchState}
-          player={player}
-          combatant={currentCombatant}
-          character={playerCharacter}
-          lobbyPlayers={lobbyPlayers}
-          isMyTurn={isPlayerTurn}
-          onAction={onAction}
-        />
+       {canRenderPanels && matchState?.rulesetId === 'gurps' ? (
+         <GameStatusPanel
+           matchState={matchState}
+           player={player}
+           combatant={currentCombatant as any}
+           character={playerCharacter}
+           lobbyPlayers={lobbyPlayers}
+           isMyTurn={isPlayerTurn}
+           onAction={onAction}
+         />
       ) : (
         <aside className="panel">
           <div className="panel-header">
@@ -234,37 +235,37 @@ export const GameScreen = ({
         
         <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
           <color attach="background" args={['#111']} />
-          <ArenaScene
-            combatants={matchState?.combatants ?? []}
-            characters={matchState?.characters ?? []}
-            playerId={player?.id ?? null}
-            activeTurnPlayerId={matchState?.activeTurnPlayerId ?? null}
-            moveTarget={moveTarget}
-            selectedTargetId={selectedTargetId}
-            isPlayerTurn={isPlayerTurn}
-            reachableHexes={matchState?.reachableHexes ?? []}
-            visualEffects={visualEffects}
-            cameraMode={cameraMode}
-            rulesetId={matchState?.rulesetId ?? 'gurps'}
-            onGridClick={onGridClick}
-            onCombatantClick={onCombatantClick}
-          />
+           <ArenaScene
+             combatants={(matchState?.combatants ?? []) as any}
+             characters={matchState?.characters ?? []}
+             playerId={player?.id ?? null}
+             activeTurnPlayerId={matchState?.activeTurnPlayerId ?? null}
+             moveTarget={moveTarget}
+             selectedTargetId={selectedTargetId}
+             isPlayerTurn={isPlayerTurn}
+             reachableHexes={matchState?.reachableHexes ?? []}
+             visualEffects={visualEffects}
+             cameraMode={cameraMode}
+             rulesetId={matchState?.rulesetId ?? 'gurps'}
+             onGridClick={onGridClick}
+             onCombatantClick={onCombatantClick}
+           />
         </Canvas>
       </main>
 
-      {canRenderPanels ? (
-        <GameActionPanel
-          matchState={matchState}
-          player={player}
-          combatant={currentCombatant}
-          character={playerCharacter}
-          logs={logs}
-          selectedTargetId={selectedTargetId}
-          currentManeuver={currentManeuver}
-          isMyTurn={isPlayerTurn}
-          onAction={onAction}
-          onLeaveLobby={onLeaveLobby}
-        />
+       {canRenderPanels && matchState?.rulesetId === 'gurps' ? (
+         <GameActionPanel
+           matchState={matchState}
+           player={player}
+           combatant={currentCombatant as any}
+           character={playerCharacter}
+           logs={logs}
+           selectedTargetId={selectedTargetId}
+           currentManeuver={currentManeuver}
+           isMyTurn={isPlayerTurn}
+           onAction={onAction}
+           onLeaveLobby={onLeaveLobby}
+         />
       ) : (
         <aside className="panel panel-right">
           <div className="panel-header">
@@ -382,20 +383,20 @@ export const GameScreen = ({
         </div>
       )}
 
-      {isDefending && pendingDefense && defenderCharacter && currentCombatant && (() => {
-        const { DefenseModal: DefenseModalSlot } = getRulesetUiSlots(matchState?.rulesetId);
-        return DefenseModalSlot ? (
-          <DefenseModalSlot
-            pendingDefense={pendingDefense}
-            character={defenderCharacter}
-            combatant={currentCombatant}
-            attackerName={attackerPlayer?.name ?? 'Unknown'}
-            inCloseCombat={inCloseCombat}
-            onDefend={handleDefenseChoice}
-            rulesetId={matchState?.rulesetId}
-          />
-        ) : null;
-      })()}
+       {isDefending && pendingDefense && defenderCharacter && currentCombatant && matchState?.rulesetId === 'gurps' && (() => {
+         const { DefenseModal: DefenseModalSlot } = getRulesetUiSlots(matchState?.rulesetId);
+         return DefenseModalSlot ? (
+           <DefenseModalSlot
+             pendingDefense={pendingDefense as any}
+             character={defenderCharacter}
+             combatant={currentCombatant as any}
+             attackerName={attackerPlayer?.name ?? 'Unknown'}
+             inCloseCombat={inCloseCombat}
+             onDefend={handleDefenseChoice}
+             rulesetId={matchState?.rulesetId}
+           />
+         ) : null;
+       })()}
 
       {pendingAction?.type === 'exit_close_combat_request' && pendingAction.targetId === player?.id && (
         <div className="modal-overlay">
@@ -430,20 +431,20 @@ export const GameScreen = ({
         </div>
       )}
 
-      {canRenderPanels && (
-        <ActionBar
-          matchState={matchState}
-          player={player}
-          combatant={currentCombatant}
-          character={playerCharacter}
-          isMyTurn={isPlayerTurn}
-          currentManeuver={currentManeuver}
-          selectedTargetId={selectedTargetId}
-          onAction={onAction}
-          onDefend={handleDefenseChoice}
-          onLeaveLobby={onLeaveLobby}
-        />
-      )}
+       {canRenderPanels && matchState?.rulesetId === 'gurps' && (
+         <ActionBar
+           matchState={matchState}
+           player={player}
+           combatant={currentCombatant as any}
+           character={playerCharacter}
+           isMyTurn={isPlayerTurn}
+           currentManeuver={currentManeuver}
+           selectedTargetId={selectedTargetId}
+           onAction={onAction}
+           onDefend={handleDefenseChoice}
+           onLeaveLobby={onLeaveLobby}
+         />
+       )}
     </div>
   )
 }

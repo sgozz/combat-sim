@@ -1,5 +1,4 @@
-import type { CombatantState, PendingDefense } from './rulesets/gurps/types';
-import type { CombatActionPayload } from './rulesets';
+import type { CombatantState, CombatActionPayload, PendingDefenseState } from './rulesets';
 import type { CharacterSheet } from './rulesets/characterSheet';
 
 export { isPF2Character, isGurpsCharacter } from './rulesets/characterSheet';
@@ -76,7 +75,7 @@ export type MatchState = {
   finishedAt?: number;
   turnMovement?: TurnMovementState;
   reachableHexes?: ReachableHexInfo[];
-  pendingDefense?: PendingDefense;
+   pendingDefense?: PendingDefenseState;
 };
 
 export type MatchSummary = {

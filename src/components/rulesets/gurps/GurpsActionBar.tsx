@@ -4,7 +4,7 @@ import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculat
 import { WaitTriggerPicker } from './WaitTriggerPicker'
 import { getSuccessChance } from '../../game/shared/useGameActions'
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
-import { rulesets } from '../../../../shared/rulesets'
+import { rulesets, isGurpsPendingDefense } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 import type { ActionBarProps } from '../types'
 
@@ -70,24 +70,24 @@ export const GurpsActionBar = ({
     }
   }, [pendingDefense])
 
-  const defenseOptions = useMemo(() => {
-    if (!pendingDefense) return null
-    const derivedDodge = playerCharacter.derived.dodge
-    const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
-    const postureMods = getPostureModifiers(playerCombatant.posture)
-    
-    type ActiveDefenseType = 'dodge' | 'parry' | 'block'
-    const getFinalValue = (type: ActiveDefenseType, base: number) => {
-      return calculateDefenseValue(base, {
-        retreat,
-        dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
-        inCloseCombat,
-        defensesThisTurn: playerCombatant.defensesThisTurn,
-        deceptivePenalty: pendingDefense.deceptivePenalty,
-        postureModifier: postureMods.defenseVsMelee,
-        defenseType: type
-      })
-    }
+   const defenseOptions = useMemo(() => {
+     if (!pendingDefense || !isGurpsPendingDefense(pendingDefense)) return null
+     const derivedDodge = playerCharacter.derived.dodge
+     const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
+     const postureMods = getPostureModifiers(playerCombatant.posture)
+     
+     type ActiveDefenseType = 'dodge' | 'parry' | 'block'
+     const getFinalValue = (type: ActiveDefenseType, base: number) => {
+       return calculateDefenseValue(base, {
+         retreat,
+         dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
+         inCloseCombat,
+         defensesThisTurn: playerCombatant.defensesThisTurn,
+         deceptivePenalty: pendingDefense.deceptivePenalty,
+         postureModifier: postureMods.defenseVsMelee,
+         defenseType: type
+       })
+     }
 
     return {
       dodge: getFinalValue('dodge', baseOpts.dodge),

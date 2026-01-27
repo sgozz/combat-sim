@@ -26,6 +26,7 @@ import { hexDistance } from '../../../utils/hex'
 import type { RulesetUIAdapter } from '../../../../shared/rulesets/Ruleset'
 import { rulesets } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
+import { isGurpsCombatant, isGurpsPendingDefense } from '../../../../shared/rulesets'
 
 export type ManeuverDef = {
   type: ManeuverType
@@ -168,21 +169,21 @@ export const useGameActions = (ctx: GameActionsContext) => {
     return matchState.characters.find(c => c.id === activeCombatant.characterId) ?? null
   }, [activeCombatant, matchState])
 
-  const currentManeuver = playerCombatant?.maneuver ?? null
+   const currentManeuver = (playerCombatant && isGurpsCombatant(playerCombatant)) ? playerCombatant.maneuver : null
 
-   const encumbrance = useMemo(() => {
-     if (!playerCharacter || !isGurpsCharacter(playerCharacter)) return null
-     return calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment)
-   }, [playerCharacter])
+    const encumbrance = useMemo(() => {
+      if (!playerCharacter || !isGurpsCharacter(playerCharacter)) return null
+      return calculateEncumbrance(playerCharacter.attributes.strength, playerCharacter.equipment)
+    }, [playerCharacter])
 
-  const inCloseCombat = !!playerCombatant?.inCloseCombatWith
-  const closeCombatTargetId = inCloseCombat ? playerCombatant?.inCloseCombatWith : null
+   const inCloseCombat = !!(playerCombatant && isGurpsCombatant(playerCombatant) && playerCombatant.inCloseCombatWith)
+   const closeCombatTargetId = (playerCombatant && isGurpsCombatant(playerCombatant) && inCloseCombat) ? playerCombatant.inCloseCombatWith : null
   const effectiveTargetId = closeCombatTargetId ?? selectedTargetId
 
-   const hpMax = playerCharacter?.derived.hitPoints ?? 10
-   const fpMax = (playerCharacter && isGurpsCharacter(playerCharacter) ? playerCharacter.derived.fatiguePoints : null) ?? 10
-  const hpCurrent = playerCombatant?.currentHP ?? hpMax
-  const fpCurrent = playerCombatant?.currentFP ?? fpMax
+    const hpMax = playerCharacter?.derived.hitPoints ?? 10
+    const fpMax = (playerCharacter && isGurpsCharacter(playerCharacter) ? playerCharacter.derived.fatiguePoints : null) ?? 10
+   const hpCurrent = playerCombatant?.currentHP ?? hpMax
+   const fpCurrent = (playerCombatant && isGurpsCombatant(playerCombatant)) ? playerCombatant.currentFP : fpMax
   const hpPercent = Math.max(0, (hpCurrent / hpMax) * 100)
   const fpPercent = Math.max(0, (fpCurrent / fpMax) * 100)
 
@@ -212,33 +213,33 @@ export const useGameActions = (ctx: GameActionsContext) => {
       : maneuvers
   }, [adapter, inCloseCombat])
 
-   const defenseOptions = useMemo((): DefenseValues | null => {
-     if (!playerCharacter || !playerCombatant || !pendingDefense || !isGurpsCharacter(playerCharacter)) return null
-     
-     const derivedDodge = playerCharacter.derived.dodge
-     const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
-     const postureMods = getPostureModifiers(playerCombatant.posture)
+    const defenseOptions = useMemo((): DefenseValues | null => {
+      if (!playerCharacter || !playerCombatant || !pendingDefense || !isGurpsCharacter(playerCharacter) || !isGurpsCombatant(playerCombatant) || !isGurpsPendingDefense(pendingDefense)) return null
+      
+      const derivedDodge = playerCharacter.derived.dodge
+      const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
+      const postureMods = getPostureModifiers(playerCombatant.posture)
 
-    type ActiveDefenseType = 'dodge' | 'parry' | 'block'
-    const getFinalValue = (type: ActiveDefenseType, base: number) => {
-      return calculateDefenseValue(base, {
-        retreat,
-        dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
-        inCloseCombat,
-        defensesThisTurn: playerCombatant.defensesThisTurn,
-        deceptivePenalty: pendingDefense.deceptivePenalty,
-        postureModifier: postureMods.defenseVsMelee,
-        defenseType: type
-      })
-    }
+     type ActiveDefenseType = 'dodge' | 'parry' | 'block'
+     const getFinalValue = (type: ActiveDefenseType, base: number) => {
+       return calculateDefenseValue(base, {
+         retreat,
+         dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
+         inCloseCombat,
+         defensesThisTurn: playerCombatant.defensesThisTurn,
+         deceptivePenalty: pendingDefense.deceptivePenalty,
+         postureModifier: postureMods.defenseVsMelee,
+         defenseType: type
+       })
+     }
 
-    return {
-      dodge: getFinalValue('dodge', baseOpts.dodge),
-      parry: baseOpts.parry ? getFinalValue('parry', baseOpts.parry.value) : null,
-      block: baseOpts.block ? getFinalValue('block', baseOpts.block.value) : null,
-      canRetreat: !playerCombatant.retreatedThisTurn
-    }
-  }, [playerCharacter, playerCombatant, pendingDefense, retreat, dodgeAndDrop, inCloseCombat])
+     return {
+       dodge: getFinalValue('dodge', baseOpts.dodge),
+       parry: baseOpts.parry ? getFinalValue('parry', baseOpts.parry.value) : null,
+       block: baseOpts.block ? getFinalValue('block', baseOpts.block.value) : null,
+       canRetreat: !playerCombatant.retreatedThisTurn
+     }
+   }, [playerCharacter, playerCombatant, pendingDefense, retreat, dodgeAndDrop, inCloseCombat])
 
   const attackerName = useMemo(() => {
     if (!pendingDefense || !matchState) return 'Enemy'
@@ -257,40 +258,40 @@ export const useGameActions = (ctx: GameActionsContext) => {
     return matchState.characters.find(c => c.id === targetCombatant.characterId)?.name ?? 'Enemy'
   }, [targetCombatant, matchState])
 
-   const hitChanceInfo = useMemo((): HitChanceInfo | null => {
-     if (!targetCombatant || !activeCombatant || !activeCharacter || !isGurpsCharacter(activeCharacter)) return null
+    const hitChanceInfo = useMemo((): HitChanceInfo | null => {
+      if (!targetCombatant || !activeCombatant || !activeCharacter || !isGurpsCharacter(activeCharacter) || !isGurpsCombatant(activeCombatant)) return null
 
-     const dist = hexDistance(
-       activeCombatant.position.x, activeCombatant.position.z,
-       targetCombatant.position.x, targetCombatant.position.z
-     )
+      const dist = hexDistance(
+        activeCombatant.position.x, activeCombatant.position.z,
+        targetCombatant.position.x, targetCombatant.position.z
+      )
 
-     const weapon = activeCharacter.equipment.find((e): e is typeof activeCharacter.equipment[number] => 
-       (e.type === 'melee' || e.type === 'ranged') && !!e.skillUsed
-     )
+      const weapon = activeCharacter.equipment.find((e): e is typeof activeCharacter.equipment[number] => 
+        (e.type === 'melee' || e.type === 'ranged') && !!e.skillUsed
+      )
 
-     let baseSkillLevel = 10
-     let skillName = 'Basic'
+      let baseSkillLevel = 10
+      let skillName = 'Basic'
 
-     if (weapon && weapon.skillUsed) {
-       const skill = activeCharacter.skills.find(s => s.name === weapon.skillUsed)
-       if (skill && 'level' in skill) {
-         baseSkillLevel = skill.level
-         skillName = skill.name
-       }
-     } else {
-       const brawling = activeCharacter.skills.find(s => 
-         s.name === 'Brawling' || s.name === 'Karate' || s.name === 'Broadsword'
-       )
-       if (brawling && 'level' in brawling) {
-         baseSkillLevel = brawling.level
-         skillName = brawling.name
-       }
-     }
+      if (weapon && weapon.skillUsed) {
+        const skill = activeCharacter.skills.find(s => s.name === weapon.skillUsed)
+        if (skill && 'level' in skill) {
+          baseSkillLevel = skill.level
+          skillName = skill.name
+        }
+      } else {
+        const brawling = activeCharacter.skills.find(s => 
+          s.name === 'Brawling' || s.name === 'Karate' || s.name === 'Broadsword'
+        )
+        if (brawling && 'level' in brawling) {
+          baseSkillLevel = brawling.level
+          skillName = brawling.name
+        }
+      }
 
-    const rangeMod = getRangePenalty(dist)
-    const hitLocMod = getHitLocationPenalty(hitLocation)
-    const shockMod = activeCombatant.shockPenalty > 0 ? -activeCombatant.shockPenalty : 0
+     const rangeMod = getRangePenalty(dist)
+     const hitLocMod = getHitLocationPenalty(hitLocation)
+     const shockMod = activeCombatant.shockPenalty > 0 ? -activeCombatant.shockPenalty : 0
     const deceptiveMod = deceptiveLevel > 0 ? -(deceptiveLevel * 2) : 0
     const rapidStrikeMod = rapidStrike ? -6 : 0
     const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod + deceptiveMod + rapidStrikeMod

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { assertRulesetId } from '../../../../shared/rulesets/defaults';
 import type { MatchState, Player, RulesetId, CharacterSheet } from '../../../../shared/types';
 import type { CombatActionPayload, ManeuverType, HitLocation, DefenseChoice, PendingDefense, CombatantState } from '../../../../shared/rulesets/gurps/types';
+import { isPF2Combatant } from '../../../../shared/rulesets';
 import HitLocationPicker from '../../rulesets/gurps/HitLocationPicker';
 import DefenseModal from '../../rulesets/gurps/DefenseModal';
 
@@ -129,12 +130,12 @@ const PF2ActionPanelHeader = ({
 }: Pick<RulesetUiSlotContext, 'matchState' | 'player'>) => {
   if (!matchState || !player) return null;
   
-  const combatant = matchState.combatants.find(c => c.playerId === player.id);
-  if (!combatant) return null;
-  
-  const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining;
-  const attacksThisTurn = combatant.pf2?.attacksThisTurn ?? 0;
-  const mapPenalty = combatant.pf2?.mapPenalty ?? 0;
+   const combatant = matchState.combatants.find(c => c.playerId === player.id);
+   if (!combatant || !isPF2Combatant(combatant)) return null;
+   
+   const actionsRemaining = combatant.actionsRemaining;
+   const attacksThisTurn = 0;
+   const mapPenalty = combatant.mapPenalty;
   
   const actionDots = Array.from({ length: 3 }, (_, i) => 
     createElement('span', {
@@ -161,11 +162,11 @@ const PF2StatusPanel = ({
 }: Pick<RulesetUiSlotContext, 'matchState' | 'player'>) => {
   if (!matchState || !player) return null;
   
-  const combatant = matchState.combatants.find(c => c.playerId === player.id);
-  if (!combatant) return null;
-  
-  const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining;
-  const attacksThisTurn = combatant.pf2?.attacksThisTurn ?? 0;
+   const combatant = matchState.combatants.find(c => c.playerId === player.id);
+   if (!combatant || !isPF2Combatant(combatant)) return null;
+   
+   const actionsRemaining = combatant.actionsRemaining;
+   const attacksThisTurn = 0;
   
   const getMapPenaltyForNextAttack = () => {
     if (attacksThisTurn === 0) return 0;

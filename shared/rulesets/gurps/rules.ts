@@ -14,6 +14,7 @@ import type {
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
 import type { GurpsCharacterSheet } from './characterSheet';
+import { isGurpsCombatant } from '../index';
 
 export type RollResult = {
   roll: number;
@@ -719,18 +720,19 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const nextPlayerId = state.players[nextIndex]?.id ?? "";
 
   const combatants = state.combatants.map(c => {
-    if (c.playerId === nextPlayerId) {
-      const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped' && e !== 'lost_balance' && e !== 'stunned');
-      return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
-    }
-    if (c.playerId === state.activeTurnPlayerId) {
-      const didAttack = c.maneuver === 'attack' || c.maneuver === 'all_out_attack' || c.maneuver === 'move_and_attack';
-      if (didAttack) {
-        return { ...c, evaluateBonus: 0, evaluateTargetId: null };
-      }
-    }
-    return c;
-  });
+     if (!isGurpsCombatant(c)) return c;
+     if (c.playerId === nextPlayerId) {
+       const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped' && e !== 'lost_balance' && e !== 'stunned');
+       return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
+     }
+     if (c.playerId === state.activeTurnPlayerId) {
+       const didAttack = c.maneuver === 'attack' || c.maneuver === 'all_out_attack' || c.maneuver === 'move_and_attack';
+       if (didAttack) {
+         return { ...c, evaluateBonus: 0, evaluateTargetId: null };
+       }
+     }
+     return c;
+   });
 
   return {
     ...state,
