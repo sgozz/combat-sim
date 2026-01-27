@@ -15,6 +15,7 @@ import {
    getPostureModifiers 
  } from '../../../../shared/rulesets/gurps/rules';
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots';
+import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet';
 
 export type DefenseModalProps = {
   pendingDefense: PendingDefense;
@@ -50,6 +51,10 @@ export default function DefenseModal({
 }: DefenseModalProps) {
   const [retreat, setRetreat] = useState(false);
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
+
+  if (!isGurpsCharacter(character)) {
+    return null;
+  }
 
   const baseOptions = useMemo(() => {
     const derivedDodge = character.derived.dodge;

@@ -5,6 +5,7 @@ import type { GridSystem, GridType } from '../../../shared/grid'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { CharacterSheet, VisualEffect } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets/gurps/types'
+import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -155,7 +156,17 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   const combatAnimationRef = useRef<{ type: 'punch' | 'jump'; until: number } | null>(null)
   const processedEffectsRef = useRef<Set<string>>(new Set())
 
-  const basicMove = character?.derived.basicMove ?? 5
+  const basicMove = useMemo(() => {
+    if (!character) return 5
+    if (isGurpsCharacter(character)) {
+      return character.derived.basicMove
+    } else if (isPF2Character(character)) {
+      // PF2 speed is in feet, convert to yards (1 yard ≈ 3 feet)
+      return Math.floor(character.derived.speed / 3)
+    }
+    return 5
+  }, [character])
+  
   const isDead = combatant.currentHP <= 0
 
   useEffect(() => {

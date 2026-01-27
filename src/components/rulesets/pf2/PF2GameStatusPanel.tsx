@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { GameStatusPanelProps } from '../types'
+import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 
 export const PF2GameStatusPanel = ({ 
   player, 
@@ -8,6 +9,10 @@ export const PF2GameStatusPanel = ({
   lobbyPlayers,
 }: GameStatusPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
+  
+  if (!isPF2Character(character)) {
+    return null
+  }
   
   const hpMax = character.derived.hitPoints
   const hpCurrent = combatant.currentHP

@@ -1,6 +1,7 @@
 import { Tooltip } from '../../ui/Tooltip'
 import type { CharacterEditorProps } from '../types'
 import { useCharacterEditor } from '../useCharacterEditor'
+import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 
 export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel }: CharacterEditorProps) => {
   const {
@@ -18,6 +19,10 @@ export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel
     addDisadvantage,
     removeDisadvantage,
   } = useCharacterEditor({ character, setCharacter, rulesetId: 'gurps' })
+
+  if (!isGurpsCharacter(character)) {
+    return null
+  }
 
   return (
     <div className="modal-overlay">

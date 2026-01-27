@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PostureControls } from './PostureControls'
 import { calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
+import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 import type { GameStatusPanelProps } from '../types'
 
 export const GurpsGameStatusPanel = ({ 
@@ -12,6 +13,11 @@ export const GurpsGameStatusPanel = ({
   onAction
 }: GameStatusPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
+  
+  if (!isGurpsCharacter(character)) {
+    return null
+  }
+  
   const encumbrance = calculateEncumbrance(character.attributes.strength, character.equipment)
   
   const hpMax = character.derived.hitPoints

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { ActionBarProps } from '../types'
+import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 
 export const PF2ActionBar = ({ 
   matchState,
@@ -15,6 +16,10 @@ export const PF2ActionBar = ({
   const closeAllPanels = useCallback(() => {
     setShowCharacterSheet(false)
   }, [])
+  
+  if (!isPF2Character(playerCharacter)) {
+    return null
+  }
   
   const maxHP = playerCharacter.derived.hitPoints
   const currentHP = playerCombatant.currentHP
