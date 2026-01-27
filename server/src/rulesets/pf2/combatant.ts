@@ -1,5 +1,5 @@
 import type { PF2CharacterSheet } from "../../../../shared/rulesets/pf2/characterSheet";
-import type { CombatantState, EquippedItem } from "../../../../shared/rulesets/gurps/types";
+import type { EquippedItem } from "../../../../shared/rulesets/gurps/types";
 import type { CombatantFactory } from "../types";
 
 export const createCombatant: CombatantFactory = (character, playerId, position, facing) => {
@@ -12,6 +12,7 @@ export const createCombatant: CombatantFactory = (character, playerId, position,
   }
 
   return {
+    rulesetId: 'pf2' as const,
     playerId,
     characterId: character.id,
     position,

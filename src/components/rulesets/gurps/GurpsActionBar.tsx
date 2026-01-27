@@ -20,6 +20,11 @@ export const GurpsActionBar = ({
   onDefend,
   onLeaveLobby,
 }: ActionBarProps) => {
+  // Type guards - MUST be before hooks
+  if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) {
+    return <div>Error: GURPS component received non-GURPS data</div>
+  }
+
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)
   const [showAOAVariants, setShowAOAVariants] = useState(false)

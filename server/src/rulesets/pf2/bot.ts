@@ -88,8 +88,8 @@ export const executeBotAttack: BotAttackExecutor = async (
           actionsRemaining: newActionsRemaining,
           attacksThisTurn: newAttacksThisTurn,
           mapPenalty: adapter.pf2!.getMultipleAttackPenalty(newAttacksThisTurn + 1, false),
-          reactionAvailable: c.pf2?.reactionAvailable ?? true,
-          shieldRaised: c.pf2?.shieldRaised ?? false,
+          reactionAvailable: (c as any).pf2?.reactionAvailable ?? true,
+          shieldRaised: (c as any).pf2?.shieldRaised ?? false,
         },
       };
     }

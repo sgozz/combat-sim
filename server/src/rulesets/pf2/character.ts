@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PF2CharacterSheet } from "../../../../shared/rulesets/pf2/characterSheet";
 
 export const createDefaultCharacter = (name: string = "PF2 Character"): PF2CharacterSheet => ({
+  rulesetId: 'pf2' as const,
   id: randomUUID(),
   name,
   level: 1,

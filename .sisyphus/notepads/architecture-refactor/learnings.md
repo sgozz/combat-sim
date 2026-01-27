@@ -171,3 +171,60 @@
 - Task 5 (Handler routing) can now use discriminated union for clean character-based routing
 - Task 7 (Type guards) can leverage literal rulesetId for improved type safety
 - Future tasks can rely on `rulesetId` field for runtime type discrimination
+
+## Task 8: Final Cleanup and Verification (COMPLETED)
+
+### Implementation Summary
+This final task completed the multi-ruleset architecture refactor by:
+
+1. **Removed Deprecated Alias**: Deleted the backward compatibility alias `CombatantState = GurpsCombatantState` from `shared/rulesets/gurps/types.ts` that was no longer needed.
+
+2. **Updated All Imports**: Changed all imports of `CombatantState` from `gurps/types` to use the union type from `shared/rulesets/index.ts`:
+   - `shared/rulesets/serverAdapter.ts`
+   - `shared/rulesets/serverTypes.ts`
+   - `server/src/rulesets/types.ts`
+   - All component files in `src/components/`
+
+3. **Added Type Guards**: Implemented proper type narrowing using `isGurpsCombatant()` and `isPF2Combatant()` guards in:
+   - Server adapter functions (serverAdapter.ts)
+   - Component files (Combatant.tsx, FloatingStatus.tsx, DefenseModal.tsx, etc.)
+   - Test files (rules.test.ts, typeGuards.test.ts, characterSheet.test.ts)
+
+4. **Fixed Test Objects**: Added `rulesetId` discriminant field to all test combatant and character objects to match the new type requirements.
+
+5. **Fixed Component Hooks**: Ensured type guards are placed before React hooks to avoid ESLint violations.
+
+### Verification Results
+✅ **All 356 tests pass** - No regressions from the refactor
+✅ **Client builds successfully** - `npm run build` completes without errors
+✅ **No GURPS imports in shared/types.ts** - Verified with grep
+✅ **No GURPS imports in Ruleset.ts** - Verified with grep
+✅ **Final commit created** - `refactor(types): complete multi-ruleset architecture cleanup`
+
+### Key Patterns Applied
+1. **Discriminated Unions**: `CombatantState = GurpsCombatantState | PF2CombatantState` with `rulesetId` literal overrides
+2. **Type Guards**: Safe narrowing with `isGurpsCombatant()` and `isPF2Combatant()` functions
+3. **Centralized Exports**: All union types exported from `shared/rulesets/index.ts` for consistency
+4. **Belt and Suspenders**: Both discriminant field AND shape-based checks provide redundant type safety
+
+### Architecture Achievements
+- ✅ Complete separation of GURPS and PF2 types
+- ✅ No hardcoded ruleset conditionals in shared code
+- ✅ Type-safe routing based on discriminant field
+- ✅ Extensible pattern for adding new rulesets (D&D 5e, etc.)
+- ✅ All tests passing with proper type coverage
+
+### Lessons Learned
+1. **Discriminated Unions are Powerful**: The `rulesetId` field enables TypeScript to automatically narrow types without runtime checks
+2. **Type Guards Must Be Placed Carefully**: In React components, type guards must come before any hooks to avoid ESLint violations
+3. **Test Objects Need Discriminants**: All test fixtures must include the discriminant field for proper type checking
+4. **Centralized Registry Pattern Works**: Having a single `index.ts` that exports all union types prevents import confusion
+
+### Future Extensibility
+The architecture is now ready for:
+- Adding new rulesets (D&D 5e, Pathfinder 1e, etc.)
+- Implementing ruleset-specific UI components
+- Creating ruleset-specific server handlers
+- Extending the type system without breaking existing code
+
+All acceptance criteria met. Multi-ruleset architecture refactor complete and verified.
