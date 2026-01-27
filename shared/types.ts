@@ -3,8 +3,6 @@ import type { CharacterSheet } from './rulesets/characterSheet';
 
 export { isPF2Character, isGurpsCharacter } from './rulesets/characterSheet';
 export type { CharacterSheet } from './rulesets/characterSheet';
-export type { PF2CharacterSheet } from './rulesets/pf2/characterSheet';
-export type { GurpsCharacterSheet } from './rulesets/gurps/characterSheet';
 
 export type Id = string;
 
