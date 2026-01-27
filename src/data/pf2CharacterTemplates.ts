@@ -43,6 +43,7 @@ const calculatePF2DerivedStats = (
 
 const createPF2Template = (input: PF2TemplateInput): Omit<PF2CharacterSheet, 'id'> => ({
   name: input.name,
+  rulesetId: 'pf2',
   level: input.level,
   class: 'Fighter',
   ancestry: 'Human',

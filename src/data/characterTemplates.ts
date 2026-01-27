@@ -12,6 +12,7 @@ const createTemplate = (
   disadvantages: { name: string; description?: string }[]
 ): Omit<GurpsCharacterSheet, 'id'> => ({
   name,
+  rulesetId: 'gurps',
   attributes,
   derived: calculateDerivedStats(attributes),
   skills: skills.map(s => ({ id: uuid(), ...s })),

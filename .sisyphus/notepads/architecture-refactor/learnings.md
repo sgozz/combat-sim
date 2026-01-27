@@ -57,3 +57,35 @@
 - The discriminant field enables TypeScript to distinguish between GURPS and PF2 combatants at runtime
 - This is the foundation for Tasks 2, 3, and 5 which depend on ruleset-specific type narrowing
 - No runtime behavior changed - purely a type system enhancement
+
+## Task 4: Action Payload Separation (COMPLETED)
+
+### Implementation Pattern
+- Created `GurpsCombatActionPayload` in `shared/rulesets/gurps/types.ts` with all GURPS-specific actions
+- Created `PF2CombatActionPayload` in `shared/rulesets/pf2/types.ts` with PF2-specific actions (`pf2_stand`, `pf2_drop_prone`)
+- Exported union `CombatActionPayload = GurpsCombatActionPayload | PF2CombatActionPayload` from `shared/rulesets/index.ts`
+- Updated `shared/types.ts` to import union from index instead of directly from gurps/types
+- Updated `src/components/rulesets/types.ts` to import union from index (CRITICAL FIX)
+
+### Key Insights
+1. **Import Path Matters**: Components were importing `CombatActionPayload` from `gurps/types` directly, which prevented the union from being recognized. Fixed by importing from `shared/rulesets/index.ts`.
+2. **Backward Compatibility**: Kept `CombatActionPayload = GurpsCombatActionPayload` alias in gurps/types.ts for any direct imports.
+3. **Action vs Maneuver**: `pf2_step` remains a ManeuverType (used in `select_maneuver`), while `pf2_stand` and `pf2_drop_prone` are direct actions.
+4. **No Action Type String Changes**: All action type strings remain unchanged (`pf2_stand`, `pf2_drop_prone`, etc.) - backend expects exact strings.
+
+### Verification Results
+- All 356 tests pass (10 test files)
+- Production build succeeds with no TypeScript errors
+- Type safety maintained: ClientToServerMessage correctly accepts union type
+- Components can now properly dispatch PF2-specific actions
+
+### Files Modified
+- `shared/rulesets/gurps/types.ts`: Created `GurpsCombatActionPayload`, kept backward compatibility alias
+- `shared/rulesets/pf2/types.ts`: Created `PF2CombatActionPayload`
+- `shared/rulesets/index.ts`: Exported union type and individual payload types
+- `shared/types.ts`: Updated import to use union from index
+- `src/components/rulesets/types.ts`: Updated import to use union from index (critical fix)
+
+### Blockers Unblocked
+- Task 5 (Handler routing) can now proceed with clean, separated action payload types
+- Type system now properly discriminates between GURPS and PF2 actions

@@ -1,5 +1,6 @@
 import type { CharacterSheet, MatchState, RulesetId } from '../types';
-import type { CombatantState, ManeuverType, AOAVariant, AODVariant } from './gurps/types';
+import type { GurpsCombatantState, ManeuverType, AOAVariant, AODVariant } from './gurps/types';
+import type { PF2CombatantState } from './pf2/types';
 
 export type RulesetAction = {
   type: string;
@@ -40,7 +41,7 @@ export type ManeuverInstruction = {
 export type Ruleset = {
   id: RulesetId;
   getDerivedStats: (character: CharacterSheet) => CharacterSheet['derived'];
-  getInitialCombatantState: (character: CharacterSheet) => Omit<CombatantState, 'playerId' | 'characterId' | 'position' | 'facing'>;
+  getInitialCombatantState: (character: CharacterSheet) => Omit<GurpsCombatantState | PF2CombatantState, 'playerId' | 'characterId' | 'position' | 'facing'>;
   getAvailableActions: (state: MatchState, actorId: string) => RulesetAction[];
   getCombatPreview: (state: MatchState, actorId: string, targetId: string, actionType: string) => RulesetCombatPreview | null;
   createCharacter: (name: string) => CharacterSheet;

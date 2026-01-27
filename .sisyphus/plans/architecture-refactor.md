@@ -135,7 +135,7 @@ Wave 4 (Final):
 
 ## TODOs
 
-- [ ] 1. Add `rulesetId` discriminant to base types
+- [x] 1. Add `rulesetId` discriminant to base types
 
   **What to do**:
   - Modify `shared/rulesets/base/types.ts`
@@ -287,7 +287,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 4. Create separate action payload types per ruleset
+- [x] 4. Create separate action payload types per ruleset
 
   **What to do**:
   - In `shared/rulesets/gurps/types.ts`:

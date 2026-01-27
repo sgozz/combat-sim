@@ -204,6 +204,7 @@ export type PF2CombatantExtension = {
 };
 
 export type GurpsCombatantState = BaseCombatantState & {
+  rulesetId: 'gurps';
   posture: Posture;
   maneuver: ManeuverType | null;
   aoaVariant: AOAVariant | null;

@@ -210,28 +210,29 @@ export const mapPathbuilderToCharacter = (data: PathbuilderExport): PF2Character
    const build = data.build;
    const abilities = mapAbilities(build);
    
-   return {
-     id: uuid(),
-     name: build.name,
-     level: build.level,
-     class: build.class,
-     ancestry: build.ancestry,
-     heritage: build.heritage ?? '',
-     background: build.background ?? '',
-     abilities,
-     derived: calculateDerivedStats(build),
-     classHP: build.attributes.classhp,
-     saveProficiencies: {
-       fortitude: mapProficiency(build.proficiencies.fortitude ?? 0),
-       reflex: mapProficiency(build.proficiencies.reflex ?? 0),
-       will: mapProficiency(build.proficiencies.will ?? 0),
-     },
-     perceptionProficiency: mapProficiency(build.proficiencies.perception ?? 0),
-     armorProficiency: mapProficiency(build.proficiencies[build.armor.find(a => a.worn)?.prof ?? 'unarmored'] ?? 0),
-     skills: mapSkills(build.proficiencies, build.lores),
-     weapons: mapWeapons(build.weapons),
-     armor: mapArmor(build.armor),
-     feats: mapFeats(build.feats),
-     spells: mapSpells(build),
-   };
+    return {
+      id: uuid(),
+      name: build.name,
+      rulesetId: 'pf2',
+      level: build.level,
+      class: build.class,
+      ancestry: build.ancestry,
+      heritage: build.heritage ?? '',
+      background: build.background ?? '',
+      abilities,
+      derived: calculateDerivedStats(build),
+      classHP: build.attributes.classhp,
+      saveProficiencies: {
+        fortitude: mapProficiency(build.proficiencies.fortitude ?? 0),
+        reflex: mapProficiency(build.proficiencies.reflex ?? 0),
+        will: mapProficiency(build.proficiencies.will ?? 0),
+      },
+      perceptionProficiency: mapProficiency(build.proficiencies.perception ?? 0),
+      armorProficiency: mapProficiency(build.proficiencies[build.armor.find(a => a.worn)?.prof ?? 'unarmored'] ?? 0),
+      skills: mapSkills(build.proficiencies, build.lores),
+      weapons: mapWeapons(build.weapons),
+      armor: mapArmor(build.armor),
+      feats: mapFeats(build.feats),
+      spells: mapSpells(build),
+    };
 };

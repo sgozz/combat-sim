@@ -4,6 +4,7 @@ import type { Attributes, DerivedStats, Skill, Advantage, Disadvantage, Equipmen
 export type GurpsCharacterSheet = {
   id: Id;
   name: string;
+  rulesetId: 'gurps';
   attributes: Attributes;
   derived: DerivedStats;
   skills: Skill[];

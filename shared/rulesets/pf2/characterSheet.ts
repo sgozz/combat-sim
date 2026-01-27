@@ -51,6 +51,7 @@ export type PF2SpellInfo = {
 export type PF2CharacterSheet = {
   id: Id;
   name: string;
+  rulesetId: 'pf2';
   level: number;
   class: string;
   ancestry: string;

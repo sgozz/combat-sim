@@ -159,6 +159,7 @@ export type PF2CombatAction = {
 };
 
 export type PF2CombatantState = BaseCombatantState & {
+  rulesetId: 'pf2';
   actionsRemaining: number;
   reactionAvailable: boolean;
   mapPenalty: number;

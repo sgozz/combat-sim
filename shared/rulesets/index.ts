@@ -24,6 +24,12 @@ export type { PF2CombatActionPayload } from './pf2/types';
 export type CombatActionPayload = GurpsCombatActionPayload | PF2CombatActionPayload;
 
 /**
+ * Discriminated union of all combatant states across rulesets.
+ * Use type guards (isGurpsCombatant, isPF2Combatant) to safely access ruleset-specific fields.
+ */
+export type CombatantState = GurpsCombatantState | PF2CombatantState;
+
+/**
  * Type guard to discriminate GURPS combatants from other rulesets.
  * Uses the 'maneuver' field which is GURPS-specific.
  */
