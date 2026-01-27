@@ -1,4 +1,4 @@
-import type { Id, GridPosition } from '../../types';
+import type { Id, GridPosition, RulesetId } from '../../types';
 
 /**
  * Universal combatant state fields shared by all rulesets (GURPS, PF2, etc.)
@@ -7,6 +7,7 @@ import type { Id, GridPosition } from '../../types';
 export type BaseCombatantState = {
   playerId: Id;
   characterId: Id;
+  rulesetId: RulesetId;
   position: GridPosition;
   facing: number;
   currentHP: number;
