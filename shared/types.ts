@@ -1,4 +1,5 @@
-import type { CombatantState, PendingDefense, CombatActionPayload } from './rulesets/gurps/types';
+import type { CombatantState, PendingDefense } from './rulesets/gurps/types';
+import type { CombatActionPayload } from './rulesets';
 import type { CharacterSheet } from './rulesets/characterSheet';
 
 export { isPF2Character, isGurpsCharacter } from './rulesets/characterSheet';

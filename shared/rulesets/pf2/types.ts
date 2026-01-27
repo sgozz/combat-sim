@@ -193,6 +193,10 @@ export type PF2ActionPayload =
   | { type: 'demoralize'; targetId: Id }
   | { type: 'end_turn' };
 
+export type PF2CombatActionPayload =
+  | { type: 'pf2_stand' }
+  | { type: 'pf2_drop_prone' };
+
 export type PF2DefenseType = 'ac' | 'fortitude' | 'reflex' | 'will';
 
 export type PF2PendingDefense = {

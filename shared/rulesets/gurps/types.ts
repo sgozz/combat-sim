@@ -167,7 +167,7 @@ export type PendingDefense = {
 
 export type GrappleAction = 'grab' | 'throw' | 'lock' | 'choke' | 'pin' | 'release';
 
-export type CombatActionPayload =
+export type GurpsCombatActionPayload =
   | { type: "select_maneuver"; maneuver: ManeuverType; aoaVariant?: AOAVariant; aodVariant?: AODVariant }
   | { type: "attack"; targetId: Id; hitLocation?: HitLocation; deceptiveLevel?: 0 | 1 | 2; rapidStrike?: boolean }
   | { type: "aim_target"; targetId: Id }
@@ -191,10 +191,9 @@ export type CombatActionPayload =
   | { type: "break_free" }
   | { type: "respond_close_combat"; accept: boolean }
   | { type: "respond_exit"; response: 'let_go' | 'follow' | 'attack' }
-  | { type: "surrender" }
-  | { type: "pf2_step"; to: { q: number; r: number } }
-  | { type: "pf2_stand" }
-  | { type: "pf2_drop_prone" };
+  | { type: "surrender" };
+
+export type CombatActionPayload = GurpsCombatActionPayload;
 
 export type PF2CombatantExtension = {
   actionsRemaining: number;
