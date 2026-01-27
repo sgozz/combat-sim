@@ -90,6 +90,56 @@ Implementare PF2e completo con combat funzionante, spell system, e bot AI con eu
 
 ---
 
+## PF2 Message Contract (Type System Integration)
+
+### Current State
+
+The shared contract in `shared/types.ts` uses `CombatActionPayload` for action typing:
+```typescript
+// shared/types.ts
+type ClientToServerMessage = 
+  | { type: 'action'; matchId: Id; action: CombatActionPayload['type']; payload: CombatActionPayload }
+  // ...
+```
+
+Currently `CombatActionPayload` is aliased to GURPS-only types, making PF2 action strings untyped.
+
+### Required Changes
+
+**1. Create PF2 action payload union** (`shared/rulesets/pf2/types.ts`):
+```typescript
+export type PF2CombatActionPayload =
+  | { type: 'pf2_strike'; targetId: string; weaponId?: string }
+  | { type: 'pf2_request_move'; mode: 'stride' | 'step' }
+  | { type: 'pf2_stride'; to: { q: number; r: number } }
+  | { type: 'pf2_step'; to: { q: number; r: number } }
+  | { type: 'pf2_drop_prone' }
+  | { type: 'pf2_stand' }
+  | { type: 'pf2_raise_shield' }
+  | { type: 'pf2_end_turn' }
+  | { type: 'pf2_cast_spell'; spellName: string; level: number; casterIndex: number }
+  | { type: 'pf2_reaction_choice'; choice: 'aoo' | 'decline' }
+```
+
+**2. Create unified CombatActionPayload** (`shared/types.ts`):
+```typescript
+import type { GurpsCombatActionPayload } from './rulesets/gurps/types';
+import type { PF2CombatActionPayload } from './rulesets/pf2/types';
+
+export type CombatActionPayload = GurpsCombatActionPayload | PF2CombatActionPayload;
+```
+
+**3. Server router type safety** (`server/src/handlers/pf2/router.ts`):
+- Import and use `PF2CombatActionPayload` for type narrowing
+- TypeScript will catch unhandled action types
+
+This change ensures:
+- `npm run build` passes with full type safety
+- Router can exhaustively handle all PF2 actions
+- Client code gets proper type hints for payloads
+
+---
+
 ## Verification Strategy (MANDATORY)
 
 ### Test Decision
@@ -313,17 +363,18 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 3. Implement Stride and Step Actions
+- [ ] 3. Implement Stride Action and Wire Up Movement Overlay
 
   **What to do**:
   - Create `server/src/handlers/pf2/stride.ts` handler for Stride
-  - Extend existing `server/src/handlers/pf2/actions.ts:handlePF2Step` for Step
+  - Add `pf2_request_move` handler for populating movement overlay
+  - Note: Step handler ALREADY EXISTS and works (`server/src/handlers/pf2/actions.ts:handlePF2Step`)
+  - Update client to use movement overlay flow
   - Cost: 1 action each (use `applyActionCost`)
-  - Update `server/src/handlers/pf2/router.ts` to dispatch both `pf2_stride` and `pf2_step`
 
   **Stride vs Step**:
   - **Stride**: Move up to Speed/5 squares (e.g., 25ft = 5 squares). Triggers AoO.
-  - **Step**: Move exactly 1 square. Does NOT trigger AoO.
+  - **Step**: Move exactly 1 square. Does NOT trigger AoO. **ALREADY IMPLEMENTED**.
 
   **API Signature** (VERIFIED from `shared/rulesets/pf2/rules.ts`):
   ```typescript
@@ -345,40 +396,75 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
   **Movement Overlay Flow** (Server-Driven):
   
-  Movement overlay uses the existing `matchState.reachableHexes` mechanism:
+  **reachableHexes Type** (from `shared/types.ts:ReachableHexInfo`):
+  ```typescript
+  interface ReachableHexInfo {
+    q: number;
+    r: number;
+    cost: number;
+    finalFacing?: number;
+  }
+  ```
+  
+  **Flow**:
   1. Client clicks Stride/Step button → calls `onAction('pf2_request_move', { mode: 'stride' | 'step' })`
-  2. Server receives request → computes reachable squares via `getReachableSquares()`
-  3. Server broadcasts `match_state` with `reachableHexes: [{q, r}, ...]` populated
+  2. Server receives request → computes reachable squares via `getReachableSquares()` (or 1-square for Step)
+  3. Server broadcasts `match_state` with `reachableHexes: ReachableHexInfo[]` populated:
+     ```typescript
+     // For Stride:
+     const reachable = getReachableSquares(pos, speed, occupied);
+     match.reachableHexes = Array.from(reachable.values()).map(r => ({
+       q: r.position.q, r: r.position.r, cost: r.cost
+     }));
+     // For Step: only adjacent unoccupied squares, cost: 5
+     ```
   4. Client renders overlay from `matchState.reachableHexes` (already implemented in `src/components/arena/ArenaScene.tsx:180-195`)
   5. Client clicks destination → calls `onAction('pf2_stride', { to: {q, r} })` or `onAction('pf2_step', { to: {q, r} })`
   6. Server validates destination is in reachable set, moves combatant, clears `reachableHexes`
+  7. Server stores `pendingMoveMode` in match state to remember which action to execute
   
-  **Existing reachableHexes rendering** (`src/components/arena/ArenaScene.tsx:180-195`):
-  - Already renders green overlay for hexes in `matchState.reachableHexes`
-  - No changes needed to rendering - just populate from server
+  **Required PF2 Payload Types** (add to `shared/rulesets/pf2/types.ts:PF2CombatActionPayload`):
+  ```typescript
+  | { type: 'pf2_request_move'; mode: 'stride' | 'step' }
+  | { type: 'pf2_stride'; to: { q: number; r: number } }
+  | { type: 'pf2_step'; to: { q: number; r: number } }
+  ```
+  
+  **Router additions** (`server/src/handlers/pf2/router.ts`):
+  ```typescript
+  case 'pf2_request_move':
+    return handlePF2RequestMove(match, combatant, character, payload);
+  case 'pf2_stride':
+    return handlePF2Stride(match, combatant, character, payload);
+  // pf2_step already routed to handlePF2Step
+  ```
 
-  **End-to-End Wiring - Stride**:
+  **End-to-End Wiring - Client Side**:
   
   **Current client behavior** (`src/components/rulesets/pf2/PF2GameActionPanel.tsx:99-107`):
   - "Stride" button triggers `onAction('select_maneuver', { maneuver: 'move' })`
-  - This doesn't match server's expected `pf2_stride` action
+  - This doesn't match server's expected actions
   
-  **Required client changes** (`src/components/rulesets/pf2/PF2GameActionPanel.tsx`):
-  1. Add state: `const [pendingMove, setPendingMove] = useState<'stride' | 'step' | null>(null)`
-  2. Stride button: `onClick={() => { setPendingMove('stride'); onAction('pf2_request_move', { mode: 'stride' }) }}`
-  3. Step button: `onClick={() => { setPendingMove('step'); onAction('pf2_request_move', { mode: 'step' }) }}`
-  4. Grid click handler (via `onHexClick` prop from parent): 
-     `if (pendingMove && hex) { onAction(pendingMove === 'stride' ? 'pf2_stride' : 'pf2_step', { to: hex }); setPendingMove(null) }`
+  **Client state management** (in `src/components/game/GameScreen.tsx`):
+  - GameScreen already owns `onGridClick` handler passed to `ArenaScene`
+  - Add state: `const [pendingMoveMode, setPendingMoveMode] = useState<'stride' | 'step' | null>(null)`
+  - When `matchState.reachableHexes.length > 0`, GameScreen knows overlay is active
+  - Grid click: if `reachableHexes` populated AND clicked hex is in set → send move action
   
-  **End-to-End Wiring - Step**:
+  **GameScreen.tsx changes**:
+  ```typescript
+  // In handleGridClick or equivalent:
+  if (matchState?.reachableHexes?.some(h => h.q === hex.q && h.r === hex.r)) {
+    // Determine action type from match state or stored pending mode
+    sendAction({ type: pendingMoveMode === 'step' ? 'pf2_step' : 'pf2_stride', to: { q: hex.q, r: hex.r } });
+    setPendingMoveMode(null);
+  }
+  ```
   
-  **Current handler** (`server/src/handlers/pf2/actions.ts:handlePF2Step`):
-  - Already exists but returns stub error
-  - Fix to: validate destination is exactly 1 square away, move combatant
-  
-  **Server expects**:
-  - `payload.type === 'pf2_stride'` with `payload.to: { q: number, r: number }`
-  - `payload.type === 'pf2_step'` with `payload.to: { q: number, r: number }`
+  **PF2GameActionPanel.tsx changes**:
+  - Pass callback to set pending mode: `onRequestMove: (mode: 'stride' | 'step') => void`
+  - Stride button: `onClick={() => onRequestMove('stride')}`
+  - Step button: `onClick={() => onRequestMove('step')}`
   
   **Handler flow (Stride)**:
   1. Convert combatant.position to {q, r} using `gridToHex`
@@ -389,21 +475,20 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
   6. Clear `matchState.reachableHexes`
   7. Broadcast `match_state`
   
-  **Handler flow (Step)**:
-  1. Convert combatant.position to {q, r} using `gridToHex`
-  2. Check destination is exactly distance 1 from current position
-  3. Check destination is not occupied
-  4. If valid: Update `combatant.position = hexToGrid(payload.to)`
-  5. Decrement `combatant.actionsRemaining`
-  6. Broadcast `match_state`
+  **Handler for pf2_request_move**:
+  1. Compute reachable based on mode ('stride' uses full speed, 'step' uses 1 square)
+  2. Populate `match.reachableHexes` with `ReachableHexInfo[]`
+  3. Store `match.pendingMoveMode = mode` (to know which handler to use on destination click)
+  4. Broadcast `match_state`
 
   **Must NOT do**:
   - Don't implement difficult terrain
   - Don't implement movement preview animation (just final position)
+  - Don't modify existing Step handler logic (it already works)
 
   **Recommended Agent Profile**:
-  - **Category**: `unspecified-low`
-  - **Skills**: []
+  - **Category**: `unspecified-high`
+  - **Skills**: [`frontend-ui-ux`]
 
   **Parallelization**:
   - **Can Run In Parallel**: YES
@@ -412,33 +497,34 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
   - **Blocked By**: Task 0
 
   **References**:
-  - `server/src/handlers/pf2/router.ts:43-45` - Stub for `pf2_stride` (returns error)
-  - `server/src/handlers/pf2/router.ts:46-48` - Stub for `pf2_step` (returns error)
-  - `server/src/handlers/pf2/actions.ts:handlePF2Step` - Step handler stub to fix
+  - `server/src/handlers/pf2/router.ts:43-45` - Stub for `pf2_stride` (returns error) - needs implementation
+  - `server/src/handlers/pf2/router.ts:46-48` - Already dispatches `pf2_step` to `handlePF2Step` (working)
+  - `server/src/handlers/pf2/actions.ts:handlePF2Step` - ALREADY IMPLEMENTED and working
   - `shared/rulesets/pf2/rules.ts:getReachableSquares` - Returns `Map<string, {position, cost}>`
   - `shared/rulesets/serverAdapter.ts:pf2GridToHex, pf2HexToGrid` - Coordinate converters
-  - `shared/rulesets/pf2/rules.ts:gridToHex, hexToGrid` - Also exported here
   - `shared/rulesets/pf2/characterSheet.ts:PF2CharacterSheet.derived.speed` - Speed in feet
   - `src/components/rulesets/pf2/PF2GameActionPanel.tsx:99-107` - Current Stride button (needs change)
   - `src/components/arena/ArenaScene.tsx:180-195` - Existing reachableHexes overlay rendering
-  - `shared/types.ts:MatchState.reachableHexes` - Server-side hex array for movement overlay
+  - `shared/types.ts:ReachableHexInfo` - Type for reachableHexes array elements: `{ q, r, cost, finalFacing? }`
+  - `shared/types.ts:MatchState.reachableHexes` - Array of ReachableHexInfo
+  - `src/components/game/GameScreen.tsx` - Owns grid click handler, needs pending move state
+  - `shared/rulesets/pf2/types.ts:PF2CombatActionPayload` - Add new action types here
 
   **Acceptance Criteria**:
+  - [ ] `pf2_request_move` handler populates `reachableHexes` correctly
   - [ ] Test: Stride with speed=25 can reach 5 squares (25/5)
   - [ ] Test: Stride costs 1 action
   - [ ] Test: Stride blocked by occupied squares
   - [ ] Test: Stride fails if 0 actions remaining
-  - [ ] Test: Step moves exactly 1 square
-  - [ ] Test: Step costs 1 action
-  - [ ] Test: Step fails if destination > 1 square away
+  - [ ] Test: Step already works (verify existing tests pass)
   - [ ] Browser: Click Stride → overlay appears → click destination → character moves
   - [ ] Browser: Click Step → overlay appears (1 square only) → click destination → character moves
   - [ ] `npx vitest run -t "stride"` → tests pass
-  - [ ] `npx vitest run -t "step"` → tests pass
+  - [ ] `npx vitest run -t "step"` → existing tests still pass
 
   **Commit**: YES
-  - Message: `feat(pf2): implement Stride and Step actions with movement overlay`
-  - Files: `server/src/handlers/pf2/stride.ts`, `server/src/handlers/pf2/actions.ts`, `server/src/handlers/pf2/router.ts`, `src/components/rulesets/pf2/PF2GameActionPanel.tsx`
+  - Message: `feat(pf2): implement Stride action with movement overlay`
+  - Files: `server/src/handlers/pf2/stride.ts`, `server/src/handlers/pf2/router.ts`, `src/components/rulesets/pf2/PF2GameActionPanel.tsx`, `src/components/game/GameScreen.tsx`, `shared/rulesets/pf2/types.ts`
 
 ---
 
@@ -500,13 +586,25 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
   - Cost: 1 action (use `applyActionCost`)
   - Verify character has a shield before allowing
 
-  **Shield Detection** (CRITICAL - current model):
+  **Shield Detection** (CRITICAL - correct integration point):
   - Pathbuilder exports `acTotal.shieldBonus` (see `shared/rulesets/pf2/pathbuilder.ts:PathbuilderExport`)
-  - Current mapping: `mapArmor()` creates `PF2CharacterArmor` with `acBonus` field
-  - **Shield detection rule**: If Pathbuilder export has `acTotal.shieldBonus > 0`, character has shield
-  - Need to add to mapping: Store `shieldBonus` in character (e.g. `character.shieldBonus: number`)
-  - Alternative: Add `hasShield: boolean` field during character creation
-  - Check: `character.shieldBonus > 0` before allowing Raise Shield
+  - **IMPORTANT**: `mapArmor()` only receives the armor array, NOT `acTotal` - cannot add shield detection there
+  - **Correct integration point**: `mapPathbuilderToCharacter()` in `shared/rulesets/pf2/pathbuilderMapping.ts`
+    - This function has access to full `build` object including `build.acTotal.shieldBonus`
+    - Add after line ~240 where other derived fields are computed
+  
+  **Implementation steps**:
+  1. Add field to `PF2CharacterSheet` in `shared/rulesets/pf2/characterSheet.ts`:
+     ```typescript
+     shieldBonus: number;  // 0 if no shield, else shield's AC bonus (typically 2)
+     ```
+  2. In `mapPathbuilderToCharacter()` (`shared/rulesets/pf2/pathbuilderMapping.ts`):
+     ```typescript
+     // After other derived calculations:
+     shieldBonus: build.acTotal?.shieldBonus ?? 0,
+     ```
+  3. Handle null/undefined: treat as 0 (no shield)
+  4. In Raise Shield handler: `if (character.shieldBonus <= 0) return error("No shield equipped")`
 
   **AC Integration**:
   - Current: `server/src/handlers/pf2/attack.ts` reads `targetCharacter.derived.armorClass`
@@ -533,10 +631,11 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
   **References**:
   - `shared/rulesets/pf2/types.ts:PF2CombatantState.shieldRaised` - Boolean field (exists)
-  - `shared/rulesets/pf2/pathbuilder.ts:PathbuilderExport.acTotal.shieldBonus` - Shield source
-  - `shared/rulesets/pf2/pathbuilderMapping.ts:mapArmor` - Where to add shieldBonus extraction
-  - `server/src/handlers/pf2/attack.ts` - Where to apply +2 AC
-  - `shared/rulesets/pf2/rules.ts:advanceTurn` - Where to reset shieldRaised
+  - `shared/rulesets/pf2/pathbuilder.ts:PathbuilderExport.acTotal.shieldBonus` - Shield source in raw export
+  - `shared/rulesets/pf2/pathbuilderMapping.ts:mapPathbuilderToCharacter` - Correct integration point (has access to full build object)
+  - `shared/rulesets/pf2/characterSheet.ts:PF2CharacterSheet` - Add `shieldBonus: number` field here
+  - `server/src/handlers/pf2/attack.ts` - Where to apply +2 AC when target.shieldRaised
+  - `shared/rulesets/pf2/rules.ts:advanceTurn` - Where to reset shieldRaised to false
   - `server/src/handlers/pf2/router.ts` - Add case for `pf2_raise_shield`
 
   **Acceptance Criteria**:
