@@ -146,7 +146,7 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
   ),
 }
 
-export const TEMPLATE_NAMES = Object.keys(CHARACTER_TEMPLATES)
+export { TEMPLATE_NAMES } from '../../shared/rulesets/gurps/templateNames'
 
 import { PF2_CHARACTER_TEMPLATES, PF2_TEMPLATE_NAMES } from './pf2CharacterTemplates'
 export { PF2_CHARACTER_TEMPLATES, PF2_TEMPLATE_NAMES }

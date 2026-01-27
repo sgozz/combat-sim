@@ -189,4 +189,4 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
   }),
 };
 
-export const PF2_TEMPLATE_NAMES = Object.keys(PF2_CHARACTER_TEMPLATES);
+export { PF2_TEMPLATE_NAMES } from '../../shared/rulesets/pf2/templateNames';

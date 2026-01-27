@@ -89,3 +89,85 @@
 ### Blockers Unblocked
 - Task 5 (Handler routing) can now proceed with clean, separated action payload types
 - Type system now properly discriminates between GURPS and PF2 actions
+
+## Task 3: CombatantState Union with Literal rulesetId Overrides (COMPLETED)
+
+### Implementation
+- Added `rulesetId: 'gurps'` literal override to `GurpsCombatantState` in `shared/rulesets/gurps/types.ts`
+- Added `rulesetId: 'pf2'` literal override to `PF2CombatantState` in `shared/rulesets/pf2/types.ts`
+- Exported union `CombatantState = GurpsCombatantState | PF2CombatantState` from `shared/rulesets/index.ts`
+- Fixed PF2 bundle's `getInitialCombatantState` to return correct PF2-specific fields instead of GURPS fields
+- Updated `Ruleset.ts` to use `GurpsCombatantState | PF2CombatantState` union in return type
+
+### Key Insights
+1. **Discriminated Union Pattern**: Extended types must override base type's `rulesetId: RulesetId` with literal values (`'gurps'` or `'pf2'`) for TypeScript to properly narrow types
+2. **Circular Dependency Avoidance**: `Ruleset.ts` imports directly from `gurps/types.ts` and `pf2/types.ts` to avoid circular dependency with `index.ts`
+3. **PF2 Bundle Bug Fix**: The PF2 bundle was incorrectly returning GURPS-specific fields (posture, maneuver, etc.). Fixed to return only PF2 fields (actionsRemaining, reactionAvailable, conditions, etc.)
+4. **Type Safety**: The union now enables proper type narrowing - TypeScript can distinguish between GURPS and PF2 combatants based on `rulesetId` field
+
+### Files Modified
+- `shared/rulesets/gurps/types.ts`: Added `rulesetId: 'gurps'` override to GurpsCombatantState
+- `shared/rulesets/pf2/types.ts`: Added `rulesetId: 'pf2'` override to PF2CombatantState
+- `shared/rulesets/index.ts`: Exported `CombatantState` union type with documentation
+- `shared/rulesets/pf2/index.ts`: Fixed `getInitialCombatantState` to return correct PF2 fields
+- `shared/rulesets/Ruleset.ts`: Updated to use union type in return signature
+
+### Verification Results
+- All 356 tests pass (10 test files)
+- Production build succeeds with no TypeScript errors
+- Type guards (`isGurpsCombatant`, `isPF2Combatant`) continue to work correctly
+- Discriminated union enables proper type narrowing in components and handlers
+
+### Blockers Unblocked
+- Task 5 (Handler routing) can now use discriminated union for clean action routing
+- Task 7 (Type guards) can leverage literal rulesetId for improved type safety
+
+## Task 2: Add rulesetId Discriminant to CharacterSheet Types (COMPLETED)
+
+### Implementation
+- Added `rulesetId: 'gurps'` literal type to `GurpsCharacterSheet` interface in `shared/rulesets/gurps/characterSheet.ts`
+- Added `rulesetId: 'pf2'` literal type to `PF2CharacterSheet` interface in `shared/rulesets/pf2/characterSheet.ts`
+- Updated all character creation functions to include the `rulesetId` field:
+  - `shared/rulesets/gurps/index.ts`: `createCharacter` function
+  - `shared/rulesets/pf2/index.ts`: `createCharacter` function
+  - `shared/rulesets/pf2/pathbuilderMapping.ts`: `mapPathbuilderToCharacter` function
+  - `src/data/characterTemplates.ts`: `createTemplate` function for GURPS templates
+  - `src/data/pf2CharacterTemplates.ts`: `createPF2Template` function for PF2 templates
+
+### Pattern Applied
+- Followed exact pattern from `BaseCombatantState.rulesetId` (Task 1)
+- Placed discriminant field early in interface (after `name` field) for visibility
+- Used literal types (`'gurps'` not just `string`) for proper type narrowing
+- Union type `CharacterSheet = PF2CharacterSheet | GurpsCharacterSheet` already existed in `shared/rulesets/characterSheet.ts`
+
+### Type System Improvements
+- Updated `Ruleset.ts` to import `PF2CombatantState` directly to avoid circular dependency
+- Changed `getInitialCombatantState` return type to `Omit<CombatantState | PF2CombatantState, ...>` to support both GURPS and PF2 combatants
+- This enables TypeScript to properly discriminate between GURPS and PF2 character sheets at runtime
+
+### Verification Results
+- All 356 tests pass (10 test files) - no regressions
+- Production build succeeds with no TypeScript errors
+- Type guards (`isPF2Character`, `isGurpsCharacter`) continue to work correctly
+- Discriminated union enables proper type narrowing in components and handlers
+
+### Files Modified
+- `shared/rulesets/gurps/characterSheet.ts`: Added `rulesetId: 'gurps'` to GurpsCharacterSheet
+- `shared/rulesets/pf2/characterSheet.ts`: Added `rulesetId: 'pf2'` to PF2CharacterSheet
+- `shared/rulesets/gurps/index.ts`: Added `rulesetId: 'gurps'` to createCharacter
+- `shared/rulesets/pf2/index.ts`: Added `rulesetId: 'pf2'` to createCharacter
+- `shared/rulesets/pf2/pathbuilderMapping.ts`: Added `rulesetId: 'pf2'` to mapPathbuilderToCharacter
+- `src/data/characterTemplates.ts`: Added `rulesetId: 'gurps'` to createTemplate
+- `src/data/pf2CharacterTemplates.ts`: Added `rulesetId: 'pf2'` to createPF2Template
+- `shared/rulesets/Ruleset.ts`: Updated import and return type signature
+
+### Key Insights
+1. **Belt and Suspenders**: Both discriminant field (`rulesetId`) AND shape-based checks (existing type guards) provide redundant type safety
+2. **Consistency**: Applied same pattern across CharacterSheet types as was done for CombatantState types
+3. **Cascading Updates**: Adding a required field to interfaces requires updating all creation sites - caught by TypeScript compiler
+4. **Import Strategy**: Direct imports from ruleset-specific files avoid circular dependencies while maintaining type safety
+
+### Blockers Unblocked
+- Task 5 (Handler routing) can now use discriminated union for clean character-based routing
+- Task 7 (Type guards) can leverage literal rulesetId for improved type safety
+- Future tasks can rely on `rulesetId` field for runtime type discrimination

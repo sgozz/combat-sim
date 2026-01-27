@@ -1,6 +1,6 @@
 import type { RulesetUIAdapter } from '../Ruleset';
 import type { ManeuverType } from './types';
-import { TEMPLATE_NAMES } from '../../../src/data/characterTemplates';
+import { TEMPLATE_NAMES } from './templateNames';
 
 const MANEUVERS = [
   { type: 'move', label: 'Move', shortLabel: 'Move', icon: '🏃', desc: 'Full move. No attack. Active defense allowed.', key: '1' },
