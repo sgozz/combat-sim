@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { GameStatusPanelProps } from '../types'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
+import { isPF2Combatant } from '../../../../shared/rulesets'
 
 export const PF2GameStatusPanel = ({ 
   player, 
@@ -10,7 +11,7 @@ export const PF2GameStatusPanel = ({
 }: GameStatusPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   
-  if (!isPF2Character(character)) {
+  if (!isPF2Character(character) || !isPF2Combatant(combatant)) {
     return null
   }
   
@@ -22,8 +23,8 @@ export const PF2GameStatusPanel = ({
   if (hpPercent <= 20) hpColor = '#f44'
   else if (hpPercent <= 50) hpColor = '#ff4'
 
-  const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining ?? 3
-  const attacksThisTurn = combatant.pf2?.attacksThisTurn ?? 0
+  const actionsRemaining = combatant.actionsRemaining ?? 3
+  const attacksThisTurn = 0
   
   const getMapPenalty = () => {
     if (attacksThisTurn === 0) return 0

@@ -4,11 +4,11 @@ import type {
   RulesetId
 } from '../../../../shared/types';
 import type {
-  CombatantState, 
   PendingDefense, 
   DefenseType, 
   DefenseChoice,
 } from '../../../../shared/rulesets/gurps/types';
+import type { CombatantState } from '../../../../shared/rulesets';
 import { 
    getDefenseOptions, 
    calculateDefenseValue, 
@@ -16,6 +16,7 @@ import {
  } from '../../../../shared/rulesets/gurps/rules';
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots';
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet';
+import { isGurpsCombatant } from '../../../../shared/rulesets';
 
 export type DefenseModalProps = {
   pendingDefense: PendingDefense;
@@ -49,12 +50,12 @@ export default function DefenseModal({
   onDefend,
   rulesetId,
 }: DefenseModalProps) {
-  const [retreat, setRetreat] = useState(false);
-  const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
-
-  if (!isGurpsCharacter(character)) {
+  if (!isGurpsCharacter(character) || !isGurpsCombatant(combatant)) {
     return null;
   }
+
+  const [retreat, setRetreat] = useState(false);
+  const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
 
   const baseOptions = useMemo(() => {
     const derivedDodge = character.derived.dodge;

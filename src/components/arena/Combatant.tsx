@@ -4,8 +4,9 @@ import { Html, useGLTF } from '@react-three/drei'
 import type { GridSystem, GridType } from '../../../shared/grid'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { CharacterSheet, VisualEffect } from '../../../shared/types'
-import type { CombatantState } from '../../../shared/rulesets/gurps/types'
+import type { CombatantState } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
+import { isGurpsCombatant } from '../../../shared/rulesets'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -263,9 +264,9 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
     hpColor = '#ff4'
   }
 
-  const isGrappling = combatant.grapple?.grappling != null
-  const isGrappled = combatant.grapple?.grappledBy != null
-  const inCloseCombat = combatant.inCloseCombatWith != null
+  const isGrappling = isGurpsCombatant(combatant) && combatant.grapple?.grappling != null
+  const isGrappled = isGurpsCombatant(combatant) && combatant.grapple?.grappledBy != null
+  const inCloseCombat = isGurpsCombatant(combatant) && combatant.inCloseCombatWith != null
 
   return (
     <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>

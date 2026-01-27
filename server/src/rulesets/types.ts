@@ -1,5 +1,5 @@
 import type { CharacterSheet, MatchState } from "../../../shared/types";
-import type { CombatantState } from "../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../shared/rulesets";
 
 export type CharacterFactory = (name: string) => CharacterSheet;
 

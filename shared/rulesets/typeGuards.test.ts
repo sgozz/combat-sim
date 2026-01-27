@@ -7,6 +7,7 @@ import type { PF2CharacterSheet } from './pf2/characterSheet';
 
 describe('Ruleset type guards', () => {
   const baseCombatant: BaseCombatantState = {
+    rulesetId: 'gurps',
     playerId: 'player-1',
     characterId: 'character-1',
     position: { x: 0, y: 0, z: 0 },
@@ -27,6 +28,7 @@ describe('Ruleset type guards', () => {
   };
 
   const gurpsCharacter = {
+    rulesetId: 'gurps' as const,
     id: 'gurps-1',
     name: 'Gurps Test',
     attributes: {
@@ -50,6 +52,7 @@ describe('Ruleset type guards', () => {
   } satisfies GurpsCharacterSheet;
 
   const pf2Character = {
+    rulesetId: 'pf2' as const,
     id: 'pf2-1',
     name: 'PF2 Test',
     level: 1,

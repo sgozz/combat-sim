@@ -1,5 +1,5 @@
 import type { Id, HexCoord, MatchState, CharacterSheet, GridPosition } from '../types';
-import type { CombatantState } from './gurps/types';
+import type { CombatantState } from './index';
 import type { Posture, DefenseType } from './gurps/types';
 
 export type DamageSpec = {

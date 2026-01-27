@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Tooltip } from '../../ui/Tooltip'
 import { CombatLog } from '../../game/CombatLog'
+import { isPF2Combatant } from '../../../../shared/rulesets'
 import type { GameActionPanelProps } from '../types'
 
 export const PF2GameActionPanel = ({ 
@@ -12,7 +13,7 @@ export const PF2GameActionPanel = ({
   onAction,
   onLeaveLobby,
 }: GameActionPanelProps) => {
-  const [collapsed, setCollapsed] = useState(false)
+   const [collapsed, setCollapsed] = useState(false)
   
   const selectedTarget = matchState.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
@@ -47,8 +48,8 @@ export const PF2GameActionPanel = ({
       )
     }
 
-    const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining ?? 3
-    const attacksThisTurn = combatant.pf2?.attacksThisTurn ?? 0
+    const actionsRemaining = isPF2Combatant(combatant) ? combatant.actionsRemaining : 3
+    const attacksThisTurn = 0
     
     const getMapPenalty = () => {
       if (attacksThisTurn === 0) return 0
@@ -109,7 +110,7 @@ export const PF2GameActionPanel = ({
           <Tooltip content="Move 5 feet. Costs 1 action. Cannot use while prone." position="top">
             <button 
               className="pf2-action-btn step"
-              disabled={actionsRemaining === 0 || combatant.posture === 'prone'}
+              disabled={actionsRemaining === 0 || (isPF2Combatant(combatant) && combatant.conditions.some(c => c.condition === 'prone'))}
               onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'pf2_step' })}
             >
               <span className="pf2-action-icon">👣</span>
@@ -117,7 +118,7 @@ export const PF2GameActionPanel = ({
             </button>
           </Tooltip>
 
-          {combatant.posture === 'prone' ? (
+          {isPF2Combatant(combatant) && combatant.conditions.some(c => c.condition === 'prone') ? (
             <Tooltip content="Stand up from prone. Costs 1 action." position="top">
               <button 
                 className="pf2-action-btn stand"
@@ -186,7 +187,7 @@ export const PF2GameActionPanel = ({
     )
   }
 
-  const actionsRemaining = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining ?? 3
+  const actionsRemaining = isPF2Combatant(combatant) ? combatant.actionsRemaining : 3
   const headerText = isMyTurn 
     ? `Your Turn (${actionsRemaining} actions)`
     : 'Actions'

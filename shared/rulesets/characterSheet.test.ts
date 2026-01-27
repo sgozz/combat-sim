@@ -6,6 +6,7 @@ import type { GurpsCharacterSheet } from './gurps/characterSheet';
 describe('CharacterSheet type guards', () => {
   // Valid PF2 character
   const validPF2Char: PF2CharacterSheet = {
+    rulesetId: 'pf2',
     id: 'pf2-1',
     name: 'Elara Brightblade',
     level: 5,
@@ -47,6 +48,7 @@ describe('CharacterSheet type guards', () => {
 
   // Valid GURPS character
   const validGurpsChar: GurpsCharacterSheet = {
+    rulesetId: 'gurps',
     id: 'gurps-1',
     name: 'Conan the Barbarian',
     attributes: {

@@ -1,8 +1,10 @@
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, RulesetId, CharacterSheet, GridPosition } from '../types';
-import type { ManeuverType, Posture, Equipment, Attributes, DerivedStats, Reach, ShieldSize, DamageType, HitLocation, CombatantState, DefenseType } from './gurps/types';
+import type { ManeuverType, Posture, Equipment, Attributes, DerivedStats, Reach, ShieldSize, DamageType, HitLocation, DefenseType } from './gurps/types';
+import type { CombatantState } from './index';
 import type { GridSystem } from '../grid';
 import { hexGrid, squareGrid8 } from '../grid';
 import { isGurpsCharacter } from '../types';
+import { isGurpsCombatant } from './index';
 
 export type MovementState = {
   position: HexCoord;
@@ -442,7 +444,7 @@ const pf2DamageDomain: DamageDomain = {
 const gurpsSelectBotDefense = (options: BotDefenseOptions): BotDefenseResult => {
   const { targetCharacter, targetCombatant, attackerPosition, distance, relativeDir, isRanged, findRetreatHex } = options;
   
-  if (!isGurpsCharacter(targetCharacter)) {
+  if (!isGurpsCharacter(targetCharacter) || !isGurpsCombatant(targetCombatant)) {
     return {
       defenseType: 'dodge',
       defenseLabel: 'Dodge',
@@ -532,6 +534,10 @@ const gurpsSelectBotDefense = (options: BotDefenseOptions): BotDefenseResult => 
 const gurpsCalculateEffectiveSkill = (options: EffectiveSkillOptions): number => {
   const { baseSkill, attackerCombatant, weapon, distance, targetId, isRanged, deceptiveLevel, rapidStrike, hitLocation } = options;
   
+  if (!isGurpsCombatant(attackerCombatant)) {
+    return baseSkill;
+  }
+  
   let skill = baseSkill;
   const attackerManeuver = attackerCombatant.maneuver;
   
@@ -597,6 +603,15 @@ const calculateFacing = (from: GridPosition, to: GridPosition): number => {
 };
 
 const gurpsGetAttackerManeuverInfo = (combatant: CombatantState): ManeuverInfo => {
+  if (!isGurpsCombatant(combatant)) {
+    return {
+      aoaDamageBonus: 0,
+      isMultiAttack: false,
+      canDefend: true,
+      defenseDescription: null,
+      canRapidStrike: false,
+    };
+  }
   const maneuver = combatant.maneuver;
   const aoaVariant = combatant.aoaVariant;
   
@@ -610,6 +625,15 @@ const gurpsGetAttackerManeuverInfo = (combatant: CombatantState): ManeuverInfo =
 };
 
 const gurpsGetDefenderManeuverInfo = (combatant: CombatantState): ManeuverInfo => {
+  if (!isGurpsCombatant(combatant)) {
+    return {
+      aoaDamageBonus: 0,
+      isMultiAttack: false,
+      canDefend: true,
+      defenseDescription: null,
+      canRapidStrike: false,
+    };
+  }
   const maneuver = combatant.maneuver;
   const aodVariant = combatant.aodVariant;
   
@@ -630,7 +654,7 @@ const gurpsGetDefenderManeuverInfo = (combatant: CombatantState): ManeuverInfo =
 const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResolutionResult => {
   const { defenderCharacter, defenderCombatant, attackerCombatant, attackerCharacter, defenseChoice, deceptivePenalty } = options;
   
-  if (!isGurpsCharacter(defenderCharacter)) {
+  if (!isGurpsCharacter(defenderCharacter) || !isGurpsCombatant(defenderCombatant)) {
     return {
       baseDefense: 0,
       defenseLabel: 'Unavailable',
@@ -765,7 +789,12 @@ const gurpsCombatDomain: CombatDomain = {
   resolveDefense: gurpsResolveDefense,
   getAttackerManeuverInfo: gurpsGetAttackerManeuverInfo,
   getDefenderManeuverInfo: gurpsGetDefenderManeuverInfo,
-  applyDodgeAndDrop: (combatant: CombatantState): CombatantState => ({ ...combatant, posture: 'prone' }),
+  applyDodgeAndDrop: (combatant: CombatantState): CombatantState => {
+    if (isGurpsCombatant(combatant)) {
+      return { ...combatant, posture: 'prone' };
+    }
+    return combatant;
+  },
 };
 
 const gurpsDamageDomain: DamageDomain = {

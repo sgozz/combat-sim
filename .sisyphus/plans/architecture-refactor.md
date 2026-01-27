@@ -393,7 +393,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 6. Update Ruleset.ts to use base types
+- [x] 6. Update Ruleset.ts to use base types
 
   **What to do**:
   - In `shared/rulesets/Ruleset.ts`:
@@ -446,7 +446,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 7. Update type guards to accept `unknown`
+- [x] 7. Update type guards to accept `unknown`
 
   **What to do**:
   - In `shared/rulesets/index.ts`:

@@ -1,5 +1,5 @@
 import type { PF2CharacterSheet } from '../../shared/rulesets/pf2/characterSheet'
-import type { Abilities } from '../../shared/rulesets/pf2/types'
+import type { Abilities, PF2DamageType } from '../../shared/rulesets/pf2/types'
 import { uuid } from '../utils/uuid'
 
 type PF2TemplateInput = {
@@ -60,7 +60,7 @@ const createPF2Template = (input: PF2TemplateInput): Omit<PF2CharacterSheet, 'id
   perceptionProficiency: 'trained',
   armorProficiency: 'trained',
   skills: input.skills.map(s => ({ id: uuid(), name: s.name, ability: s.ability, proficiency: 'trained' })),
-  weapons: input.equipment.map(e => ({ id: uuid(), name: e.name, damage: e.damage, damageType: e.damageType as any, proficiencyCategory: 'simple', traits: [], potencyRune: 0, strikingRune: null })),
+   weapons: input.equipment.map(e => ({ id: uuid(), name: e.name, damage: e.damage, damageType: e.damageType as unknown as PF2DamageType, proficiencyCategory: 'simple', traits: [], potencyRune: 0, strikingRune: null })),
   armor: null,
   feats: input.advantages.map(a => ({ id: uuid(), name: a.name, type: 'class', level: 1, description: a.description })),
   spells: null,

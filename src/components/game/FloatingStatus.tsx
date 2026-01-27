@@ -1,6 +1,7 @@
 import type { CharacterSheet } from '../../../shared/types'
 import { isGurpsCharacter } from '../../../shared/types'
-import type { CombatantState } from '../../../shared/rulesets/gurps/types'
+import type { CombatantState } from '../../../shared/rulesets'
+import { isGurpsCombatant } from '../../../shared/rulesets'
 
 type FloatingStatusProps = {
   combatant: CombatantState | null
@@ -11,7 +12,7 @@ export const FloatingStatus = ({ combatant, character }: FloatingStatusProps) =>
   if (!combatant || !character) return null
 
   const hpPercent = Math.max(0, (combatant.currentHP / character.derived.hitPoints) * 100)
-  const fpPercent = isGurpsCharacter(character) 
+  const fpPercent = isGurpsCharacter(character) && isGurpsCombatant(combatant)
     ? Math.max(0, (combatant.currentFP / character.derived.fatiguePoints) * 100)
     : 0
 
@@ -34,7 +35,7 @@ export const FloatingStatus = ({ combatant, character }: FloatingStatusProps) =>
         <span className="status-value">{combatant.currentHP}/{character.derived.hitPoints}</span>
       </div>
       
-      {isGurpsCharacter(character) && (
+      {isGurpsCharacter(character) && isGurpsCombatant(combatant) && (
         <div className="status-bar-row">
           <span className="status-label">FP</span>
           <div className="status-bar-track">

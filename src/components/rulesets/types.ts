@@ -4,11 +4,11 @@ import type {
   Player, 
 } from '../../../shared/types'
 import type {
-  CombatantState,
   ManeuverType,
   DefenseChoice,
   PendingDefense,
 } from '../../../shared/rulesets/gurps/types'
+import type { CombatantState } from '../../../shared/rulesets'
 import type { CombatActionPayload } from '../../../shared/rulesets'
 
 export type CharacterEditorProps = {

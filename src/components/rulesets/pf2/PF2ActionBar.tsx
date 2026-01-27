@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { ActionBarProps } from '../types'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
+import { isPF2Combatant } from '../../../../shared/rulesets'
 
 export const PF2ActionBar = ({ 
   matchState,
@@ -11,22 +12,22 @@ export const PF2ActionBar = ({
   onAction,
   onLeaveLobby,
 }: ActionBarProps) => {
-  const [showCharacterSheet, setShowCharacterSheet] = useState(false)
-  
-  const closeAllPanels = useCallback(() => {
-    setShowCharacterSheet(false)
-  }, [])
-  
-  if (!isPF2Character(playerCharacter)) {
-    return null
-  }
+   if (!isPF2Character(playerCharacter) || !isPF2Combatant(playerCombatant)) {
+     return null
+   }
+   
+   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
+   
+   const closeAllPanels = useCallback(() => {
+     setShowCharacterSheet(false)
+   }, [])
   
   const maxHP = playerCharacter.derived.hitPoints
   const currentHP = playerCombatant.currentHP
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
   const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
   
-  const actionsRemaining = playerCombatant.pf2?.actionsRemaining ?? playerCombatant.attacksRemaining ?? 3
+  const actionsRemaining = playerCombatant.actionsRemaining ?? 3
   
   const turnMovement = matchState.turnMovement
   const inMovementPhase = turnMovement?.phase === 'moving'
@@ -196,13 +197,13 @@ export const PF2ActionBar = ({
             </button>
             <button
               className="action-bar-btn"
-              disabled={actionsRemaining === 0 || playerCombatant.posture === 'prone'}
+              disabled={actionsRemaining === 0 || playerCombatant.conditions.some(c => c.condition === 'prone')}
               onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'pf2_step' })}
             >
               <span className="action-bar-icon">👣</span>
               <span className="action-bar-label">Step</span>
             </button>
-            {playerCombatant.posture === 'prone' ? (
+            {playerCombatant.conditions.some(c => c.condition === 'prone') ? (
               <button
                 className="action-bar-btn"
                 disabled={actionsRemaining === 0}

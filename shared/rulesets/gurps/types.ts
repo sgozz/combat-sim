@@ -226,6 +226,3 @@ export type GurpsCombatantState = BaseCombatantState & {
   waitTrigger: WaitTrigger | null;
   pf2?: PF2CombatantExtension;
 };
-
-// Backward compatibility alias
-export type CombatantState = GurpsCombatantState;

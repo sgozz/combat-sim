@@ -278,7 +278,7 @@ describe('PF2 Rules', () => {
 
     it('canPerformAction checks action availability', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 2, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -293,7 +293,7 @@ describe('PF2 Rules', () => {
 
     it('applyActionCost reduces actions', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -305,7 +305,7 @@ describe('PF2 Rules', () => {
 
     it('applyActionCost tracks MAP for attacks', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -323,7 +323,7 @@ describe('PF2 Rules', () => {
 
     it('Cannot Step while prone', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -336,7 +336,7 @@ describe('PF2 Rules', () => {
 
     it('Stand removes prone condition', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -355,7 +355,7 @@ describe('PF2 Rules', () => {
 
      it('Drop Prone sets prone condition', () => {
        const combatant: PF2CombatantState = {
-         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+         rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
          facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
          conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
          heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -384,7 +384,7 @@ describe('PF2 Rules', () => {
 
      it('Cannot Step while prone - action cost unchanged', () => {
        const combatant: PF2CombatantState = {
-         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+         rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
          facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
          conditions: [{ condition: 'prone', value: 1 }],
          currentHP: 10, tempHP: 0, shieldRaised: false,
@@ -398,7 +398,7 @@ describe('PF2 Rules', () => {
 
      it('Step action requires available actions', () => {
        const combatant: PF2CombatantState = {
-         playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+         rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
          facing: 0, actionsRemaining: 0, reactionAvailable: true, mapPenalty: 0,
          conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
          heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -425,7 +425,7 @@ describe('PF2 Rules', () => {
   describe('Turn Management', () => {
     it('startNewTurn resets actions', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: -10,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: true,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
@@ -440,7 +440,7 @@ describe('PF2 Rules', () => {
 
     it('startNewTurn applies slowed', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: 0,
         conditions: [{ condition: 'slowed', value: 1 }],
         currentHP: 10, tempHP: 0, shieldRaised: false,
@@ -453,7 +453,7 @@ describe('PF2 Rules', () => {
 
     it('startNewTurn applies quickened', () => {
       const combatant: PF2CombatantState = {
-        playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: 0,
         conditions: [{ condition: 'quickened' }],
         currentHP: 10, tempHP: 0, shieldRaised: false,

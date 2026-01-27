@@ -4,7 +4,7 @@ import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculat
 import { WaitTriggerPicker } from './WaitTriggerPicker'
 import { getSuccessChance } from '../../game/shared/useGameActions'
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
-import { rulesets, isGurpsPendingDefense } from '../../../../shared/rulesets'
+import { rulesets, isGurpsPendingDefense, isGurpsCombatant } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 import type { ActionBarProps } from '../types'
 
@@ -20,11 +20,6 @@ export const GurpsActionBar = ({
   onDefend,
   onLeaveLobby,
 }: ActionBarProps) => {
-  // Type guard: ensure playerCharacter is GURPS
-  if (!playerCharacter || !isGurpsCharacter(playerCharacter)) {
-    return null
-  }
-
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)
   const [showAOAVariants, setShowAOAVariants] = useState(false)

@@ -11,6 +11,7 @@ import { hexDistance } from '../../../utils/hex'
 import { getRangePenalty, getHitLocationPenalty } from '../../../../shared/rulesets/gurps/rules'
 import { rulesets } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
+import { isGurpsCombatant } from '../../../../shared/rulesets'
 
 export const GurpsGameActionPanel = ({ 
   matchState, 
@@ -25,7 +26,7 @@ export const GurpsGameActionPanel = ({
   onLeaveLobby,
 }: GameActionPanelProps) => {
   // Type guard: ensure activeCharacter is GURPS
-  if (!activeCharacter || !isGurpsCharacter(activeCharacter)) {
+  if (!activeCharacter || !isGurpsCharacter(activeCharacter) || !isGurpsCombatant(activeCombatant)) {
     return null
   }
 
