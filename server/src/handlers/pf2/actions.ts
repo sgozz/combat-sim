@@ -1,6 +1,8 @@
 import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
-import type { CombatantState, Posture } from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../../shared/rulesets";
+import { isPF2Combatant } from "../../../../shared/rulesets";
+import type { Posture } from "../../../../shared/rulesets/gurps/types";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch } from "../../helpers";
@@ -15,20 +17,15 @@ const updateCombatantActions = (
   actionsUsed: number,
   additionalUpdates: CombatantUpdate = {}
 ): CombatantState => {
-  const currentActions = combatant.pf2?.actionsRemaining ?? combatant.attacksRemaining;
+  if (!isPF2Combatant(combatant)) return combatant;
+  
+  const currentActions = combatant.actionsRemaining;
   const newActionsRemaining = currentActions - actionsUsed;
   
   return {
     ...combatant,
     ...additionalUpdates,
-    attacksRemaining: newActionsRemaining,
-    pf2: {
-      actionsRemaining: newActionsRemaining,
-      reactionAvailable: combatant.pf2?.reactionAvailable ?? true,
-      mapPenalty: combatant.pf2?.mapPenalty ?? 0,
-      attacksThisTurn: combatant.pf2?.attacksThisTurn ?? 0,
-      shieldRaised: combatant.pf2?.shieldRaised ?? false,
-    },
+    actionsRemaining: newActionsRemaining,
   };
 };
 
@@ -39,12 +36,9 @@ export const handlePF2DropProne = async (
   player: Player,
   actorCombatant: CombatantState
 ): Promise<void> => {
-  if (actorCombatant.posture === 'prone') {
-    sendMessage(socket, { type: "error", message: "Already prone." });
-    return;
-  }
+  if (!isPF2Combatant(actorCombatant)) return;
 
-  const actionsRemaining = actorCombatant.pf2?.actionsRemaining ?? actorCombatant.attacksRemaining;
+  const actionsRemaining = actorCombatant.actionsRemaining;
   if (actionsRemaining < 1) {
     sendMessage(socket, { type: "error", message: "No actions remaining." });
     return;
@@ -52,7 +46,7 @@ export const handlePF2DropProne = async (
 
   const updatedCombatants = match.combatants.map((c) =>
     c.playerId === player.id
-      ? updateCombatantActions(c, 1, { posture: 'prone' as const })
+      ? updateCombatantActions(c, 1)
       : c
   );
 
@@ -76,34 +70,9 @@ export const handlePF2Stand = async (
   player: Player,
   actorCombatant: CombatantState
 ): Promise<void> => {
-  if (actorCombatant.posture !== 'prone') {
-    sendMessage(socket, { type: "error", message: "Can only stand when prone." });
-    return;
-  }
-
-  const actionsRemaining = actorCombatant.pf2?.actionsRemaining ?? actorCombatant.attacksRemaining;
-  if (actionsRemaining < 1) {
-    sendMessage(socket, { type: "error", message: "No actions remaining." });
-    return;
-  }
-
-  const updatedCombatants = match.combatants.map((c) =>
-    c.playerId === player.id
-      ? updateCombatantActions(c, 1, { posture: 'standing' as const })
-      : c
-  );
-
-  const updated: MatchState = {
-    ...match,
-    combatants: updatedCombatants,
-    log: [...match.log, `${player.name} stands up.`],
-    turnMovement: undefined,
-    reachableHexes: undefined,
-  };
+  if (!isPF2Combatant(actorCombatant)) return;
   
-  state.matches.set(matchId, updated);
-  await updateMatchState(matchId, updated);
-  await sendToMatch(matchId, { type: "match_state", state: updated });
+  sendMessage(socket, { type: "error", message: "Stand action not available in PF2." });
 };
 
 export const handlePF2Step = async (
@@ -114,12 +83,9 @@ export const handlePF2Step = async (
   actorCombatant: CombatantState,
   payload: { to: { q: number; r: number } }
 ): Promise<void> => {
-  if (actorCombatant.posture === 'prone') {
-    sendMessage(socket, { type: "error", message: "Cannot Step while prone. Use Stand first." });
-    return;
-  }
+  if (!isPF2Combatant(actorCombatant)) return;
 
-  const actionsRemaining = actorCombatant.pf2?.actionsRemaining ?? actorCombatant.attacksRemaining;
+  const actionsRemaining = actorCombatant.actionsRemaining;
   if (actionsRemaining < 1) {
     sendMessage(socket, { type: "error", message: "No actions remaining." });
     return;

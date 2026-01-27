@@ -3,10 +3,8 @@ import type {
   RulesetId,
 } from "../../../../shared/types";
 import { isGurpsCharacter } from "../../../../shared/types";
-import type {
-  DamageType,
-  CombatantState,
-} from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../../shared/rulesets";
+import type { DamageType } from "../../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { assertRulesetId } from "../../../../shared/rulesets/defaults";
 

@@ -1,6 +1,8 @@
 import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
-import type { CombatantState, CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState, CombatActionPayload } from "../../../../shared/rulesets";
+import { isGurpsCombatant } from "../../../../shared/rulesets";
+import type { GurpsCombatActionPayload } from "../../../../shared/rulesets/gurps/types";
 import { sendMessage, calculateHexDistance, calculateFacing, getCharacterById } from "../../helpers";
 import {
   handleMoveStep,
@@ -32,6 +34,11 @@ export const handleGurpsAction = async (
   actorCombatant: CombatantState,
   payload: any
 ): Promise<void> => {
+  if (!isGurpsCombatant(actorCombatant)) {
+    sendMessage(socket, { type: "error", message: "Not a GURPS combatant." });
+    return;
+  }
+
   if (payload.type === "select_maneuver") {
     if (match.turnMovement?.phase === "moving") {
       sendMessage(socket, { type: "error", message: "Cannot change maneuver during movement." });
@@ -53,13 +60,14 @@ export const handleGurpsAction = async (
       return;
     }
 
-    const updatedCombatants = match.combatants.map((c) => {
-      if (c.playerId !== player.id) return c;
+     const updatedCombatants = match.combatants.map((c) => {
+       if (c.playerId !== player.id) return c;
+       if (!isGurpsCombatant(c)) return c;
 
-      let aimTurns = c.aimTurns;
-      let aimTargetId = c.aimTargetId;
-      let evaluateBonus = c.evaluateBonus;
-      let evaluateTargetId = c.evaluateTargetId;
+       let aimTurns = c.aimTurns;
+       let aimTargetId = c.aimTargetId;
+       let evaluateBonus = c.evaluateBonus;
+       let evaluateTargetId = c.evaluateTargetId;
 
       if (newManeuver === "aim") {
         if (previousManeuver === "aim") {
@@ -89,9 +97,9 @@ export const handleGurpsAction = async (
     if (newManeuver === "all_out_defense" && aodVariant) {
       logMsg += ` (${aodVariant.replace(/_/g, " ")})`;
     }
-    const updatedActor = updatedCombatants.find((c) => c.playerId === player.id);
-    if (newManeuver === "aim" && updatedActor && updatedActor.aimTurns > 1) {
-      logMsg += ` (turn ${updatedActor.aimTurns})`;
+     const updatedActor = updatedCombatants.find((c) => c.playerId === player.id);
+     if (newManeuver === "aim" && updatedActor && isGurpsCombatant(updatedActor) && updatedActor.aimTurns > 1) {
+       logMsg += ` (turn ${updatedActor.aimTurns})`;
     }
     logMsg += ".";
 

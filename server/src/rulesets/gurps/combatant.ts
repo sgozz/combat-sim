@@ -1,6 +1,7 @@
 import type { CharacterSheet } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
-import type { CombatantState, EquippedItem } from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../../shared/rulesets";
+import type { EquippedItem } from "../../../../shared/rulesets/gurps/types";
 import type { CombatantFactory } from "../types";
 
 export const createCombatant: CombatantFactory = (character, playerId, position, facing) => {
@@ -17,6 +18,7 @@ export const createCombatant: CombatantFactory = (character, playerId, position,
   }
 
   return {
+    rulesetId: 'gurps' as const,
     playerId,
     characterId: character.id,
     position,

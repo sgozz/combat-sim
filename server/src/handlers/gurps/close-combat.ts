@@ -4,7 +4,8 @@ import type {
   Player,
 } from "../../../../shared/types";
 import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
-import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import type { CombatActionPayload } from "../../../../shared/rulesets";
+import { isGurpsCombatant } from "../../../../shared/rulesets";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
 import { advanceTurn } from "../../rulesetHelpers";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
@@ -30,6 +31,7 @@ export const handleEnterCloseCombat = async (
   payload: CombatActionPayload & { type: "enter_close_combat" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
    
    const adapter = getServerAdapter(match.rulesetId);
    
@@ -43,13 +45,17 @@ export const handleEnterCloseCombat = async (
     return;
   }
   
-  const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
-  if (!targetCombatant) {
-    sendMessage(socket, { type: "error", message: "Target not found." });
-    return;
-  }
-  
-  if (targetCombatant.inCloseCombatWith && targetCombatant.inCloseCombatWith !== player.id) {
+   const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
+   if (!targetCombatant) {
+     sendMessage(socket, { type: "error", message: "Target not found." });
+     return;
+   }
+   if (!isGurpsCombatant(targetCombatant)) {
+     sendMessage(socket, { type: "error", message: "Target is not a GURPS combatant." });
+     return;
+   }
+   
+   if (targetCombatant.inCloseCombatWith && targetCombatant.inCloseCombatWith !== player.id) {
     sendMessage(socket, { type: "error", message: "Target is already in close combat with someone else." });
     return;
   }
@@ -128,6 +134,7 @@ export const handleExitCloseCombat = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
    
    const adapter = getServerAdapter(match.rulesetId);
    
@@ -214,6 +221,7 @@ export const handleGrapple = async (
   payload: CombatActionPayload & { type: "grapple" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   const adapter = getServerAdapter(match.rulesetId);
   
@@ -251,26 +259,28 @@ export const handleGrapple = async (
     );
     
     if (grappleResult.success) {
-      const cp = grappleResult.controlPoints;
-      const updatedCombatants = match.combatants.map(c => {
-        if (c.playerId === player.id) {
-          return { 
-            ...c, 
-            grapple: { grappledBy: c.grapple?.grappledBy ?? null, grappling: payload.targetId, cpSpent: cp, cpReceived: c.grapple?.cpReceived ?? 0 },
-            inCloseCombatWith: payload.targetId,
-            closeCombatPosition: 'front' as const,
-            position: targetCombatant.position
-          };
-        }
-        if (c.playerId === payload.targetId) {
-          return { 
-            ...c, 
-            grapple: { grappledBy: player.id, grappling: c.grapple?.grappling ?? null, cpSpent: c.grapple?.cpSpent ?? 0, cpReceived: cp },
-            inCloseCombatWith: player.id,
-            closeCombatPosition: 'front' as const
-          };
-        }
-        return c;
+       const cp = grappleResult.controlPoints;
+       const updatedCombatants = match.combatants.map(c => {
+         if (c.playerId === player.id) {
+           if (!isGurpsCombatant(c)) return c;
+           return { 
+             ...c, 
+             grapple: { grappledBy: c.grapple?.grappledBy ?? null, grappling: payload.targetId, cpSpent: cp, cpReceived: c.grapple?.cpReceived ?? 0 },
+             inCloseCombatWith: payload.targetId,
+             closeCombatPosition: 'front' as const,
+             position: targetCombatant.position
+           };
+         }
+         if (c.playerId === payload.targetId) {
+           if (!isGurpsCombatant(c)) return c;
+           return { 
+             ...c, 
+             grapple: { grappledBy: player.id, grappling: c.grapple?.grappling ?? null, cpSpent: c.grapple?.cpSpent ?? 0, cpReceived: cp },
+             inCloseCombatWith: player.id,
+             closeCombatPosition: 'front' as const
+           };
+         }
+         return c;
       });
       
       let logEntry = `${attackerCharacter.name} grapples ${targetCharacter.name}! (${cp} CP) ${formatRoll(grappleResult.attack, 'Wrestling')}`;
@@ -408,10 +418,11 @@ export const handleBreakFree = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
-  
-  const adapter = getServerAdapter(match.rulesetId);
-  
-  if (!actorCombatant.grapple?.grappledBy) {
+  if (!isGurpsCombatant(actorCombatant)) return;
+   
+   const adapter = getServerAdapter(match.rulesetId);
+   
+   if (!actorCombatant.grapple?.grappledBy) {
     sendMessage(socket, { type: "error", message: "Not being grappled." });
     return;
   }

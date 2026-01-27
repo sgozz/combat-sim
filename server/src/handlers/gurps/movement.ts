@@ -7,7 +7,8 @@ import type {
   RulesetId,
 } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
-import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import type { CombatActionPayload } from "../../../../shared/rulesets";
+import { isGurpsCombatant } from "../../../../shared/rulesets";
 import { advanceTurn } from "../../rulesetHelpers";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { assertRulesetId } from "../../../../shared/rulesets/defaults";
@@ -30,6 +31,7 @@ export const handleMoveStep = async (
   payload: CombatActionPayload & { type: "move_step" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   if (actorCombatant.inCloseCombatWith) {
     sendMessage(socket, { type: "error", message: "Cannot move while in close combat." });
@@ -106,6 +108,7 @@ export const handleRotate = async (
   payload: CombatActionPayload & { type: "rotate" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   if (actorCombatant.inCloseCombatWith) {
     sendMessage(socket, { type: "error", message: "Cannot rotate while in close combat." });
@@ -177,6 +180,7 @@ export const handleUndoMovement = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   if (!match.turnMovement) {
     sendMessage(socket, { type: "error", message: "No movement to undo." });
@@ -234,27 +238,28 @@ export const handleConfirmMovement = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   if (!match.turnMovement) {
     sendMessage(socket, { type: "error", message: "No movement to confirm." });
     return;
   }
   
-  const startPos = match.turnMovement.startPosition;
-  const endPos = match.turnMovement.currentPosition;
-  const moved = startPos.q !== endPos.q || startPos.r !== endPos.r;
-  
-  const logMsg = moved
-    ? `${player.name} moves to (${endPos.q}, ${endPos.r}).`
-    : `${player.name} stays in place.`;
-  
-  const updatedCombatants = match.combatants.map((c) =>
-    c.playerId === player.id
-      ? { ...c, statusEffects: [...c.statusEffects, 'has_stepped'] }
-      : c
-  );
-  
-  const maneuver = actorCombatant.maneuver;
+   const startPos = match.turnMovement.startPosition;
+   const endPos = match.turnMovement.currentPosition;
+   const moved = startPos.q !== endPos.q || startPos.r !== endPos.r;
+   
+   const logMsg = moved
+     ? `${player.name} moves to (${endPos.q}, ${endPos.r}).`
+     : `${player.name} stays in place.`;
+   
+   const updatedCombatants = match.combatants.map((c) =>
+     c.playerId === player.id
+       ? { ...c, statusEffects: [...c.statusEffects, 'has_stepped'] }
+       : c
+   );
+   
+   const maneuver = actorCombatant.maneuver;
   const allowsActionAfterMove = maneuver === 'attack' || maneuver === 'aim' || maneuver === 'move_and_attack';
   
   if (allowsActionAfterMove) {
@@ -291,6 +296,7 @@ export const handleSkipMovement = async (
   actorCombatant: ReturnType<typeof getCombatantByPlayerId>
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   if (match.turnMovement) {
     const adapter = getServerAdapter(assertRulesetId(match.rulesetId));

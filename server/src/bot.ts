@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { CharacterSheet, MatchState, User, RulesetId } from "../../shared/types";
 import { isPF2Character, isGurpsCharacter } from "../../shared/types";
-import type { CombatantState, DefenseType, DamageType, PendingDefense } from "../../shared/rulesets/gurps/types";
+import type { CombatantState, PendingDefenseState } from "../../shared/rulesets";
+import { isGurpsCombatant } from "../../shared/rulesets";
+import type { DefenseType, DamageType, PendingDefense } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 
@@ -156,32 +158,35 @@ export const chooseBotDefense = (
     if (!isGurpsCharacter(defenderCharacter)) {
       return { defenseType: 'none', retreat: false, dodgeAndDrop: false };
     }
+    if (!isGurpsCombatant(defenderCombatant)) {
+      return { defenseType: 'none', retreat: false, dodgeAndDrop: false };
+    }
     
     const adapter = getServerAdapter(rulesetId);
    const encumbrance = adapter.calculateEncumbrance!(
-     defenderCharacter.attributes.strength,
-     defenderCharacter.equipment
-   );
-   const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
-   const options = adapter.getDefenseOptions!(defenderCharacter, effectiveDodge);
-  
-  const defenses: { type: DefenseType; value: number }[] = [
-    { type: 'dodge', value: options.dodge }
-  ];
-  
-  if (options.block) {
-    defenses.push({ type: 'block', value: options.block.value });
-  }
-  
-  if (options.parry) {
-    const alreadyUsed = defenderCombatant.parryWeaponsUsedThisTurn.includes(options.parry.weapon);
-    const parryValue = alreadyUsed ? options.parry.value - 4 : options.parry.value;
-    defenses.push({ type: 'parry', value: parryValue });
-  }
-  
-  defenses.sort((a, b) => b.value - a.value);
-  const bestDefense = defenses[0];
-  const canRetreat = !defenderCombatant.retreatedThisTurn;
+      defenderCharacter.attributes.strength,
+      defenderCharacter.equipment
+    );
+    const effectiveDodge = defenderCharacter.derived.dodge + encumbrance.dodgePenalty;
+    const options = adapter.getDefenseOptions!(defenderCharacter, effectiveDodge);
+   
+   const defenses: { type: DefenseType; value: number }[] = [
+     { type: 'dodge', value: options.dodge }
+   ];
+   
+   if (options.block) {
+     defenses.push({ type: 'block', value: options.block.value });
+   }
+   
+   if (options.parry) {
+     const alreadyUsed = defenderCombatant.parryWeaponsUsedThisTurn.includes(options.parry.weapon);
+     const parryValue = alreadyUsed ? options.parry.value - 4 : options.parry.value;
+     defenses.push({ type: 'parry', value: parryValue });
+   }
+   
+   defenses.sort((a, b) => b.value - a.value);
+   const bestDefense = defenses[0];
+   const canRetreat = !defenderCombatant.retreatedThisTurn;
   
   return {
     defenseType: bestDefense.type,

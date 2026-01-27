@@ -4,8 +4,9 @@ import type {
   Player,
 } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
+import type { CombatActionPayload } from "../../../../shared/rulesets";
+import { isGurpsCombatant } from "../../../../shared/rulesets";
 import type {
-  CombatActionPayload,
   EquippedItem,
   EquipmentSlot,
 } from "../../../../shared/rulesets/gurps/types";
@@ -28,6 +29,7 @@ export const handleReadyAction = async (
   payload: CombatActionPayload & { type: "ready_action" }
 ): Promise<void> => {
   if (!actorCombatant) return;
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   if (actorCombatant.maneuver !== 'ready') {
     sendMessage(socket, { type: "error", message: "Must select Ready maneuver first." });

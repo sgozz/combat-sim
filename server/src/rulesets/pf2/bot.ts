@@ -1,6 +1,7 @@
 import type { MatchState } from "../../../../shared/types";
 import type { PF2CharacterSheet } from "../../../../shared/rulesets/pf2/characterSheet";
-import type { CombatantState } from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../../shared/rulesets";
+import { isPF2Combatant } from "../../../../shared/rulesets";
 import type { PF2DamageType } from "../../../../shared/rulesets/pf2/types";
 import type { BotAttackExecutor } from "../types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
@@ -18,6 +19,13 @@ export const executeBotAttack: BotAttackExecutor = async (
   target: CombatantState,
   activePlayer: { id: string; name: string }
 ): Promise<MatchState> => {
+  if (!isPF2Combatant(botCombatant) || !isPF2Combatant(target)) {
+    return advanceTurn({
+      ...currentMatch,
+      log: [...currentMatch.log, `${activePlayer.name} waits.`],
+    });
+  }
+
   const adapter = getServerAdapter('pf2');
   const attackerCharacter = asPF2Character(currentMatch, botCombatant.characterId);
   const targetCharacter = asPF2Character(currentMatch, target.characterId);
@@ -37,7 +45,7 @@ export const executeBotAttack: BotAttackExecutor = async (
   const strMod = adapter.pf2!.getAbilityModifier(attackerCharacter.abilities.strength);
   const level = attackerCharacter.level;
   const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
-  const attacksThisTurn = botCombatant.pf2?.attacksThisTurn ?? 0;
+  const attacksThisTurn = 0;
   const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attacksThisTurn + 1, false);
   const totalAttackBonus = strMod + profBonus + mapPenalty;
   
@@ -66,8 +74,8 @@ export const executeBotAttack: BotAttackExecutor = async (
     }
   }
 
-  const newActionsRemaining = (botCombatant.pf2?.actionsRemaining ?? 3) - 1;
-  const newAttacksThisTurn = attacksThisTurn + 1;
+   const newActionsRemaining = botCombatant.actionsRemaining - 1;
+   const newAttacksThisTurn = attacksThisTurn + 1;
 
   const updatedCombatants = currentMatch.combatants.map(c => {
     if (c.playerId === target.playerId && damageDealt > 0) {

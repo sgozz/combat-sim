@@ -12,6 +12,7 @@ export const createDefaultCharacter: CharacterFactory = (name) => {
     health: 10,
   };
   return {
+    rulesetId: 'gurps' as const,
     id: randomUUID(),
     name,
     attributes,

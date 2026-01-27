@@ -5,7 +5,8 @@ import type {
   Player,
   RulesetId,
 } from "../../shared/types";
-import type { CombatActionPayload } from "../../shared/rulesets/gurps/types";
+import type { CombatActionPayload } from "../../shared/rulesets";
+import { isGurpsCombatant } from "../../shared/rulesets";
 
 import { assertRulesetId } from "../../shared/rulesets/defaults";
 import { state } from "./state";
@@ -391,14 +392,14 @@ const handleCombatAction = async (
   player: Player,
   payload: CombatActionPayload
 ): Promise<void> => {
-  if (payload.type === "respond_exit") {
-    const actorCombatant = getCombatantByPlayerId(match, player.id);
-    if (!actorCombatant) {
-      sendMessage(socket, { type: "error", message: "Combatant not found." });
-      return;
-    }
-    
-    const pendingExit = match.combatants.find(c => c.inCloseCombatWith === player.id);
+   if (payload.type === "respond_exit") {
+     const actorCombatant = getCombatantByPlayerId(match, player.id);
+     if (!actorCombatant) {
+       sendMessage(socket, { type: "error", message: "Combatant not found." });
+       return;
+     }
+     
+     const pendingExit = match.combatants.find(c => isGurpsCombatant(c) && c.inCloseCombatWith === player.id);
     if (!pendingExit) {
       sendMessage(socket, { type: "error", message: "No pending exit." });
       return;

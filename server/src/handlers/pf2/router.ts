@@ -1,6 +1,6 @@
 import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
-import type { CombatantState } from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../../shared/rulesets";
 import { sendMessage } from "../../helpers";
 import { handlePF2AttackAction } from "./attack";
 import { handlePF2DropProne, handlePF2Stand, handlePF2Step } from "./actions";

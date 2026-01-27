@@ -498,7 +498,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 8. Final cleanup and verification
+- [~] 8. Final cleanup and verification (IN PROGRESS - server PF2 files need fixing)
 
   **What to do**:
   - Remove deprecated `CombatantState = GurpsCombatantState` alias if exists

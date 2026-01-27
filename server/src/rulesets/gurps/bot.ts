@@ -1,6 +1,7 @@
 import type { MatchState } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
-import type { CombatantState, DefenseType, DamageType, PendingDefense } from "../../../../shared/rulesets/gurps/types";
+import type { CombatantState } from "../../../../shared/rulesets";
+import type { DefenseType, DamageType, PendingDefense } from "../../../../shared/rulesets/gurps/types";
 import type { BotAttackExecutor } from "../types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../../rulesetHelpers";

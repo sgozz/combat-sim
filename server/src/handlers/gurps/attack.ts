@@ -4,8 +4,12 @@ import type {
   Player,
   RulesetId,
 } from "../../../../shared/types";
+import type { CombatActionPayload } from "../../../../shared/rulesets";
+import {
+  isGurpsCombatant,
+  isGurpsPendingDefense,
+} from "../../../../shared/rulesets";
 import type {
-  CombatActionPayload,
   PendingDefense,
   DefenseType,
   DamageType,
@@ -77,17 +81,21 @@ export const resolveDefenseChoice = async (
   const defenderCharacter = match.characters.find(c => c.id === defenderCombatant?.characterId);
   const attackerCharacter = match.characters.find(c => c.id === attackerCombatant?.characterId);
   
-  if (!defenderCombatant || !attackerCombatant || !defenderCharacter || !attackerCharacter) return;
+   if (!defenderCombatant || !attackerCombatant || !defenderCharacter || !attackerCharacter) return;
+   
+   // Type guard: ensure we have GURPS-specific data
+   if (!isGurpsPendingDefense(pending)) return;
+   if (!isGurpsCombatant(attackerCombatant)) return;
 
-  if (choice.defenseType === 'none') {
-    const dmg = adapter.rollDamage!(pending.damage);
-    const attackerManeuverInfo = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
-    let baseDamage = dmg.total + (attackerManeuverInfo?.aoaDamageBonus ?? 0);
-    
-    const result = applyDamageToTarget(
-      match, pending.defenderId, baseDamage, pending.damage,
-      pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
-    );
+   if (choice.defenseType === 'none') {
+     const dmg = adapter.rollDamage!(pending.damage);
+     const attackerManeuverInfo = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
+     let baseDamage = dmg.total + (attackerManeuverInfo?.aoaDamageBonus ?? 0);
+     
+     const result = applyDamageToTarget(
+       match, pending.defenderId, baseDamage, pending.damage,
+       pending.damageType, pending.hitLocation, dmg.rolls, dmg.modifier
+     );
     
     let logEntry = `${defenderCharacter.name} does not defend: Hit for ${result.finalDamage} damage ${result.logEntry}`;
     if (result.fellUnconscious) {
@@ -224,20 +232,21 @@ export const resolveDefenseChoice = async (
       effect: { type: "defend", attackerId: pending.attackerId, targetId: pending.defenderId, position: defenderCombatant.position } 
     });
     
-    let updatedCombatants = match.combatants.map(c => {
-      if (c.playerId !== pending.defenderId) return c;
-      const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
-        ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
-        : c.parryWeaponsUsedThisTurn;
-      const baseUpdate = { 
-        ...c, 
-        retreatedThisTurn: (canRetreat && retreatHex !== null) || c.retreatedThisTurn, 
-        defensesThisTurn: c.defensesThisTurn + 1,
-        parryWeaponsUsedThisTurn: newParryWeapons,
-        position: retreatHex ?? c.position,
-      };
-      return choice.dodgeAndDrop ? (adapter.combat?.applyDodgeAndDrop?.(baseUpdate) ?? baseUpdate) : baseUpdate;
-    });
+     let updatedCombatants = match.combatants.map(c => {
+       if (c.playerId !== pending.defenderId) return c;
+       if (!isGurpsCombatant(c)) return c;
+       const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
+         ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
+         : c.parryWeaponsUsedThisTurn;
+       const baseUpdate = { 
+         ...c, 
+         retreatedThisTurn: (canRetreat && retreatHex !== null) || c.retreatedThisTurn, 
+         defensesThisTurn: c.defensesThisTurn + 1,
+         parryWeaponsUsedThisTurn: newParryWeapons,
+         position: retreatHex ?? c.position,
+       };
+       return choice.dodgeAndDrop ? (adapter.combat?.applyDodgeAndDrop?.(baseUpdate) ?? baseUpdate) : baseUpdate;
+     });
     
     const isMultiAttack = attackerCombatant.attacksRemaining > 1;
     const remainingAttacks = isMultiAttack ? attackerCombatant.attacksRemaining - 1 : 0;
@@ -287,18 +296,19 @@ export const resolveDefenseChoice = async (
       effect: { type: "damage", attackerId: pending.attackerId, targetId: pending.defenderId, value: result.finalDamage, position: defenderCombatant.position } 
     });
 
-    let updatedCombatants = result.updatedCombatants.map(c => {
-      if (c.playerId !== pending.defenderId) return c;
-      const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
-        ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
-        : c.parryWeaponsUsedThisTurn;
-      const baseUpdate = { 
-        ...c, 
-        defensesThisTurn: c.defensesThisTurn + 1,
-        parryWeaponsUsedThisTurn: newParryWeapons,
-      };
-      return choice.dodgeAndDrop ? (adapter.combat?.applyDodgeAndDrop?.(baseUpdate) ?? baseUpdate) : baseUpdate;
-    });
+     let updatedCombatants = result.updatedCombatants.map(c => {
+       if (c.playerId !== pending.defenderId) return c;
+       if (!isGurpsCombatant(c)) return c;
+       const newParryWeapons = parryWeaponName && !c.parryWeaponsUsedThisTurn.includes(parryWeaponName)
+         ? [...c.parryWeaponsUsedThisTurn, parryWeaponName]
+         : c.parryWeaponsUsedThisTurn;
+       const baseUpdate = { 
+         ...c, 
+         defensesThisTurn: c.defensesThisTurn + 1,
+         parryWeaponsUsedThisTurn: newParryWeapons,
+       };
+       return choice.dodgeAndDrop ? (adapter.combat?.applyDodgeAndDrop?.(baseUpdate) ?? baseUpdate) : baseUpdate;
+     });
 
     const remainingAttacks = attackerCombatant.attacksRemaining - 1;
     
@@ -345,6 +355,8 @@ export const handleAttackAction = async (
   if (isPf2Match(match)) {
     return handlePF2AttackAction(socket, matchId, match, player, actorCombatant, payload);
   }
+  
+  if (!isGurpsCombatant(actorCombatant)) return;
   
   const adapter = getServerAdapter(assertRulesetId(match.rulesetId));
   
@@ -634,19 +646,20 @@ const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
         effect: { type: "defend", attackerId: player.id, targetId: targetCombatant.playerId, position: targetCombatant.position } 
       });
       
-      let updatedCombatants = match.combatants.map(c => {
-        if (c.playerId !== targetCombatant.playerId) return c;
-        const newParryWeapons = botParryWeaponName && !c.parryWeaponsUsedThisTurn.includes(botParryWeaponName)
-          ? [...c.parryWeaponsUsedThisTurn, botParryWeaponName]
-          : c.parryWeaponsUsedThisTurn;
-        return { 
-          ...c, 
-          retreatedThisTurn: canRetreat || c.retreatedThisTurn, 
-          defensesThisTurn: c.defensesThisTurn + 1, 
-          parryWeaponsUsedThisTurn: newParryWeapons,
-          position: retreatHex ?? c.position 
-        };
-      });
+       let updatedCombatants = match.combatants.map(c => {
+         if (c.playerId !== targetCombatant.playerId) return c;
+         if (!isGurpsCombatant(c)) return c;
+         const newParryWeapons = botParryWeaponName && !c.parryWeaponsUsedThisTurn.includes(botParryWeaponName)
+           ? [...c.parryWeaponsUsedThisTurn, botParryWeaponName]
+           : c.parryWeaponsUsedThisTurn;
+         return { 
+           ...c, 
+           retreatedThisTurn: canRetreat || c.retreatedThisTurn, 
+           defensesThisTurn: c.defensesThisTurn + 1, 
+           parryWeaponsUsedThisTurn: newParryWeapons,
+           position: retreatHex ?? c.position 
+         };
+       });
       
       const isMultiAttack = actorCombatant.attacksRemaining > 1;
       const remainingAttacks = isMultiAttack ? actorCombatant.attacksRemaining - 1 : 0;

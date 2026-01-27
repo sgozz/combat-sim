@@ -5,7 +5,8 @@ import type {
 } from "../../../../shared/types";
 import { isPF2Character } from "../../../../shared/types";
 import type { PF2CharacterSheet, PF2CharacterWeapon } from "../../../../shared/rulesets/pf2/characterSheet";
-import type { CombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+import type { CombatActionPayload } from "../../../../shared/rulesets";
+import { isPF2Combatant } from "../../../../shared/rulesets";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
@@ -71,6 +72,7 @@ export const handlePF2AttackAction = async (
   }
 
   if (!actorCombatant) return;
+  if (!isPF2Combatant(actorCombatant)) return;
 
   const targetCombatant = match.combatants.find(
     (combatant) => combatant.playerId === payload.targetId
@@ -79,6 +81,7 @@ export const handlePF2AttackAction = async (
     sendMessage(socket, { type: "error", message: "Target not found." });
     return;
   }
+  if (!isPF2Combatant(targetCombatant)) return;
 
   const attackerCharacter = getCharacterById(match, actorCombatant.characterId);
   const targetCharacter = getCharacterById(match, targetCombatant.characterId);
@@ -94,7 +97,7 @@ export const handlePF2AttackAction = async (
     return;
   }
 
-  const pf2ActionsRemaining = actorCombatant.pf2?.actionsRemaining ?? actorCombatant.attacksRemaining;
+  const pf2ActionsRemaining = actorCombatant.actionsRemaining;
   if (pf2ActionsRemaining < 1) {
     sendMessage(socket, { type: "error", message: "No actions remaining." });
     return;
@@ -105,36 +108,29 @@ export const handlePF2AttackAction = async (
      return;
    }
 
-   const weapon = getWeaponInfo(attackerCharacter);
-   const abilities = attackerCharacter.abilities;
-   let targetAC = calculateAC(targetCharacter);
+    const weapon = getWeaponInfo(attackerCharacter);
+    const abilities = attackerCharacter.abilities;
+    let targetAC = calculateAC(targetCharacter);
 
-   if (targetCombatant.posture === 'prone') {
-     targetAC -= 2;
-   }
+     const isFinesse = weapon.traits.includes('finesse');
+    const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
+    const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
+    const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
+   
+    const level = attackerCharacter.level;
+    const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
+   
+    const attackNumber = 0;
+    const isAgile = weapon.traits.includes('agile');
+    const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attackNumber + 1, isAgile);
+   
+    const totalAttackBonus = abilityMod + profBonus + mapPenalty;
 
-    const isFinesse = weapon.traits.includes('finesse');
-   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
-   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
-   const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
-  
-   const level = attackerCharacter.level;
-   const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
-  
-   const attackNumber = actorCombatant.pf2?.attacksThisTurn ?? 0;
-   const isAgile = weapon.traits.includes('agile');
-   const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attackNumber + 1, isAgile);
-  
-   const totalAttackBonus = abilityMod + profBonus + mapPenalty;
-
-   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
-  
-   let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
-   if (mapPenalty < 0) {
-     logEntry += ` (MAP ${mapPenalty})`;
-   }
-   if (targetCombatant.posture === 'prone') {
-     logEntry += ` (flat-footed, -2 AC)`;
+    const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
+   
+    let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
+    if (mapPenalty < 0) {
+      logEntry += ` (MAP ${mapPenalty})`;
    }
    logEntry += `: [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${attackRoll.dc}] ${formatDegree(attackRoll.degree)}`;
 
@@ -160,21 +156,14 @@ export const handlePF2AttackAction = async (
           : c.statusEffects,
       };
     }
-    if (c.playerId === player.id) {
-      const newActionsRemaining = (c.pf2?.actionsRemaining ?? c.attacksRemaining) - 1;
-      const newAttacksThisTurn = (c.pf2?.attacksThisTurn ?? 0) + 1;
-      return {
-        ...c,
-        attacksRemaining: newActionsRemaining,
-       pf2: {
-           actionsRemaining: newActionsRemaining,
-           attacksThisTurn: newAttacksThisTurn,
-           mapPenalty: adapter.pf2!.getMultipleAttackPenalty(newAttacksThisTurn + 1, isAgile),
-           reactionAvailable: c.pf2?.reactionAvailable ?? true,
-           shieldRaised: c.pf2?.shieldRaised ?? false,
-         },
-      };
-    }
+     if (c.playerId === player.id) {
+       if (!isPF2Combatant(c)) return c;
+       const newActionsRemaining = c.actionsRemaining - 1;
+       return {
+         ...c,
+         actionsRemaining: newActionsRemaining,
+       };
+     }
     return c;
   });
 
@@ -208,8 +197,8 @@ export const handlePF2AttackAction = async (
     });
   }
 
-  const attackerAfterAction = updatedCombatants.find(c => c.playerId === player.id);
-  const actionsLeft = attackerAfterAction?.pf2?.actionsRemaining ?? attackerAfterAction?.attacksRemaining ?? 0;
+   const attackerAfterAction = updatedCombatants.find(c => c.playerId === player.id);
+   const actionsLeft = (attackerAfterAction && isPF2Combatant(attackerAfterAction)) ? attackerAfterAction.actionsRemaining : 0;
 
   let finalState: MatchState;
   if (actionsLeft <= 0) {
