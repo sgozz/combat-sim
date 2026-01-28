@@ -61,7 +61,7 @@ Rendere l'architettura dei tipi veramente ruleset-agnostica, permettendo a TypeS
 - [x] `npx vitest run` → 356 test passano
 - [x] `grep -r "from.*rulesets/gurps" shared/types.ts` → nessun risultato
 - [x] `grep -r "from.*rulesets/gurps" shared/rulesets/Ruleset.ts` → nessun risultato
-- [ ] Type guards accettano `unknown` come input (still accept CharacterSheet - not critical)
+- [x] Type guards accettano `unknown` come input
 
 ### Must Have
 - `rulesetId` discriminante su CombatantState
@@ -595,7 +595,7 @@ grep -r "from.*rulesets/gurps" shared/rulesets/Ruleset.ts  # Expected: no result
 - [ ] No ESLint errors (87 remain - mostly unused vars, not blocking)
 - [x] No GURPS imports in shared/types.ts
 - [x] No GURPS imports in Ruleset.ts
-- [ ] Type guards accept `unknown` (still accept CharacterSheet - not blocking)
+- [x] Type guards accept `unknown`
 - [x] CombatantState is a proper union with discriminant
 - [x] CharacterSheet has `rulesetId` discriminant
 - [x] Action payloads are separate per ruleset

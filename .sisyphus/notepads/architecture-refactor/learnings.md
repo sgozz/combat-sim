@@ -562,3 +562,101 @@ The multi-ruleset architecture refactor is **COMPLETE AND VERIFIED**. Both GURPS
 - ✅ PF2 match starts in browser
 
 The architecture is now ready for future ruleset additions (D&D 5e, etc.) with a clean, extensible pattern.
+
+## Task 11: Type Guards Accept Unknown (COMPLETED)
+
+### Objective
+Update all type guards to accept `unknown` instead of specific types for ergonomic usage with external data sources (WebSocket, API, etc.).
+
+### Implementation
+
+#### Files Modified
+1. **shared/rulesets/characterSheet.ts**:
+   - `isPF2Character(character: unknown): character is PF2CharacterSheet`
+   - `isGurpsCharacter(character: unknown): character is GurpsCharacterSheet`
+   - Both already had null/undefined checks, just changed input type
+
+2. **shared/rulesets/guards.ts**:
+   - `isGurpsCombatant(combatant: unknown): combatant is GurpsCombatantState`
+   - `isPF2Combatant(combatant: unknown): combatant is PF2CombatantState`
+   - `isGurpsPendingDefense(defense: unknown): defense is PendingDefense`
+   - Added explicit null/undefined checks before property access:
+     ```typescript
+     return (
+       typeof combatant === 'object' &&
+       combatant !== null &&
+       'maneuver' in combatant
+     );
+     ```
+   - Removed unused `BaseCombatantState` import (was causing build error)
+
+### Key Insights
+
+1. **Ergonomic Type Guards**: Accepting `unknown` allows type guards to be used anywhere without prior type assertions:
+   ```typescript
+   // Before: Had to assert type first
+   const data: unknown = await socket.receive();
+   if (isPF2Character(data as CharacterSheet)) { ... }
+   
+   // After: Direct usage
+   const data: unknown = await socket.receive();
+   if (isPF2Character(data)) { ... }
+   ```
+
+2. **Null Safety Pattern**: All guards now follow the same pattern:
+   ```typescript
+   typeof value === 'object' && value !== null && 'field' in value
+   ```
+   This is the standard TypeScript pattern for type guards accepting `unknown`.
+
+3. **Shape-Based Checks Remain**: Guards still use property existence checks as the primary discriminator:
+   - GURPS combatants: `'maneuver' in combatant`
+   - PF2 combatants: `'actionsRemaining' in combatant`
+   - GURPS defense: `'deceptivePenalty' in defense`
+   
+   This is the "belt and suspenders" approach - shape checks work even if `rulesetId` field is missing.
+
+4. **No Logic Changes**: Only the input type changed from specific types to `unknown`. The validation logic remains identical.
+
+### Verification Results
+
+✅ **All 356 tests pass** - No regressions from signature changes
+✅ **Build succeeds** - `npm run build` completes with 0 TypeScript errors
+✅ **Type safety maintained** - Type guards still properly narrow types
+✅ **Unused import removed** - Build error fixed by removing `BaseCombatantState` import
+
+### Pattern Applied
+
+This follows the TypeScript handbook pattern for type guards:
+```typescript
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+```
+
+Our guards extend this with object and property checks:
+```typescript
+function isGurpsCombatant(combatant: unknown): combatant is GurpsCombatantState {
+  return (
+    typeof combatant === 'object' &&
+    combatant !== null &&
+    'maneuver' in combatant
+  );
+}
+```
+
+### Use Cases Enabled
+
+1. **WebSocket Message Handling**: Directly check incoming messages without casting
+2. **API Response Validation**: Validate external data before using
+3. **JSON Parsing**: Check parsed JSON objects without intermediate assertions
+4. **Generic Functions**: Type guards can now be used in generic contexts
+
+### Architecture Impact
+
+- ✅ Type guards are now more ergonomic and flexible
+- ✅ No breaking changes - existing code continues to work
+- ✅ Enables safer handling of external data sources
+- ✅ Follows TypeScript best practices for type guards
+
+All acceptance criteria met. Type guards now accept `unknown` for ergonomic usage.

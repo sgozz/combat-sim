@@ -11,8 +11,9 @@ export type CharacterSheet = PF2CharacterSheet | GurpsCharacterSheet;
  * Type guard to discriminate PF2 characters.
  * Resilient: checks field existence, null safety, and type before accessing nested properties.
  * Returns false on malformed input instead of throwing.
+ * Accepts unknown for ergonomic usage with external data sources.
  */
-export function isPF2Character(character: CharacterSheet): character is PF2CharacterSheet {
+export function isPF2Character(character: unknown): character is PF2CharacterSheet {
   return (
     typeof character === 'object' &&
     character !== null &&
@@ -27,8 +28,9 @@ export function isPF2Character(character: CharacterSheet): character is PF2Chara
  * Type guard to discriminate GURPS characters.
  * Resilient: checks field existence, null safety, and type before accessing nested properties.
  * Returns false on malformed input instead of throwing.
+ * Accepts unknown for ergonomic usage with external data sources.
  */
-export function isGurpsCharacter(character: CharacterSheet): character is GurpsCharacterSheet {
+export function isGurpsCharacter(character: unknown): character is GurpsCharacterSheet {
   return (
     typeof character === 'object' &&
     character !== null &&
