@@ -25,17 +25,17 @@ export const GurpsGameActionPanel = ({
   onAction,
   onLeaveLobby,
 }: GameActionPanelProps) => {
-  // Type guard: ensure activeCharacter is GURPS
-  if (!activeCharacter || !isGurpsCharacter(activeCharacter) || !isGurpsCombatant(activeCombatant)) {
-    return null
-  }
-
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
   const [rapidStrike, setRapidStrike] = useState(false)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
+
+  // Type guard: ensure activeCharacter is GURPS
+  if (!activeCharacter || !isGurpsCharacter(activeCharacter) || !isGurpsCombatant(activeCombatant)) {
+    return null
+  }
   
   const adapter = rulesets.gurps.ui
   const slots = getRulesetUiSlots('gurps')

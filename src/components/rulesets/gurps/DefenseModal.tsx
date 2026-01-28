@@ -50,17 +50,18 @@ export default function DefenseModal({
   onDefend,
   rulesetId,
 }: DefenseModalProps) {
-  if (!isGurpsCharacter(character) || !isGurpsCombatant(combatant)) {
-    return null;
-  }
-
   const [retreat, setRetreat] = useState(false);
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
 
   const baseOptions = useMemo(() => {
+    if (!isGurpsCharacter(character)) return null;
     const derivedDodge = character.derived.dodge;
     return getDefenseOptions(character, derivedDodge);
   }, [character]);
+
+  if (!isGurpsCharacter(character) || !isGurpsCombatant(combatant) || !baseOptions) {
+    return null;
+  }
 
   // Calculate final values based on current modifiers
   const getFinalValue = (type: Exclude<DefenseType, 'none'>, base: number, weaponName?: string) => {

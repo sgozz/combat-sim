@@ -12,15 +12,15 @@ export const PF2ActionBar = ({
   onAction,
   onLeaveLobby,
 }: ActionBarProps) => {
-   if (!isPF2Character(playerCharacter) || !isPF2Combatant(playerCombatant)) {
-     return null
-   }
-   
    const [showCharacterSheet, setShowCharacterSheet] = useState(false)
    
    const closeAllPanels = useCallback(() => {
      setShowCharacterSheet(false)
    }, [])
+
+   if (!isPF2Character(playerCharacter) || !isPF2Combatant(playerCombatant)) {
+     return null
+   }
   
   const maxHP = playerCharacter.derived.hitPoints
   const currentHP = playerCombatant.currentHP

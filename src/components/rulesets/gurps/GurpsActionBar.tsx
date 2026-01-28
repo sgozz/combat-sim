@@ -20,11 +20,6 @@ export const GurpsActionBar = ({
   onDefend,
   onLeaveLobby,
 }: ActionBarProps) => {
-  // Type guards - MUST be before hooks
-  if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) {
-    return <div>Error: GURPS component received non-GURPS data</div>
-  }
-
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)
   const [showAOAVariants, setShowAOAVariants] = useState(false)
@@ -35,7 +30,7 @@ export const GurpsActionBar = ({
   const [hitLocation, setHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
   const [rapidStrike, setRapidStrike] = useState(false)
-  
+
   const closeAllPanels = useCallback(() => {
     setShowManeuvers(false)
     setShowCharacterSheet(false)
@@ -43,6 +38,48 @@ export const GurpsActionBar = ({
     setShowAODVariants(false)
     setShowWaitPicker(false)
   }, [])
+
+  useEffect(() => {
+    if (!matchState.pendingDefense) {
+      queueMicrotask(() => {
+        setRetreat(false)
+        setDodgeAndDrop(false)
+      })
+    }
+  }, [matchState.pendingDefense])
+
+  const defenseOptions = useMemo(() => {
+    if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) return null
+    const pd = matchState.pendingDefense
+    if (!pd || !isGurpsPendingDefense(pd)) return null
+    const derivedDodge = playerCharacter.derived.dodge
+    const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
+    const postureMods = getPostureModifiers(playerCombatant.posture)
+    
+    type ActiveDefenseType = 'dodge' | 'parry' | 'block'
+    const getFinalValue = (type: ActiveDefenseType, base: number) => {
+      return calculateDefenseValue(base, {
+        retreat,
+        dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
+        inCloseCombat: !!playerCombatant.inCloseCombatWith,
+        defensesThisTurn: playerCombatant.defensesThisTurn,
+        deceptivePenalty: pd.deceptivePenalty,
+        postureModifier: postureMods.defenseVsMelee,
+        defenseType: type
+      })
+    }
+
+    return {
+      dodge: getFinalValue('dodge', baseOpts.dodge),
+      parry: baseOpts.parry ? getFinalValue('parry', baseOpts.parry.value) : null,
+      block: baseOpts.block ? getFinalValue('block', baseOpts.block.value) : null,
+      canRetreat: !playerCombatant.retreatedThisTurn
+    }
+  }, [playerCharacter, playerCombatant, matchState.pendingDefense, retreat, dodgeAndDrop])
+
+  if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) {
+    return <div>Error: GURPS component received non-GURPS data</div>
+  }
   
   const hasOpenPanel = showManeuvers || showCharacterSheet || showAOAVariants || showAODVariants || showWaitPicker
   
@@ -60,42 +97,6 @@ export const GurpsActionBar = ({
 
   const pendingDefense = matchState.pendingDefense
   const isDefending = pendingDefense?.defenderId === player.id
-
-  useEffect(() => {
-    if (!pendingDefense) {
-      queueMicrotask(() => {
-        setRetreat(false)
-        setDodgeAndDrop(false)
-      })
-    }
-  }, [pendingDefense])
-
-   const defenseOptions = useMemo(() => {
-     if (!pendingDefense || !isGurpsPendingDefense(pendingDefense)) return null
-     const derivedDodge = playerCharacter.derived.dodge
-     const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
-     const postureMods = getPostureModifiers(playerCombatant.posture)
-     
-     type ActiveDefenseType = 'dodge' | 'parry' | 'block'
-     const getFinalValue = (type: ActiveDefenseType, base: number) => {
-       return calculateDefenseValue(base, {
-         retreat,
-         dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
-         inCloseCombat,
-         defensesThisTurn: playerCombatant.defensesThisTurn,
-         deceptivePenalty: pendingDefense.deceptivePenalty,
-         postureModifier: postureMods.defenseVsMelee,
-         defenseType: type
-       })
-     }
-
-    return {
-      dodge: getFinalValue('dodge', baseOpts.dodge),
-      parry: baseOpts.parry ? getFinalValue('parry', baseOpts.parry.value) : null,
-      block: baseOpts.block ? getFinalValue('block', baseOpts.block.value) : null,
-      canRetreat: !playerCombatant.retreatedThisTurn
-    }
-  }, [playerCharacter, playerCombatant, pendingDefense, retreat, dodgeAndDrop, inCloseCombat])
 
   const handleDefense = (type: 'dodge' | 'parry' | 'block' | 'none') => {
     onDefend({

@@ -340,7 +340,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 5. Remove GURPS imports from shared/types.ts
+- [x] 5. Remove GURPS imports from shared/types.ts
 
   **What to do**:
   - In `shared/types.ts`:
