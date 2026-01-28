@@ -57,11 +57,11 @@ Rendere l'architettura dei tipi veramente ruleset-agnostica, permettendo a TypeS
 - `shared/rulesets/Ruleset.ts` - Interfacce generiche senza GURPS
 
 ### Definition of Done
-- [ ] `npm run build` passa senza errori
-- [ ] `npx vitest run` → 356 test passano
-- [ ] `grep -r "from.*rulesets/gurps" shared/types.ts` → nessun risultato
-- [ ] `grep -r "from.*rulesets/gurps" shared/rulesets/Ruleset.ts` → nessun risultato
-- [ ] Type guards accettano `unknown` come input
+- [x] `npm run build` passa senza errori
+- [x] `npx vitest run` → 356 test passano
+- [x] `grep -r "from.*rulesets/gurps" shared/types.ts` → nessun risultato
+- [x] `grep -r "from.*rulesets/gurps" shared/rulesets/Ruleset.ts` → nessun risultato
+- [ ] Type guards accettano `unknown` come input (still accept CharacterSheet - not critical)
 
 ### Must Have
 - `rulesetId` discriminante su CombatantState
@@ -589,15 +589,15 @@ grep -r "from.*rulesets/gurps" shared/rulesets/Ruleset.ts  # Expected: no result
 ```
 
 ### Final Checklist
-- [ ] All 356 tests pass
-- [ ] Client build succeeds
-- [ ] Server compiles without errors
-- [ ] No ESLint errors
-- [ ] No GURPS imports in shared/types.ts
-- [ ] No GURPS imports in Ruleset.ts
-- [ ] Type guards accept `unknown`
-- [ ] CombatantState is a proper union with discriminant
-- [ ] CharacterSheet has `rulesetId` discriminant
-- [ ] Action payloads are separate per ruleset
-- [ ] GURPS match works in browser
-- [ ] PF2 match starts in browser
+- [x] All 356 tests pass
+- [x] Client build succeeds
+- [x] Server compiles without errors
+- [ ] No ESLint errors (87 remain - mostly unused vars, not blocking)
+- [x] No GURPS imports in shared/types.ts
+- [x] No GURPS imports in Ruleset.ts
+- [ ] Type guards accept `unknown` (still accept CharacterSheet - not blocking)
+- [x] CombatantState is a proper union with discriminant
+- [x] CharacterSheet has `rulesetId` discriminant
+- [x] Action payloads are separate per ruleset
+- [x] GURPS match works in browser
+- [x] PF2 match starts in browser
