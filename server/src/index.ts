@@ -2,8 +2,8 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
-import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, buildMatchSummary, removeMatchMember, updateMatchState } from "./db";
-import { sendMessage, sendToUser, sendToMatch } from "./helpers";
+import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, removeMatchMember, updateMatchState } from "./db";
+import { sendMessage, sendToMatch } from "./helpers";
 import { handleMessage } from "./handlers";
 
 const PORT = Number(process.env.PORT ?? 8080);

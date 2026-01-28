@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { isPF2Character, isGurpsCharacter } from './characterSheet';
 import type { PF2CharacterSheet } from './pf2/characterSheet';
 import type { GurpsCharacterSheet } from './gurps/characterSheet';

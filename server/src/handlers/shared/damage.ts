@@ -1,6 +1,5 @@
 import type {
   MatchState,
-  RulesetId,
 } from "../../../../shared/types";
 import { isGurpsCharacter } from "../../../../shared/types";
 import type { CombatantState } from "../../../../shared/rulesets";
@@ -42,7 +41,7 @@ export const applyDamageToTarget = (
   }
 
   const baseMultDamage = adapter.damage?.applyDamageMultiplier?.(baseDamage, damageType) ?? baseDamage;
-  const hitLocMultiplier = adapter.damage?.getHitLocationWoundingMultiplier?.(hitLocation as any, damageType) ?? 1;
+   const hitLocMultiplier = adapter.damage?.getHitLocationWoundingMultiplier?.(hitLocation, damageType) ?? 1;
   const finalDamage = Math.floor(baseMultDamage * hitLocMultiplier);
   
   const rolls = damageRolls.join(',');

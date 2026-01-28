@@ -6,7 +6,7 @@ import type {
 import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
 import type { CombatActionPayload } from "../../../../shared/rulesets";
 import { isGurpsCombatant } from "../../../../shared/rulesets";
-import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
+
 import { advanceTurn } from "../../rulesetHelpers";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { state } from "../../state";

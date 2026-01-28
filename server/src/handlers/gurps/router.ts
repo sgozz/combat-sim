@@ -2,7 +2,7 @@ import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
 import type { CombatantState, CombatActionPayload } from "../../../../shared/rulesets";
 import { isGurpsCombatant } from "../../../../shared/rulesets";
-import type { GurpsCombatActionPayload } from "../../../../shared/rulesets/gurps/types";
+
 import { sendMessage, calculateHexDistance, calculateFacing, getCharacterById } from "../../helpers";
 import {
   handleMoveStep,
@@ -32,7 +32,7 @@ export const handleGurpsAction = async (
   match: MatchState,
   player: Player,
   actorCombatant: CombatantState,
-  payload: any
+  payload: CombatActionPayload
 ): Promise<void> => {
   if (!isGurpsCombatant(actorCombatant)) {
     sendMessage(socket, { type: "error", message: "Not a GURPS combatant." });
@@ -266,7 +266,7 @@ export const handleGurpsAction = async (
     };
     const actionDesc = trigger.action === "attack" ? "attack" : trigger.action === "move" ? "move" : "ready";
 
-    const updatedCombatants = match.combatants.map((c) => (c.playerId === player.id ? { ...c, waitTrigger: trigger as any } : c));
+    const updatedCombatants = match.combatants.map((c) => (c.playerId === player.id ? { ...c, waitTrigger: trigger } : c));
 
     const updated = advanceTurn({
       ...match,
@@ -293,7 +293,7 @@ export const handleGurpsAction = async (
   }
 
   if (payload.type === "change_posture") {
-    const newPosture = payload.posture as any;
+    const newPosture = payload.posture;
     const oldPosture = actorCombatant.posture;
     if (newPosture === oldPosture) {
       sendMessage(socket, { type: "error", message: "Already in that posture." });
@@ -308,7 +308,7 @@ export const handleGurpsAction = async (
       return;
     }
 
-    const updatedCombatants = match.combatants.map((c) => (c.playerId === player.id ? { ...c, posture: newPosture as any } : c));
+    const updatedCombatants = match.combatants.map((c) => (c.playerId === player.id ? { ...c, posture: newPosture } : c));
 
     if (isFreeChange) {
       const updated: MatchState = {

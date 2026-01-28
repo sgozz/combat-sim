@@ -592,7 +592,7 @@ grep -r "from.*rulesets/gurps" shared/rulesets/Ruleset.ts  # Expected: no result
 - [x] All 356 tests pass
 - [x] Client build succeeds
 - [x] Server compiles without errors
-- [ ] No ESLint errors (87 remain - mostly unused vars, not blocking)
+- [x] No ESLint errors
 - [x] No GURPS imports in shared/types.ts
 - [x] No GURPS imports in Ruleset.ts
 - [x] Type guards accept `unknown`

@@ -280,9 +280,11 @@ export const buildMatchSummary = (matchRow: MatchRow, forUserId: string): MatchS
   let activeTurnPlayerId: string | null = null;
   if (matchRow.state_json) {
     try {
-      const matchState = JSON.parse(matchRow.state_json) as MatchState;
-      activeTurnPlayerId = matchState.activeTurnPlayerId;
-    } catch {}
+       const matchState = JSON.parse(matchRow.state_json) as MatchState;
+       activeTurnPlayerId = matchState.activeTurnPlayerId;
+     } catch {
+       // Ignore JSON parse errors
+     }
   }
   
   for (const member of members) {
@@ -325,10 +327,12 @@ export const loadPersistedMatches = (): void => {
   
   for (const row of rows) {
     if (row.state_json) {
-      try {
-        const matchState = JSON.parse(row.state_json) as MatchState;
-        state.matches.set(row.id, matchState);
-      } catch {}
+       try {
+         const matchState = JSON.parse(row.state_json) as MatchState;
+         state.matches.set(row.id, matchState);
+       } catch {
+         // Ignore JSON parse errors
+       }
     }
   }
 };
@@ -343,10 +347,12 @@ export const loadPersistedUsers = (): void => {
 export const loadPersistedCharacters = (): void => {
   const rows = state.db.prepare("SELECT id, data_json FROM characters").all() as CharacterRow[];
   for (const row of rows) {
-    try {
-      const character = JSON.parse(row.data_json) as CharacterSheet;
-      state.characters.set(row.id, character);
-    } catch {}
+     try {
+       const character = JSON.parse(row.data_json) as CharacterSheet;
+       state.characters.set(row.id, character);
+     } catch {
+       // Ignore JSON parse errors
+     }
   }
 };
 

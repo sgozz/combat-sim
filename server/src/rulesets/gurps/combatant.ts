@@ -1,6 +1,4 @@
-import type { CharacterSheet } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
-import type { CombatantState } from "../../../../shared/rulesets";
 import type { EquippedItem } from "../../../../shared/rulesets/gurps/types";
 import type { CombatantFactory } from "../types";
 

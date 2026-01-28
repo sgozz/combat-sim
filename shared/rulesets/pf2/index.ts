@@ -1,7 +1,7 @@
 import type { Ruleset } from '../Ruleset';
 import { pf2UiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
-import type { MatchState, CharacterSheet } from '../../types';
+import type { CharacterSheet } from '../../types';
 import { isPF2Character } from '../../types';
 import { uuid } from '../../utils/uuid';
 export type {
@@ -52,7 +52,7 @@ export const pf2Ruleset: Ruleset = {
         doomed: 0,
       };
     },
-  getAvailableActions: (_state: MatchState) => [],
+   getAvailableActions: () => [],
   getCombatPreview: () => null,
    createCharacter: (name: string): CharacterSheet => ({
      id: uuid(),
@@ -93,7 +93,7 @@ export const pf2Ruleset: Ruleset = {
     armor: null,
     feats: [],
     spells: null,
-  } as any),
+   } as CharacterSheet),
 };
 
 export const pf2Bundle = {

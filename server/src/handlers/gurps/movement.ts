@@ -4,7 +4,6 @@ import type {
   Player,
   HexCoord,
   TurnMovementState,
-  RulesetId,
 } from "../../../../shared/types";
 import type { GurpsCharacterSheet } from "../../../../shared/rulesets/gurps/characterSheet";
 import type { CombatActionPayload } from "../../../../shared/rulesets";

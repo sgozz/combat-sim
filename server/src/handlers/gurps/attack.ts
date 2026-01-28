@@ -2,7 +2,6 @@ import type { WebSocket } from "ws";
 import type {
   MatchState,
   Player,
-  RulesetId,
 } from "../../../../shared/types";
 import type { CombatActionPayload } from "../../../../shared/rulesets";
 import {
@@ -90,7 +89,7 @@ export const resolveDefenseChoice = async (
    if (choice.defenseType === 'none') {
      const dmg = adapter.rollDamage!(pending.damage);
      const attackerManeuverInfo = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
-     let baseDamage = dmg.total + (attackerManeuverInfo?.aoaDamageBonus ?? 0);
+     const baseDamage = dmg.total + (attackerManeuverInfo?.aoaDamageBonus ?? 0);
      
      const result = applyDamageToTarget(
        match, pending.defenderId, baseDamage, pending.damage,
@@ -159,7 +158,7 @@ export const resolveDefenseChoice = async (
   if (!defenseResolution) {
     const dmg = adapter.rollDamage!(pending.damage);
     const attackerManeuverInfo2 = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
-    let baseDamage = dmg.total + (attackerManeuverInfo2?.aoaDamageBonus ?? 0);
+    const baseDamage = dmg.total + (attackerManeuverInfo2?.aoaDamageBonus ?? 0);
     
     const result = applyDamageToTarget(
       match, pending.defenderId, baseDamage, pending.damage,
@@ -275,7 +274,7 @@ export const resolveDefenseChoice = async (
   } else {
     const dmg = adapter.rollDamage!(pending.damage);
     const attackerManeuverInfo3 = adapter.combat?.getAttackerManeuverInfo?.(attackerCombatant);
-    let baseDamage = dmg.total + (attackerManeuverInfo3?.aoaDamageBonus ?? 0);
+    const baseDamage = dmg.total + (attackerManeuverInfo3?.aoaDamageBonus ?? 0);
     
     const result = applyDamageToTarget(
       match, pending.defenderId, baseDamage, pending.damage,
@@ -529,7 +528,7 @@ export const handleAttackAction = async (
 
   if (attackRoll.critical || !canDefend) {
     const dmg = adapter.rollDamage!(damageFormula);
-    let baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
+    const baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
     
     let critHitStr = '';
     let finalBaseDamage = baseDamage;
@@ -612,7 +611,7 @@ export const handleAttackAction = async (
     
     if (!botDefense) {
       const dmg = adapter.rollDamage!(damageFormula);
-      let baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
+      const baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
       
       const result = applyDamageToTarget(
         match, targetCombatant.playerId, baseDamage, damageFormula,
@@ -633,7 +632,7 @@ export const handleAttackAction = async (
       return;
     }
     
-    const { defenseType: defenseUsed, defenseLabel, finalDefenseValue, canRetreat, retreatHex, parryWeaponName: botParryWeaponName } = botDefense;
+    const { defenseLabel, finalDefenseValue, canRetreat, retreatHex, parryWeaponName: botParryWeaponName } = botDefense;
     
 const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
     
@@ -686,7 +685,7 @@ const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
       }
     } else {
       const dmg = adapter.rollDamage!(damageFormula);
-      let baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
+      const baseDamage = dmg.total + (actorManeuverInfo?.aoaDamageBonus ?? 0);
       
       const result = applyDamageToTarget(
         match, targetCombatant.playerId, baseDamage, damageFormula,

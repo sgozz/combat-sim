@@ -165,7 +165,7 @@ export const handleMessage = async (
       const user = requireUser(socket);
       if (!user) return;
       
-      const { id, code } = await createMatch(message.name, message.maxPlayers, user.id, message.rulesetId);
+      const { id } = await createMatch(message.name, message.maxPlayers, user.id, message.rulesetId);
       await addMatchMember(id, user.id, null);
       
       const matchRow = await findMatchById(id);

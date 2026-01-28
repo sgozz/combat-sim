@@ -2,7 +2,7 @@ import type { MatchState } from "../../../../shared/types";
 import type { PF2CharacterSheet } from "../../../../shared/rulesets/pf2/characterSheet";
 import type { CombatantState } from "../../../../shared/rulesets";
 import { isPF2Combatant } from "../../../../shared/rulesets";
-import type { PF2DamageType } from "../../../../shared/rulesets/pf2/types";
+
 import type { BotAttackExecutor } from "../types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../../rulesetHelpers";
@@ -96,8 +96,8 @@ export const executeBotAttack: BotAttackExecutor = async (
           actionsRemaining: newActionsRemaining,
           attacksThisTurn: newAttacksThisTurn,
           mapPenalty: adapter.pf2!.getMultipleAttackPenalty(newAttacksThisTurn + 1, false),
-          reactionAvailable: (c as any).pf2?.reactionAvailable ?? true,
-          shieldRaised: (c as any).pf2?.shieldRaised ?? false,
+           reactionAvailable: c.pf2?.reactionAvailable ?? true,
+           shieldRaised: c.pf2?.shieldRaised ?? false,
         },
       };
     }

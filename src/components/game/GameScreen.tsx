@@ -80,13 +80,19 @@ export const GameScreen = ({
   useEffect(() => {
     if (matchState?.status === 'active' && !hasSeenMatchStart.current) {
       hasSeenMatchStart.current = true
-      setCameraMode('overview')
       
-      const timer = setTimeout(() => {
+      const overviewTimer = setTimeout(() => {
+        setCameraMode('overview')
+      }, 0)
+      
+      const followTimer = setTimeout(() => {
         setCameraMode('follow')
       }, 3000)
       
-      return () => clearTimeout(timer)
+      return () => {
+        clearTimeout(overviewTimer)
+        clearTimeout(followTimer)
+      }
     }
     
     if (!matchState || matchState.status === 'finished') {
@@ -96,7 +102,10 @@ export const GameScreen = ({
 
   useEffect(() => {
     if (hasSeenMatchStart.current && isPlayerTurn && cameraMode === 'overview') {
-      setCameraMode('follow')
+      const timer = setTimeout(() => {
+        setCameraMode('follow')
+      }, 0)
+      return () => clearTimeout(timer)
     }
   }, [isPlayerTurn, cameraMode])
 
@@ -147,15 +156,15 @@ export const GameScreen = ({
   return (
     <div className="app-container">
        {canRenderPanels && matchState?.rulesetId === 'gurps' ? (
-         <GameStatusPanel
-           matchState={matchState}
-           player={player}
-           combatant={currentCombatant as any}
-           character={playerCharacter}
-           lobbyPlayers={lobbyPlayers}
-           isMyTurn={isPlayerTurn}
-           onAction={onAction}
-         />
+          <GameStatusPanel
+            matchState={matchState}
+            player={player}
+            combatant={currentCombatant}
+            character={playerCharacter}
+            lobbyPlayers={lobbyPlayers}
+            isMyTurn={isPlayerTurn}
+            onAction={onAction}
+          />
       ) : (
         <aside className="panel">
           <div className="panel-header">
@@ -235,8 +244,8 @@ export const GameScreen = ({
         
         <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
           <color attach="background" args={['#111']} />
-           <ArenaScene
-             combatants={(matchState?.combatants ?? []) as any}
+            <ArenaScene
+              combatants={matchState?.combatants ?? []}
              characters={matchState?.characters ?? []}
              playerId={player?.id ?? null}
              activeTurnPlayerId={matchState?.activeTurnPlayerId ?? null}
@@ -254,10 +263,10 @@ export const GameScreen = ({
       </main>
 
        {canRenderPanels && matchState?.rulesetId === 'gurps' ? (
-         <GameActionPanel
-           matchState={matchState}
-           player={player}
-           combatant={currentCombatant as any}
+          <GameActionPanel
+            matchState={matchState}
+            player={player}
+            combatant={currentCombatant}
            character={playerCharacter}
            logs={logs}
            selectedTargetId={selectedTargetId}
@@ -386,10 +395,11 @@ export const GameScreen = ({
        {isDefending && pendingDefense && defenderCharacter && currentCombatant && matchState?.rulesetId === 'gurps' && (() => {
          const { DefenseModal: DefenseModalSlot } = getRulesetUiSlots(matchState?.rulesetId);
          return DefenseModalSlot ? (
-           <DefenseModalSlot
-             pendingDefense={pendingDefense as any}
-             character={defenderCharacter}
-             combatant={currentCombatant as any}
+            <DefenseModalSlot
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              pendingDefense={pendingDefense as any}
+              character={defenderCharacter}
+              combatant={currentCombatant}
              attackerName={attackerPlayer?.name ?? 'Unknown'}
              inCloseCombat={inCloseCombat}
              onDefend={handleDefenseChoice}
@@ -432,10 +442,10 @@ export const GameScreen = ({
       )}
 
        {canRenderPanels && matchState?.rulesetId === 'gurps' && (
-         <ActionBar
-           matchState={matchState}
-           player={player}
-           combatant={currentCombatant as any}
+          <ActionBar
+            matchState={matchState}
+            player={player}
+            combatant={currentCombatant}
            character={playerCharacter}
            isMyTurn={isPlayerTurn}
            currentManeuver={currentManeuver}

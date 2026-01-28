@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { CharacterSheet } from "../../../../shared/types";
+
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import type { CharacterFactory } from "../types";
 

@@ -861,7 +861,7 @@ const pf2Adapter: ServerRulesetAdapter = {
     gridSystem: squareGrid8,
     hasFacingArcs: false,
     advanceTurn: pf2AdvanceTurn,
-   initializeTurnMovement: (position, facing, maneuver, basicMove, _posture) => {
+    initializeTurnMovement: (position, facing, maneuver, basicMove) => {
      const movePoints = maneuver === 'pf2_step' ? 1 : basicMove;
      return pf2InitializeTurnMovement(position, facing, movePoints);
    },

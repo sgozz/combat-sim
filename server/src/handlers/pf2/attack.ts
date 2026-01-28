@@ -110,7 +110,7 @@ export const handlePF2AttackAction = async (
 
     const weapon = getWeaponInfo(attackerCharacter);
     const abilities = attackerCharacter.abilities;
-    let targetAC = calculateAC(targetCharacter);
+    const targetAC = calculateAC(targetCharacter);
 
      const isFinesse = weapon.traits.includes('finesse');
     const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);

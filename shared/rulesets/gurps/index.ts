@@ -1,7 +1,7 @@
 import type { Ruleset } from '../Ruleset';
 import { gurpsUiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
-import type { MatchState, CharacterSheet } from '../../types';
+import type { CharacterSheet } from '../../types';
 import { isGurpsCharacter } from '../../types';
 import { uuid } from '../../utils/uuid';
 
@@ -43,7 +43,7 @@ export const gurpsRuleset: Ruleset = {
        waitTrigger: null,
      };
    },
-  getAvailableActions: (_state: MatchState) => [],
+   getAvailableActions: () => [],
   getCombatPreview: () => null,
    createCharacter: (name: string): CharacterSheet => ({
      id: uuid(),
@@ -67,7 +67,7 @@ export const gurpsRuleset: Ruleset = {
      disadvantages: [],
      equipment: [],
      pointsTotal: 100,
-   } as any),
+    } as CharacterSheet),
 };
 
 export const gurpsBundle = {

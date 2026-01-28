@@ -1,9 +1,7 @@
-import { randomUUID } from "node:crypto";
 import type { CharacterSheet, MatchState, User, RulesetId } from "../../shared/types";
 import { isPF2Character, isGurpsCharacter } from "../../shared/types";
-import type { CombatantState, PendingDefenseState } from "../../shared/rulesets";
+import type { CombatantState } from "../../shared/rulesets";
 import { isGurpsCombatant } from "../../shared/rulesets";
-import type { DefenseType, DamageType, PendingDefense } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 
@@ -21,8 +19,7 @@ import { advanceTurn } from "./rulesetHelpers";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { getRulesetServerFactory } from "./rulesets";
 
-const formatRoll = (r: { target: number, roll: number, success: boolean, margin: number, dice: number[] }, label: string) => 
-  `(${label} ${r.target} vs ${r.roll} [${r.dice.join(', ')}]: ${r.success ? 'Made' : 'Missed'} by ${Math.abs(r.margin)})`;
+
 
 export const createBotCharacter = (name: string, rulesetId: RulesetId): CharacterSheet => {
   const factory = getRulesetServerFactory(rulesetId);
