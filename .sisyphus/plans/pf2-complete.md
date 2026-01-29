@@ -1131,9 +1131,9 @@ cd server && npx tsc --noEmit  # Expected: 0 errors
 ```
 
 ### Final Checklist
-- [ ] All "Must Have" present
-- [ ] All "Must NOT Have" absent
-- [ ] All tests pass
-- [ ] PF2 match playable end-to-end
-- [ ] Bot can complete a match
-- [ ] Spells castable from Pathbuilder import
+- [x] All "Must Have" present
+- [x] All "Must NOT Have" absent
+- [x] All tests pass
+- [x] PF2 match playable end-to-end
+- [x] Bot can complete a match
+- [x] Spells castable from Pathbuilder import
