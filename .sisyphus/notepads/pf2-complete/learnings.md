@@ -268,3 +268,31 @@ return {
 - Condition modifiers are pure functions in `shared/rulesets/pf2/conditions.ts` — keeps attack handler clean.
 - Attack handler currently hardcodes `'melee'` attack type. When ranged attacks are added, need to pass actual attack type to `getConditionACModifier`.
 - PF2 circumstance penalties technically don't stack (worst penalty applies), but for prone + flat_footed the simple sum works since they affect different aspects. May need revisiting when more conditions are added.
+
+## AoO Reaction System (2026-01-29)
+
+### Router Changes
+- Added `pf2_reaction_choice` to local `PF2ActionPayload` in `router.ts` (must stay in sync with `PF2CombatActionPayload` in shared types).
+- Router dispatches to `handlePF2ReactionChoice` without `actorCombatant` param (reaction handler finds combatants from `match.pendingReaction`).
+
+### Test Pattern for Server-Side Functions
+- Server handler functions (in `server/src/handlers/`) need extensive mocking when tested from `shared/` location.
+- Mock targets: `server/src/helpers`, `server/src/state`, `server/src/db`, `server/src/bot`, `shared/rulesets/serverAdapter`.
+- The `vi.mock` path is resolved relative to the test file, not the module being tested.
+- Use `vi.fn()` references declared before `vi.mock` to allow per-test customization with `mockReturnValue`.
+
+### AoO Flow
+1. `handlePF2Stride` → `getAoOReactors()` detects adjacent enemies with reaction available.
+2. Bot reactors: auto-execute via `executeAoOStrike`.
+3. Player reactors: set `pendingReaction` on match state, send `reaction_prompt` message.
+4. Player responds with `pf2_reaction_choice` → router → `handlePF2ReactionChoice`.
+5. Handler executes or declines AoO, clears `pendingReaction`, resumes stride via `resumeStrideAfterReaction`.
+
+### Client-Side Gap
+- `reaction_prompt` message type exists in `shared/types.ts` (line 146) but NO client handler exists.
+- No component in `src/` handles this message. Players won't see the prompt yet.
+- This is a known gap for a future UI task.
+
+### Key Design: AoO Ignores MAP
+- `executeAoOStrike` intentionally does NOT include `reactor.mapPenalty` in the attack bonus.
+- AoO is a reaction, not an action on your turn, so MAP doesn't apply (PF2 core rules).

@@ -5,6 +5,7 @@ import { sendMessage } from "../../helpers";
 import { handlePF2AttackAction } from "./attack";
 import { handlePF2DropProne, handlePF2Stand, handlePF2Step, handlePF2RaiseShield } from "./actions";
 import { handlePF2RequestMove, handlePF2Stride } from "./stride";
+import { handlePF2ReactionChoice } from "./reaction";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -19,6 +20,7 @@ type PF2ActionPayload =
   | { type: "pf2_raise_shield" }
   | { type: "pf2_request_move"; mode: "stride" }
   | { type: "pf2_stride"; to: { q: number; r: number } }
+  | { type: "pf2_reaction_choice"; choice: 'aoo' | 'decline' }
   | { type: "end_turn" }
   | { type: "surrender" };
 
@@ -52,6 +54,9 @@ export const handlePF2Action = async (
     case "pf2_stride":
       return handlePF2Stride(socket, matchId, match, player, actorCombatant, payload);
     
+    case "pf2_reaction_choice":
+      return handlePF2ReactionChoice(socket, matchId, match, player, payload);
+
     case "end_turn": {
       const updated = advanceTurn({
         ...match,
