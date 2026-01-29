@@ -1,20 +1,8 @@
 {
-  "active_plan": "/Users/fabio_1/dev/combat-sim/.sisyphus/plans/pf2-complete.md",
-  "started_at": "2026-01-29T01:20:25.118Z",
-  "completed_at": "2026-01-29T06:45:00.000Z",
+  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/missing-features.md",
+  "started_at": "2026-01-29T21:06:34.794Z",
   "session_ids": [
-    "ses_3f965c476ffexiHFoC8mJhau7A",
-    "ses_3f965c476ffexiHFoC8mJhau7A",
-    "ses_3f7d57c9fffe25J2aTt2eNHM6s",
-    "ses_3f7ccd4c2ffee2NBJii6TrDYlE",
-    "ses_3f7c63c6fffeuzs0mX3LEmyMl6",
-    "ses_3f7bdebb9ffesoPf1jh2nnCsL2",
-    "ses_3f7b9fae0ffeW0qpzfrYkvK5Av"
+    "ses_3f48cffe8ffeu6J5SuV2l3zkkv"
   ],
-  "plan_name": "pf2-complete",
-  "status": "complete",
-  "tasks_completed": 11,
-  "tasks_total": 11,
-  "tests_added": 86,
-  "final_test_count": 442
+  "plan_name": "missing-features"
 }
