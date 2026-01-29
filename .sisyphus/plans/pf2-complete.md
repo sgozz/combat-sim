@@ -63,12 +63,12 @@ Implementare PF2e completo con combat funzionante, spell system, e bot AI con eu
 - Test files per ogni modulo
 
 ### Definition of Done
-- [ ] `npm run build` passes
-- [ ] `npx vitest run` - all tests pass
-- [ ] PF2 match loads with correct UI panels
-- [ ] All 6 core actions work in browser
-- [ ] Bot can play a complete match autonomously
-- [ ] Spells can be cast from Pathbuilder-imported character
+- [x] `npm run build` passes
+- [x] `npx vitest run` - all tests pass
+- [x] PF2 match loads with correct UI panels
+- [x] All 6 core actions work in browser
+- [x] Bot can play a complete match autonomously
+- [x] Spells can be cast from Pathbuilder-imported character
 
 ### Must Have
 - GameScreen.tsx uses PF2 panels for PF2 matches
@@ -706,7 +706,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 7. Implement Attack of Opportunity Reaction
+- [x] 7. Implement Attack of Opportunity Reaction
 
   **What to do**:
   - Create reaction trigger system for AoO
@@ -802,7 +802,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 8. Implement Spell Casting System
+- [x] 8. Implement Spell Casting System
 
   **What to do**:
   - Create spell casting mechanics (NO effects)
@@ -937,7 +937,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 9. Fix and Enhance PF2 Bot AI
+- [x] 9. Fix and Enhance PF2 Bot AI
 
   **Current state** (`server/src/rulesets/pf2/bot.ts` ALREADY EXISTS):
   - Has basic bot logic but with bugs:
@@ -1019,7 +1019,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 10. Wire Up Mobile UI (PF2ActionBar)
+- [x] 10. Wire Up Mobile UI (PF2ActionBar)
 
   **What to do**:
   - Update GameScreen.tsx mobile section for PF2
@@ -1057,7 +1057,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 11. Polish and Edge Cases
+- [x] 11. Polish and Edge Cases
 
   **What to do**:
   - Fix any remaining TypeScript errors
