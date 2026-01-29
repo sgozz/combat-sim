@@ -1,7 +1,7 @@
 import type { CharacterSheet, MatchState, User, RulesetId } from "../../shared/types";
 import { isPF2Character, isGurpsCharacter } from "../../shared/types";
 import type { CombatantState } from "../../shared/rulesets";
-import { isGurpsCombatant } from "../../shared/rulesets";
+import { isGurpsCombatant, isPF2Combatant } from "../../shared/rulesets";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 
@@ -18,6 +18,7 @@ import {
 import { advanceTurn } from "./rulesetHelpers";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { getRulesetServerFactory } from "./rulesets";
+import { decidePF2BotAction, executeBotStrike, executeBotStride } from "./rulesets/pf2/bot";
 
 
 
@@ -90,6 +91,53 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
       await updateMatchState(matchId, updated);
       await sendToMatch(matchId, { type: "match_state", state: updated });
       scheduleBotTurn(matchId, updated);
+      return;
+    }
+
+    if (currentMatch.rulesetId === 'pf2' && isPF2Combatant(botCombatant)) {
+      let match = currentMatch;
+      const botCharacter = getCharacterById(match, botCombatant.characterId);
+      if (!botCharacter || !isPF2Character(botCharacter)) {
+        const updated = advanceTurn({
+          ...match,
+          log: [...match.log, `${activePlayer.name} waits.`],
+        });
+        state.matches.set(matchId, updated);
+        await updateMatchState(matchId, updated);
+        await sendToMatch(matchId, { type: "match_state", state: updated });
+        scheduleBotTurn(matchId, updated);
+        return;
+      }
+
+      let actionsTaken = 0;
+      const maxActions = 10;
+      while (actionsTaken < maxActions) {
+        actionsTaken++;
+        const currentBot = match.combatants.find(c => c.playerId === activePlayer.id);
+        if (!currentBot || !isPF2Combatant(currentBot)) break;
+        if (currentBot.actionsRemaining <= 0) break;
+        if (currentBot.currentHP <= 0) break;
+
+        const action = decidePF2BotAction(match, currentBot, botCharacter);
+        if (!action) break;
+
+        if (action.type === 'strike') {
+          match = executeBotStrike(matchId, match, currentBot, action.targetId, activePlayer);
+        } else if (action.type === 'stride') {
+          match = executeBotStride(match, currentBot, action.to, activePlayer);
+        } else {
+          break;
+        }
+
+        match = checkVictory(match);
+        if (match.status === 'finished') break;
+      }
+
+      const finalState = advanceTurn(match);
+      state.matches.set(matchId, finalState);
+      await updateMatchState(matchId, finalState);
+      await sendToMatch(matchId, { type: "match_state", state: finalState });
+      scheduleBotTurn(matchId, finalState);
       return;
     }
 

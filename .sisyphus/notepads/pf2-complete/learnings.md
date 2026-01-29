@@ -296,3 +296,52 @@ return {
 ### Key Design: AoO Ignores MAP
 - `executeAoOStrike` intentionally does NOT include `reactor.mapPenalty` in the attack bonus.
 - AoO is a reaction, not an action on your turn, so MAP doesn't apply (PF2 core rules).
+
+## PF2 Bot AI Multi-Action Loop (2026-01-29)
+
+### Changes Made
+
+1. **`server/src/rulesets/pf2/bot.ts`** - Complete rewrite:
+   - Removed hardcoded `attacksThisTurn = 0` and nested `pf2` object writes
+   - Added `decidePF2BotAction()`: returns strike (if adjacent + MAP < -10), stride (if not adjacent), or null
+   - Added `executeBotStrike()`: single strike with correct MAP tracking (penaltyStep: -5 non-agile, -4 agile)
+   - Added `executeBotStride()`: move toward enemy, decrement actionsRemaining
+   - Kept `executeBotAttack` as legacy fallback (wraps executeBotStrike + advanceTurn)
+
+2. **`server/src/bot.ts`** - PF2 multi-action loop in `scheduleBotTurn`:
+   - Detects `rulesetId === 'pf2'` and `isPF2Combatant(botCombatant)`
+   - Loops: decide action → execute → refresh state → repeat until no actions/no valid action
+   - Safety cap at 10 iterations to prevent infinite loops
+   - After loop: `advanceTurn()` to end bot's turn
+
+3. **`server/src/rulesets/pf2/bot.test.ts`** - 18 unit tests:
+   - Decision logic: no actions, no enemies, adjacent strike, distant stride, MAP maxed
+   - Strike execution: actionsRemaining decrement, MAP progression (non-agile -5, agile -4), capping at -10
+   - Stride execution: position update, actionsRemaining decrement, log entry
+   - Multi-action simulation: 3 actions used, MAP stopping logic, stride-then-strike
+
+### Key Patterns
+
+**Bot Decision Loop:**
+```typescript
+while (actionsTaken < maxActions) {
+  const action = decidePF2BotAction(match, currentBot, character);
+  if (!action) break;
+  if (action.type === 'strike') match = executeBotStrike(...);
+  else if (action.type === 'stride') match = executeBotStride(...);
+  match = checkVictory(match);
+}
+const finalState = advanceTurn(match);
+```
+
+**MAP in Bot Strike:**
+```typescript
+const minPenalty = isAgile ? -8 : -10;
+const penaltyStep = isAgile ? -4 : -5;
+const newMapPenalty = Math.max(minPenalty, mapPenalty + penaltyStep);
+```
+
+### Testing Pattern
+- Mocked `server/src/helpers` with inline square grid distance calculation
+- Mocked `server/src/state`, `server/src/db` to avoid server dependencies
+- Pure unit tests for `decidePF2BotAction`, `executeBotStrike`, `executeBotStride`
