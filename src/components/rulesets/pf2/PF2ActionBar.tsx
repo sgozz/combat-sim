@@ -222,6 +222,58 @@ export const PF2ActionBar = ({
               </button>
             )}
             <button
+              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_grapple', { type: 'pf2_grapple', targetId: selectedTargetId })
+                }
+              }}
+              title="Grapple (Athletics vs Fortitude)"
+            >
+              <span className="action-bar-icon">🤼</span>
+              <span className="action-bar-label">Grapple</span>
+            </button>
+            <button
+              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_trip', { type: 'pf2_trip', targetId: selectedTargetId })
+                }
+              }}
+              title="Trip (Athletics vs Reflex)"
+            >
+              <span className="action-bar-icon">🦵</span>
+              <span className="action-bar-label">Trip</span>
+            </button>
+            <button
+              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_feint', { type: 'pf2_feint', targetId: selectedTargetId })
+                }
+              }}
+              title="Feint (Deception vs Perception)"
+            >
+              <span className="action-bar-icon">🎭</span>
+              <span className="action-bar-label">Feint</span>
+            </button>
+            <button
+              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_demoralize', { type: 'pf2_demoralize', targetId: selectedTargetId })
+                }
+              }}
+              title="Demoralize (Intimidation vs Will)"
+            >
+              <span className="action-bar-icon">😱</span>
+              <span className="action-bar-label">Scare</span>
+            </button>
+            <button
               className="action-bar-btn"
               onClick={() => onAction('end_turn', { type: 'end_turn' })}
             >

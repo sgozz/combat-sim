@@ -7,6 +7,7 @@ import { handlePF2DropProne, handlePF2Stand, handlePF2Step, handlePF2RaiseShield
 import { handlePF2RequestMove, handlePF2Stride } from "./stride";
 import { handlePF2ReactionChoice } from "./reaction";
 import { handlePF2CastSpell } from "./spell";
+import { handlePF2Grapple, handlePF2Trip, handlePF2Disarm, handlePF2Feint, handlePF2Demoralize } from "./skill-actions";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -23,6 +24,11 @@ type PF2ActionPayload =
   | { type: "pf2_stride"; to: { q: number; r: number } }
   | { type: "pf2_reaction_choice"; choice: 'aoo' | 'decline' }
   | { type: "pf2_cast_spell"; casterIndex: number; spellName: string; spellLevel: number; targetId?: string; isFocus?: boolean }
+  | { type: "pf2_grapple"; targetId: string }
+  | { type: "pf2_trip"; targetId: string }
+  | { type: "pf2_disarm"; targetId: string }
+  | { type: "pf2_feint"; targetId: string }
+  | { type: "pf2_demoralize"; targetId: string }
   | { type: "end_turn" }
   | { type: "surrender" };
 
@@ -61,6 +67,21 @@ export const handlePF2Action = async (
 
     case "pf2_cast_spell":
       return handlePF2CastSpell(socket, matchId, match, player, actorCombatant, payload);
+
+    case "pf2_grapple":
+      return handlePF2Grapple(socket, matchId, match, player, actorCombatant, payload);
+
+    case "pf2_trip":
+      return handlePF2Trip(socket, matchId, match, player, actorCombatant, payload);
+
+    case "pf2_disarm":
+      return handlePF2Disarm(socket, matchId, match, player, actorCombatant, payload);
+
+    case "pf2_feint":
+      return handlePF2Feint(socket, matchId, match, player, actorCombatant, payload);
+
+    case "pf2_demoralize":
+      return handlePF2Demoralize(socket, matchId, match, player, actorCombatant, payload);
 
     case "end_turn": {
       const updated = advanceTurn({

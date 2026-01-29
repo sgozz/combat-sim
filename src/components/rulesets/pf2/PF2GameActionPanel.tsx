@@ -154,6 +154,81 @@ export const PF2GameActionPanel = ({
               <span className="pf2-action-label">Interact</span>
             </button>
           </Tooltip>
+
+          <Tooltip content="Grapple: Athletics vs Fortitude DC. Success = grabbed, Crit = restrained. Has attack trait (MAP applies)." position="top">
+            <button 
+              className={`pf2-action-btn grapple ${!selectedTargetId ? 'needs-target' : ''}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_grapple', { type: 'pf2_grapple', targetId: selectedTargetId })
+                }
+              }}
+            >
+              <span className="pf2-action-icon">🤼</span>
+              <span className="pf2-action-label">Grapple</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Trip: Athletics vs Reflex DC. Success = prone + flat-footed. Has attack trait (MAP applies)." position="top">
+            <button 
+              className={`pf2-action-btn trip ${!selectedTargetId ? 'needs-target' : ''}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_trip', { type: 'pf2_trip', targetId: selectedTargetId })
+                }
+              }}
+            >
+              <span className="pf2-action-icon">🦵</span>
+              <span className="pf2-action-label">Trip</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Disarm: Athletics vs Reflex DC. Success = -2 attacks, Crit = drop weapon. Has attack trait (MAP applies)." position="top">
+            <button 
+              className={`pf2-action-btn disarm ${!selectedTargetId ? 'needs-target' : ''}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_disarm', { type: 'pf2_disarm', targetId: selectedTargetId })
+                }
+              }}
+            >
+              <span className="pf2-action-icon">🗡️</span>
+              <span className="pf2-action-label">Disarm</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Feint: Deception vs Perception DC. Success = flat-footed to next attack. NO attack trait (no MAP)." position="top">
+            <button 
+              className={`pf2-action-btn feint ${!selectedTargetId ? 'needs-target' : ''}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_feint', { type: 'pf2_feint', targetId: selectedTargetId })
+                }
+              }}
+            >
+              <span className="pf2-action-icon">🎭</span>
+              <span className="pf2-action-label">Feint</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Demoralize: Intimidation vs Will DC. Success = frightened 1, Crit = frightened 2. NO attack trait (no MAP)." position="top">
+            <button 
+              className={`pf2-action-btn demoralize ${!selectedTargetId ? 'needs-target' : ''}`}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
+              onClick={() => {
+                if (selectedTargetId) {
+                  onAction('pf2_demoralize', { type: 'pf2_demoralize', targetId: selectedTargetId })
+                }
+              }}
+            >
+              <span className="pf2-action-icon">😱</span>
+              <span className="pf2-action-label">Demoralize</span>
+            </button>
+          </Tooltip>
         </div>
         
         <div className="pf2-turn-controls">

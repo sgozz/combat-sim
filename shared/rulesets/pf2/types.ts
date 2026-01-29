@@ -203,7 +203,12 @@ export type PF2CombatActionPayload =
   | { type: 'pf2_raise_shield' }
   | { type: 'pf2_request_move'; mode: 'stride' }
   | { type: 'pf2_stride'; to: { q: number; r: number } }
-  | { type: 'pf2_reaction_choice'; choice: 'aoo' | 'decline' };
+  | { type: 'pf2_reaction_choice'; choice: 'aoo' | 'decline' }
+  | { type: 'pf2_grapple'; targetId: string }
+  | { type: 'pf2_trip'; targetId: string }
+  | { type: 'pf2_disarm'; targetId: string }
+  | { type: 'pf2_feint'; targetId: string }
+  | { type: 'pf2_demoralize'; targetId: string };
 
 // --- Spell Casting Types ---
 

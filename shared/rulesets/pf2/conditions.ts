@@ -18,6 +18,12 @@ export function getConditionACModifier(
     if (c.condition === 'flat_footed') {
       modifier -= 2;
     }
+    if (c.condition === 'grabbed') {
+      modifier -= 2;
+    }
+    if (c.condition === 'restrained') {
+      modifier -= 2;
+    }
   }
 
   return modifier;
@@ -35,6 +41,15 @@ export function getConditionAttackModifier(
   for (const c of combatant.conditions) {
     if (c.condition === 'prone') {
       modifier -= 2;
+    }
+    if (c.condition === 'grabbed') {
+      modifier -= 2;
+    }
+    if (c.condition === 'restrained') {
+      modifier -= 2;
+    }
+    if (c.condition === 'frightened' && c.value) {
+      modifier -= c.value;
     }
   }
 
@@ -60,4 +75,12 @@ export function formatConditionModifiers(
     parts.push(`AC ${acModifier > 0 ? '+' : ''}${acModifier}`);
   }
   return parts.length > 0 ? ` [conditions: ${parts.join(', ')}]` : '';
+}
+
+export function isImmobilized(combatant: PF2CombatantState): boolean {
+  return combatant.conditions.some(c => 
+    c.condition === 'grabbed' || 
+    c.condition === 'restrained' || 
+    c.condition === 'immobilized'
+  );
 }
