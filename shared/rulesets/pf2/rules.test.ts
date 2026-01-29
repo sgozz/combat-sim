@@ -17,6 +17,7 @@ import {
   applyActionCost,
   startNewTurn,
   advanceTurn,
+  getReachableSquares,
 } from './rules';
 import type { Abilities, PF2Weapon, PF2CombatantState } from './types';
 import type { MatchState, Player } from '../../types';
@@ -492,6 +493,65 @@ describe('PF2 Rules', () => {
       const after = advanceTurn(state);
       expect(after.activeTurnPlayerId).toBe('p1');
       expect(after.round).toBe(2);
+    });
+  });
+
+  describe('Stride Movement (getReachableSquares)', () => {
+    it('speed=25 can reach 5 squares', () => {
+      const start = { q: 5, r: 5 };
+      const reachable = getReachableSquares(start, 25);
+      
+      const oneSquareAway = reachable.get('6,5');
+      expect(oneSquareAway).toBeDefined();
+      expect(oneSquareAway!.cost).toBe(1);
+
+      const fiveSquaresAway = reachable.get('10,5');
+      expect(fiveSquaresAway).toBeDefined();
+      expect(fiveSquaresAway!.cost).toBe(5);
+    });
+
+    it('cannot reach beyond speed/5 squares', () => {
+      const start = { q: 5, r: 5 };
+      const reachable = getReachableSquares(start, 25);
+      
+      const sixAway = reachable.get('11,5');
+      expect(sixAway).toBeUndefined();
+    });
+
+    it('does not include start position', () => {
+      const start = { q: 5, r: 5 };
+      const reachable = getReachableSquares(start, 25);
+      expect(reachable.has('5,5')).toBe(false);
+    });
+
+    it('blocked by occupied squares', () => {
+      const start = { q: 5, r: 5 };
+      const occupied = [{ q: 6, r: 5 }];
+      const reachable = getReachableSquares(start, 25, occupied);
+      
+      expect(reachable.has('6,5')).toBe(false);
+    });
+
+    it('can path around occupied squares', () => {
+      const start = { q: 5, r: 5 };
+      const occupied = [{ q: 6, r: 5 }];
+      const reachable = getReachableSquares(start, 25, occupied);
+      
+      const aroundOccupied = reachable.get('7,5');
+      expect(aroundOccupied).toBeDefined();
+      expect(aroundOccupied!.cost).toBeGreaterThan(1);
+    });
+
+    it('speed=10 can reach only 2 squares', () => {
+      const start = { q: 5, r: 5 };
+      const reachable = getReachableSquares(start, 10);
+      
+      const twoAway = reachable.get('7,5');
+      expect(twoAway).toBeDefined();
+      expect(twoAway!.cost).toBe(2);
+
+      const threeAway = reachable.get('8,5');
+      expect(threeAway).toBeUndefined();
     });
   });
 });

@@ -49,14 +49,7 @@ export const PF2GameActionPanel = ({
     }
 
     const actionsRemaining = isPF2Combatant(combatant) ? combatant.actionsRemaining : 3
-    const attacksThisTurn = 0
-    
-    const getMapPenalty = () => {
-      if (attacksThisTurn === 0) return 0
-      if (attacksThisTurn === 1) return -5
-      return -10
-    }
-    const mapPenalty = getMapPenalty()
+    const mapPenalty = isPF2Combatant(combatant) ? (combatant.mapPenalty || 0) : 0
     
     return (
       <div className="pf2-action-panel">
@@ -68,7 +61,7 @@ export const PF2GameActionPanel = ({
               </span>
             ))}
           </div>
-          {attacksThisTurn > 0 && (
+          {mapPenalty < 0 && (
             <div className="pf2-map-badge" style={{ color: mapPenalty < -5 ? '#f44' : '#ff4' }}>
               MAP: {mapPenalty}
             </div>
@@ -100,7 +93,7 @@ export const PF2GameActionPanel = ({
             <button 
               className="pf2-action-btn stride"
               disabled={actionsRemaining === 0}
-              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'move' })}
+              onClick={() => onAction('pf2_request_move', { type: 'pf2_request_move', mode: 'stride' })}
             >
               <span className="pf2-action-icon">🏃</span>
               <span className="pf2-action-label">Stride</span>

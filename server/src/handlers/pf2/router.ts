@@ -4,6 +4,7 @@ import type { CombatantState } from "../../../../shared/rulesets";
 import { sendMessage } from "../../helpers";
 import { handlePF2AttackAction } from "./attack";
 import { handlePF2DropProne, handlePF2Stand, handlePF2Step } from "./actions";
+import { handlePF2RequestMove, handlePF2Stride } from "./stride";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -15,6 +16,7 @@ type PF2ActionPayload =
   | { type: "pf2_drop_prone" }
   | { type: "pf2_stand" }
   | { type: "pf2_step"; to: { q: number; r: number } }
+  | { type: "pf2_request_move"; mode: "stride" }
   | { type: "pf2_stride"; to: { q: number; r: number } }
   | { type: "end_turn" }
   | { type: "surrender" };
@@ -40,9 +42,11 @@ export const handlePF2Action = async (
     case "pf2_step":
       return handlePF2Step(socket, matchId, match, player, actorCombatant, payload);
     
+    case "pf2_request_move":
+      return handlePF2RequestMove(socket, matchId, match, player, actorCombatant, payload);
+
     case "pf2_stride":
-      sendMessage(socket, { type: "error", message: "Stride not yet implemented. Use Step for now." });
-      return;
+      return handlePF2Stride(socket, matchId, match, player, actorCombatant, payload);
     
     case "end_turn": {
       const updated = advanceTurn({

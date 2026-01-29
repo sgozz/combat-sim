@@ -128,6 +128,20 @@ function AppRoutes() {
       setMoveTarget(null)
       return
     }
+
+    if (matchState.rulesetId === 'pf2' && matchState.reachableHexes && matchState.reachableHexes.length > 0) {
+      const reachable = matchState.reachableHexes.some(
+        (hex) => hex.q === position.x && hex.r === position.z
+      )
+      if (!reachable) {
+        setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
+        return
+      }
+      const payload: { type: string; to: { q: number; r: number } } = { type: 'pf2_stride', to: { q: position.x, r: position.z } }
+      sendMessage({ type: 'action', matchId: activeMatchId!, action: payload.type, payload })
+      setMoveTarget(null)
+      return
+    }
     
     setMoveTarget(position)
   }, [matchState, user, sendMessage, setLogs, activeMatchId])

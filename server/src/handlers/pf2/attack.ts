@@ -120,9 +120,8 @@ export const handlePF2AttackAction = async (
     const level = attackerCharacter.level;
     const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
    
-    const attackNumber = 0;
     const isAgile = weapon.traits.includes('agile');
-    const mapPenalty = adapter.pf2!.getMultipleAttackPenalty(attackNumber + 1, isAgile);
+    const mapPenalty = actorCombatant.mapPenalty || 0;
    
     const totalAttackBonus = abilityMod + profBonus + mapPenalty;
 
@@ -159,9 +158,14 @@ export const handlePF2AttackAction = async (
      if (c.playerId === player.id) {
        if (!isPF2Combatant(c)) return c;
        const newActionsRemaining = c.actionsRemaining - 1;
+       const isAgile = weapon.traits.includes('agile');
+       const minPenalty = isAgile ? -8 : -10;
+       const penaltyStep = isAgile ? -4 : -5;
+       const newMapPenalty = Math.max(minPenalty, (c.mapPenalty || 0) + penaltyStep);
        return {
          ...c,
          actionsRemaining: newActionsRemaining,
+         mapPenalty: newMapPenalty,
        };
      }
     return c;

@@ -190,7 +190,7 @@ export const PF2ActionBar = ({
             <button
               className="action-bar-btn"
               disabled={actionsRemaining === 0}
-              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'move' })}
+              onClick={() => onAction('pf2_request_move', { type: 'pf2_request_move', mode: 'stride' })}
             >
               <span className="action-bar-icon">🏃</span>
               <span className="action-bar-label">Stride</span>

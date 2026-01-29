@@ -96,3 +96,110 @@ Task 0 (GameScreen.tsx fix) is complete and verified. Ready to proceed with:
 - No changes to panel component internals
 - Both GURPS and PF2 panels work correctly
 - Ready for Wave 1 tasks to begin
+
+## Test Fixture Audit - COMPLETED
+
+### Summary
+✅ All 356 tests pass
+✅ TypeScript type check: 0 errors
+✅ Production build: SUCCESS
+✅ All test fixtures properly typed with `rulesetId`
+
+### Findings
+
+1. **Test Fixtures Status**
+   - PF2 tests (`shared/rulesets/pf2/rules.test.ts`): All fixtures have `rulesetId: 'pf2'`
+   - GURPS tests (`shared/rules.test.ts`): All fixtures have `rulesetId: 'gurps'`
+   - No `CombatantState | undefined` issues found
+   - No null check issues in test code
+
+2. **Type Safety**
+   - All combatant fixtures properly typed with required fields
+   - No missing `rulesetId` in any test fixture
+   - Type guards working correctly across both rulesets
+
+3. **Build Status**
+   - `npm run build` completes successfully
+   - Minor warning: JS chunk size > 500KB (expected for this project)
+   - No TypeScript compilation errors
+
+### Verification Commands Run
+```bash
+npx tsc --noEmit --project tsconfig.json  # ✅ 0 errors
+npx vitest run                             # ✅ 356 tests passed
+npm run build                              # ✅ SUCCESS
+```
+
+### Conclusion
+Test fixtures are properly typed and all tests pass. No fixes needed. The multi-ruleset architecture is correctly implemented with proper type safety across GURPS and PF2 systems.
+
+## MAP Tracking Implementation (Completed)
+
+### Changes Made
+
+1. **Attack Handler** (`server/src/handlers/pf2/attack.ts`):
+   - Removed hardcoded `attackNumber = 0`
+   - Read `mapPenalty` from `actorCombatant.mapPenalty || 0`
+   - Apply penalty to attack roll: `totalAttackBonus = abilityMod + profBonus + mapPenalty`
+   - After attack: increment MAP with proper capping logic
+   - Agile weapons: -4/-8 progression
+   - Non-agile weapons: -5/-10 progression
+
+2. **UI Component** (`src/components/rulesets/pf2/PF2GameActionPanel.tsx`):
+   - Removed hardcoded `attacksThisTurn = 0` and `getMapPenalty()` function
+   - Read directly from `combatant.mapPenalty`
+   - Updated badge display condition from `attacksThisTurn > 0` to `mapPenalty < 0`
+
+3. **Tests** (`shared/rulesets/pf2/map.test.ts`):
+   - Created comprehensive test suite for MAP behavior
+   - Verified progression: 0 → -5 → -10 (non-agile)
+   - Verified progression: 0 → -4 → -8 (agile)
+   - Verified capping logic
+   - Verified semantics (negative values, addition subtracts)
+
+### Key Patterns
+
+**MAP Increment Pattern:**
+```typescript
+const isAgile = weapon.traits.includes('agile');
+const minPenalty = isAgile ? -8 : -10;
+const penaltyStep = isAgile ? -4 : -5;
+const newMapPenalty = Math.max(minPenalty, (c.mapPenalty || 0) + penaltyStep);
+```
+
+**MAP Application Pattern:**
+```typescript
+const mapPenalty = actorCombatant.mapPenalty || 0;
+const totalAttackBonus = abilityMod + profBonus + mapPenalty; // Adding negative = subtracting
+```
+
+### Verification
+
+- ✅ All existing tests pass
+- ✅ New MAP tests pass (14 tests)
+- ✅ Client build passes
+- ✅ Server build passes
+- ✅ MAP resets to 0 on turn advance (already implemented in `advanceTurn`)
+
+
+# PF2 Stride Implementation - Learnings
+
+## Flow Pattern
+- PF2 stride uses a 2-step flow: `pf2_request_move` populates `reachableHexes` on MatchState, then `pf2_stride` validates and moves
+- Unlike GURPS which uses `turnMovement.phase === 'moving'`, PF2 stride uses `reachableHexes` presence without turnMovement
+- App.tsx `handleGridClick` checks for PF2 reachableHexes separately from GURPS movement phase
+
+## Key Patterns
+- `getReachableSquares()` returns a Map keyed by `q,r` string, with cost per cell
+- Grid coordinates: position.x = q, position.z = r (y is always 0 for ground level)
+- PF2CombatActionPayload union type in `shared/rulesets/pf2/types.ts` must include all PF2-specific action types
+- Router in `server/src/handlers/pf2/router.ts` has its own local PF2ActionPayload type that must stay in sync
+
+## Files Modified
+- `shared/rulesets/pf2/types.ts` - Added pf2_request_move, pf2_stride to PF2CombatActionPayload
+- `server/src/handlers/pf2/stride.ts` - NEW: handlePF2RequestMove + handlePF2Stride
+- `server/src/handlers/pf2/router.ts` - Wired new handlers, replaced stride stub
+- `src/components/rulesets/pf2/PF2GameActionPanel.tsx` - Stride button sends pf2_request_move
+- `src/components/rulesets/pf2/PF2ActionBar.tsx` - Same for mobile
+- `src/App.tsx` - handleGridClick dispatches pf2_stride when overlay active
+- `shared/rulesets/pf2/rules.test.ts` - 6 new stride tests

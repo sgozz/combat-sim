@@ -196,7 +196,9 @@ export type PF2ActionPayload =
 
 export type PF2CombatActionPayload =
   | { type: 'pf2_stand' }
-  | { type: 'pf2_drop_prone' };
+  | { type: 'pf2_drop_prone' }
+  | { type: 'pf2_request_move'; mode: 'stride' }
+  | { type: 'pf2_stride'; to: { q: number; r: number } };
 
 export type PF2DefenseType = 'ac' | 'fortitude' | 'reflex' | 'will';
 

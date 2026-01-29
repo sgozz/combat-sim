@@ -251,7 +251,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 1. Audit and Fix Any Test Fixture Type Errors
+- [x] 1. Audit and Fix Any Test Fixture Type Errors
 
   **What to do**:
   - Run `npx tsc --noEmit` on shared/ to identify any remaining type errors
@@ -289,7 +289,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 2. Fix MAP Tracking in Attack Handler
+- [x] 2. Fix MAP Tracking in Attack Handler
 
   **What to do**:
   - Fix `handlePF2AttackAction` for correct MAP handling
@@ -363,7 +363,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 3. Implement Stride Action and Wire Up Movement Overlay
+- [x] 3. Implement Stride Action and Wire Up Movement Overlay
 
   **What to do**:
   - Create `server/src/handlers/pf2/stride.ts` handler for Stride
