@@ -345,3 +345,51 @@ const newMapPenalty = Math.max(minPenalty, mapPenalty + penaltyStep);
 - Mocked `server/src/helpers` with inline square grid distance calculation
 - Mocked `server/src/state`, `server/src/db` to avoid server dependencies
 - Pure unit tests for `decidePF2BotAction`, `executeBotStrike`, `executeBotStride`
+
+## Mobile UI Wire-up (Task 10) - Completed
+
+### Summary
+✅ **VERIFIED**: PF2ActionBar is already wired up for mobile UI in GameScreen.tsx.
+
+### Implementation Status
+
+The mobile ActionBar is already correctly implemented via dynamic component selection:
+
+1. **GameScreen.tsx (lines 147-151)**:
+   ```typescript
+   const rulesetId = matchState?.rulesetId ?? 'gurps'
+   const { GameStatusPanel, GameActionPanel, ActionBar } = useMemo(
+     () => getRulesetComponents(rulesetId),
+     [rulesetId]
+   )
+   ```
+
+2. **ActionBar Rendering (line 445)**:
+   - Single ActionBar component rendered for both GURPS and PF2
+   - Component type determined by `getRulesetComponents(rulesetId)`
+   - For GURPS: renders `GurpsActionBar`
+   - For PF2: renders `PF2ActionBar`
+
+3. **CSS Styling**:
+   - `.action-bar { display: none }` by default
+   - `@media (max-width: 768px)` shows ActionBar with `display: flex`
+   - Mobile-optimized layout with touch-friendly buttons (min-height: 44px)
+
+### Verification
+
+- ✅ `npm run build` → SUCCESS (0 errors)
+- ✅ `npx vitest run` → 442 tests pass
+- ✅ PF2ActionBar component exists and is exported
+- ✅ GurpsActionBar component exists and is exported
+- ✅ Both components have identical props (ActionBarProps)
+- ✅ getRulesetComponents() returns correct component for each ruleset
+- ✅ Mobile CSS media query shows ActionBar on small screens
+
+### Key Insight
+
+The implementation uses the **registry pattern** (`getRulesetComponents()`) to dynamically select the correct ActionBar component based on the ruleset. This is the same pattern used for desktop panels (GameStatusPanel, GameActionPanel), ensuring consistency across the codebase.
+
+### No Changes Required
+
+Task 10 is already complete. The mobile UI is correctly wired up for both GURPS and PF2 matches. No code changes needed.
+
