@@ -1,6 +1,6 @@
 import type { PF2CharacterSheet, PF2CharacterWeapon, PF2CharacterArmor, PF2Feat, PF2SpellInfo } from './characterSheet';
-import type { Abilities, Proficiency, PF2Skill } from './types';
-import type { PathbuilderExport, PathbuilderBuild, PathbuilderWeapon, PathbuilderArmor, PathbuilderFeatTuple, PathbuilderLoreTuple } from './pathbuilder';
+import type { Abilities, Proficiency, PF2Skill, SpellCaster } from './types';
+import type { PathbuilderExport, PathbuilderBuild, PathbuilderWeapon, PathbuilderArmor, PathbuilderFeatTuple, PathbuilderLoreTuple, PathbuilderSpellCaster } from './pathbuilder';
 import { uuid } from '../../utils/uuid';
 
 const getProfBonus = (rank: number, level: number): number => {
@@ -192,6 +192,20 @@ const mapSpells = (build: PathbuilderBuild): PF2SpellInfo | null => {
   };
 };
 
+const mapSingleSpellcaster = (sc: PathbuilderSpellCaster): SpellCaster => ({
+  name: sc.name,
+  tradition: sc.magicTradition,
+  type: sc.spellcastingType,
+  proficiency: sc.proficiency,
+  slots: sc.perDay.map((total, level) => ({ level, total, used: 0 })),
+  focusPool: { max: sc.focusPoints || 0, current: sc.focusPoints || 0 },
+  knownSpells: sc.spells.map(s => ({ level: s.spellLevel, spells: s.list })),
+});
+
+export const mapSpellcasters = (build: PathbuilderBuild): SpellCaster[] => {
+  return (build.spellCasters ?? []).map(mapSingleSpellcaster);
+};
+
 export const collectWarnings = (build: PathbuilderBuild): string[] => {
   const warnings: string[] = [];
   if (build.pets && build.pets.length > 0) {
@@ -235,5 +249,6 @@ export const mapPathbuilderToCharacter = (data: PathbuilderExport): PF2Character
       shieldBonus: build.acTotal?.shieldBonus ?? 0,
       feats: mapFeats(build.feats),
       spells: mapSpells(build),
+      spellcasters: mapSpellcasters(build),
     };
 };

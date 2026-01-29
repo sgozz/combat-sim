@@ -8,6 +8,8 @@ import type {
   PF2Weapon,
   PF2CombatantState,
   PF2DamageType,
+  SpellCaster,
+  SpellSlotUsage,
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
 import { isPF2Combatant } from '../guards';
@@ -379,6 +381,88 @@ export const advanceTurn = (state: MatchState): MatchState => {
     turnMovement: undefined,
     reachableHexes: undefined,
   };
+};
+
+// --- Spell Casting ---
+
+const proficiencyRankToName = (rank: number): Proficiency => {
+  if (rank === 0) return 'untrained';
+  if (rank === 2) return 'trained';
+  if (rank === 4) return 'expert';
+  if (rank === 6) return 'master';
+  return 'legendary';
+};
+
+export const calculateSpellAttack = (
+  caster: SpellCaster,
+  abilities: Abilities,
+  level: number,
+): number => {
+  const tradition = caster.tradition.toLowerCase();
+  const abilityKey = traditionToAbility(tradition);
+  const abilityMod = getAbilityModifier(abilities[abilityKey]);
+  const profBonus = getProficiencyBonus(proficiencyRankToName(caster.proficiency), level);
+  return abilityMod + profBonus;
+};
+
+export const calculateSpellDC = (
+  caster: SpellCaster,
+  abilities: Abilities,
+  level: number,
+): number => {
+  return 10 + calculateSpellAttack(caster, abilities, level);
+};
+
+const traditionToAbility = (tradition: string): keyof Abilities => {
+  switch (tradition) {
+    case 'arcane': return 'intelligence';
+    case 'divine': return 'wisdom';
+    case 'occult': return 'charisma';
+    case 'primal': return 'wisdom';
+    default: return 'charisma';
+  }
+};
+
+export type CastSpellResult = {
+  success: boolean;
+  error?: string;
+  spellLevel?: number;
+  isCantrip?: boolean;
+  isFocus?: boolean;
+};
+
+export const canCastSpell = (
+  caster: SpellCaster,
+  spellLevel: number,
+  casterIndex: number,
+  slotUsage: SpellSlotUsage[],
+  focusPointsUsed: number,
+  isFocusCast: boolean = false,
+): CastSpellResult => {
+  const isCantrip = spellLevel === 0;
+  if (isCantrip) {
+    return { success: true, spellLevel, isCantrip: true };
+  }
+
+  if (isFocusCast) {
+    const availableFocus = caster.focusPool.max - focusPointsUsed;
+    if (availableFocus <= 0) {
+      return { success: false, error: 'No focus points remaining' };
+    }
+    return { success: true, spellLevel, isFocus: true };
+  }
+
+  const slot = caster.slots.find(s => s.level === spellLevel);
+  if (!slot || slot.total === 0) {
+    return { success: false, error: `No spell slots at level ${spellLevel}` };
+  }
+  const slotEntry = slotUsage.find(s => s.casterIndex === casterIndex && s.level === spellLevel);
+  const used = slotEntry?.used ?? 0;
+  if (used >= slot.total) {
+    return { success: false, error: `No level ${spellLevel} slots remaining` };
+  }
+
+  return { success: true, spellLevel };
 };
 
 import { squareGrid8 } from '../../grid';

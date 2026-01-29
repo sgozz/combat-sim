@@ -37,5 +37,7 @@ export const createCombatant: CombatantFactory = (character, playerId, position,
     dying: 0,
     wounded: 0,
     doomed: 0,
+    spellSlotUsage: [],
+    focusPointsUsed: 0,
   };
 };

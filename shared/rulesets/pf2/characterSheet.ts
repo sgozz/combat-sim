@@ -1,5 +1,5 @@
 import type { Id } from '../../types';
-import type { Proficiency, PF2DamageType, PF2Skill, PF2WeaponTrait } from './types';
+import type { Proficiency, PF2DamageType, PF2Skill, PF2WeaponTrait, SpellCaster } from './types';
 
 // Re-export Abilities as PF2Abilities for clarity
 export type { Abilities as PF2Abilities } from './types';
@@ -87,4 +87,5 @@ export type PF2CharacterSheet = {
   shieldBonus: number;
   feats: PF2Feat[];
   spells: PF2SpellInfo | null;
+  spellcasters: SpellCaster[];
 };

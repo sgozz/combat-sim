@@ -65,6 +65,7 @@ const createPF2Template = (input: PF2TemplateInput): Omit<PF2CharacterSheet, 'id
   shieldBonus: 0,
   feats: input.advantages.map(a => ({ id: uuid(), name: a.name, type: 'class', level: 1, description: a.description })),
   spells: null,
+  spellcasters: [],
 });
 
 export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id'>> = {

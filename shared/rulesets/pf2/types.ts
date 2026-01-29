@@ -172,6 +172,8 @@ export type PF2CombatantState = BaseCombatantState & {
   dying: number;
   wounded: number;
   doomed: number;
+  spellSlotUsage: SpellSlotUsage[];
+  focusPointsUsed: number;
 };
 
 export type PF2ActionPayload =
@@ -192,13 +194,44 @@ export type PF2ActionPayload =
   | { type: 'disarm'; targetId: Id }
   | { type: 'feint'; targetId: Id }
   | { type: 'demoralize'; targetId: Id }
+  | { type: 'cast_spell'; casterIndex: number; spellName: string; spellLevel: number; targetId?: Id }
   | { type: 'end_turn' };
 
 export type PF2CombatActionPayload =
   | { type: 'pf2_stand' }
   | { type: 'pf2_drop_prone' }
   | { type: 'pf2_request_move'; mode: 'stride' }
-  | { type: 'pf2_stride'; to: { q: number; r: number } };
+  | { type: 'pf2_stride'; to: { q: number; r: number } }
+  | { type: 'pf2_reaction_choice'; choice: 'aoo' | 'decline' };
+
+// --- Spell Casting Types ---
+
+export type SpellSlot = {
+  level: number;
+  total: number;
+  used: number;
+};
+
+export type FocusPool = {
+  max: number;
+  current: number;
+};
+
+export type SpellCaster = {
+  name: string;
+  tradition: string;
+  type: string; // 'prepared' | 'spontaneous'
+  proficiency: number; // raw proficiency rank (0,2,4,6,8)
+  slots: SpellSlot[];
+  focusPool: FocusPool;
+  knownSpells: { level: number; spells: string[] }[];
+};
+
+export type SpellSlotUsage = {
+  casterIndex: number;
+  level: number;
+  used: number;
+};
 
 export type PF2DefenseType = 'ac' | 'fortitude' | 'reflex' | 'will';
 

@@ -14,6 +14,7 @@ const baseCombatant: PF2CombatantState = {
   conditions: [], currentHP: 20, tempHP: 0, shieldRaised: false,
   heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
   statusEffects: [], usedReaction: false,
+  spellSlotUsage: [], focusPointsUsed: 0,
 };
 
 const withConditions = (conditions: PF2CombatantState['conditions']): PF2CombatantState => ({

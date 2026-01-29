@@ -283,7 +283,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 2, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: false
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       expect(canPerformAction(combatant, 1)).toBe(true);
       expect(canPerformAction(combatant, 2)).toBe(true);
@@ -298,7 +299,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: false
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const after = applyActionCost(combatant, 1);
       expect(after.actionsRemaining).toBe(2);
@@ -310,7 +312,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: false
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const after = applyActionCost(combatant, 1, true);
       expect(after.mapPenalty).toBe(-5);
@@ -328,7 +331,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: false
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const proneCombatant = { ...combatant, posture: 'prone' as const };
       expect(getActionCost('step')).toBe(1);
@@ -341,7 +345,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: false
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const proneCombatant = { ...combatant, posture: 'prone' as const };
       expect(getActionCost('stand')).toBe(1);
@@ -360,7 +365,8 @@ describe('PF2 Rules', () => {
          facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
          conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
          heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-         statusEffects: [], usedReaction: false
+         statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
        };
        const standing = { ...combatant, posture: 'standing' as const };
        expect(getActionCost('drop_prone')).toBe(1);
@@ -390,7 +396,8 @@ describe('PF2 Rules', () => {
          conditions: [{ condition: 'prone', value: 1 }],
          currentHP: 10, tempHP: 0, shieldRaised: false,
          heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-         statusEffects: [], usedReaction: false
+         statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
        };
        // Step costs 1 action even when prone (UI prevents selection, server validates)
        expect(getActionCost('step')).toBe(1);
@@ -403,7 +410,8 @@ describe('PF2 Rules', () => {
          facing: 0, actionsRemaining: 0, reactionAvailable: true, mapPenalty: 0,
          conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
          heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-         statusEffects: [], usedReaction: false
+         statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
        };
        // Cannot perform Step with 0 actions remaining
        expect(canPerformAction(combatant, 1)).toBe(false);
@@ -430,7 +438,8 @@ describe('PF2 Rules', () => {
         facing: 0, actionsRemaining: 0, reactionAvailable: false, mapPenalty: -10,
         conditions: [], currentHP: 10, tempHP: 0, shieldRaised: true,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: true
+        statusEffects: [], usedReaction: true,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const after = startNewTurn(combatant);
       expect(after.actionsRemaining).toBe(3);
@@ -446,7 +455,8 @@ describe('PF2 Rules', () => {
         conditions: [{ condition: 'slowed', value: 1 }],
         currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: true
+        statusEffects: [], usedReaction: true,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const after = startNewTurn(combatant);
       expect(after.actionsRemaining).toBe(2);
@@ -459,7 +469,8 @@ describe('PF2 Rules', () => {
         conditions: [{ condition: 'quickened' }],
         currentHP: 10, tempHP: 0, shieldRaised: false,
         heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
-        statusEffects: [], usedReaction: true
+        statusEffects: [], usedReaction: true,
+        spellSlotUsage: [], focusPointsUsed: 0
       };
       const after = startNewTurn(combatant);
       expect(after.actionsRemaining).toBe(4);
