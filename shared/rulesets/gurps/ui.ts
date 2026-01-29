@@ -9,8 +9,9 @@ const MANEUVERS = [
   { type: 'move_and_attack', label: 'Move & Attack', shortLabel: 'M&A', icon: '🤸', desc: 'Full move and attack. -4 skill (max 9). No Parry/Block.', key: '5' },
   { type: 'aim', label: 'Aim', shortLabel: 'Aim', icon: '🎯', desc: 'Accumulate Accuracy bonus. Step allowed.', key: '6' },
   { type: 'evaluate', label: 'Evaluate', shortLabel: 'Eval', icon: '🔍', desc: 'Study target. +1 to hit (max +3). Step allowed.', key: '7' },
-  { type: 'wait', label: 'Wait', shortLabel: 'Wait', icon: '⏳', desc: 'Prepare to react when triggered.', key: '8' },
-  { type: 'ready', label: 'Ready', shortLabel: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '9' },
+  { type: 'concentrate', label: 'Concentrate', shortLabel: 'Conc', icon: '🧠', desc: 'Focus on task. Step allowed. No attack.', key: '8' },
+  { type: 'wait', label: 'Wait', shortLabel: 'Wait', icon: '⏳', desc: 'Prepare to react when triggered.', key: '9' },
+  { type: 'ready', label: 'Ready', shortLabel: 'Ready', icon: '🗡️', desc: 'Draw, sheathe, or prepare a weapon. Step allowed.', key: '*' },
   { type: 'change_posture', label: 'Change Posture', shortLabel: 'Posture', icon: '🧎', desc: 'Rise from kneeling/prone. Use for non-free posture changes.', key: '-' },
   { type: 'do_nothing', label: 'Do Nothing', shortLabel: 'Nothing', icon: '💤', desc: 'Recover from stun or wait. No move.', key: '0' },
 ] as const;
@@ -19,7 +20,7 @@ const AOA_VARIANTS = [
   { variant: 'determined', label: 'Determined', desc: '+4 to hit' },
   { variant: 'strong', label: 'Strong', desc: '+2 damage' },
   { variant: 'double', label: 'Double', desc: 'Two attacks at full skill' },
-  { variant: 'feint', label: 'Feint', desc: 'Attack + Feint (not implemented)' },
+  { variant: 'feint', label: 'Feint', desc: 'Quick Contest: margin reduces defense' },
 ] as const;
 
 const AOD_VARIANTS = [
@@ -47,6 +48,8 @@ const getManeuverInstructions = (maneuver: string | null) => {
       return { text: 'Aiming. You gain +Acc bonus next turn.', canAttack: false, canMove: false, isStep: false };
     case 'evaluate':
       return { text: 'Click enemy to study. +1 to hit (max +3).', canAttack: false, canMove: false, isStep: false, canEvaluate: true };
+    case 'concentrate':
+      return { text: 'Focusing on a task. You can step 1 hex.', canAttack: false, canMove: true, isStep: true };
     case 'ready':
       return { text: 'Draw, sheathe, or prepare equipment.', canAttack: false, canMove: false, isStep: true, canReady: true };
     case 'wait':
