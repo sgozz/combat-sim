@@ -50,6 +50,7 @@ import {
   applyCriticalHitDamage,
   getMovePointsForManeuver,
   getLocationDR,
+  checkWaitTriggers,
   type HexPosition,
   type MovementState,
   type CriticalHitEffect,
@@ -1908,20 +1909,515 @@ describe('Combat Rules', () => {
         expect(result).toBe(7)
       })
 
-      it('minimum defense of 3 applies after feint', () => {
-        const baseDefense = 8
-        const result = calculateDefenseValue(baseDefense, {
-          retreat: false,
-          dodgeAndDrop: false,
-          inCloseCombat: false,
-          defensesThisTurn: 0,
-          deceptivePenalty: 0,
-          postureModifier: 0,
-          defenseType: 'dodge',
-          feintPenalty: 10, // Would reduce to -2, but min is 3
-        })
-        expect(result).toBe(3)
-      })
-    })
-  })
-})
+       it('minimum defense of 3 applies after feint', () => {
+         const baseDefense = 8
+         const result = calculateDefenseValue(baseDefense, {
+           retreat: false,
+           dodgeAndDrop: false,
+           inCloseCombat: false,
+           defensesThisTurn: 0,
+           deceptivePenalty: 0,
+           postureModifier: 0,
+           defenseType: 'dodge',
+           feintPenalty: 10, // Would reduce to -2, but min is 3
+         })
+         expect(result).toBe(3)
+       })
+     })
+   })
+
+   describe('Wait Triggers', () => {
+     describe('checkWaitTriggers', () => {
+       it('returns null when no waiters exist', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: null,
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).toBeNull()
+       })
+
+       it('returns null when no matching condition', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_attacks_me',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).toBeNull()
+       })
+
+       it('returns waiter for matching enemy_moves_adjacent', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_moves_adjacent',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).not.toBeNull()
+         expect(result?.combatantId).toBe('p1')
+         expect(result?.waitTrigger.condition).toBe('enemy_moves_adjacent')
+       })
+
+       it('returns waiter for matching enemy_attacks_me', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_attacks_me',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_attacks_me',
+           actorId: 'p2',
+           targetId: 'p1',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).not.toBeNull()
+         expect(result?.combatantId).toBe('p1')
+         expect(result?.waitTrigger.condition).toBe('enemy_attacks_me')
+       })
+
+       it('returns waiter for matching enemy_attacks_ally', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_attacks_ally',
+               action: 'attack',
+               attackPayload: { targetId: 'p3' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_attacks_ally',
+           actorId: 'p2',
+           targetId: 'p3',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).not.toBeNull()
+         expect(result?.combatantId).toBe('p1')
+         expect(result?.waitTrigger.condition).toBe('enemy_attacks_ally')
+       })
+
+       it('returns waiter for matching enemy_enters_reach', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_enters_reach',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_enters_reach',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).not.toBeNull()
+         expect(result?.combatantId).toBe('p1')
+         expect(result?.waitTrigger.condition).toBe('enemy_enters_reach')
+       })
+
+       it('skips unconscious waiter', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: ['unconscious'],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_moves_adjacent',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).toBeNull()
+       })
+
+       it('skips stunned waiter', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: ['stunned'],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_moves_adjacent',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).toBeNull()
+       })
+
+       it('skips waiter with HP <= 0', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 0,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_moves_adjacent',
+               action: 'attack',
+               attackPayload: { targetId: 'p2' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p2',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).toBeNull()
+       })
+
+       it('tie-breaking returns first by initiative order', () => {
+         const combatants: CombatantState[] = [
+           {
+             playerId: 'p2',
+             characterId: 'c2',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_moves_adjacent',
+               action: 'attack',
+               attackPayload: { targetId: 'p3' },
+             },
+             pf2: undefined,
+           } as any,
+           {
+             playerId: 'p1',
+             characterId: 'c1',
+             rulesetId: 'gurps',
+             position: { x: 0, y: 0, z: 0 },
+             facing: 0,
+             currentHP: 10,
+             statusEffects: [],
+             usedReaction: false,
+             posture: 'standing',
+             maneuver: null,
+             aoaVariant: null,
+             aodVariant: null,
+             currentFP: 10,
+             aimTurns: 0,
+             aimTargetId: null,
+             evaluateBonus: 0,
+             evaluateTargetId: null,
+             equipped: [],
+             inCloseCombatWith: null,
+             closeCombatPosition: null,
+             grapple: null,
+             shockPenalty: 0,
+             attacksRemaining: 1,
+             retreatedThisTurn: false,
+             defensesThisTurn: 0,
+             parryWeaponsUsedThisTurn: [],
+             waitTrigger: {
+               condition: 'enemy_moves_adjacent',
+               action: 'attack',
+               attackPayload: { targetId: 'p3' },
+             },
+             pf2: undefined,
+           } as any,
+         ]
+         const result = checkWaitTriggers(combatants, {
+           type: 'enemy_moves_adjacent',
+           actorId: 'p3',
+           actorPosition: { q: 1, r: 0 },
+         })
+         expect(result).not.toBeNull()
+         expect(result?.combatantId).toBe('p2')
+       })
+     })
+   })
+ })

@@ -16,6 +16,9 @@ import { state } from "../../state";
 import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../../helpers";
 import { scheduleBotTurn } from "../../bot";
+import { checkWaitTriggers, hexDistance } from "../../../../shared/rulesets/gurps/rules";
+import { executeWaitInterrupt } from "./wait-interrupt";
+import type { GurpsCombatantState } from "../../../../shared/rulesets/gurps/types";
 
 const asGurpsCharacter = (match: MatchState, characterId: string): GurpsCharacterSheet | undefined => {
   return getCharacterById(match, characterId) as GurpsCharacterSheet | undefined;
@@ -86,12 +89,24 @@ export const handleMoveStep = async (
       : c
   );
   
-  const updated: MatchState = {
+  let updated: MatchState = {
     ...match,
     combatants: updatedCombatants,
     turnMovement: newTurnMovement,
     reachableHexes: newReachableHexes,
   };
+  
+  // Check for wait triggers after movement
+  const gurbsCombatants = updated.combatants.filter(isGurpsCombatant) as GurpsCombatantState[];
+  const triggerCheck = checkWaitTriggers(gurbsCombatants, {
+    type: 'enemy_moves_adjacent',
+    actorId: player.id,
+    actorPosition: newState.position,
+  });
+  
+  if (triggerCheck) {
+    updated = executeWaitInterrupt(updated, triggerCheck.combatantId, player.id);
+  }
   
   state.matches.set(matchId, updated);
   await updateMatchState(matchId, updated);

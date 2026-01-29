@@ -33,8 +33,10 @@ import { scheduleBotTurn, chooseBotDefense } from "../../bot";
 import { clearDefenseTimeout } from "../../timers";
 import { formatRoll, applyDamageToTarget } from "../shared/damage";
 import { handlePF2AttackAction } from "../pf2/attack";
-import { quickContest, getDefenseOptions } from "../../../../shared/rulesets/gurps/rules";
+import { quickContest, getDefenseOptions, checkWaitTriggers } from "../../../../shared/rulesets/gurps/rules";
 import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
+import { executeWaitInterrupt } from "./wait-interrupt";
+import type { GurpsCombatantState } from "../../../../shared/rulesets/gurps/types";
 
 const BOT_DEFENSE_DELAY_MS = 800;
 
@@ -468,6 +470,34 @@ export const handleAttackAction = async (
   
   if (targetCombatant.statusEffects.includes('defending')) {
     defenseDescription += defenseDescription === "normal" ? "defensive (+1)" : " + defensive (+1)";
+  }
+
+  // Check for wait triggers before attack
+  const gurbsCombatants = match.combatants.filter(isGurpsCombatant) as GurpsCombatantState[];
+  const adapter2 = getServerAdapter(assertRulesetId(match.rulesetId));
+  
+  // Check if target has enemy_attacks_me trigger
+  let triggerCheck = checkWaitTriggers(gurbsCombatants, {
+    type: 'enemy_attacks_me',
+    actorId: actorCombatant.playerId,
+    targetId: targetCombatant.playerId,
+    actorPosition: adapter2.gridToHex(actorCombatant.position),
+  });
+
+  if (triggerCheck) {
+    match = executeWaitInterrupt(match, triggerCheck.combatantId, actorCombatant.playerId);
+  }
+
+  // Check if any ally of target has enemy_attacks_ally trigger
+  triggerCheck = checkWaitTriggers(gurbsCombatants, {
+    type: 'enemy_attacks_ally',
+    actorId: actorCombatant.playerId,
+    targetId: targetCombatant.playerId,
+    actorPosition: adapter2.gridToHex(actorCombatant.position),
+  });
+
+  if (triggerCheck) {
+    match = executeWaitInterrupt(match, triggerCheck.combatantId, actorCombatant.playerId);
   }
 
   const attackRoll = adapter.resolveAttackRoll!(skill);

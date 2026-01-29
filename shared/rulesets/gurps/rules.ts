@@ -11,9 +11,12 @@ import type {
   CloseCombatPosition, 
   HitLocation,
   ManeuverType,
+  WaitTrigger,
+  WaitTriggerCondition,
 } from './types';
-import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
+import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, Id } from '../../types';
 import type { GurpsCharacterSheet } from './characterSheet';
+import type { GurpsCombatantState } from './types';
 import { isGurpsCombatant } from '../guards';
 
 export type RollResult = {
@@ -756,36 +759,84 @@ export const rollHTCheck = (
 };
 
 export const advanceTurn = (state: MatchState): MatchState => {
-  if (state.players.length === 0) {
-    return state;
+   if (state.players.length === 0) {
+     return state;
+   }
+   const currentIndex = state.players.findIndex((player) => player.id === state.activeTurnPlayerId);
+   const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % state.players.length;
+   const round = nextIndex === 0 ? state.round + 1 : state.round;
+   const nextPlayerId = state.players[nextIndex]?.id ?? "";
+
+   const combatants = state.combatants.map(c => {
+      if (!isGurpsCombatant(c)) return c;
+      if (c.playerId === nextPlayerId) {
+        const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped' && e !== 'lost_balance' && e !== 'stunned');
+        return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
+      }
+      if (c.playerId === state.activeTurnPlayerId) {
+        const didAttack = c.maneuver === 'attack' || c.maneuver === 'all_out_attack' || c.maneuver === 'move_and_attack';
+        if (didAttack) {
+          return { ...c, evaluateBonus: 0, evaluateTargetId: null };
+        }
+      }
+      return c;
+    });
+
+   return {
+     ...state,
+     combatants,
+     activeTurnPlayerId: nextPlayerId,
+     round,
+     turnMovement: undefined,
+     reachableHexes: undefined,
+   };
+ };
+
+export const checkWaitTriggers = (
+  combatants: GurpsCombatantState[],
+  triggerEvent: {
+    type: WaitTriggerCondition;
+    actorId: Id;
+    targetId?: Id;
+    actorPosition: HexPosition;
   }
-  const currentIndex = state.players.findIndex((player) => player.id === state.activeTurnPlayerId);
-  const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % state.players.length;
-  const round = nextIndex === 0 ? state.round + 1 : state.round;
-  const nextPlayerId = state.players[nextIndex]?.id ?? "";
+): { combatantId: Id; waitTrigger: WaitTrigger } | null => {
+  // Filter combatants who have a waitTrigger set
+  const waiters = combatants.filter(c => c.waitTrigger !== null);
 
-  const combatants = state.combatants.map(c => {
-     if (!isGurpsCombatant(c)) return c;
-     if (c.playerId === nextPlayerId) {
-       const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped' && e !== 'lost_balance' && e !== 'stunned');
-       return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
-     }
-     if (c.playerId === state.activeTurnPlayerId) {
-       const didAttack = c.maneuver === 'attack' || c.maneuver === 'all_out_attack' || c.maneuver === 'move_and_attack';
-       if (didAttack) {
-         return { ...c, evaluateBonus: 0, evaluateTargetId: null };
-       }
-     }
-     return c;
-   });
+  // Filter for matching trigger condition and valid waiters
+  const validWaiters = waiters.filter(waiter => {
+    // Check if condition matches
+    if (waiter.waitTrigger!.condition !== triggerEvent.type) {
+      return false;
+    }
 
+    // Check if targetId matches (if trigger has targetId specified)
+    if (waiter.waitTrigger!.targetId !== undefined && waiter.waitTrigger!.targetId !== triggerEvent.actorId) {
+      return false;
+    }
+
+    // Skip invalid waiters (unconscious, stunned, HP <= 0)
+    if (waiter.statusEffects.includes('unconscious') || waiter.statusEffects.includes('stunned')) {
+      return false;
+    }
+    if (waiter.currentHP <= 0) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // If no valid matches, return null
+  if (validWaiters.length === 0) {
+    return null;
+  }
+
+  // If multiple matches, return first by initiative order (earliest in array)
+  const firstWaiter = validWaiters[0];
   return {
-    ...state,
-    combatants,
-    activeTurnPlayerId: nextPlayerId,
-    round,
-    turnMovement: undefined,
-    reachableHexes: undefined,
+    combatantId: firstWaiter.playerId,
+    waitTrigger: firstWaiter.waitTrigger!,
   };
 };
 

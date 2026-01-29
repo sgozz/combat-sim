@@ -136,6 +136,18 @@ export type WaitTrigger = {
   condition: WaitTriggerCondition;
   targetId?: Id;
   action: WaitTriggerAction;
+  attackPayload?: {
+    targetId: Id;
+    weaponId?: Id;
+    hitLocation?: HitLocation;
+  };
+  movePayload?: {
+    direction: 'toward_trigger' | 'away_from_trigger';
+  };
+  readyPayload?: {
+    readyAction: string;
+    itemId?: Id;
+  };
 };
 
 export type AOAVariant = 'determined' | 'strong' | 'double' | 'feint';
