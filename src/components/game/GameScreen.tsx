@@ -155,28 +155,28 @@ export const GameScreen = ({
 
   return (
     <div className="app-container">
-       {canRenderPanels && matchState?.rulesetId === 'gurps' ? (
-          <GameStatusPanel
-            matchState={matchState}
-            player={player}
-            combatant={currentCombatant}
-            character={playerCharacter}
-            lobbyPlayers={lobbyPlayers}
-            isMyTurn={isPlayerTurn}
-            onAction={onAction}
-          />
-      ) : (
-        <aside className="panel">
-          <div className="panel-header">
-            <span>Status</span>
-          </div>
-          <div className="panel-content">
-            <div className="card">
-              <p>Loading...</p>
-            </div>
-          </div>
-        </aside>
-      )}
+   {canRenderPanels ? (
+           <GameStatusPanel
+             matchState={matchState}
+             player={player}
+             combatant={currentCombatant}
+             character={playerCharacter}
+             lobbyPlayers={lobbyPlayers}
+             isMyTurn={isPlayerTurn}
+             onAction={onAction}
+           />
+       ) : (
+         <aside className="panel">
+           <div className="panel-header">
+             <span>Status</span>
+           </div>
+           <div className="panel-content">
+             <div className="card">
+               <p>Loading...</p>
+             </div>
+           </div>
+         </aside>
+       )}
 
       <main className="canvas-container">
         <header className="game-header">
@@ -262,31 +262,31 @@ export const GameScreen = ({
         </Canvas>
       </main>
 
-       {canRenderPanels && matchState?.rulesetId === 'gurps' ? (
-          <GameActionPanel
-            matchState={matchState}
-            player={player}
-            combatant={currentCombatant}
-           character={playerCharacter}
-           logs={logs}
-           selectedTargetId={selectedTargetId}
-           currentManeuver={currentManeuver}
-           isMyTurn={isPlayerTurn}
-           onAction={onAction}
-           onLeaveLobby={onLeaveLobby}
-         />
-      ) : (
-        <aside className="panel panel-right">
-          <div className="panel-header">
-            <span>Actions</span>
-          </div>
-          <div className="panel-content">
-            <div className="card">
-              <p>Waiting for match...</p>
-            </div>
-          </div>
-        </aside>
-      )}
+        {canRenderPanels ? (
+           <GameActionPanel
+             matchState={matchState}
+             player={player}
+             combatant={currentCombatant}
+            character={playerCharacter}
+            logs={logs}
+            selectedTargetId={selectedTargetId}
+            currentManeuver={currentManeuver}
+            isMyTurn={isPlayerTurn}
+            onAction={onAction}
+            onLeaveLobby={onLeaveLobby}
+          />
+       ) : (
+         <aside className="panel panel-right">
+           <div className="panel-header">
+             <span>Actions</span>
+           </div>
+           <div className="panel-content">
+             <div className="card">
+               <p>Waiting for match...</p>
+             </div>
+           </div>
+         </aside>
+       )}
 
       {inLobbyButNoMatch && (
         <div className="lobby-setup-overlay">
@@ -441,20 +441,20 @@ export const GameScreen = ({
         </div>
       )}
 
-       {canRenderPanels && matchState?.rulesetId === 'gurps' && (
-          <ActionBar
-            matchState={matchState}
-            player={player}
-            combatant={currentCombatant}
-           character={playerCharacter}
-           isMyTurn={isPlayerTurn}
-           currentManeuver={currentManeuver}
-           selectedTargetId={selectedTargetId}
-           onAction={onAction}
-           onDefend={handleDefenseChoice}
-           onLeaveLobby={onLeaveLobby}
-         />
-       )}
+        {canRenderPanels && (
+           <ActionBar
+             matchState={matchState}
+             player={player}
+             combatant={currentCombatant}
+            character={playerCharacter}
+            isMyTurn={isPlayerTurn}
+            currentManeuver={currentManeuver}
+            selectedTargetId={selectedTargetId}
+            onAction={onAction}
+            onDefend={handleDefenseChoice}
+            onLeaveLobby={onLeaveLobby}
+          />
+        )}
     </div>
   )
 }
