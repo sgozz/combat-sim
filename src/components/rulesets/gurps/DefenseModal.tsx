@@ -138,6 +138,11 @@ export default function DefenseModal({
               Deceptive Attack: -{pendingDefense.deceptivePenalty} to defense
             </div>
           )}
+          {pendingDefense.feintPenalty && pendingDefense.feintPenalty > 0 && (
+            <div className="penalty-notice">
+              Feint: -{pendingDefense.feintPenalty} to defense
+            </div>
+          )}
         </div>
 
         <div className="defense-cards">

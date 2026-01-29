@@ -33,6 +33,8 @@ import { scheduleBotTurn, chooseBotDefense } from "../../bot";
 import { clearDefenseTimeout } from "../../timers";
 import { formatRoll, applyDamageToTarget } from "../shared/damage";
 import { handlePF2AttackAction } from "../pf2/attack";
+import { quickContest, getDefenseOptions } from "../../../../shared/rulesets/gurps/rules";
+import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
 
 const BOT_DEFENSE_DELAY_MS = 800;
 
@@ -153,6 +155,7 @@ export const resolveDefenseChoice = async (
       dodgeAndDrop: choice.dodgeAndDrop,
     },
     deceptivePenalty: pending.deceptivePenalty,
+    feintPenalty: pending.feintPenalty,
   });
   
   if (!defenseResolution) {
@@ -741,6 +744,26 @@ const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
     return;
   }
 
+  let feintPenalty: number | undefined = undefined;
+  
+  if (actorCombatant.aoaVariant === 'feint' && isGurpsCharacter(targetCharacter)) {
+    const defenseOptions = getDefenseOptions(targetCharacter, targetCharacter.derived.dodge);
+    const defenderBestDefense = Math.max(
+      defenseOptions.dodge,
+      defenseOptions.parry?.value ?? 0,
+      defenseOptions.block?.value ?? 0
+    );
+    
+    const feintContest = quickContest(skill, defenderBestDefense);
+    
+    if (feintContest.attackerWins && feintContest.margin > 0) {
+      feintPenalty = feintContest.margin;
+      logEntry += ` [Feint: ${formatRoll(feintContest.attacker, 'Attacker')} vs ${formatRoll(feintContest.defender, 'Defender')} → -${feintPenalty} defense]`;
+    } else {
+      logEntry += ` [Feint failed: ${formatRoll(feintContest.attacker, 'Attacker')} vs ${formatRoll(feintContest.defender, 'Defender')}]`;
+    }
+  }
+
   const pendingDefense: PendingDefense = {
     attackerId: player.id,
     defenderId: targetCombatant.playerId,
@@ -751,6 +774,7 @@ const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
     damage: damageFormula,
     damageType,
     deceptivePenalty: deceptiveLevel,
+    feintPenalty,
     timestamp: Date.now(),
   };
 

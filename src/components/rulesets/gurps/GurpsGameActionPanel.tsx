@@ -120,8 +120,7 @@ export const GurpsGameActionPanel = ({
               {adapter.getAoaVariants().map(v => (
                 <Tooltip key={v.variant} content={v.desc} position="top">
                   <button 
-                    className={`aoa-variant-btn ${v.variant === 'feint' ? 'disabled' : ''}`}
-                    disabled={v.variant === 'feint'}
+                    className="aoa-variant-btn"
                     onClick={() => {
                       setShowAOAVariantPicker(false)
                       onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant as AOAVariant })
