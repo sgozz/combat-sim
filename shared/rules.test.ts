@@ -1203,6 +1203,136 @@ describe('Combat Rules', () => {
     })
   })
 
+  describe('Advantage Effects', () => {
+    const createCharacterWithAdvantages = (advantages: string[]): GurpsCharacterSheet => ({
+      id: 'test',
+      name: 'Test',
+      rulesetId: 'gurps',
+      attributes: { strength: 10, dexterity: 12, intelligence: 10, health: 10 },
+      derived: { hitPoints: 10, fatiguePoints: 10, basicSpeed: 5.5, basicMove: 5, dodge: 8 },
+      skills: [{ id: 's1', name: 'Sword', level: 14 }],
+      equipment: [{ id: 'e1', name: 'Broadsword', type: 'melee', damage: '2d', parry: 0, reach: '1', skillUsed: 'Sword' }],
+      advantages: advantages.map(name => ({ id: `adv-${name}`, name })),
+      disadvantages: [],
+      pointsTotal: 100,
+    })
+
+    describe('Combat Reflexes', () => {
+      it('adds +1 to dodge defense', () => {
+        const char = createCharacterWithAdvantages(['Combat Reflexes'])
+        const options = getDefenseOptions(char, 8)
+        expect(options.dodge).toBe(9)
+      })
+
+      it('adds +1 to parry defense', () => {
+        const char = createCharacterWithAdvantages(['Combat Reflexes'])
+        const options = getDefenseOptions(char, 8)
+        expect(options.parry?.value).toBe(11)
+      })
+
+      it('adds +1 to block defense', () => {
+        const charWithShield: GurpsCharacterSheet = {
+          ...createCharacterWithAdvantages(['Combat Reflexes']),
+          skills: [
+            { id: 's1', name: 'Sword', level: 14 },
+            { id: 's2', name: 'Shield', level: 12 },
+          ],
+          equipment: [
+            { id: 'e1', name: 'Broadsword', type: 'melee', damage: '2d', parry: 0, reach: '1', skillUsed: 'Sword' },
+            { id: 'e2', name: 'Medium Shield', type: 'shield', block: 0 },
+          ],
+        }
+        const options = getDefenseOptions(charWithShield, 8)
+        expect(options.block?.value).toBe(10)
+      })
+
+      it('adds +1 in calculateDefenseValue', () => {
+        const char = createCharacterWithAdvantages(['Combat Reflexes'])
+        const value = calculateDefenseValue(10, {
+          retreat: false,
+          dodgeAndDrop: false,
+          inCloseCombat: false,
+          defensesThisTurn: 0,
+          deceptivePenalty: 0,
+          postureModifier: 0,
+          defenseType: 'dodge',
+        }, char)
+        expect(value).toBe(11)
+      })
+
+      it('no bonus without Combat Reflexes', () => {
+        const char = createCharacterWithAdvantages([])
+        const options = getDefenseOptions(char, 8)
+        expect(options.dodge).toBe(8)
+        expect(options.parry?.value).toBe(10)
+      })
+    })
+
+    describe('High Pain Threshold', () => {
+      it('sets shock penalty to 0', () => {
+        const char = createCharacterWithAdvantages(['High Pain Threshold'])
+        expect(char.advantages.some(a => a.name === 'High Pain Threshold')).toBe(true)
+      })
+
+      it('adds +3 to HT checks', () => {
+        const char = createCharacterWithAdvantages(['High Pain Threshold'])
+        const random = () => 0.5
+        const result = rollHTCheck(10, -5, 10, random, char)
+        expect(result.target).toBe(13)
+      })
+
+      it('no bonus without High Pain Threshold', () => {
+        const char = createCharacterWithAdvantages([])
+        const random = () => 0.5
+        const result = rollHTCheck(10, -5, 10, random, char)
+        expect(result.target).toBe(10)
+      })
+    })
+
+    describe('Hard to Kill', () => {
+      it('adds +2 to HT checks', () => {
+        const char = createCharacterWithAdvantages(['Hard to Kill'])
+        const random = () => 0.5
+        const result = rollHTCheck(10, -5, 10, random, char)
+        expect(result.target).toBe(12)
+      })
+
+      it('stacks with High Pain Threshold', () => {
+        const char = createCharacterWithAdvantages(['High Pain Threshold', 'Hard to Kill'])
+        const random = () => 0.5
+        const result = rollHTCheck(10, -5, 10, random, char)
+        expect(result.target).toBe(15)
+      })
+
+      it('no bonus without Hard to Kill', () => {
+        const char = createCharacterWithAdvantages([])
+        const random = () => 0.5
+        const result = rollHTCheck(10, -5, 10, random, char)
+        expect(result.target).toBe(10)
+      })
+    })
+
+    describe('Enhanced Parry', () => {
+      it('adds +1 to parry calculation', () => {
+        const char = createCharacterWithAdvantages(['Enhanced Parry'])
+        const parry = calculateParry(14, 0, char)
+        expect(parry).toBe(11)
+      })
+
+      it('stacks with weapon parry modifier', () => {
+        const char = createCharacterWithAdvantages(['Enhanced Parry'])
+        const parry = calculateParry(14, 2, char)
+        expect(parry).toBe(13)
+      })
+
+      it('no bonus without Enhanced Parry', () => {
+        const char = createCharacterWithAdvantages([])
+        const parry = calculateParry(14, 0, char)
+        expect(parry).toBe(10)
+      })
+    })
+  })
+
   describe('Hex Movement', () => {
     describe('hexDistance', () => {
       it('returns 0 for same hex', () => {

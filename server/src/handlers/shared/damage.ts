@@ -6,6 +6,7 @@ import type { CombatantState } from "../../../../shared/rulesets";
 import type { DamageType, HitLocation } from "../../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { assertRulesetId } from "../../../../shared/rulesets/defaults";
+import { hasAdvantage } from "../../../../shared/rulesets/gurps/rules";
 
 export type ApplyDamageResult = {
   updatedCombatants: CombatantState[];
@@ -74,7 +75,7 @@ export const applyDamageToTarget = (
     let effects = [...combatant.statusEffects];
     
      if (isMajorWound && !effects.includes('stunned')) {
-       const htCheck = adapter.damage?.rollHTCheck?.(targetHT, combatant.currentHP, targetMaxHP);
+       const htCheck = adapter.damage?.rollHTCheck?.(targetHT, combatant.currentHP, targetMaxHP, undefined, targetCharacter);
        if (!htCheck?.success) {
          effects = [...effects, 'stunned'];
          majorWoundStunned = true;
@@ -82,18 +83,21 @@ export const applyDamageToTarget = (
      }
      
      if (wasAboveZero && nowAtOrBelowZero) {
-       const htCheck = adapter.damage?.rollHTCheck?.(targetHT, newHP, targetMaxHP);
+       const htCheck = adapter.damage?.rollHTCheck?.(targetHT, newHP, targetMaxHP, undefined, targetCharacter);
        if (!htCheck?.success) {
          effects = [...effects, 'unconscious'];
          fellUnconscious = true;
        }
      }
     
+    const hasHighPainThreshold = isGurpsCharacter(targetCharacter) && hasAdvantage(targetCharacter, 'High Pain Threshold');
+    const shockPenalty = hasHighPainThreshold ? 0 : Math.min(4, finalDamage);
+    
     return { 
       ...combatant, 
       currentHP: newHP,
       statusEffects: effects,
-      shockPenalty: Math.min(4, finalDamage),
+      shockPenalty,
     };
   });
 

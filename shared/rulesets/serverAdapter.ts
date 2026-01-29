@@ -115,7 +115,7 @@ export type CombatDomain = {
     defenseType: 'dodge' | 'parry' | 'block';
     sameWeaponParry?: boolean;
     lostBalance?: boolean;
-  }) => number;
+  }, character?: CharacterSheet) => number;
   /** Returns available defense options for a character. */
   getDefenseOptions: (character: CharacterSheet, dodgeValue: number) => GurpsDefenseOptions;
   /** Calculates range penalty based on distance. */
@@ -159,7 +159,7 @@ export type DamageDomain = {
   /** Applies wounding multipliers based on damage type. */
   applyDamageMultiplier: (baseDamage: number, damageType: DamageType) => number;
   /** Resolves a Health check to avoid unconsciousness/death. */
-  rollHTCheck: (ht: number, currentHP: number, maxHP: number, random?: () => number) => GurpsHTCheckResult;
+  rollHTCheck: (ht: number, currentHP: number, maxHP: number, random?: () => number, character?: CharacterSheet) => GurpsHTCheckResult;
   /** Returns wounding multiplier for a specific hit location. */
   getHitLocationWoundingMultiplier: (location: HitLocation, damageType: DamageType) => number;
   /** Returns DR for a specific hit location. */
@@ -259,7 +259,8 @@ export type ServerRulesetAdapter = {
     defenseType: 'dodge' | 'parry' | 'block';
     sameWeaponParry?: boolean;
     lostBalance?: boolean;
-  }) => number;
+    feintPenalty?: number;
+  }, character?: CharacterSheet) => number;
   getDefenseOptions?: (character: CharacterSheet, dodgeValue: number) => GurpsDefenseOptions;
   getRangePenalty?: (distance: number) => number;
   canAttackAtDistance?: (reach: Reach, distance: number) => boolean;
@@ -780,11 +781,46 @@ const gurpsGetLocationDRWrapper = (character: CharacterSheet, hitLocation: HitLo
   return gurpsGetLocationDR(character, hitLocation);
 };
 
+const gurpsCalculateDefenseValueWrapper = (
+  baseDefense: number,
+  options: {
+    retreat: boolean;
+    dodgeAndDrop: boolean;
+    inCloseCombat: boolean;
+    defensesThisTurn: number;
+    deceptivePenalty: number;
+    postureModifier: number;
+    defenseType: 'dodge' | 'parry' | 'block';
+    sameWeaponParry?: boolean;
+    lostBalance?: boolean;
+    feintPenalty?: number;
+  },
+  character?: CharacterSheet
+): number => {
+  if (character && isGurpsCharacter(character)) {
+    return gurpsCalculateDefenseValue(baseDefense, options, character);
+  }
+  return gurpsCalculateDefenseValue(baseDefense, options);
+};
+
+const gurpsRollHTCheckWrapper = (
+  ht: number,
+  currentHP: number,
+  maxHP: number,
+  random?: () => number,
+  character?: CharacterSheet
+): GurpsHTCheckResult => {
+  if (character && isGurpsCharacter(character)) {
+    return gurpsRollHTCheck(ht, currentHP, maxHP, random, character);
+  }
+  return gurpsRollHTCheck(ht, currentHP, maxHP, random);
+};
+
 const gurpsCombatDomain: CombatDomain = {
-  resolveAttackRoll: gurpsResolveAttackRoll,
-  resolveDefenseRoll: gurpsResolveDefenseRoll,
-  calculateDefenseValue: gurpsCalculateDefenseValue,
-  getDefenseOptions: gurpsGetDefenseOptionsWrapper,
+   resolveAttackRoll: gurpsResolveAttackRoll,
+   resolveDefenseRoll: gurpsResolveDefenseRoll,
+   calculateDefenseValue: gurpsCalculateDefenseValueWrapper,
+   getDefenseOptions: gurpsGetDefenseOptionsWrapper,
   getRangePenalty: gurpsGetRangePenalty,
   getPostureModifiers: gurpsGetPostureModifiers,
   canAttackAtDistance: gurpsCanAttackAtDistance,
@@ -810,11 +846,11 @@ const gurpsCombatDomain: CombatDomain = {
 };
 
 const gurpsDamageDomain: DamageDomain = {
-  rollDamage: gurpsRollDamage,
-  applyDamageMultiplier: gurpsApplyDamageMultiplier,
-  rollHTCheck: gurpsRollHTCheck,
-  getHitLocationWoundingMultiplier: gurpsGetHitLocationWoundingMultiplier,
-  getLocationDR: gurpsGetLocationDRWrapper,
+   rollDamage: gurpsRollDamage,
+   applyDamageMultiplier: gurpsApplyDamageMultiplier,
+   rollHTCheck: gurpsRollHTCheckWrapper,
+   getHitLocationWoundingMultiplier: gurpsGetHitLocationWoundingMultiplier,
+   getLocationDR: gurpsGetLocationDRWrapper,
 };
 
 const gurpsCloseCombatDomain: CloseCombatDomain = {
@@ -845,24 +881,24 @@ const gurpsAdapter: ServerRulesetAdapter = {
   closeCombat: gurpsCloseCombatDomain,
   pf2: undefined,
   
-   resolveAttackRoll: gurpsResolveAttackRoll,
-   resolveDefenseRoll: gurpsResolveDefenseRoll,
-   calculateDefenseValue: gurpsCalculateDefenseValue,
-   getDefenseOptions: gurpsGetDefenseOptionsWrapper,
-   getRangePenalty: gurpsGetRangePenalty,
-  canAttackAtDistance: gurpsCanAttackAtDistance,
-  getCloseCombatAttackModifiers: gurpsGetCloseCombatAttackModifiers,
-  getCloseCombatDefenseModifiers: gurpsGetCloseCombatDefenseModifiers,
-  parseReach: gurpsParseReach,
-  getHitLocationPenalty: gurpsGetHitLocationPenalty,
-  rollCriticalHitTable: gurpsRollCriticalHitTable,
-  rollCriticalMissTable: gurpsRollCriticalMissTable,
-  applyCriticalHitDamage: gurpsApplyCriticalHitDamage,
-  getCriticalMissDescription: gurpsGetCriticalMissDescription,
-  rollDamage: gurpsRollDamage,
-  applyDamageMultiplier: gurpsApplyDamageMultiplier,
-  rollHTCheck: gurpsRollHTCheck,
-  getHitLocationWoundingMultiplier: gurpsGetHitLocationWoundingMultiplier,
+    resolveAttackRoll: gurpsResolveAttackRoll,
+    resolveDefenseRoll: gurpsResolveDefenseRoll,
+    calculateDefenseValue: gurpsCalculateDefenseValueWrapper,
+    getDefenseOptions: gurpsGetDefenseOptionsWrapper,
+    getRangePenalty: gurpsGetRangePenalty,
+   canAttackAtDistance: gurpsCanAttackAtDistance,
+   getCloseCombatAttackModifiers: gurpsGetCloseCombatAttackModifiers,
+   getCloseCombatDefenseModifiers: gurpsGetCloseCombatDefenseModifiers,
+   parseReach: gurpsParseReach,
+   getHitLocationPenalty: gurpsGetHitLocationPenalty,
+   rollCriticalHitTable: gurpsRollCriticalHitTable,
+   rollCriticalMissTable: gurpsRollCriticalMissTable,
+   applyCriticalHitDamage: gurpsApplyCriticalHitDamage,
+   getCriticalMissDescription: gurpsGetCriticalMissDescription,
+   rollDamage: gurpsRollDamage,
+   applyDamageMultiplier: gurpsApplyDamageMultiplier,
+   rollHTCheck: gurpsRollHTCheckWrapper,
+   getHitLocationWoundingMultiplier: gurpsGetHitLocationWoundingMultiplier,
   quickContest: gurpsQuickContest,
   resolveGrappleAttempt: gurpsResolveGrappleAttempt,
   resolveBreakFree: gurpsResolveBreakFree,

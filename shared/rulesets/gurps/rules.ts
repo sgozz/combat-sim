@@ -275,8 +275,16 @@ export const calculateTotalPoints = (character: GurpsCharacterSheet): number => 
   return attrCost + skillCost;
 };
 
-export const calculateParry = (skillLevel: number, weaponParryMod: number = 0): number => {
-  return Math.floor(skillLevel / 2) + 3 + weaponParryMod;
+export const hasAdvantage = (character: GurpsCharacterSheet, advantageName: string): boolean => {
+  return character.advantages.some(a => a.name === advantageName);
+};
+
+export const calculateParry = (skillLevel: number, weaponParryMod: number = 0, character?: GurpsCharacterSheet | { advantages: { name: string }[] }): number => {
+  let parry = Math.floor(skillLevel / 2) + 3 + weaponParryMod;
+  if (character && 'advantages' in character && character.advantages.some(a => a.name === 'Enhanced Parry')) {
+    parry += 1;
+  }
+  return parry;
 };
 
 export const calculateBlock = (shieldSkill: number, shieldBlockMod: number = 0): number => {
@@ -287,8 +295,10 @@ export const getDefenseOptions = (
   character: GurpsCharacterSheet,
   dodgeValue: number
 ): DefenseOptions => {
+  const combatReflexesBonus = hasAdvantage(character, 'Combat Reflexes') ? 1 : 0;
+  
   const result: DefenseOptions = {
-    dodge: dodgeValue,
+    dodge: dodgeValue + combatReflexesBonus,
     parry: null,
     block: null,
   };
@@ -298,7 +308,7 @@ export const getDefenseOptions = (
     const weaponSkill = character.skills.find(s => s.name === meleeWeapon.skillUsed);
     if (weaponSkill) {
       result.parry = {
-        value: calculateParry(weaponSkill.level, meleeWeapon.parry ?? 0),
+        value: calculateParry(weaponSkill.level, meleeWeapon.parry ?? 0, character) + combatReflexesBonus,
         weapon: meleeWeapon.name,
       };
     }
@@ -309,7 +319,7 @@ export const getDefenseOptions = (
     const shieldSkill = character.skills.find(s => s.name === 'Shield');
     if (shieldSkill) {
       result.block = {
-        value: calculateBlock(shieldSkill.level, shield.block ?? 0),
+        value: calculateBlock(shieldSkill.level, shield.block ?? 0) + combatReflexesBonus,
         shield: shield.name,
       };
     }
@@ -338,9 +348,14 @@ export const calculateDefenseValue = (
     sameWeaponParry?: boolean;
     lostBalance?: boolean;
     feintPenalty?: number;
-  }
+  },
+  character?: GurpsCharacterSheet | { advantages: { name: string }[] }
 ): number => {
   let value = baseDefense;
+  
+  if (character && 'advantages' in character && character.advantages.some(a => a.name === 'Combat Reflexes')) {
+    value += 1;
+  }
   
   if (options.retreat) {
     const bonus = getRetreatBonus(options.inCloseCombat);
@@ -717,12 +732,25 @@ export const rollHTCheck = (
   ht: number, 
   currentHP: number, 
   maxHP: number, 
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  character?: GurpsCharacterSheet | { advantages: { name: string }[] }
 ): HTCheckResult => {
   const { total: roll } = roll3d6(random);
   const hpMultiple = Math.floor(Math.abs(currentHP) / maxHP);
   const penalty = hpMultiple > 0 ? hpMultiple : 0;
-  const target = ht - penalty;
+  
+  let bonus = 0;
+  if (character && 'advantages' in character) {
+    const advantages = character.advantages;
+    if (advantages.some(a => a.name === 'High Pain Threshold')) {
+      bonus += 3;
+    }
+    if (advantages.some(a => a.name === 'Hard to Kill')) {
+      bonus += 2;
+    }
+  }
+  
+  const target = ht - penalty + bonus;
   const margin = target - roll;
   return { roll, target, success: margin >= 0, margin };
 };
