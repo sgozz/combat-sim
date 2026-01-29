@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getServerAdapter } from './serverAdapter'
+import { getServerAdapter, isGurpsMatch } from './serverAdapter'
+import type { MatchState } from '../types'
 
 describe('Server Adapter Registry', () => {
   describe('getServerAdapter', () => {
@@ -47,6 +48,51 @@ describe('Server Adapter Registry', () => {
       
       expect(gurpsAdapter).not.toBe(pf2Adapter)
       expect(gurpsAdapter.gridSystem.type).not.toBe(pf2Adapter.gridSystem.type)
+    })
+
+    it('Unknown ruleset throws error', () => {
+      expect(() => getServerAdapter('unknown' as any)).toThrow('Unknown ruleset: unknown')
+    })
+  })
+
+  describe('isGurpsMatch', () => {
+    const baseMatch = {
+      id: 'test',
+      name: 'Test Match',
+      code: 'TEST',
+      maxPlayers: 4,
+      players: [],
+      characters: [],
+      combatants: [],
+      activeTurnPlayerId: 'p1',
+      round: 1,
+      log: [],
+      status: 'active' as const,
+      createdAt: Date.now(),
+    }
+
+    it('returns true for GURPS match', () => {
+      const match: MatchState = {
+        ...baseMatch,
+        rulesetId: 'gurps',
+      }
+      expect(isGurpsMatch(match)).toBe(true)
+    })
+
+    it('returns false for PF2 match', () => {
+      const match: MatchState = {
+        ...baseMatch,
+        rulesetId: 'pf2',
+      }
+      expect(isGurpsMatch(match)).toBe(false)
+    })
+
+    it('returns false when rulesetId is undefined', () => {
+      const match = {
+        ...baseMatch,
+        rulesetId: undefined,
+      } as unknown as MatchState
+      expect(isGurpsMatch(match)).toBe(false)
     })
   })
 })

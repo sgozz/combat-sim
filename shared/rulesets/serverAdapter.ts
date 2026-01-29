@@ -978,14 +978,13 @@ const adapters: Record<RulesetId, ServerRulesetAdapter> = {
 export const getServerAdapter = (rulesetId: RulesetId): ServerRulesetAdapter => {
   const adapter = adapters[rulesetId];
   if (!adapter) {
-    console.warn(`Unknown ruleset: ${rulesetId}, falling back to GURPS`);
-    return gurpsAdapter;
+    throw new Error(`Unknown ruleset: ${rulesetId}`);
   }
   return adapter;
 };
 
 export const isGurpsMatch = (match: MatchState): boolean => {
-  return match.rulesetId === 'gurps' || !match.rulesetId;
+  return match.rulesetId === 'gurps';
 };
 
 export const isPf2Match = (match: MatchState): boolean => {
