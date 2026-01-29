@@ -83,6 +83,20 @@ export interface PathbuilderACTotal {
 }
 
 /**
+ * Spell caster data from Pathbuilder export
+ */
+export interface PathbuilderSpellCaster {
+  name: string;
+  magicTradition: string;
+  spellcastingType: string;
+  ability: string;
+  proficiency: number;
+  perDay: number[];
+  spells: { spellLevel: number; list: string[] }[];
+  focusPoints: number;
+}
+
+/**
  * Focus spell data from Pathbuilder export
  */
 export interface PathbuilderFocusData {
@@ -155,7 +169,7 @@ export interface PathbuilderBuild {
    armor: PathbuilderArmor[];
    acTotal: PathbuilderACTotal;
    focus: Record<string, Record<string, PathbuilderFocusData>>;
-   spellCasters: unknown[];
+    spellCasters: PathbuilderSpellCaster[];
    pets?: unknown[];
    familiars?: unknown[];
    formula?: unknown[];

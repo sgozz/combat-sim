@@ -50,6 +50,14 @@ export const pf2Ruleset: Ruleset = {
         dying: 0,
         wounded: 0,
         doomed: 0,
+        spellSlotUsage: (character.spellcasters ?? []).flatMap((sc, casterIndex) =>
+          sc.slots.filter(s => s.level > 0).map(s => ({
+            casterIndex,
+            level: s.level,
+            used: 0,
+          }))
+        ),
+        focusPointsUsed: 0,
       };
     },
    getAvailableActions: () => [],
@@ -94,6 +102,7 @@ export const pf2Ruleset: Ruleset = {
     shieldBonus: 0,
     feats: [],
     spells: null,
+    spellcasters: [],
    } as CharacterSheet),
 };
 

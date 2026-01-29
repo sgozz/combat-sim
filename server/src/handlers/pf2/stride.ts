@@ -9,6 +9,7 @@ import { state } from "../../state";
 import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
 import { isPF2Character } from "../../../../shared/rulesets/characterSheet";
+import { getAoOReactors, executeAoOStrike } from "./reaction";
 
 export const handlePF2RequestMove = async (
   socket: WebSocket,
@@ -86,6 +87,83 @@ export const handlePF2Stride = async (
 
   if (!reachable.has(destKey)) {
     sendMessage(socket, { type: "error", message: "Destination not reachable." });
+    return;
+  }
+
+  const reactors = getAoOReactors(match, actorCombatant);
+
+  if (reactors.length > 0) {
+    const firstReactor = reactors[0];
+    const reactorPlayer = match.players.find(p => p.id === firstReactor.playerId);
+
+    const preMoveCombatants = match.combatants.map(c =>
+      c.playerId === player.id && isPF2Combatant(c)
+        ? { ...c, actionsRemaining: c.actionsRemaining - 1 }
+        : c
+    );
+
+    if (reactorPlayer?.isBot) {
+      // Bot auto-executes AoO
+      let updatedMatch: MatchState = { ...match, combatants: preMoveCombatants };
+      const updatedActor = updatedMatch.combatants.find(c => c.playerId === player.id);
+      if (!updatedActor) return;
+
+      updatedMatch = executeAoOStrike(updatedMatch, matchId, firstReactor, updatedActor);
+
+      const actorAfterAoO = updatedMatch.combatants.find(c => c.playerId === player.id);
+      if (actorAfterAoO && actorAfterAoO.currentHP <= 0) {
+        const finalState: MatchState = {
+          ...updatedMatch,
+          log: [...updatedMatch.log, `${player.name}'s stride is interrupted — they fall unconscious!`],
+          reachableHexes: undefined,
+        };
+        state.matches.set(matchId, finalState);
+        await updateMatchState(matchId, finalState);
+        await sendToMatch(matchId, { type: "match_state", state: finalState });
+        return;
+      }
+
+      const movedCombatants = updatedMatch.combatants.map(c =>
+        c.playerId === player.id
+          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r } }
+          : c
+      );
+
+      const finalState: MatchState = {
+        ...updatedMatch,
+        combatants: movedCombatants,
+        log: [...updatedMatch.log, `${player.name} strides to (${payload.to.q}, ${payload.to.r}).`],
+        reachableHexes: undefined,
+      };
+
+      state.matches.set(matchId, finalState);
+      await updateMatchState(matchId, finalState);
+      await sendToMatch(matchId, { type: "match_state", state: finalState });
+      return;
+    }
+
+    // Player reactor: pause and send prompt
+    const pausedState: MatchState = {
+      ...match,
+      combatants: preMoveCombatants,
+      pendingReaction: {
+        reactorId: firstReactor.playerId,
+        triggerId: player.id,
+        triggerAction: 'stride',
+        originalPayload: { type: 'pf2_stride', to: payload.to },
+      },
+      reachableHexes: undefined,
+    };
+
+    state.matches.set(matchId, pausedState);
+    await updateMatchState(matchId, pausedState);
+    await sendToMatch(matchId, { type: "match_state", state: pausedState });
+    await sendToMatch(matchId, {
+      type: "reaction_prompt",
+      matchId,
+      reactorId: firstReactor.playerId,
+      triggerAction: 'stride',
+    });
     return;
   }
 

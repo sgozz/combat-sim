@@ -200,6 +200,7 @@ export type PF2ActionPayload =
 export type PF2CombatActionPayload =
   | { type: 'pf2_stand' }
   | { type: 'pf2_drop_prone' }
+  | { type: 'pf2_raise_shield' }
   | { type: 'pf2_request_move'; mode: 'stride' }
   | { type: 'pf2_stride'; to: { q: number; r: number } }
   | { type: 'pf2_reaction_choice'; choice: 'aoo' | 'decline' };

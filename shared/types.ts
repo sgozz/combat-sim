@@ -1,6 +1,13 @@
 import type { CombatantState, CombatActionPayload, PendingDefenseState } from './rulesets';
 import type { CharacterSheet } from './rulesets/characterSheet';
 
+export type PendingReaction = {
+  reactorId: string;
+  triggerId: string;
+  triggerAction: 'stride' | 'interact';
+  originalPayload: CombatActionPayload;
+};
+
 export { isPF2Character, isGurpsCharacter } from './rulesets/characterSheet';
 export type { CharacterSheet } from './rulesets/characterSheet';
 
@@ -74,6 +81,7 @@ export type MatchState = {
   turnMovement?: TurnMovementState;
   reachableHexes?: ReachableHexInfo[];
    pendingDefense?: PendingDefenseState;
+   pendingReaction?: PendingReaction;
 };
 
 export type MatchSummary = {
@@ -135,4 +143,5 @@ export type ServerToClientMessage =
    | { type: "player_reconnected"; matchId: Id; playerId: Id; playerName: string }
    | { type: "visual_effect"; matchId: Id; effect: VisualEffect }
    | { type: "pending_action"; matchId: Id; action: PendingAction }
+   | { type: "reaction_prompt"; matchId: Id; reactorId: Id; triggerAction: string }
    | { type: "error"; message: string };
