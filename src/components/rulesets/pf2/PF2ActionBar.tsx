@@ -175,12 +175,10 @@ export const PF2ActionBar = ({
           <>
             <button
               className={`action-bar-btn ${selectedTargetId ? 'primary' : ''}`}
-              disabled={actionsRemaining === 0}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
               onClick={() => {
                 if (selectedTargetId) {
                   onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: 'torso' })
-                } else {
-                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'attack' })
                 }
               }}
             >
@@ -197,8 +195,8 @@ export const PF2ActionBar = ({
             </button>
             <button
               className="action-bar-btn"
-              disabled={actionsRemaining === 0 || playerCombatant.conditions.some(c => c.condition === 'prone')}
-              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'pf2_step' })}
+              disabled={true}
+              onClick={() => {}}
             >
               <span className="action-bar-icon">👣</span>
               <span className="action-bar-label">Step</span>

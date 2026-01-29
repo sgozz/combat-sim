@@ -2,6 +2,7 @@ import type { CharacterSheet, MatchState, User, RulesetId } from "../../shared/t
 import { isPF2Character, isGurpsCharacter } from "../../shared/types";
 import type { CombatantState } from "../../shared/rulesets";
 import { isGurpsCombatant, isPF2Combatant } from "../../shared/rulesets";
+import type { DefenseType } from "../../shared/rulesets/gurps/types";
 import { state } from "./state";
 import { createUser, addMatchMember, updateMatchState, upsertCharacter } from "./db";
 import { 

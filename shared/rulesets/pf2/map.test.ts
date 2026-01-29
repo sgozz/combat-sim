@@ -6,10 +6,9 @@ describe('Multiple Attack Penalty (MAP)', () => {
     rulesetId: 'pf2',
     playerId: 'player1',
     characterId: 'char1',
-    position: { q: 0, r: 0 },
+    position: { x: 0, y: 0, z: 0 },
     facing: 0,
     currentHP: 20,
-    maxHP: 20,
     actionsRemaining: 3,
     reactionAvailable: true,
     mapPenalty,
@@ -21,6 +20,9 @@ describe('Multiple Attack Penalty (MAP)', () => {
     dying: 0,
     wounded: 0,
     doomed: 0,
+    spellSlotUsage: [],
+    focusPointsUsed: 0,
+    usedReaction: false,
   });
 
   describe('MAP progression', () => {

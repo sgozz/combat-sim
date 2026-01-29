@@ -88,8 +88,10 @@ describe('Ruleset type guards', () => {
     skills: [],
     weapons: [],
     armor: null,
+    shieldBonus: 0,
     feats: [],
     spells: null,
+    spellcasters: [],
   } satisfies PF2CharacterSheet;
 
   describe('combatant guards', () => {

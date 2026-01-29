@@ -69,15 +69,13 @@ export const PF2GameActionPanel = ({
         </div>
         
         <div className="pf2-action-grid">
-          <Tooltip content="Attack with a weapon. Multiple Attack Penalty applies after first Strike." position="top">
+          <Tooltip content="Attack with a weapon. Multiple Attack Penalty applies after first Strike. Click an enemy to target." position="top">
             <button 
               className={`pf2-action-btn strike ${!selectedTargetId ? 'needs-target' : ''}`}
-              disabled={actionsRemaining === 0}
+              disabled={actionsRemaining === 0 || !selectedTargetId}
               onClick={() => {
                 if (selectedTargetId) {
                   onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: 'torso' })
-                } else {
-                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'attack' })
                 }
               }}
             >
@@ -100,11 +98,11 @@ export const PF2GameActionPanel = ({
             </button>
           </Tooltip>
 
-          <Tooltip content="Move 5 feet. Costs 1 action. Cannot use while prone." position="top">
+          <Tooltip content="Move 5 feet. Costs 1 action. Cannot use while prone. (Not yet implemented - use Stride)" position="top">
             <button 
               className="pf2-action-btn step"
-              disabled={actionsRemaining === 0 || (isPF2Combatant(combatant) && combatant.conditions.some(c => c.condition === 'prone'))}
-              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'pf2_step' })}
+              disabled={true}
+              onClick={() => {}}
             >
               <span className="pf2-action-icon">👣</span>
               <span className="pf2-action-label">Step</span>
@@ -139,18 +137,18 @@ export const PF2GameActionPanel = ({
             <button 
               className="pf2-action-btn raise-shield"
               disabled={actionsRemaining === 0}
-              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense' })}
+              onClick={() => onAction('pf2_raise_shield', { type: 'pf2_raise_shield' })}
             >
               <span className="pf2-action-icon">🛡️</span>
               <span className="pf2-action-label">Raise Shield</span>
             </button>
           </Tooltip>
           
-          <Tooltip content="Draw, stow, or interact with an item." position="top">
+          <Tooltip content="Draw, stow, or interact with an item. (Not yet implemented)" position="top">
             <button 
               className="pf2-action-btn interact"
-              disabled={actionsRemaining === 0}
-              onClick={() => onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'ready' })}
+              disabled={true}
+              onClick={() => {}}
             >
               <span className="pf2-action-icon">✋</span>
               <span className="pf2-action-label">Interact</span>

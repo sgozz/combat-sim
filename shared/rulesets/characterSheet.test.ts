@@ -43,8 +43,10 @@ describe('CharacterSheet type guards', () => {
     skills: [],
     weapons: [],
     armor: null,
+    shieldBonus: 0,
     feats: [],
     spells: null,
+    spellcasters: [],
   };
 
   // Valid GURPS character

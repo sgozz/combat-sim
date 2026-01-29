@@ -3,7 +3,7 @@ import type {
 } from "../../../../shared/types";
 import { isGurpsCharacter } from "../../../../shared/types";
 import type { CombatantState } from "../../../../shared/rulesets";
-import type { DamageType } from "../../../../shared/rulesets/gurps/types";
+import type { DamageType, HitLocation } from "../../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { assertRulesetId } from "../../../../shared/rulesets/defaults";
 
@@ -28,7 +28,7 @@ export const applyDamageToTarget = (
   baseDamage: number,
   damageFormula: string,
   damageType: DamageType,
-  hitLocation: string,
+  hitLocation: HitLocation,
   damageRolls: number[],
   damageModifier: number,
 ): ApplyDamageResult => {
