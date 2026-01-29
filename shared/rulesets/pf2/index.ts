@@ -91,6 +91,7 @@ export const pf2Ruleset: Ruleset = {
     skills: [],
     weapons: [],
     armor: null,
+    shieldBonus: 0,
     feats: [],
     spells: null,
    } as CharacterSheet),

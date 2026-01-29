@@ -528,7 +528,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 4. Implement Stand Action (and fix Drop Prone)
+- [x] 4. Implement Stand Action (and fix Drop Prone)
 
   **What to do**:
   - Fix `handlePF2Stand` to actually work
@@ -578,7 +578,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 5. Implement Raise Shield Action
+- [x] 5. Implement Raise Shield Action
 
   **What to do**:
   - Create handler `handlePF2RaiseShield` in `server/src/handlers/pf2/actions.ts`
@@ -652,7 +652,7 @@ Critical Path: 0 → 1,2,3 → 4,5,6 → 7,8 → 9 → 10,11
 
 ---
 
-- [ ] 6. Implement Condition Effects (Prone, Flat-Footed)
+- [x] 6. Implement Condition Effects (Prone, Flat-Footed)
 
   **What to do**:
   - Create `shared/rulesets/pf2/conditions.ts` with condition effect helpers

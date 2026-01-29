@@ -203,3 +203,68 @@ const totalAttackBonus = abilityMod + profBonus + mapPenalty; // Adding negative
 - `src/components/rulesets/pf2/PF2ActionBar.tsx` - Same for mobile
 - `src/App.tsx` - handleGridClick dispatches pf2_stride when overlay active
 - `shared/rulesets/pf2/rules.test.ts` - 6 new stride tests
+
+## Stand & Drop Prone Implementation - Completed
+
+### Changes Made
+
+1. **handlePF2DropProne** (`server/src/handlers/pf2/actions.ts`):
+   - Added `{ condition: 'prone' }` to `combatant.conditions` array
+   - Costs 1 action via `updateCombatantActions(c, 1)`
+   - Validates 1+ action available before executing
+   - Logs action to match log
+
+2. **handlePF2Stand** (`server/src/handlers/pf2/actions.ts`):
+   - Checks if combatant has `prone` condition
+   - Returns error if not prone
+   - Removes prone condition from array via filter
+   - Costs 1 action via `updateCombatantActions(c, 1)`
+   - Validates 1+ action available before executing
+   - Logs action to match log
+
+### Key Patterns
+
+**Condition Management Pattern:**
+```typescript
+// Add condition
+conditions: [...c.conditions, { condition: 'prone' as const }]
+
+// Remove condition
+conditions: c.conditions.filter(cond => cond.condition !== 'prone')
+
+// Check condition exists
+if (!combatant.conditions.some(c => c.condition === 'prone'))
+```
+
+**Action Cost Pattern:**
+```typescript
+// Use updateCombatantActions helper
+return {
+  ...updateCombatantActions(c, 1),
+  conditions: [...c.conditions, { condition: 'prone' as const }],
+};
+```
+
+### Verification
+
+- ✅ All 55 PF2 tests pass
+- ✅ Server builds successfully
+- ✅ Drop Prone adds prone condition to array
+- ✅ Stand removes prone condition from array
+- ✅ Both actions cost 1 action
+- ✅ Stand fails if not prone
+- ✅ Both fail if 0 actions remaining
+
+### Type Safety
+
+- Used `as const` for condition type to satisfy TypeScript
+- Checked `isPF2Combatant()` before accessing PF2-specific fields
+- Properly typed `ConditionValue` with `condition: PF2Condition`
+
+
+## PF2 Condition Effect System (2026-01-29)
+
+- `PF2CombatantState` has both `conditions: ConditionValue[]` (authoritative) and `statusEffects: string[]` (legacy GURPS pattern). UI was rendering `statusEffects` instead of `conditions`.
+- Condition modifiers are pure functions in `shared/rulesets/pf2/conditions.ts` — keeps attack handler clean.
+- Attack handler currently hardcodes `'melee'` attack type. When ranged attacks are added, need to pass actual attack type to `getConditionACModifier`.
+- PF2 circumstance penalties technically don't stack (worst penalty applies), but for prone + flat_footed the simple sum works since they affect different aspects. May need revisiting when more conditions are added.

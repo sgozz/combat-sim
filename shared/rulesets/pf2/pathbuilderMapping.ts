@@ -232,6 +232,7 @@ export const mapPathbuilderToCharacter = (data: PathbuilderExport): PF2Character
       skills: mapSkills(build.proficiencies, build.lores),
       weapons: mapWeapons(build.weapons),
       armor: mapArmor(build.armor),
+      shieldBonus: build.acTotal?.shieldBonus ?? 0,
       feats: mapFeats(build.feats),
       spells: mapSpells(build),
     };

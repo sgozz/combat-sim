@@ -2,10 +2,11 @@ import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
 import type { CombatantState } from "../../../../shared/rulesets";
 import { isPF2Combatant } from "../../../../shared/rulesets";
+import { isPF2Character } from "../../../../shared/types";
 import type { Posture } from "../../../../shared/rulesets/gurps/types";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
-import { sendMessage, sendToMatch } from "../../helpers";
+import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
 
 type CombatantUpdate = {
   posture?: Posture;
@@ -44,11 +45,15 @@ export const handlePF2DropProne = async (
     return;
   }
 
-  const updatedCombatants = match.combatants.map((c) =>
-    c.playerId === player.id
-      ? updateCombatantActions(c, 1)
-      : c
-  );
+  const updatedCombatants = match.combatants.map((c) => {
+    if (c.playerId === player.id && isPF2Combatant(c)) {
+      return {
+        ...updateCombatantActions(c, 1),
+        conditions: [...c.conditions, { condition: 'prone' as const }],
+      };
+    }
+    return c;
+  });
 
   const updated: MatchState = {
     ...match,
@@ -71,8 +76,39 @@ export const handlePF2Stand = async (
   actorCombatant: CombatantState
 ): Promise<void> => {
   if (!isPF2Combatant(actorCombatant)) return;
+
+  const actionsRemaining = actorCombatant.actionsRemaining;
+  if (actionsRemaining < 1) {
+    sendMessage(socket, { type: "error", message: "No actions remaining." });
+    return;
+  }
+
+  if (!actorCombatant.conditions.some(c => c.condition === 'prone')) {
+    sendMessage(socket, { type: "error", message: "Not prone." });
+    return;
+  }
+
+  const updatedCombatants = match.combatants.map((c) => {
+    if (c.playerId === player.id && isPF2Combatant(c)) {
+      return {
+        ...updateCombatantActions(c, 1),
+        conditions: c.conditions.filter(cond => cond.condition !== 'prone'),
+      };
+    }
+    return c;
+  });
+
+  const updated: MatchState = {
+    ...match,
+    combatants: updatedCombatants,
+    log: [...match.log, `${player.name} stands up.`],
+    turnMovement: undefined,
+    reachableHexes: undefined,
+  };
   
-  sendMessage(socket, { type: "error", message: "Stand action not available in PF2." });
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  await sendToMatch(matchId, { type: "match_state", state: updated });
 };
 
 export const handlePF2Step = async (
@@ -122,6 +158,58 @@ export const handlePF2Step = async (
     ...match,
     combatants: updatedCombatants,
     log: [...match.log, `${player.name} steps to (${payload.to.q}, ${payload.to.r}).`],
+  };
+  
+  state.matches.set(matchId, updated);
+  await updateMatchState(matchId, updated);
+  await sendToMatch(matchId, { type: "match_state", state: updated });
+};
+
+export const handlePF2RaiseShield = async (
+  socket: WebSocket,
+  matchId: string,
+  match: MatchState,
+  player: Player,
+  actorCombatant: CombatantState
+): Promise<void> => {
+  if (!isPF2Combatant(actorCombatant)) return;
+
+  const actionsRemaining = actorCombatant.actionsRemaining;
+  if (actionsRemaining < 1) {
+    sendMessage(socket, { type: "error", message: "No actions remaining." });
+    return;
+  }
+
+  const character = getCharacterById(match, actorCombatant.characterId);
+  if (!character || !isPF2Character(character)) {
+    sendMessage(socket, { type: "error", message: "Character not found." });
+    return;
+  }
+
+  if (character.shieldBonus <= 0) {
+    sendMessage(socket, { type: "error", message: "No shield equipped." });
+    return;
+  }
+
+  if (actorCombatant.shieldRaised) {
+    sendMessage(socket, { type: "error", message: "Shield already raised." });
+    return;
+  }
+
+  const updatedCombatants = match.combatants.map((c) => {
+    if (c.playerId === player.id && isPF2Combatant(c)) {
+      return {
+        ...updateCombatantActions(c, 1),
+        shieldRaised: true,
+      };
+    }
+    return c;
+  });
+
+  const updated: MatchState = {
+    ...match,
+    combatants: updatedCombatants,
+    log: [...match.log, `${player.name} raises their shield (+2 AC).`],
   };
   
   state.matches.set(matchId, updated);

@@ -78,10 +78,12 @@ export const PF2GameStatusPanel = ({
             )}
           </div>
           
-          {combatant.statusEffects.length > 0 && (
+          {combatant.conditions.length > 0 && (
             <div className="status-effects-list">
-              {combatant.statusEffects.map(effect => (
-                <span key={effect} className="status-tag">{effect}</span>
+              {combatant.conditions.map(c => (
+                <span key={c.condition} className="status-tag">
+                  {c.condition.replace('_', ' ')}{c.value ? ` ${c.value}` : ''}
+                </span>
               ))}
             </div>
           )}

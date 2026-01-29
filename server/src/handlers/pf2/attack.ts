@@ -21,6 +21,11 @@ import {
   checkVictory,
 } from "../../helpers";
 import { scheduleBotTurn } from "../../bot";
+import {
+  getConditionAttackModifier,
+  getConditionACModifier,
+  formatConditionModifiers,
+} from "../../../../shared/rulesets/pf2/conditions";
 
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;
@@ -123,13 +128,22 @@ export const handlePF2AttackAction = async (
     const isAgile = weapon.traits.includes('agile');
     const mapPenalty = actorCombatant.mapPenalty || 0;
    
-    const totalAttackBonus = abilityMod + profBonus + mapPenalty;
+    const conditionAttackMod = getConditionAttackModifier(actorCombatant);
+    const totalAttackBonus = abilityMod + profBonus + mapPenalty + conditionAttackMod;
 
-    const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, targetAC);
+    const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
+    const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
+    const effectiveAC = targetAC + conditionACMod + shieldBonus;
+
+    const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
    
     let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
     if (mapPenalty < 0) {
       logEntry += ` (MAP ${mapPenalty})`;
+   }
+   const conditionLogSuffix = formatConditionModifiers(conditionAttackMod, conditionACMod);
+   if (conditionLogSuffix) {
+     logEntry += conditionLogSuffix;
    }
    logEntry += `: [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${attackRoll.dc}] ${formatDegree(attackRoll.degree)}`;
 
