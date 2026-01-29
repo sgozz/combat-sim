@@ -84,6 +84,8 @@ export type Equipment = {
   block?: number;
   shieldSize?: ShieldSize;
   skillUsed?: string;
+  dr?: number;
+  coveredLocations?: HitLocation[];
 };
 
 // Grappling states
@@ -119,6 +121,7 @@ export type ManeuverType =
   | 'all_out_attack' 
   | 'all_out_defense' 
   | 'move_and_attack'
+  | 'concentrate'
   | 'pf2_step';
 
 export type WaitTriggerCondition = 
@@ -162,6 +165,7 @@ export type PendingDefense = {
   damage: string; // Damage formula (e.g., "2d+1")
   damageType: DamageType;
   deceptivePenalty: number; // Defense penalty from deceptive attack
+  feintPenalty?: number; // Defense penalty from All-Out Attack (Feint)
   timestamp: number; // When the attack was made (for timeout)
 };
 

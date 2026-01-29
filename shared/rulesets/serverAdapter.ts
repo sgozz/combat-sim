@@ -74,6 +74,7 @@ export type DefenseResolutionOptions = {
     dodgeAndDrop: boolean;
   };
   deceptivePenalty: number;
+  feintPenalty?: number;
 };
 
 export type DefenseResolutionResult = {
@@ -161,6 +162,8 @@ export type DamageDomain = {
   rollHTCheck: (ht: number, currentHP: number, maxHP: number, random?: () => number) => GurpsHTCheckResult;
   /** Returns wounding multiplier for a specific hit location. */
   getHitLocationWoundingMultiplier: (location: HitLocation, damageType: DamageType) => number;
+  /** Returns DR for a specific hit location. */
+  getLocationDR?: (character: CharacterSheet, hitLocation: HitLocation) => number;
 };
 
 /**
@@ -308,6 +311,7 @@ import {
   applyDamageMultiplier as gurpsApplyDamageMultiplier,
   rollHTCheck as gurpsRollHTCheck,
   getHitLocationWoundingMultiplier as gurpsGetHitLocationWoundingMultiplier,
+  getLocationDR as gurpsGetLocationDR,
   quickContest as gurpsQuickContest,
   resolveGrappleAttempt as gurpsResolveGrappleAttempt,
   resolveBreakFree as gurpsResolveBreakFree,
@@ -652,7 +656,7 @@ const gurpsGetDefenderManeuverInfo = (combatant: CombatantState): ManeuverInfo =
 };
 
 const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResolutionResult => {
-  const { defenderCharacter, defenderCombatant, attackerCombatant, attackerCharacter, defenseChoice, deceptivePenalty } = options;
+  const { defenderCharacter, defenderCombatant, attackerCombatant, attackerCharacter, defenseChoice, deceptivePenalty, feintPenalty } = options;
   
   if (!isGurpsCharacter(defenderCharacter) || !isGurpsCombatant(defenderCombatant)) {
     return {
@@ -744,6 +748,7 @@ const gurpsResolveDefense = (options: DefenseResolutionOptions): DefenseResoluti
     inCloseCombat,
     defensesThisTurn: defenderCombatant.defensesThisTurn,
     deceptivePenalty,
+    feintPenalty,
     postureModifier: defenseMod,
     defenseType: defenseChoice.defenseType,
     sameWeaponParry,
@@ -766,6 +771,13 @@ const gurpsGetDefenseOptionsWrapper = (character: CharacterSheet, dodgeValue: nu
     return { dodge: dodgeValue, parry: null, block: null };
   }
   return gurpsGetDefenseOptions(character, dodgeValue);
+};
+
+const gurpsGetLocationDRWrapper = (character: CharacterSheet, hitLocation: HitLocation): number => {
+  if (!isGurpsCharacter(character)) {
+    return 0;
+  }
+  return gurpsGetLocationDR(character, hitLocation);
 };
 
 const gurpsCombatDomain: CombatDomain = {
@@ -802,6 +814,7 @@ const gurpsDamageDomain: DamageDomain = {
   applyDamageMultiplier: gurpsApplyDamageMultiplier,
   rollHTCheck: gurpsRollHTCheck,
   getHitLocationWoundingMultiplier: gurpsGetHitLocationWoundingMultiplier,
+  getLocationDR: gurpsGetLocationDRWrapper,
 };
 
 const gurpsCloseCombatDomain: CloseCombatDomain = {

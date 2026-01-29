@@ -337,6 +337,7 @@ export const calculateDefenseValue = (
     defenseType: 'dodge' | 'parry' | 'block';
     sameWeaponParry?: boolean;
     lostBalance?: boolean;
+    feintPenalty?: number;
   }
 ): number => {
   let value = baseDefense;
@@ -362,6 +363,11 @@ export const calculateDefenseValue = (
   }
   
   value -= options.deceptivePenalty;
+  
+  if (options.feintPenalty) {
+    value -= options.feintPenalty;
+  }
+  
   value += options.postureModifier;
   
   if (options.lostBalance) {
@@ -603,6 +609,17 @@ export const rollRandomHitLocation = (random: () => number = Math.random): HitLo
   if (total === 16) return 'hand_left';
   if (total === 17 || total === 18) return 'foot_left';
   return 'torso';
+};
+
+export const getLocationDR = (character: GurpsCharacterSheet, hitLocation: HitLocation): number => {
+  const armorPieces = character.equipment.filter(e => e.type === 'armor' && e.dr && e.coveredLocations);
+  const coveringArmor = armorPieces.filter(armor => armor.coveredLocations?.includes(hitLocation));
+  
+  if (coveringArmor.length === 0) {
+    return 0;
+  }
+  
+  return Math.max(...coveringArmor.map(armor => armor.dr ?? 0));
 };
 
 export const getPostureModifiers = (posture: Posture): PostureModifiers => {
@@ -1202,6 +1219,7 @@ export const getMovePointsForManeuver = (
       return Math.min(baseMove, 1);
     case 'attack':
     case 'aim':
+    case 'concentrate':
       return 1;
     case 'all_out_attack':
       return Math.floor(basicMove / 2);

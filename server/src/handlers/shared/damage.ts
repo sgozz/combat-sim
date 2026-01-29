@@ -40,17 +40,20 @@ export const applyDamageToTarget = (
     return { updatedCombatants: match.combatants, finalDamage: 0, logEntry: '', fellUnconscious: false, majorWound: false, majorWoundStunned: false };
   }
 
-  const baseMultDamage = adapter.damage?.applyDamageMultiplier?.(baseDamage, damageType) ?? baseDamage;
+  const locationDR = adapter.damage?.getLocationDR?.(targetCharacter, hitLocation) ?? 0;
+  const afterDR = Math.max(0, baseDamage - locationDR);
+  const baseMultDamage = adapter.damage?.applyDamageMultiplier?.(afterDR, damageType) ?? afterDR;
    const hitLocMultiplier = adapter.damage?.getHitLocationWoundingMultiplier?.(hitLocation, damageType) ?? 1;
   const finalDamage = Math.floor(baseMultDamage * hitLocMultiplier);
   
   const rolls = damageRolls.join(',');
   const mod = damageModifier !== 0 ? (damageModifier > 0 ? `+${damageModifier}` : `${damageModifier}`) : '';
+  const drStr = locationDR > 0 ? ` - ${locationDR} DR` : '';
   const typeMultStr = damageType === 'cutting' ? 'x1.5' : damageType === 'impaling' ? 'x2' : '';
   const hitLocStr = hitLocMultiplier > 1 ? ` ${hitLocation} x${hitLocMultiplier}` : ` ${hitLocation}`;
   const dmgDetail = typeMultStr 
-    ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage} ${damageType} ${typeMultStr}${hitLocStr} = ${finalDamage})`
-    : `(${damageFormula}: [${rolls}]${mod} ${damageType}${hitLocStr} = ${finalDamage})`;
+    ? `(${damageFormula}: [${rolls}]${mod} = ${baseDamage}${drStr} ${damageType} ${typeMultStr}${hitLocStr} = ${finalDamage})`
+    : `(${damageFormula}: [${rolls}]${mod}${drStr} ${damageType}${hitLocStr} = ${finalDamage})`;
 
   const targetMaxHP = targetCharacter.derived.hitPoints;
   const targetHT = isGurpsCharacter(targetCharacter) 

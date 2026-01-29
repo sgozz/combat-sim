@@ -48,12 +48,15 @@ import {
   rollCriticalHitTable,
   rollCriticalMissTable,
   applyCriticalHitDamage,
+  getMovePointsForManeuver,
+  getLocationDR,
   type HexPosition,
   type MovementState,
   type CriticalHitEffect,
 } from './rulesets/gurps/rules'
 import type { CharacterSheet, MatchState, Player } from './types'
 import type { Equipment } from './rulesets/gurps/types'
+import type { GurpsCharacterSheet } from './rulesets/gurps/characterSheet'
 import type { CombatantState } from './rulesets'
 import { isGurpsCombatant } from './rulesets'
 
@@ -1175,6 +1178,31 @@ describe('Combat Rules', () => {
     })
   })
 
+  describe('Concentrate Maneuver', () => {
+    it('allows 1 move point (step only)', () => {
+      const movePoints = getMovePointsForManeuver('concentrate', 5, 'standing')
+      expect(movePoints).toBe(1)
+    })
+
+    it('allows 1 move point regardless of basic move', () => {
+      const movePoints1 = getMovePointsForManeuver('concentrate', 3, 'standing')
+      const movePoints2 = getMovePointsForManeuver('concentrate', 10, 'standing')
+      expect(movePoints1).toBe(1)
+      expect(movePoints2).toBe(1)
+    })
+
+    it('allows 1 move point in different postures', () => {
+      const standing = getMovePointsForManeuver('concentrate', 5, 'standing')
+      const crouching = getMovePointsForManeuver('concentrate', 5, 'crouching')
+      const kneeling = getMovePointsForManeuver('concentrate', 5, 'kneeling')
+      const prone = getMovePointsForManeuver('concentrate', 5, 'prone')
+      expect(standing).toBe(1)
+      expect(crouching).toBe(1)
+      expect(kneeling).toBe(1)
+      expect(prone).toBe(1)
+    })
+  })
+
   describe('Hex Movement', () => {
     describe('hexDistance', () => {
       it('returns 0 for same hex', () => {
@@ -1565,6 +1593,204 @@ describe('Combat Rules', () => {
       it('returns groin for roll of 12', () => {
         const rollTwelve = () => 0.6
         expect(rollRandomHitLocation(rollTwelve)).toBe('groin')
+      })
+    })
+
+    describe('Armor DR', () => {
+      const mockCharacter: GurpsCharacterSheet = {
+        id: 'test-char',
+        name: 'Test Knight',
+        rulesetId: 'gurps',
+        attributes: { strength: 12, dexterity: 11, intelligence: 10, health: 11 },
+        derived: { hitPoints: 12, fatiguePoints: 11, basicSpeed: 5.5, basicMove: 5, dodge: 8 },
+        skills: [],
+        equipment: [
+          { id: 'armor1', name: 'Chain Mail', type: 'armor', dr: 4, coveredLocations: ['torso', 'groin', 'arm_right', 'arm_left'] },
+          { id: 'armor2', name: 'Leather Helm', type: 'armor', dr: 2, coveredLocations: ['skull', 'face'] },
+        ],
+        advantages: [],
+        disadvantages: [],
+        pointsTotal: 100,
+      }
+
+      describe('getLocationDR', () => {
+        it('returns DR from armor covering the location', () => {
+          expect(getLocationDR(mockCharacter, 'torso')).toBe(4)
+          expect(getLocationDR(mockCharacter, 'skull')).toBe(2)
+        })
+
+        it('returns 0 for uncovered locations', () => {
+          expect(getLocationDR(mockCharacter, 'hand_right')).toBe(0)
+          expect(getLocationDR(mockCharacter, 'foot_left')).toBe(0)
+        })
+
+        it('returns highest DR when multiple armor pieces cover same location', () => {
+          const multiArmorChar: GurpsCharacterSheet = {
+            ...mockCharacter,
+            equipment: [
+              { id: 'armor1', name: 'Chain Mail', type: 'armor', dr: 4, coveredLocations: ['torso'] },
+              { id: 'armor2', name: 'Plate Vest', type: 'armor', dr: 6, coveredLocations: ['torso', 'vitals'] },
+            ],
+          }
+          expect(getLocationDR(multiArmorChar, 'torso')).toBe(6)
+          expect(getLocationDR(multiArmorChar, 'vitals')).toBe(6)
+        })
+
+        it('returns 0 for character with no armor', () => {
+          const noArmorChar: GurpsCharacterSheet = {
+            ...mockCharacter,
+            equipment: [
+              { id: 'weapon1', name: 'Sword', type: 'melee', damage: '2d', damageType: 'cutting', reach: '1', parry: 0 },
+            ],
+          }
+          expect(getLocationDR(noArmorChar, 'torso')).toBe(0)
+        })
+
+        it('returns 0 for armor without coveredLocations', () => {
+          const incompletArmorChar: GurpsCharacterSheet = {
+            ...mockCharacter,
+            equipment: [
+              { id: 'armor1', name: 'Old Armor', type: 'armor', dr: 3 },
+            ],
+          }
+          expect(getLocationDR(incompletArmorChar, 'torso')).toBe(0)
+        })
+      })
+
+      describe('DR in damage pipeline', () => {
+        it('reduces damage by DR before wounding multiplier', () => {
+          // 10 base damage - 4 DR = 6 damage, then x1 (crushing torso) = 6 final
+          const baseDamage = 10
+          const dr = 4
+          const afterDR = baseDamage - dr
+          const finalDamage = applyDamageMultiplier(afterDR, 'crushing')
+          expect(finalDamage).toBe(6)
+        })
+
+        it('DR greater than damage results in 0 damage', () => {
+          const baseDamage = 3
+          const dr = 5
+          const afterDR = Math.max(0, baseDamage - dr)
+          expect(afterDR).toBe(0)
+        })
+
+        it('applies DR before damage type multiplier', () => {
+          // 10 base - 4 DR = 6, then x1.5 (cutting) = 9
+          const baseDamage = 10
+          const dr = 4
+          const afterDR = baseDamage - dr
+          const finalDamage = applyDamageMultiplier(afterDR, 'cutting')
+          expect(finalDamage).toBe(9)
+        })
+
+        it('applies DR before hit location multiplier', () => {
+          // 10 base - 4 DR = 6, then x2 (impaling) = 12, then x3 (vitals impaling) = 36
+          const baseDamage = 10
+          const dr = 4
+          const afterDR = baseDamage - dr
+          const afterDamageType = applyDamageMultiplier(afterDR, 'impaling')
+          const finalDamage = Math.floor(afterDamageType * getHitLocationWoundingMultiplier('vitals', 'impaling'))
+          expect(finalDamage).toBe(36)
+        })
+      })
+    })
+  })
+
+  describe('All-Out Attack (Feint)', () => {
+    describe('resolveFeint', () => {
+      it('attacker wins: margin reduces defender defense', () => {
+        // Attacker skill 14, rolls 10 (margin +4)
+        // Defender defense 12, rolls 13 (margin -1)
+        // Attacker wins by 5
+        const mockRandom = () => 0.5 // rolls ~3,3,3 = 9-10
+        const result = quickContest(14, 12, mockRandom)
+        expect(result.attackerWins).toBe(true)
+        expect(result.margin).toBeGreaterThan(0)
+      })
+
+      it('defender wins: no penalty applied', () => {
+        // Defender wins or ties
+        const mockRandom = () => 0.5
+        const result = quickContest(10, 14, mockRandom)
+        expect(result.attackerWins).toBe(false)
+      })
+
+      it('margin of 0: no penalty', () => {
+        // Exact tie
+        const mockRandom = () => 0.4
+        const result = quickContest(12, 12, mockRandom)
+        if (result.margin === 0) {
+          expect(result.attackerWins).toBe(false)
+        }
+      })
+
+      it('uses quickContest for feint resolution', () => {
+        const mockRandom = () => 0.3
+        const result = quickContest(15, 10, mockRandom)
+        expect(result).toHaveProperty('attackerWins')
+        expect(result).toHaveProperty('margin')
+        expect(result).toHaveProperty('attacker')
+        expect(result).toHaveProperty('defender')
+      })
+    })
+
+    describe('calculateDefenseValue with feintPenalty', () => {
+      it('subtracts feint penalty from defense', () => {
+        const baseDefense = 10
+        const withoutFeint = calculateDefenseValue(baseDefense, {
+          retreat: false,
+          dodgeAndDrop: false,
+          inCloseCombat: false,
+          defensesThisTurn: 0,
+          deceptivePenalty: 0,
+          postureModifier: 0,
+          defenseType: 'dodge',
+        })
+        expect(withoutFeint).toBe(10)
+
+        // With feint penalty of 3
+        const withFeint = calculateDefenseValue(baseDefense, {
+          retreat: false,
+          dodgeAndDrop: false,
+          inCloseCombat: false,
+          defensesThisTurn: 0,
+          deceptivePenalty: 0,
+          postureModifier: 0,
+          defenseType: 'dodge',
+          feintPenalty: 3,
+        })
+        expect(withFeint).toBe(7)
+      })
+
+      it('stacks feint penalty with deceptive penalty', () => {
+        const baseDefense = 12
+        const result = calculateDefenseValue(baseDefense, {
+          retreat: false,
+          dodgeAndDrop: false,
+          inCloseCombat: false,
+          defensesThisTurn: 0,
+          deceptivePenalty: 2,
+          postureModifier: 0,
+          defenseType: 'dodge',
+          feintPenalty: 3,
+        })
+        // 12 - 2 (deceptive) - 3 (feint) = 7
+        expect(result).toBe(7)
+      })
+
+      it('minimum defense of 3 applies after feint', () => {
+        const baseDefense = 8
+        const result = calculateDefenseValue(baseDefense, {
+          retreat: false,
+          dodgeAndDrop: false,
+          inCloseCombat: false,
+          defensesThisTurn: 0,
+          deceptivePenalty: 0,
+          postureModifier: 0,
+          defenseType: 'dodge',
+          feintPenalty: 10, // Would reduce to -2, but min is 3
+        })
+        expect(result).toBe(3)
       })
     })
   })

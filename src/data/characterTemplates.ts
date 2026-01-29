@@ -8,6 +8,7 @@ const createTemplate = (
   attributes: { strength: number; dexterity: number; intelligence: number; health: number },
   skills: { name: string; level: number }[],
   equipment: { name: string; damage: string; damageType: 'crushing' | 'cutting' | 'impaling'; reach: 'C' | '1' | '2' | 'C,1' | '1,2'; parry: number }[],
+  armor: { name: string; dr: number; coveredLocations: ('eye' | 'skull' | 'face' | 'neck' | 'torso' | 'vitals' | 'groin' | 'arm_right' | 'arm_left' | 'hand_right' | 'hand_left' | 'leg_right' | 'leg_left' | 'foot_right' | 'foot_left')[] }[],
   advantages: { name: string; description?: string }[],
   disadvantages: { name: string; description?: string }[]
 ): Omit<GurpsCharacterSheet, 'id'> => ({
@@ -16,7 +17,10 @@ const createTemplate = (
   attributes,
   derived: calculateDerivedStats(attributes),
   skills: skills.map(s => ({ id: uuid(), ...s })),
-  equipment: equipment.map(e => ({ id: uuid(), type: 'melee' as const, ...e })),
+  equipment: [
+    ...equipment.map(e => ({ id: uuid(), type: 'melee' as const, ...e })),
+    ...armor.map(a => ({ id: uuid(), type: 'armor' as const, ...a })),
+  ],
   advantages: advantages.map(a => ({ id: uuid(), ...a })),
   disadvantages: disadvantages.map(d => ({ id: uuid(), ...d })),
   pointsTotal: 100,
@@ -33,6 +37,9 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Broadsword', damage: '2d', damageType: 'cutting', reach: '1', parry: 0 },
       { name: 'Medium Shield', damage: '1d', damageType: 'crushing', reach: '1', parry: 2 },
+    ],
+    [
+      { name: 'Chain Mail', dr: 4, coveredLocations: ['torso', 'vitals', 'groin', 'arm_right', 'arm_left', 'leg_right', 'leg_left'] },
     ],
     [
       { name: 'Combat Reflexes', description: '+1 to active defenses' },
@@ -55,6 +62,7 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
       { name: 'Rapier', damage: '1d+1', damageType: 'impaling', reach: '1', parry: 0 },
       { name: 'Main-Gauche', damage: '1d-1', damageType: 'impaling', reach: 'C', parry: 0 },
     ],
+    [],
     [
       { name: 'Combat Reflexes', description: '+1 to active defenses' },
       { name: 'Enhanced Parry', description: '+1 to Rapier parry' },
@@ -76,6 +84,9 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
       { name: 'Great Axe', damage: '3d+1', damageType: 'cutting', reach: '1,2', parry: -2 },
     ],
     [
+      { name: 'Leather Armor', dr: 2, coveredLocations: ['torso', 'vitals', 'groin', 'arm_right', 'arm_left'] },
+    ],
+    [
       { name: 'High Pain Threshold', description: 'No shock penalties' },
       { name: 'Hard to Kill', description: '+2 to HT rolls to stay alive' },
     ],
@@ -95,6 +106,7 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Smallsword', damage: '1d', damageType: 'impaling', reach: '1', parry: 0 },
     ],
+    [],
     [
       { name: 'Combat Reflexes', description: '+1 to active defenses' },
       { name: 'Weapon Master', description: '+2 damage with swords' },
@@ -116,6 +128,7 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
       { name: 'Spear', damage: '1d+2', damageType: 'impaling', reach: '1,2', parry: 0 },
       { name: 'Large Shield', damage: '1d+1', damageType: 'crushing', reach: '1', parry: 3 },
     ],
+    [],
     [
       { name: 'Fit', description: '+1 to HT rolls' },
     ],
@@ -136,6 +149,7 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
       { name: 'Large Knife', damage: '1d', damageType: 'cutting', reach: 'C,1', parry: -1 },
       { name: 'Brass Knuckles', damage: '1d', damageType: 'crushing', reach: 'C', parry: 0 },
     ],
+    [],
     [
       { name: 'High Pain Threshold', description: 'No shock penalties' },
     ],
