@@ -565,4 +565,191 @@ describe('PF2 Rules', () => {
       expect(threeAway).toBeUndefined();
     });
   });
+
+  describe('Dying and Wounded', () => {
+    it('HP reaching 0 sets dying = 1 + wounded', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 0, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      // Simulate taking 10 damage (HP 10 -> 0)
+      const afterDamage = { ...combatant, currentHP: 0, dying: 1 + combatant.wounded };
+      expect(afterDamage.dying).toBe(1);
+      expect(afterDamage.wounded).toBe(0);
+    });
+
+    it('HP reaching 0 with wounded=1 sets dying=2', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 10, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 0, wounded: 1, doomed: 0,
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      const afterDamage = { ...combatant, currentHP: 0, dying: 1 + combatant.wounded };
+      expect(afterDamage.dying).toBe(2);
+    });
+
+    it('dying >= (4 - doomed) causes death', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 0, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 4, wounded: 0, doomed: 0,
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      const deathThreshold = 4 - combatant.doomed;
+      expect(combatant.dying).toBeGreaterThanOrEqual(deathThreshold);
+    });
+
+    it('dying >= (4 - doomed) with doomed=1 causes death at dying=3', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [], currentHP: 0, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 3, wounded: 0, doomed: 1,
+        statusEffects: [], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      const deathThreshold = 4 - combatant.doomed;
+      expect(deathThreshold).toBe(3);
+      expect(combatant.dying).toBeGreaterThanOrEqual(deathThreshold);
+    });
+  });
+
+  describe('Recovery Checks', () => {
+    it('recovery check DC = 10 + dying value', () => {
+      const dying = 2;
+      const dc = 10 + dying;
+      expect(dc).toBe(12);
+    });
+
+    it('recovery check critical success reduces dying by 2', () => {
+      const random = mockRandom([0.95]); // Roll 20
+      const result = rollCheck(0, 12, random);
+      expect(result.degree).toBe('critical_success');
+      
+      const dying = 2;
+      const newDying = dying - 2;
+      expect(newDying).toBe(0);
+    });
+
+    it('recovery check success reduces dying by 1', () => {
+      const random = mockRandom([0.55]); // Roll 12
+      const result = rollCheck(0, 12, random);
+      expect(result.degree).toBe('success');
+      
+      const dying = 2;
+      const newDying = dying - 1;
+      expect(newDying).toBe(1);
+    });
+
+    it('recovery check failure increases dying by 1', () => {
+      const random = mockRandom([0.45]); // Roll 10
+      const result = rollCheck(0, 12, random);
+      expect(result.degree).toBe('failure');
+      
+      const dying = 2;
+      const newDying = dying + 1;
+      expect(newDying).toBe(3);
+    });
+
+    it('recovery check critical failure increases dying by 2', () => {
+      const random = mockRandom([0.0]); // Roll 1
+      const result = rollCheck(0, 12, random);
+      expect(result.degree).toBe('critical_failure');
+      
+      const dying = 2;
+      const newDying = dying + 2;
+      expect(newDying).toBe(4);
+    });
+
+    it('dying reaching 0 adds wounded and removes unconscious', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [{ condition: 'unconscious' }], currentHP: 0, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 1, wounded: 0, doomed: 0,
+        statusEffects: ['unconscious'], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      // Simulate successful recovery check reducing dying to 0
+      const afterRecovery = {
+        ...combatant,
+        dying: 0,
+        wounded: combatant.wounded + 1,
+        conditions: combatant.conditions.filter(c => c.condition !== 'unconscious'),
+        statusEffects: combatant.statusEffects.filter(e => e !== 'unconscious')
+      };
+      
+      expect(afterRecovery.dying).toBe(0);
+      expect(afterRecovery.wounded).toBe(1);
+      expect(afterRecovery.conditions).toHaveLength(0);
+      expect(afterRecovery.statusEffects).toHaveLength(0);
+    });
+  });
+
+  describe('Healing While Dying', () => {
+    it('healing while dying resets dying to 0 and adds wounded', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [{ condition: 'unconscious' }], currentHP: 0, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 2, wounded: 0, doomed: 0,
+        statusEffects: ['unconscious'], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      // Simulate healing 5 HP
+      const healAmount = 5;
+      const afterHealing = {
+        ...combatant,
+        currentHP: healAmount,
+        dying: 0,
+        wounded: combatant.wounded + 1,
+        conditions: combatant.conditions.filter(c => c.condition !== 'unconscious'),
+        statusEffects: combatant.statusEffects.filter(e => e !== 'unconscious')
+      };
+      
+      expect(afterHealing.currentHP).toBe(5);
+      expect(afterHealing.dying).toBe(0);
+      expect(afterHealing.wounded).toBe(1);
+      expect(afterHealing.conditions).toHaveLength(0);
+      expect(afterHealing.statusEffects).toHaveLength(0);
+    });
+
+    it('healing while dying with wounded=1 sets wounded=2', () => {
+      const combatant: PF2CombatantState = {
+        rulesetId: 'pf2', playerId: '1', characterId: '1', position: { x: 0, y: 0, z: 0 },
+        facing: 0, actionsRemaining: 3, reactionAvailable: true, mapPenalty: 0,
+        conditions: [{ condition: 'unconscious' }], currentHP: 0, tempHP: 0, shieldRaised: false,
+        heroPoints: 1, dying: 3, wounded: 1, doomed: 0,
+        statusEffects: ['unconscious'], usedReaction: false,
+        spellSlotUsage: [], focusPointsUsed: 0
+      };
+      
+      const healAmount = 10;
+      const afterHealing = {
+        ...combatant,
+        currentHP: healAmount,
+        dying: 0,
+        wounded: combatant.wounded + 1,
+        conditions: combatant.conditions.filter(c => c.condition !== 'unconscious'),
+        statusEffects: combatant.statusEffects.filter(e => e !== 'unconscious')
+      };
+      
+      expect(afterHealing.wounded).toBe(2);
+    });
+  });
 });

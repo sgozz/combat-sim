@@ -349,7 +349,7 @@ export const startNewTurn = (combatant: PF2CombatantState): PF2CombatantState =>
   };
 };
 
-export const advanceTurn = (state: MatchState): MatchState => {
+export const advanceTurn = (state: MatchState, random: () => number = Math.random): MatchState => {
   if (state.players.length === 0) {
     return state;
   }
@@ -359,17 +359,64 @@ export const advanceTurn = (state: MatchState): MatchState => {
   const round = nextIndex === 0 ? state.round + 1 : state.round;
   const nextPlayerId = state.players[nextIndex]?.id ?? '';
   
-   const updatedCombatants = state.combatants.map(c => {
-     if (c.playerId === nextPlayerId && isPF2Combatant(c)) {
-       return {
-         ...c,
-         attacksRemaining: 3,
-         actionsRemaining: 3,
-         reactionAvailable: true,
-         mapPenalty: 0,
-         shieldRaised: false,
-       };
-     }
+  const logEntries: string[] = [];
+  
+  const updatedCombatants = state.combatants.map(c => {
+    if (c.playerId === nextPlayerId && isPF2Combatant(c)) {
+      let combatant = {
+        ...c,
+        attacksRemaining: 3,
+        actionsRemaining: 3,
+        reactionAvailable: true,
+        mapPenalty: 0,
+        shieldRaised: false,
+      };
+      
+      if (combatant.dying > 0) {
+        const dc = 10 + combatant.dying;
+        const recoveryCheck = rollCheck(0, dc, random);
+        
+        let newDying = combatant.dying;
+        if (recoveryCheck.degree === 'critical_success') {
+          newDying = Math.max(0, combatant.dying - 2);
+        } else if (recoveryCheck.degree === 'success') {
+          newDying = Math.max(0, combatant.dying - 1);
+        } else if (recoveryCheck.degree === 'failure') {
+          newDying = combatant.dying + 1;
+        } else if (recoveryCheck.degree === 'critical_failure') {
+          newDying = combatant.dying + 2;
+        }
+        
+        const deathThreshold = 4 - combatant.doomed;
+        const isDead = newDying >= deathThreshold;
+        
+        if (isDead) {
+          logEntries.push(`Recovery check failed! Dying ${newDying} >= ${deathThreshold}. Character dies.`);
+          combatant = {
+            ...combatant,
+            dying: newDying,
+            statusEffects: [...combatant.statusEffects.filter(e => e !== 'unconscious'), 'dead'],
+          };
+        } else if (newDying === 0) {
+          logEntries.push(`Recovery check success! Dying reduced to 0. Wounded increased to ${combatant.wounded + 1}.`);
+          combatant = {
+            ...combatant,
+            dying: 0,
+            wounded: combatant.wounded + 1,
+            conditions: combatant.conditions.filter(cond => cond.condition !== 'unconscious'),
+            statusEffects: combatant.statusEffects.filter(e => e !== 'unconscious'),
+          };
+        } else {
+          logEntries.push(`Recovery check: [${recoveryCheck.roll}+${recoveryCheck.modifier}=${recoveryCheck.total} vs DC ${dc}] ${recoveryCheck.degree}. Dying: ${combatant.dying} → ${newDying}`);
+          combatant = {
+            ...combatant,
+            dying: newDying,
+          };
+        }
+      }
+      
+      return combatant;
+    }
     return c;
   });
   
@@ -378,6 +425,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
     combatants: updatedCombatants,
     activeTurnPlayerId: nextPlayerId,
     round,
+    log: [...state.log, ...logEntries],
     turnMovement: undefined,
     reachableHexes: undefined,
   };
@@ -594,5 +642,30 @@ export const executeMove = (
     movePointsRemaining: state.movePointsRemaining - chebyshevDistance,
     freeRotationUsed: state.freeRotationUsed,
     movedBackward: state.movedBackward,
+  };
+};
+
+export const applyHealing = (
+  combatant: PF2CombatantState,
+  healAmount: number,
+  maxHP: number
+): PF2CombatantState => {
+  const wasDying = combatant.dying > 0;
+  const newHP = Math.min(maxHP, combatant.currentHP + healAmount);
+  
+  if (wasDying && healAmount > 0) {
+    return {
+      ...combatant,
+      currentHP: newHP,
+      dying: 0,
+      wounded: combatant.wounded + 1,
+      conditions: combatant.conditions.filter(c => c.condition !== 'unconscious'),
+      statusEffects: combatant.statusEffects.filter(e => e !== 'unconscious'),
+    };
+  }
+  
+  return {
+    ...combatant,
+    currentHP: newHP,
   };
 };

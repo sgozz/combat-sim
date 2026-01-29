@@ -161,6 +161,25 @@ export const handlePF2AttackAction = async (
   const updatedCombatants = match.combatants.map(c => {
     if (c.playerId === targetCombatant.playerId && damageDealt > 0) {
       const newHP = Math.max(0, c.currentHP - damageDealt);
+      
+      if (newHP <= 0 && isPF2Combatant(c)) {
+        const newDying = 1 + c.wounded;
+        const deathThreshold = 4 - c.doomed;
+        const isDead = newDying >= deathThreshold;
+        
+        return {
+          ...c,
+          currentHP: newHP,
+          dying: isDead ? c.dying : newDying,
+          statusEffects: isDead 
+            ? [...c.statusEffects.filter(e => e !== 'unconscious'), 'dead']
+            : [...c.statusEffects.filter(e => e !== 'unconscious'), 'unconscious'],
+          conditions: isDead
+            ? c.conditions
+            : [...c.conditions.filter(cond => cond.condition !== 'unconscious'), { condition: 'unconscious' as const }],
+        };
+      }
+      
       return { 
         ...c, 
         currentHP: newHP,
