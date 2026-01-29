@@ -153,7 +153,7 @@ Wave 4 (Final):
 
 ## TODOs
 
-- [ ] 1. GURPS Per-Location Armor/DR System
+- [x] 1. GURPS Per-Location Armor/DR System
 
   **What to do**:
   - Add `dr?: number` and `coveredLocations?: HitLocation[]` fields to `Equipment` type (optional, backwards-compatible)
@@ -228,7 +228,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 2. GURPS Concentrate Maneuver
+- [x] 2. GURPS Concentrate Maneuver
 
   **What to do**:
   - Add `'concentrate'` to `ManeuverType` union in types.ts
@@ -284,7 +284,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 3. GURPS AOA Feint Variant
+- [x] 3. GURPS AOA Feint Variant
 
   **What to do**:
   - Implement Feint as AOA variant: a Quick Contest (attacker's melee weapon skill vs defender's best melee defense skill) that reduces defender's defense on the follow-up attack
@@ -732,7 +732,7 @@ Wave 4 (Final):
 
 ---
 
-- [ ] 8. PF2 Dying/Wounded/Recovery System
+- [x] 8. PF2 Dying/Wounded/Recovery System
 
   **What to do**:
   - The `dying`, `wounded`, and `doomed` fields already exist on `PF2CombatantState` (types.ts:172-174) but are never modified. Implement the full state machine:
