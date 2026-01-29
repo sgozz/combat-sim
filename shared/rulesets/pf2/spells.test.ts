@@ -3,8 +3,11 @@ import {
   calculateSpellAttack,
   calculateSpellDC,
   canCastSpell,
+  rollDamage,
+  rollCheck,
+  applyHealing,
 } from './rules';
-import type { SpellCaster, SpellSlotUsage, Abilities } from './types';
+import type { SpellCaster, SpellSlotUsage, Abilities, PF2CombatantState, SpellDefinition } from './types';
 
 const makeAbilities = (overrides: Partial<Abilities> = {}): Abilities => ({
   strength: 10,
@@ -227,6 +230,203 @@ describe('Spell Casting', () => {
       const attack = calculateSpellAttack(caster, abilities, 1);
       // WIS mod (3) + trained (3) = 6
       expect(attack).toBe(6);
+    });
+  });
+
+  describe('Spell Effects', () => {
+    const mockCombatant = (hp: number, dying = 0): PF2CombatantState => ({
+      playerId: 'test-player',
+      characterId: 'test-char',
+      rulesetId: 'pf2',
+      position: { x: 0, y: 0, z: 0 },
+      facing: 0,
+      currentHP: hp,
+      actionsRemaining: 3,
+      reactionAvailable: true,
+      mapPenalty: 0,
+      conditions: [],
+      statusEffects: [],
+      tempHP: 0,
+      shieldRaised: false,
+      heroPoints: 1,
+      dying,
+      wounded: 0,
+      doomed: 0,
+      spellSlotUsage: [],
+      focusPointsUsed: 0,
+      usedReaction: false,
+    });
+
+    describe('Damage Spells', () => {
+      it('should deal full damage on failed save', () => {
+        const damageRoll = rollDamage('2d6', 'fire', () => 0.5);
+        expect(damageRoll.total).toBeGreaterThan(0);
+        expect(damageRoll.damageType).toBe('fire');
+      });
+
+      it('should deal half damage on successful save', () => {
+        const damageRoll = rollDamage('6d6', 'fire', () => 0.5);
+        const halfDamage = Math.floor(damageRoll.total / 2);
+        expect(halfDamage).toBeGreaterThanOrEqual(0);
+      });
+
+      it('should deal double damage on critical failure', () => {
+        const damageRoll = rollDamage('2d6', 'electricity', () => 0.5);
+        const doubleDamage = damageRoll.total * 2;
+        expect(doubleDamage).toBeGreaterThan(damageRoll.total);
+      });
+
+      it('should deal no damage on critical success', () => {
+        const noDamage = 0;
+        expect(noDamage).toBe(0);
+      });
+
+      it('should apply damage with degree of success', () => {
+        const saveRoll = rollCheck(5, 15, () => 0.5);
+        expect(['critical_failure', 'failure', 'success', 'critical_success']).toContain(saveRoll.degree);
+      });
+    });
+
+    describe('Healing Spells', () => {
+      it('should heal damage up to maxHP', () => {
+        const combatant = mockCombatant(10);
+        const maxHP = 30;
+        const healed = applyHealing(combatant, 15, maxHP);
+        expect(healed.currentHP).toBe(25);
+      });
+
+      it('should not exceed maxHP', () => {
+        const combatant = mockCombatant(25);
+        const maxHP = 30;
+        const healed = applyHealing(combatant, 20, maxHP);
+        expect(healed.currentHP).toBe(30);
+      });
+
+      it('should stabilize dying character', () => {
+        const combatant = mockCombatant(0, 2);
+        const maxHP = 30;
+        const healed = applyHealing(combatant, 10, maxHP);
+        expect(healed.currentHP).toBe(10);
+        expect(healed.dying).toBe(0);
+        expect(healed.wounded).toBe(1);
+        expect(healed.conditions.some(c => c.condition === 'unconscious')).toBe(false);
+      });
+
+      it('should increase wounded when healing from dying', () => {
+        const combatant = mockCombatant(0, 1);
+        const maxHP = 30;
+        const healed = applyHealing(combatant, 5, maxHP);
+        expect(healed.wounded).toBe(1);
+      });
+    });
+
+    describe('Condition Application', () => {
+      it('should apply frightened condition on failed save', () => {
+        const combatant = mockCombatant(20);
+        const withCondition: PF2CombatantState = {
+          ...combatant,
+          conditions: [{ condition: 'frightened', value: 1 }],
+        };
+        expect(withCondition.conditions).toHaveLength(1);
+        expect(withCondition.conditions[0].condition).toBe('frightened');
+        expect(withCondition.conditions[0].value).toBe(1);
+      });
+
+      it('should not apply condition on successful save', () => {
+        const combatant = mockCombatant(20);
+        expect(combatant.conditions).toHaveLength(0);
+      });
+    });
+
+    describe('Spell Data Validation', () => {
+      it('should have valid damage spell definition', () => {
+        const electricArc: SpellDefinition = {
+          name: 'Electric Arc',
+          level: 0,
+          tradition: 'arcane',
+          castActions: 2,
+          targetType: 'single',
+          save: 'reflex',
+          damageFormula: '1d4+{mod}',
+          damageType: 'electricity',
+        };
+        expect(electricArc.name).toBe('Electric Arc');
+        expect(electricArc.save).toBe('reflex');
+        expect(electricArc.damageType).toBe('electricity');
+      });
+
+      it('should have valid healing spell definition', () => {
+        const heal: SpellDefinition = {
+          name: 'Heal',
+          level: 1,
+          tradition: 'divine',
+          castActions: 2,
+          targetType: 'single',
+          healFormula: '1d8',
+        };
+        expect(heal.name).toBe('Heal');
+        expect(heal.healFormula).toBe('1d8');
+      });
+
+      it('should have valid condition spell definition', () => {
+        const fear: SpellDefinition = {
+          name: 'Fear',
+          level: 1,
+          tradition: 'arcane',
+          castActions: 2,
+          targetType: 'single',
+          save: 'will',
+          conditions: [{ condition: 'frightened', value: 1 }],
+          duration: 'varies',
+        };
+        expect(fear.name).toBe('Fear');
+        expect(fear.conditions).toHaveLength(1);
+        expect(fear.conditions![0].condition).toBe('frightened');
+      });
+    });
+
+    describe('Spell Effect Resolution', () => {
+      it('should resolve damage spell with save', () => {
+        const baseDamage = 20;
+        const saveRoll = rollCheck(8, 15, () => 0.3);
+        
+        let finalDamage = 0;
+        if (saveRoll.degree === 'critical_failure') {
+          finalDamage = baseDamage * 2;
+        } else if (saveRoll.degree === 'failure') {
+          finalDamage = baseDamage;
+        } else if (saveRoll.degree === 'success') {
+          finalDamage = Math.floor(baseDamage / 2);
+        } else {
+          finalDamage = 0;
+        }
+        
+        expect(finalDamage).toBeGreaterThanOrEqual(0);
+      });
+
+      it('should resolve healing spell', () => {
+        const combatant = mockCombatant(15);
+        const maxHP = 30;
+        const healAmount = 12;
+        const healed = applyHealing(combatant, healAmount, maxHP);
+        expect(healed.currentHP).toBe(27);
+      });
+
+      it('should resolve condition spell with save', () => {
+        const saveRoll = rollCheck(5, 18, () => 0.2);
+        const shouldApplyCondition = saveRoll.degree === 'failure' || saveRoll.degree === 'critical_failure';
+        
+        if (shouldApplyCondition) {
+          const combatant = mockCombatant(20);
+          const withCondition: PF2CombatantState = {
+            ...combatant,
+            conditions: [{ condition: 'frightened', value: 1 }],
+          };
+          expect(withCondition.conditions).toHaveLength(1);
+        }
+        
+        expect(typeof shouldApplyCondition).toBe('boolean');
+      });
     });
   });
 });

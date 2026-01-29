@@ -246,3 +246,19 @@ export type PF2PendingDefense = {
   damageType?: PF2DamageType;
   criticalSpecialization?: string;
 };
+
+// --- Spell Definition Types ---
+
+export type SpellDefinition = {
+  name: string;
+  level: number;
+  tradition: string;
+  castActions: 1 | 2 | 3;
+  targetType: 'single' | 'area' | 'self';
+  save?: 'fortitude' | 'reflex' | 'will';
+  damageFormula?: string;
+  damageType?: PF2DamageType;
+  healFormula?: string;
+  conditions?: ConditionValue[];
+  duration?: string;
+};
