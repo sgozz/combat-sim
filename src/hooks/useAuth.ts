@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { ServerToClientMessage, User } from '../../shared/types'
-import type { ScreenState, ConnectionState } from './useGameSocket'
+import type { ConnectionState } from './useGameSocket'
 
 const SESSION_TOKEN_KEY = 'tcs.sessionToken'
-const SCREEN_STATE_KEY = 'tcs.screenState'
 const ACTIVE_MATCH_KEY = 'tcs.activeMatchId'
 
 type UseAuthParams = {
@@ -11,7 +10,6 @@ type UseAuthParams = {
   setSocket: (ws: WebSocket | null) => void
   messageHandlers: React.MutableRefObject<Array<(msg: ServerToClientMessage) => boolean>>
   setLogs: React.Dispatch<React.SetStateAction<string[]>>
-  setScreen: React.Dispatch<React.SetStateAction<ScreenState>>
   setActiveMatchId: React.Dispatch<React.SetStateAction<string | null>>
 }
 
@@ -20,7 +18,6 @@ export const useAuth = ({
   setSocket,
   messageHandlers,
   setLogs,
-  setScreen,
   setActiveMatchId,
 }: UseAuthParams) => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected')
@@ -104,15 +101,11 @@ export const useAuth = ({
           connectingRef.current = false
           reconnectDelayRef.current = 1000
           
-          const savedScreen = localStorage.getItem(SCREEN_STATE_KEY) as ScreenState | null
           const savedMatchId = localStorage.getItem(ACTIVE_MATCH_KEY)
           
-          if (savedMatchId && (savedScreen === 'match' || savedScreen === 'waiting')) {
+          if (savedMatchId) {
             setActiveMatchId(savedMatchId)
-            setScreen(savedScreen)
             pendingRejoinRef.current = savedMatchId
-          } else {
-            setScreen('matches')
           }
           return true
         }
@@ -120,7 +113,6 @@ export const useAuth = ({
         case 'session_invalid':
           localStorage.removeItem(SESSION_TOKEN_KEY)
           setConnectionState('disconnected')
-          setScreen('welcome')
           connectingRef.current = false
           return true
         
@@ -144,7 +136,7 @@ export const useAuth = ({
       const index = messageHandlers.current.indexOf(handleMessage)
       if (index > -1) messageHandlers.current.splice(index, 1)
     }
-  }, [messageHandlers, setScreen, setActiveMatchId])
+  }, [messageHandlers, setActiveMatchId])
 
   // Initial reconnect attempt
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
+import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnStepper } from './TurnStepper'
@@ -18,14 +19,11 @@ type GameScreenProps = {
   matchState: MatchState | null
   player: Player | null
   lobbyPlayers: Player[]
-  lobbyId: string | null
-  matchCode: string | null
   logs: string[]
   visualEffects: (VisualEffect & { id: string })[]
   moveTarget: GridPosition | null
   selectedTargetId: string | null
   isPlayerTurn: boolean
-  isCreator: boolean
   isSpectating?: boolean
   pendingAction: PendingAction | null
   onGridClick: (position: GridPosition) => void
@@ -33,9 +31,6 @@ type GameScreenProps = {
   onAction: (action: string, payload?: { type: string; [key: string]: unknown }) => void
   onPendingActionResponse: (response: string) => void
   onLeaveLobby: () => void
-  onStartMatch: (botCount: number) => void
-  onOpenCharacterEditor: () => void
-  inLobbyButNoMatch: boolean
 }
 
 const MANEUVER_KEYS: Record<string, string> = {
@@ -52,14 +47,11 @@ export const GameScreen = ({
   matchState,
   player,
   lobbyPlayers,
-  lobbyId: _lobbyId,
-  matchCode,
   logs,
   visualEffects,
   moveTarget,
   selectedTargetId,
   isPlayerTurn,
-  isCreator,
   isSpectating = false,
   pendingAction,
   onGridClick,
@@ -67,11 +59,9 @@ export const GameScreen = ({
   onAction,
   onPendingActionResponse,
   onLeaveLobby,
-  onStartMatch,
-  onOpenCharacterEditor,
-  inLobbyButNoMatch
 }: GameScreenProps) => {
-  void _lobbyId
+  const { matchId } = useParams<{ matchId: string }>()
+  void matchId
   const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
   const hasSeenMatchStart = useRef(false)
    const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
@@ -288,109 +278,7 @@ export const GameScreen = ({
          </aside>
        )}
 
-      {inLobbyButNoMatch && (
-        <div className="lobby-setup-overlay">
-          <div className="lobby-setup-modal">
-            <h2>Match Setup</h2>
-            
-            <div className="setup-section">
-              <label>Players ({lobbyPlayers.length}/4)</label>
-              <div className="setup-players-list">
-                {lobbyPlayers.map(p => (
-                  <div key={p.id} className="setup-player-item">
-                    <span className="setup-player-icon">{p.id === player?.id ? '👤' : '🎮'}</span>
-                    <span className="setup-player-name">{p.name}</span>
-                    {p.id === player?.id && <span className="setup-player-you">(you)</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="setup-section">
-              <label>Invite Link</label>
-              <div className="setup-invite-row">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`${window.location.origin}?join=${matchCode ?? ''}`}
-                  className="setup-invite-input"
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                />
-                <button 
-                  className="setup-copy-btn"
-                  onClick={() => {
-                    if (matchCode) {
-                      navigator.clipboard.writeText(`${window.location.origin}?join=${matchCode}`)
-                    }
-                  }}
-                  disabled={!matchCode}
-                >
-                  📋
-                </button>
-              </div>
-            </div>
-
-            <div className="setup-section">
-              <label>Your Character</label>
-              <button className="setup-btn" onClick={onOpenCharacterEditor}>
-                ✏️ Edit Character
-              </button>
-            </div>
-
-            {isCreator && (
-              <div className="setup-section">
-                <label>AI Opponents</label>
-                <div className="setup-bot-row">
-                  <button 
-                    className="setup-bot-btn"
-                    onClick={() => {
-                      const input = document.querySelector('.bot-count-display') as HTMLElement
-                      const currentBots = parseInt(input?.dataset.count ?? '1')
-                      const newCount = Math.max(0, currentBots - 1)
-                      if (input) {
-                        input.dataset.count = String(newCount)
-                        input.textContent = String(newCount)
-                      }
-                    }}
-                  >−</button>
-                  <span className="bot-count-display" data-count="1">1</span>
-                  <button 
-                    className="setup-bot-btn"
-                    onClick={() => {
-                      const current = lobbyPlayers.length
-                      const maxBots = 4 - current
-                      const input = document.querySelector('.bot-count-display') as HTMLElement
-                      const currentBots = parseInt(input?.dataset.count ?? '1')
-                      const newCount = Math.min(maxBots, currentBots + 1)
-                      if (input) {
-                        input.dataset.count = String(newCount)
-                        input.textContent = String(newCount)
-                      }
-                    }}
-                  >+</button>
-                </div>
-              </div>
-            )}
-
-            <div className="setup-actions">
-              <button 
-                className="setup-btn primary"
-                onClick={() => {
-                  const input = document.querySelector('.bot-count-display') as HTMLElement
-                  const botCount = parseInt(input?.dataset.count ?? '1')
-                  onStartMatch(botCount)
-                }}
-                disabled={lobbyPlayers.length < 1}
-              >
-                ▶️ Start Match
-              </button>
-              <button className="setup-btn danger" onClick={onLeaveLobby}>
-                🚪 Leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
        {isDefending && pendingDefense && defenderCharacter && currentCombatant && matchState?.rulesetId === 'gurps' && (() => {
          const { DefenseModal: DefenseModalSlot } = getRulesetUiSlots(matchState?.rulesetId);

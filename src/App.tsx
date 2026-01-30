@@ -2,13 +2,14 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
 import { WelcomeScreen } from './components/WelcomeScreen'
+import { Dashboard } from './components/Dashboard'
+import { CharacterArmory } from './components/armory/CharacterArmory'
+import { LobbyScreen } from './components/lobby/LobbyScreen'
 import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
-import { getRulesetComponents } from './components/rulesets'
-import { assertRulesetId } from '../shared/rulesets/defaults'
-import { rulesets, isGurpsCombatant } from '../shared/rulesets'
+import { isGurpsCombatant } from '../shared/rulesets'
 
-import type { GridPosition, CharacterSheet, RulesetId } from '../shared/types'
+import type { GridPosition, RulesetId } from '../shared/types'
 import './App.css'
 
 function AppRoutes() {
@@ -27,7 +28,6 @@ function AppRoutes() {
     pendingAction,
     authError,
     spectatingMatchId,
-    setScreen,
     setLogs,
     setActiveMatchId,
     setPendingAction,
@@ -42,8 +42,6 @@ function AppRoutes() {
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
-  const [showCharacterModal, setShowCharacterModal] = useState(false)
-  const [editingCharacter, setEditingCharacter] = useState<CharacterSheet | null>(null)
   
   const pendingJoinCodeRef = useRef<string | null>((() => {
     const params = new URLSearchParams(window.location.search)
@@ -58,11 +56,15 @@ function AppRoutes() {
   useEffect(() => {
     if (connectionState === 'connected' && user) {
       refreshMyMatches()
+      
+      // Handle pending join code
       if (pendingJoinCodeRef.current && !activeMatchId) {
         sendMessage({ type: 'join_match', code: pendingJoinCodeRef.current })
         pendingJoinCodeRef.current = null
-      } else if (location.pathname === '/') {
-        navigate('/matches', { replace: true })
+      }
+      // Reconnection logic: navigate to /home if on welcome screen
+      else if (location.pathname === '/') {
+        navigate('/home', { replace: true })
       }
     } else if (connectionState === 'disconnected' && location.pathname !== '/') {
       navigate('/', { replace: true })
@@ -70,17 +72,19 @@ function AppRoutes() {
   }, [connectionState, user, navigate, location.pathname, activeMatchId, sendMessage, refreshMyMatches])
 
   useEffect(() => {
-    if (activeMatchId && location.pathname === '/matches') {
-      navigate('/game', { replace: true })
-    } else if (!activeMatchId && location.pathname === '/game') {
-      navigate('/matches', { replace: true })
+    if (activeMatchId) {
+      const match = myMatches.find(m => m.id === activeMatchId)
+      if (match) {
+        if (match.status === 'waiting') {
+          navigate(`/lobby/${activeMatchId}`, { replace: true })
+        } else if (match.status === 'active' || match.status === 'paused') {
+          navigate(`/game/${activeMatchId}`, { replace: true })
+        }
+      }
     }
-  }, [activeMatchId, navigate, location.pathname])
+  }, [activeMatchId, myMatches, navigate])
 
-  const handleWelcomeComplete = (username: string) => {
-    setScreen('matches')
-    register(username)
-  }
+
 
   const handleCreateMatch = (name: string, rulesetId: RulesetId) => {
     sendMessage({ type: 'create_match', name, maxPlayers: 4, rulesetId })
@@ -92,10 +96,6 @@ function AppRoutes() {
 
   const handleSelectMatch = (matchId: string) => {
     setActiveMatchId(matchId)
-    const match = myMatches.find(m => m.id === matchId)
-    if (match && match.status !== 'waiting') {
-      navigate('/game')
-    }
   }
 
   const handleGameAction = useCallback((_action: string, payload?: { type: string; [key: string]: unknown }) => {
@@ -195,10 +195,53 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={
-        connectionState === 'connected' ? (
-          <Navigate to="/matches" replace />
+        user ? (
+          <Navigate to="/home" replace />
         ) : (
-          <WelcomeScreen onComplete={handleWelcomeComplete} authError={authError} />
+          <WelcomeScreen onComplete={register} authError={authError} />
+        )
+      } />
+      
+      <Route path="/home" element={
+        user ? <Dashboard /> : <Navigate to="/" replace />
+      } />
+      
+      <Route path="/armory" element={
+        user ? <CharacterArmory /> : <Navigate to="/" replace />
+      } />
+      
+      <Route path="/lobby/:matchId" element={
+        user ? <LobbyScreen /> : <Navigate to="/" replace />
+      } />
+      
+      <Route path="/game/:matchId" element={
+        !user ? (
+          <Navigate to="/" replace />
+        ) : (
+          <>
+            <GameScreen
+              matchState={matchState}
+              player={user ? { id: user.id, name: user.username, isBot: user.isBot, characterId: '' } : null}
+              lobbyPlayers={lobbyPlayers}
+              logs={logs}
+              visualEffects={visualEffects}
+              moveTarget={moveTarget}
+              selectedTargetId={selectedTargetId}
+              isPlayerTurn={isPlayerTurn}
+              isSpectating={!!spectatingMatchId}
+              pendingAction={pendingAction}
+              onGridClick={handleGridClick}
+              onCombatantClick={handleCombatantClick}
+              onAction={handleGameAction}
+              onPendingActionResponse={(response) => {
+                if (activeMatchId) {
+                  sendMessage({ type: 'action', matchId: activeMatchId, action: 'respond_exit', payload: { type: 'respond_exit', response } })
+                }
+                setPendingAction(null)
+              }}
+              onLeaveLobby={spectatingMatchId ? () => stopSpectating(spectatingMatchId) : handleLeaveMatch}
+            />
+          </>
         )
       } />
       
@@ -221,75 +264,7 @@ function AppRoutes() {
         )
       } />
       
-      <Route path="/game" element={
-        !user ? (
-          <Navigate to="/" replace />
-        ) : (
-          <>
-            <GameScreen
-              matchState={matchState}
-              player={user ? { id: user.id, name: user.username, isBot: user.isBot, characterId: '' } : null}
-              lobbyPlayers={lobbyPlayers}
-              lobbyId={activeMatchId}
-              matchCode={currentMatch?.code ?? matchState?.code ?? null}
-              logs={logs}
-              visualEffects={visualEffects}
-              moveTarget={moveTarget}
-              selectedTargetId={selectedTargetId}
-              isPlayerTurn={isPlayerTurn}
-              isCreator={currentMatch?.creatorId === user?.id}
-              isSpectating={!!spectatingMatchId}
-              pendingAction={pendingAction}
-              onGridClick={handleGridClick}
-              onCombatantClick={handleCombatantClick}
-              onAction={handleGameAction}
-              onPendingActionResponse={(response) => {
-                if (activeMatchId) {
-                  sendMessage({ type: 'action', matchId: activeMatchId, action: 'respond_exit', payload: { type: 'respond_exit', response } })
-                }
-                setPendingAction(null)
-              }}
-              onLeaveLobby={spectatingMatchId ? () => stopSpectating(spectatingMatchId) : handleLeaveMatch}
-              onStartMatch={(botCount) => {
-                if (activeMatchId) {
-                  sendMessage({ type: 'start_combat', matchId: activeMatchId, botCount })
-                }
-              }}
-               onOpenCharacterEditor={() => {
-                   const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
-                   setEditingCharacter(rulesets[rulesetId].ruleset.createCharacter(user?.username ?? 'New Character'))
-                   setShowCharacterModal(true)
-                 }}
-              inLobbyButNoMatch={!matchState && !!activeMatchId && currentMatch?.status === 'waiting'}
-            />
-            
-             {showCharacterModal && (() => {
-                const rulesetId = assertRulesetId(matchState?.rulesetId ?? currentMatch?.rulesetId)
-                const { CharacterEditor } = getRulesetComponents(rulesetId)
-                return (
-                  <CharacterEditor 
-                    character={editingCharacter || rulesets[rulesetId].ruleset.createCharacter(user?.username ?? 'New Character')}
-                    setCharacter={setEditingCharacter}
-                   onSave={() => {
-                     if (editingCharacter && activeMatchId) {
-                       sendMessage({ type: 'select_character', matchId: activeMatchId, character: editingCharacter })
-                       setShowCharacterModal(false)
-                       setEditingCharacter(null)
-                     }
-                   }}
-                   onCancel={() => {
-                     setShowCharacterModal(false)
-                     setEditingCharacter(null)
-                   }}
-                 />
-               )
-             })()}
-          </>
-        )
-      } />
-      
-      <Route path="/lobby" element={<Navigate to="/matches" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
     </Routes>
   )
 }

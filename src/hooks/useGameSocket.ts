@@ -5,7 +5,6 @@ import { useMatches } from './useMatches'
 import { useMatchState } from './useMatchState'
 import { useCharacterRoster } from './useCharacterRoster'
 
-export type ScreenState = 'welcome' | 'matches' | 'waiting' | 'match'
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected'
 
 export const useGameSocket = () => {
@@ -40,7 +39,6 @@ export const useGameSocket = () => {
     setSocket,
     messageHandlers,
     setLogs: matchState.setLogs,
-    setScreen: matchState.setScreen,
     setActiveMatchId: matchState.setActiveMatchId,
   })
 
@@ -51,7 +49,6 @@ export const useGameSocket = () => {
     setActiveMatchId: matchState.setActiveMatchId,
     setMatchState: matchState.setMatchState,
     setLogs: matchState.setLogs,
-    setScreen: matchState.setScreen,
   })
 
   const roster = useCharacterRoster()
@@ -65,12 +62,10 @@ export const useGameSocket = () => {
     activeMatchId: matchState.activeMatchId,
     matchState: matchState.matchState,
     logs: matchState.logs,
-    screen: matchState.screen,
     visualEffects: matchState.visualEffects,
     pendingAction: matchState.pendingAction,
     authError: auth.authError,
     spectatingMatchId: matches.spectatingMatchId,
-    setScreen: matchState.setScreen,
     setLogs: matchState.setLogs,
     setActiveMatchId: matchState.setActiveMatchId,
     setPendingAction: matchState.setPendingAction,

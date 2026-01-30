@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { ServerToClientMessage, MatchState, VisualEffect, PendingAction } from '../../shared/types'
-import type { ScreenState } from './useGameSocket'
 import { uuid } from '../utils/uuid'
 
-const SCREEN_STATE_KEY = 'tcs.screenState'
 const ACTIVE_MATCH_KEY = 'tcs.activeMatchId'
 
 type UseMatchStateParams = {
@@ -16,7 +14,6 @@ export const useMatchState = ({
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null)
   const [matchState, setMatchState] = useState<MatchState | null>(null)
   const [logs, setLogs] = useState<string[]>([])
-  const [screen, setScreen] = useState<ScreenState>('welcome')
   const [visualEffects, setVisualEffects] = useState<(VisualEffect & { id: string })[]>([])
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
 
@@ -26,9 +23,6 @@ export const useMatchState = ({
         case 'match_state':
           setMatchState(message.state)
           setLogs(message.state.log)
-          if (message.state.status === 'active' || message.state.status === 'paused') {
-            setScreen('match')
-          }
           return true
         
         case 'visual_effect': {
@@ -54,7 +48,6 @@ export const useMatchState = ({
             localStorage.removeItem(ACTIVE_MATCH_KEY)
             setActiveMatchId(null)
             setMatchState(null)
-            setScreen('matches')
             return true
           }
           return false
@@ -73,12 +66,6 @@ export const useMatchState = ({
   }, [messageHandlers, activeMatchId])
 
   useEffect(() => {
-    if (screen !== 'welcome') {
-      localStorage.setItem(SCREEN_STATE_KEY, screen)
-    }
-  }, [screen])
-
-  useEffect(() => {
     if (activeMatchId) {
       localStorage.setItem(ACTIVE_MATCH_KEY, activeMatchId)
     } else {
@@ -93,8 +80,6 @@ export const useMatchState = ({
     setMatchState,
     logs,
     setLogs,
-    screen,
-    setScreen,
     visualEffects,
     pendingAction,
     setPendingAction,

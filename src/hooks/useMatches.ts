@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { ServerToClientMessage, MatchSummary, MatchState } from '../../shared/types'
-import type { ScreenState } from './useGameSocket'
 
 type UseMatchesParams = {
   sendMessage: (payload: unknown) => void
@@ -9,7 +8,6 @@ type UseMatchesParams = {
   setActiveMatchId: React.Dispatch<React.SetStateAction<string | null>>
   setMatchState: React.Dispatch<React.SetStateAction<MatchState | null>>
   setLogs: React.Dispatch<React.SetStateAction<string[]>>
-  setScreen: React.Dispatch<React.SetStateAction<ScreenState>>
 }
 
 export const useMatches = ({
@@ -19,7 +17,6 @@ export const useMatches = ({
   setActiveMatchId,
   setMatchState,
   setLogs,
-  setScreen,
 }: UseMatchesParams) => {
   const [myMatches, setMyMatches] = useState<MatchSummary[]>([])
   const [publicMatches, setPublicMatches] = useState<MatchSummary[]>([])
@@ -42,8 +39,7 @@ export const useMatches = ({
     setSpectatingMatchId(null)
     setActiveMatchId(null)
     setMatchState(null)
-    setScreen('matches')
-  }, [sendMessage, setActiveMatchId, setMatchState, setScreen])
+  }, [sendMessage, setActiveMatchId, setMatchState])
 
   useEffect(() => {
     const handleMessage = (message: ServerToClientMessage): boolean => {
@@ -57,14 +53,12 @@ export const useMatches = ({
           setActiveMatchId(message.match.id)
           setMatchState(null)
           setLogs(['Joined match.'])
-          setScreen('waiting')
           return true
         
         case 'match_joined':
           setActiveMatchId(message.matchId)
           setMatchState(null)
           setLogs(['Joined match.'])
-          setScreen('waiting')
           return true
         
         case 'match_left':
@@ -72,7 +66,6 @@ export const useMatches = ({
             setActiveMatchId(null)
             setMatchState(null)
             setLogs(prev => [...prev, 'Left match.'])
-            setScreen('matches')
           }
           setMyMatches(prev => prev.filter(m => m.id !== message.matchId))
           return true
@@ -137,14 +130,12 @@ export const useMatches = ({
         case 'spectating':
           setSpectatingMatchId(message.matchId)
           setActiveMatchId(message.matchId)
-          setScreen('match')
           return true
         
         case 'stopped_spectating':
           setSpectatingMatchId(null)
           setActiveMatchId(null)
           setMatchState(null)
-          setScreen('matches')
           return true
         
         default:
@@ -158,7 +149,7 @@ export const useMatches = ({
       const index = messageHandlers.current.indexOf(handleMessage)
       if (index > -1) messageHandlers.current.splice(index, 1)
     }
-  }, [messageHandlers, activeMatchId, setActiveMatchId, setMatchState, setLogs, setScreen])
+  }, [messageHandlers, activeMatchId, setActiveMatchId, setMatchState, setLogs])
 
   return {
     myMatches,
