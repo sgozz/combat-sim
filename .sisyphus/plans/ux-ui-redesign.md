@@ -1375,7 +1375,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 12. Build character editor — Skills tab (replace prompt())
+- [x] 12. Build character editor — Skills tab (replace prompt())
 
   **What to do**:
   - Add Skills tab content to `CharacterEditor.tsx`

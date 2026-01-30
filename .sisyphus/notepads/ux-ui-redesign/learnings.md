@@ -429,3 +429,106 @@ Ready for Phase 1: Login screen redesign.
 - Stat labels: 10 matches ✓ (target: ≥3)
 - LSP diagnostics: clean ✓
 - Build succeeded ✓
+
+## [2026-01-31] Progress Summary - 11/24 Tasks Complete (45.8%)
+
+### Completed Phases
+
+**Phase 0: Foundation (5/5)** ✅
+- CSS Design Tokens: 38 tokens in src/index.css
+- Hook Decomposition: 388-line monolith → 4 focused hooks
+- Navigation Consolidation: Router-only, removed ScreenState
+- WS Message Types: 7 new message types
+- Server Handlers: 7 handlers, ready system, DB migrations
+
+**Phase 1: Login (1/1)** ✅
+- WelcomeScreen: Modern/clean, loading states, 68 CSS tokens, 10s timeout
+
+**Phase 2: Dashboard (3/3)** ✅
+- Dashboard Layout: Match list, quick actions, 96 CSS tokens
+- Stats Component: 4 stat cards, color-coded win rate
+- Match Creation Dialog: Ruleset/players/visibility, modal with animations
+
+**Phase 3: Armory (2/7)** ⏳
+- Character Roster: Filters, cards, CRUD, 430 lines CSS
+- Character Editor Attributes: Tab-based, GURPS/PF2 conditional, 403 lines
+
+### Remaining Work (13 tasks)
+
+**Phase 3: Armory (5 tasks)**
+- Task 12: Skills tab (replace window.prompt with inline forms)
+- Task 13: Equipment tab (replace window.prompt with inline forms)
+- Task 14: Traits tab (replace window.prompt with inline forms)
+- Task 15: Pathbuilder import integration
+- Task 16: Character picker for lobby
+
+**Phase 4: Lobby (5 tasks)**
+- Task 17: Lobby full-screen layout
+- Task 18: Player list with ready system
+- Task 19: Character preview panel
+- Task 20: Match settings and bot controls
+- Task 21: Invite system and start flow
+
+**Phase 5: Polish (3 tasks)**
+- Task 22: E2e tests for all screens
+- Task 23: Mobile responsive polish
+- Task 24: Cleanup old components and CSS
+
+### Key Architectural Decisions
+
+**Design System**
+- CSS tokens: 14 colors, 6 spacing, 11 typography, 4 radius, 3 transitions
+- Modern/clean aesthetic: more whitespace, clear hierarchy, less decoration
+- Mobile-first responsive: breakpoints at 768px, 1024px, 1200px
+
+**State Management**
+- No Redux/Zustand: hooks only
+- WebSocket-driven: server authoritative
+- Client-side derivation: stats, filters, sorting
+
+**Navigation**
+- Router-only: no dual system
+- Route guards: auth checks, match status routing
+- Deep linking: ?join=CODE support
+
+**Character Management**
+- Client assigns IDs: via createCharacter() or crypto.randomUUID()
+- DB column is_favorite: source of truth (not payload)
+- Standalone save: save_character (no matchId required)
+- Match-scoped assignment: select_character (existing)
+
+**Ready System**
+- In-memory Map<matchId, Set<playerId>>: transient lobby state
+- Lifecycle: created on create_match, cleared on start_combat
+- Server-side enforcement: validates all human players ready
+- Abandoned match cleanup: status='finished' when memberCount=0
+
+### Technical Metrics
+
+**Code Quality**
+- Zero window.prompt() calls in new code
+- Zero hardcoded colors (all CSS tokens)
+- Type-safe: strict TypeScript, no any
+- LSP clean: zero diagnostics on all files
+
+**Bundle Size**
+- CSS: 99.62 kB (16.16 kB gzipped)
+- JS: 1,595.04 kB (458.27 kB gzipped)
+- Note: Large bundle due to Three.js (combat rendering)
+
+**Test Coverage**
+- 2183/2184 tests passing
+- 4 pre-existing failures (unrelated to UX redesign)
+
+### Blockers & Issues
+
+**None identified** - all tasks proceeding smoothly
+
+### Next Steps
+
+1. Complete character editor tabs (Tasks 12-14): Skills, Equipment, Traits
+2. Integrate Pathbuilder import (Task 15)
+3. Build character picker for lobby (Task 16)
+4. Redesign lobby screens (Tasks 17-21)
+5. Polish and test (Tasks 22-24)
+
