@@ -92,6 +92,19 @@ export const initializeDatabase = (): BetterSqliteDatabase => {
     WHERE ruleset_id IS NULL;
   `);
 
+  // Migration: Add is_favorite column to characters table
+  const characterColumns = db.prepare("PRAGMA table_info(characters)").all() as { name: string }[];
+  const hasIsFavorite = characterColumns.some((column) => column.name === 'is_favorite');
+  if (!hasIsFavorite) {
+    db.exec("ALTER TABLE characters ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0");
+  }
+
+  // Migration: Add is_public column to matches table
+  const hasIsPublic = matchColumns.some((column) => column.name === 'is_public');
+  if (!hasIsPublic) {
+    db.exec("ALTER TABLE matches ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0");
+  }
+
   return db;
 };
 
@@ -158,18 +171,22 @@ export const loadCharacterById = (characterId: string): CharacterSheet | null =>
 
 export const loadCharactersByOwner = (ownerId: string): CharacterSheet[] => {
   const rows = state.db.prepare(
-    "SELECT data_json FROM characters WHERE owner_id = ?"
-  ).all(ownerId) as CharacterRow[];
-  return rows.map(row => JSON.parse(row.data_json) as CharacterSheet);
+    "SELECT data_json, is_favorite FROM characters WHERE owner_id = ?"
+  ).all(ownerId) as Array<{ data_json: string; is_favorite: number }>;
+  return rows.map(row => {
+    const sheet = JSON.parse(row.data_json) as CharacterSheet;
+    sheet.isFavorite = Boolean(row.is_favorite);
+    return sheet;
+  });
 };
 
 export const upsertCharacter = (character: CharacterSheet, ownerId: string): void => {
   state.db.prepare(
-    "INSERT OR REPLACE INTO characters (id, owner_id, name, data_json) VALUES (?, ?, ?, ?)"
+    "INSERT INTO characters (id, owner_id, name, data_json) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, data_json = excluded.data_json"
   ).run(character.id, ownerId, character.name, JSON.stringify(character));
 };
 
-export const createMatch = (name: string, maxPlayers: number, createdBy: string, rulesetId: string): { id: string; code: string } => {
+export const createMatch = (name: string, maxPlayers: number, createdBy: string, rulesetId: string, isPublic = false): { id: string; code: string } => {
   const id = randomUUID();
   let code = generateShortCode();
   
@@ -183,8 +200,8 @@ export const createMatch = (name: string, maxPlayers: number, createdBy: string,
   
   const now = Math.floor(Date.now() / 1000);
   state.db.prepare(
-    "INSERT INTO matches (id, code, name, max_players, status, created_by, ruleset_id, created_at) VALUES (?, ?, ?, ?, 'waiting', ?, ?, ?)"
-  ).run(id, code, name, maxPlayers, createdBy, rulesetId, now);
+    "INSERT INTO matches (id, code, name, max_players, status, created_by, ruleset_id, is_public, created_at) VALUES (?, ?, ?, ?, 'waiting', ?, ?, ?, ?)"
+  ).run(id, code, name, maxPlayers, createdBy, rulesetId, isPublic ? 1 : 0, now);
   
   return { id, code };
 };
@@ -271,6 +288,78 @@ export const getMatchMemberCount = (matchId: string): number => {
     "SELECT COUNT(*) as count FROM match_members WHERE match_id = ?"
   ).get(matchId) as { count: number } | undefined;
   return result?.count ?? 0;
+};
+
+export const countActiveMatchesForCharacter = (characterId: string): number => {
+  const result = state.db.prepare(`
+    SELECT COUNT(*) as count
+    FROM match_members mm
+    INNER JOIN matches m ON mm.match_id = m.id
+    WHERE mm.character_id = ? AND m.status IN ('active', 'paused')
+  `).get(characterId) as { count: number };
+  return result.count;
+};
+
+export const clearCharacterFromWaitingMatches = (characterId: string): void => {
+  state.db.prepare(`
+    UPDATE match_members SET character_id = NULL
+    WHERE character_id = ?
+    AND match_id IN (SELECT id FROM matches WHERE status = 'waiting')
+  `).run(characterId);
+};
+
+export const clearDefaultCharacter = (characterId: string): void => {
+  state.db.prepare(`
+    UPDATE users SET default_character_id = NULL WHERE default_character_id = ?
+  `).run(characterId);
+};
+
+export const deleteCharacter = (characterId: string, ownerId: string): void => {
+  state.db.prepare(`
+    DELETE FROM characters WHERE id = ? AND owner_id = ?
+  `).run(characterId, ownerId);
+};
+
+export const getPublicWaitingMatches = (): MatchRow[] => {
+  return state.db.prepare(`
+    SELECT * FROM matches WHERE is_public = 1 AND status = 'waiting' ORDER BY created_at DESC
+  `).all() as MatchRow[];
+};
+
+export const getReadyPlayers = (matchId: string): string[] => {
+  return Array.from(state.readySets.get(matchId) ?? []);
+};
+
+export const buildJoinableMatchSummary = (matchRow: MatchRow, forUserId: string): MatchSummary => {
+  const members = getMatchMembers(matchRow.id);
+  const players: { id: string; name: string; isConnected: boolean }[] = [];
+  
+  for (const member of members) {
+    const user = findUserById(member.user_id);
+    if (user) {
+      players.push({
+        id: user.id,
+        name: user.username,
+        isConnected: member.is_connected === 1
+      });
+    }
+  }
+  
+  const readyPlayers = getReadyPlayers(matchRow.id);
+  
+  return {
+    id: matchRow.id,
+    code: matchRow.code,
+    name: matchRow.name,
+    creatorId: matchRow.created_by,
+    playerCount: members.length,
+    maxPlayers: matchRow.max_players,
+    rulesetId: assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined),
+    status: matchRow.status as MatchSummary['status'],
+    players,
+    isMyTurn: false,
+    readyPlayers,
+  };
 };
 
 export const buildMatchSummary = (matchRow: MatchRow, forUserId: string): MatchSummary => {

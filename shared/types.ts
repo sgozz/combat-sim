@@ -139,7 +139,7 @@ export type ServerToClientMessage =
     | { type: "my_matches"; matches: MatchSummary[] }
     | { type: "public_matches"; matches: MatchSummary[] }
     | { type: "match_created"; match: MatchSummary }
-    | { type: "match_joined"; matchId: Id }
+    | { type: "match_joined"; matchId: Id; readyPlayers?: string[] }
     | { type: "match_left"; matchId: Id }
     | { type: "match_state"; state: MatchState }
     | { type: "spectating"; matchId: Id }

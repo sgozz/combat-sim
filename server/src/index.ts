@@ -2,7 +2,7 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
-import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, removeMatchMember, updateMatchState } from "./db";
+import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, removeMatchMember, updateMatchState, getMatchMemberCount } from "./db";
 import { sendMessage, sendToMatch } from "./helpers";
 import { handleMessage } from "./handlers";
 
@@ -49,7 +49,19 @@ const startServer = async () => {
         const userMatches = getUserMatches(connState.userId);
         for (const matchRow of userMatches) {
           if (matchRow.status === 'waiting') {
+            const readySet = state.readySets.get(matchRow.id);
+            if (readySet) {
+              readySet.delete(connState.userId);
+            }
+            
             removeMatchMember(matchRow.id, connState.userId);
+            
+            const memberCount = getMatchMemberCount(matchRow.id);
+            if (memberCount === 0) {
+              state.readySets.delete(matchRow.id);
+              state.db.prepare(`UPDATE matches SET status = 'finished' WHERE id = ?`).run(matchRow.id);
+            }
+            
             await sendToMatch(matchRow.id, { 
               type: "player_left", 
               matchId: matchRow.id, 

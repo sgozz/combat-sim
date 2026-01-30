@@ -32,6 +32,14 @@ import {
   getMatchMemberCount,
   getActiveMatches,
   buildPublicMatchSummary,
+  loadCharactersByOwner,
+  countActiveMatchesForCharacter,
+  clearCharacterFromWaitingMatches,
+  clearDefaultCharacter,
+  deleteCharacter,
+  getPublicWaitingMatches,
+  buildJoinableMatchSummary,
+  getReadyPlayers,
 } from "./db";
 import { 
   sendMessage,
@@ -69,7 +77,14 @@ export const handleMessage = async (
       state.connections.set(socket, { sessionToken: session.token, userId: user.id });
       state.addUserSocket(user.id, socket);
       
-      sendMessage(socket, { type: "auth_ok", user, sessionToken: session.token });
+      const userMatches = await getUserMatches(user.id);
+      const activeMatches = await Promise.all(
+        userMatches
+          .filter(row => row.status !== 'finished')
+          .map(row => buildMatchSummary(row, user.id))
+      );
+      
+      sendMessage(socket, { type: "auth_ok", user, sessionToken: session.token, activeMatches });
       return;
     }
     
@@ -92,9 +107,15 @@ export const handleMessage = async (
       state.connections.set(socket, { sessionToken: session.token, userId: user.id });
       state.addUserSocket(user.id, socket);
       
-      sendMessage(socket, { type: "auth_ok", user, sessionToken: session.token });
-      
       const userMatches = await getUserMatches(user.id);
+      const activeMatches = await Promise.all(
+        userMatches
+          .filter(row => row.status !== 'finished')
+          .map(row => buildMatchSummary(row, user.id))
+      );
+      
+      sendMessage(socket, { type: "auth_ok", user, sessionToken: session.token, activeMatches });
+      
       const summaries = await Promise.all(
         userMatches.map(row => buildMatchSummary(row, user.id))
       );
@@ -165,8 +186,10 @@ export const handleMessage = async (
       const user = requireUser(socket);
       if (!user) return;
       
-      const { id } = await createMatch(message.name, message.maxPlayers, user.id, message.rulesetId);
+      const { id } = await createMatch(message.name, message.maxPlayers, user.id, message.rulesetId, message.isPublic ?? false);
       await addMatchMember(id, user.id, null);
+      
+      state.readySets.set(id, new Set());
       
       const matchRow = await findMatchById(id);
       if (!matchRow) {
@@ -176,7 +199,9 @@ export const handleMessage = async (
       
       const summary = await buildMatchSummary(matchRow, user.id);
       sendMessage(socket, { type: "match_created", match: summary });
-      sendMessage(socket, { type: "match_joined", matchId: id });
+      
+      const readyPlayers = getReadyPlayers(id);
+      sendMessage(socket, { type: "match_joined", matchId: id, readyPlayers });
       return;
     }
     
@@ -211,7 +236,8 @@ export const handleMessage = async (
         }
       }
       
-      sendMessage(socket, { type: "match_joined", matchId: matchRow.id });
+      const readyPlayers = getReadyPlayers(matchRow.id);
+      sendMessage(socket, { type: "match_joined", matchId: matchRow.id, readyPlayers });
       
       const updatedMatchRow = await findMatchById(matchRow.id);
       if (updatedMatchRow) {
@@ -325,6 +351,21 @@ export const handleMessage = async (
       }
       
       const members = await getMatchMembers(message.matchId);
+      const humanMembers = members.filter(m => {
+        const u = state.users.get(m.user_id);
+        return u && !u.isBot;
+      });
+      
+      const readySet = state.readySets.get(message.matchId) ?? new Set();
+      const allReady = humanMembers.every(m => readySet.has(m.user_id));
+      
+      if (!allReady) {
+        sendMessage(socket, { type: "error", message: "Not all players are ready" });
+        return;
+      }
+      
+      state.readySets.delete(message.matchId);
+      
       const requestedBots = message.botCount ?? 0;
       const maxBots = matchRow.max_players - members.length;
       const botsToAdd = Math.min(Math.max(0, requestedBots), maxBots);
@@ -377,6 +418,198 @@ export const handleMessage = async (
       }
       
       await handleCombatAction(socket, message.matchId, match, player, payload);
+      return;
+    }
+    
+    case "list_characters": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const characters = await loadCharactersByOwner(user.id);
+      sendMessage(socket, { type: "character_list", characters });
+      return;
+    }
+    
+    case "save_character": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const existingChar = state.db.prepare(`
+        SELECT owner_id FROM characters WHERE id = ?
+      `).get(message.character.id) as { owner_id: string } | undefined;
+      
+      if (existingChar && existingChar.owner_id !== user.id) {
+        sendMessage(socket, { type: "error", message: "You do not own this character" });
+        return;
+      }
+      
+      await upsertCharacter(message.character, user.id);
+      sendMessage(socket, { type: "character_saved", characterId: message.character.id });
+      return;
+    }
+    
+    case "delete_character": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const char = state.db.prepare(`
+        SELECT owner_id FROM characters WHERE id = ?
+      `).get(message.characterId) as { owner_id: string } | undefined;
+      
+      if (!char) {
+        sendMessage(socket, { type: "error", message: "Character not found" });
+        return;
+      }
+      
+      if (char.owner_id !== user.id) {
+        sendMessage(socket, { type: "error", message: "You do not own this character" });
+        return;
+      }
+      
+      const activeCount = countActiveMatchesForCharacter(message.characterId);
+      if (activeCount > 0) {
+        sendMessage(socket, { type: "error", message: "Cannot delete a character in an active match" });
+        return;
+      }
+      
+      clearCharacterFromWaitingMatches(message.characterId);
+      clearDefaultCharacter(message.characterId);
+      deleteCharacter(message.characterId, user.id);
+      
+      sendMessage(socket, { type: "character_deleted", characterId: message.characterId });
+      return;
+    }
+    
+    case "toggle_favorite": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const char = state.db.prepare(`
+        SELECT owner_id, is_favorite FROM characters WHERE id = ?
+      `).get(message.characterId) as { owner_id: string; is_favorite: number } | undefined;
+      
+      if (!char) {
+        sendMessage(socket, { type: "error", message: "Character not found" });
+        return;
+      }
+      
+      if (char.owner_id !== user.id) {
+        sendMessage(socket, { type: "error", message: "You do not own this character" });
+        return;
+      }
+      
+      const newFavorite = char.is_favorite === 1 ? 0 : 1;
+      state.db.prepare(`
+        UPDATE characters SET is_favorite = ? WHERE id = ?
+      `).run(newFavorite, message.characterId);
+      
+      sendMessage(socket, { 
+        type: "character_favorited", 
+        characterId: message.characterId, 
+        isFavorite: Boolean(newFavorite) 
+      });
+      return;
+    }
+    
+    case "player_ready": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const match = await findMatchById(message.matchId);
+      if (!match) {
+        sendMessage(socket, { type: "error", message: "Match not found" });
+        return;
+      }
+      
+      if (match.status !== 'waiting') {
+        sendMessage(socket, { type: "error", message: "Match has already started" });
+        return;
+      }
+      
+      let readySet = state.readySets.get(message.matchId);
+      if (!readySet) {
+        readySet = new Set();
+        state.readySets.set(message.matchId, readySet);
+      }
+      
+      if (message.ready) {
+        readySet.add(user.id);
+      } else {
+        readySet.delete(user.id);
+      }
+      
+      await sendToMatch(message.matchId, {
+        type: "player_ready_update",
+        matchId: message.matchId,
+        playerId: user.id,
+        ready: message.ready,
+      });
+      
+      const members = await getMatchMembers(message.matchId);
+      const humanMembers = members.filter(m => {
+        const u = state.users.get(m.user_id);
+        return u && !u.isBot;
+      });
+      
+      const allReady = humanMembers.every(m => readySet.has(m.user_id));
+      
+      if (allReady && humanMembers.length > 0) {
+        await sendToMatch(message.matchId, {
+          type: "all_players_ready",
+          matchId: message.matchId,
+        });
+      }
+      
+      return;
+    }
+    
+    case "update_match_settings": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const match = await findMatchById(message.matchId);
+      if (!match) {
+        sendMessage(socket, { type: "error", message: "Match not found" });
+        return;
+      }
+      
+      if (match.created_by !== user.id) {
+        sendMessage(socket, { type: "error", message: "Only the match creator can change settings" });
+        return;
+      }
+      
+      if (match.status !== 'waiting') {
+        sendMessage(socket, { type: "error", message: "Cannot change settings after match has started" });
+        return;
+      }
+      
+      if (message.settings.isPublic !== undefined) {
+        state.db.prepare(`
+          UPDATE matches SET is_public = ? WHERE id = ?
+        `).run(message.settings.isPublic ? 1 : 0, message.matchId);
+      }
+      
+      await sendToMatch(message.matchId, {
+        type: "match_settings_updated",
+        matchId: message.matchId,
+        settings: {
+          isPublic: message.settings.isPublic ?? Boolean(match.is_public),
+        },
+      });
+      
+      return;
+    }
+    
+    case "list_public_waiting": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      const matches = getPublicWaitingMatches();
+      const summaries = await Promise.all(
+        matches.map(row => buildJoinableMatchSummary(row, user.id))
+      );
+      
+      sendMessage(socket, { type: "public_waiting_list", matches: summaries });
       return;
     }
     

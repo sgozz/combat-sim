@@ -27,6 +27,7 @@ export type CharacterRow = {
   owner_id: string;
   name: string;
   data_json: string;
+  is_favorite: number;
   created_at: number;
 };
 
@@ -40,6 +41,7 @@ export type MatchRow = {
   created_by: string;
   winner_id: string | null;
   ruleset_id: string;
+  is_public: number;
   created_at: number;
   finished_at: number | null;
 };
