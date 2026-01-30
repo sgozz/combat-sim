@@ -1295,7 +1295,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 11. Build character editor — Attributes tab
+- [x] 11. Build character editor — Attributes tab
 
   **What to do**:
   - Create `src/components/armory/CharacterEditor.tsx` — tab-based editor replacing old modal editor

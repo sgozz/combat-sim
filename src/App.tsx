@@ -5,6 +5,7 @@ import { useCharacterRoster } from './hooks/useCharacterRoster'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { Dashboard } from './components/Dashboard'
 import { CharacterArmory } from './components/armory/CharacterArmory'
+import { CharacterEditor } from './components/armory/CharacterEditor'
 import { LobbyScreen } from './components/lobby/LobbyScreen'
 import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
@@ -230,6 +231,24 @@ function AppRoutes() {
             onDeleteCharacter={deleteCharacter}
             onToggleFavorite={toggleFavorite}
             onDuplicateCharacter={handleDuplicateCharacter}
+          />
+        ) : <Navigate to="/" replace />
+      } />
+      
+      <Route path="/armory/new" element={
+        user ? (
+          <CharacterEditor
+            characters={rosterCharacters}
+            onSaveCharacter={saveCharacter}
+          />
+        ) : <Navigate to="/" replace />
+      } />
+      
+      <Route path="/armory/:id" element={
+        user ? (
+          <CharacterEditor
+            characters={rosterCharacters}
+            onSaveCharacter={saveCharacter}
           />
         ) : <Navigate to="/" replace />
       } />
