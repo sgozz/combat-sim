@@ -5,8 +5,9 @@ import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/chara
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import type { GurpsCharacterSheet } from '../../../shared/rulesets/gurps/characterSheet'
 import type { PF2CharacterSheet } from '../../../shared/rulesets/pf2/characterSheet'
-import type { Skill } from '../../../shared/rulesets/gurps/types'
-import type { PF2Skill, Proficiency } from '../../../shared/rulesets/pf2/types'
+import type { PF2CharacterWeapon, PF2CharacterArmor } from '../../../shared/rulesets/pf2/characterSheet'
+import type { Skill, Equipment, DamageType, Reach, EquipmentType } from '../../../shared/rulesets/gurps/types'
+import type { PF2Skill, Proficiency, PF2DamageType, PF2WeaponTrait } from '../../../shared/rulesets/pf2/types'
 import type { Abilities } from '../../../shared/rulesets/pf2/types'
 import './CharacterEditor.css'
 
@@ -189,10 +190,20 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
 
         {activeTab === 'equipment' && (
           <div className="editor-tab-panel" role="tabpanel">
-            <div className="editor-placeholder">
-              <span className="editor-placeholder-icon">⚔️</span>
-              <p className="editor-placeholder-text">Equipment editor coming soon</p>
-            </div>
+            {isGurpsCharacter(character) && (
+              <GurpsEquipmentPanel
+                character={character}
+                onUpdateEquipment={(equipment) => setCharacter({ ...character, equipment })}
+              />
+            )}
+            {isPF2Character(character) && (
+              <PF2EquipmentPanel
+                character={character}
+                onUpdateWeapons={(weapons) => setCharacter({ ...character, weapons })}
+                onUpdateArmor={(armor) => setCharacter({ ...character, armor })}
+                onUpdateShield={(shieldBonus) => setCharacter({ ...character, shieldBonus })}
+              />
+            )}
           </div>
         )}
 
@@ -565,6 +576,544 @@ const PF2SkillsPanel = ({ character, onUpdateSkills }: PF2SkillsPanelProps) => {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── GURPS Equipment Panel ─── */
+
+type GurpsWeaponPreset = {
+  name: string
+  damage: string
+  damageType: DamageType
+  type: EquipmentType
+  reach?: Reach
+  parry?: number
+  skillUsed?: string
+}
+
+const GURPS_WEAPON_PRESETS: GurpsWeaponPreset[] = [
+  { name: 'Broadsword', damage: 'sw+1', damageType: 'cutting', type: 'melee', reach: '1', parry: 0, skillUsed: 'Broadsword' },
+  { name: 'Shortsword', damage: 'sw-1', damageType: 'cutting', type: 'melee', reach: '1', parry: 0, skillUsed: 'Shortsword' },
+  { name: 'Thrusting Broadsword', damage: 'thr+2', damageType: 'impaling', type: 'melee', reach: '1', parry: 0, skillUsed: 'Broadsword' },
+  { name: 'Bastard Sword (2H)', damage: 'sw+2', damageType: 'cutting', type: 'melee', reach: '1,2', parry: 0, skillUsed: 'Two-Handed Sword' },
+  { name: 'Greatsword', damage: 'sw+3', damageType: 'cutting', type: 'melee', reach: '1,2', parry: 0, skillUsed: 'Two-Handed Sword' },
+  { name: 'Spear (1H)', damage: 'thr+2', damageType: 'impaling', type: 'melee', reach: '1', parry: 0, skillUsed: 'Spear' },
+  { name: 'Spear (2H)', damage: 'thr+3', damageType: 'impaling', type: 'melee', reach: '1,2', parry: 0, skillUsed: 'Spear' },
+  { name: 'Knife', damage: 'thr-1', damageType: 'impaling', type: 'melee', reach: 'C', parry: -1, skillUsed: 'Knife' },
+  { name: 'Large Knife', damage: 'sw-2', damageType: 'cutting', type: 'melee', reach: 'C,1', parry: -1, skillUsed: 'Knife' },
+  { name: 'Axe', damage: 'sw+2', damageType: 'cutting', type: 'melee', reach: '1', parry: 0, skillUsed: 'Axe/Mace' },
+  { name: 'Mace', damage: 'sw+2', damageType: 'crushing', type: 'melee', reach: '1', parry: 0, skillUsed: 'Axe/Mace' },
+  { name: 'Quarterstaff', damage: 'sw+2', damageType: 'crushing', type: 'melee', reach: '1,2', parry: 2, skillUsed: 'Staff' },
+  { name: 'Halberd', damage: 'sw+3', damageType: 'cutting', type: 'melee', reach: '2,3', parry: 0, skillUsed: 'Two-Handed Sword' },
+  { name: 'Bow', damage: 'thr+1', damageType: 'impaling', type: 'ranged', skillUsed: 'Bow' },
+  { name: 'Crossbow', damage: 'thr+4', damageType: 'impaling', type: 'ranged', skillUsed: 'Crossbow' },
+]
+
+const GURPS_ARMOR_PRESETS = [
+  { name: 'Cloth Armor', dr: 1 },
+  { name: 'Leather Armor', dr: 2 },
+  { name: 'Light Scale', dr: 3 },
+  { name: 'Mail', dr: 4 },
+  { name: 'Heavy Mail', dr: 5 },
+  { name: 'Light Plate', dr: 6 },
+  { name: 'Heavy Plate', dr: 7 },
+]
+
+const GURPS_DAMAGE_TYPES: DamageType[] = ['crushing', 'cutting', 'impaling', 'piercing']
+
+type GurpsEquipmentPanelProps = {
+  character: GurpsCharacterSheet
+  onUpdateEquipment: (equipment: Equipment[]) => void
+}
+
+const GurpsEquipmentPanel = ({ character, onUpdateEquipment }: GurpsEquipmentPanelProps) => {
+  const [weaponName, setWeaponName] = useState('')
+  const [weaponDamage, setWeaponDamage] = useState('')
+  const [weaponDamageType, setWeaponDamageType] = useState<DamageType>('crushing')
+  const [weaponReach, setWeaponReach] = useState<Reach>('1')
+  const [weaponParry, setWeaponParry] = useState(0)
+  const [weaponType, setWeaponType] = useState<EquipmentType>('melee')
+
+  const weapons = character.equipment.filter(e => e.type === 'melee' || e.type === 'ranged')
+  const armor = character.equipment.find(e => e.type === 'armor')
+
+  const handleWeaponNameChange = useCallback((name: string) => {
+    setWeaponName(name)
+    const preset = GURPS_WEAPON_PRESETS.find(p => p.name.toLowerCase() === name.toLowerCase())
+    if (preset) {
+      setWeaponDamage(preset.damage)
+      setWeaponDamageType(preset.damageType)
+      setWeaponType(preset.type)
+      if (preset.reach) setWeaponReach(preset.reach)
+      if (preset.parry !== undefined) setWeaponParry(preset.parry)
+    }
+  }, [])
+
+  const addWeapon = useCallback(() => {
+    const name = weaponName.trim()
+    if (!name) return
+    const weapon: Equipment = {
+      id: crypto.randomUUID(),
+      name,
+      type: weaponType,
+      damage: weaponDamage || undefined,
+      damageType: weaponDamageType,
+      reach: weaponType === 'melee' ? weaponReach : undefined,
+      parry: weaponType === 'melee' ? weaponParry : undefined,
+    }
+    onUpdateEquipment([...character.equipment, weapon])
+    setWeaponName('')
+    setWeaponDamage('')
+    setWeaponDamageType('crushing')
+    setWeaponReach('1')
+    setWeaponParry(0)
+    setWeaponType('melee')
+  }, [weaponName, weaponDamage, weaponDamageType, weaponReach, weaponParry, weaponType, character.equipment, onUpdateEquipment])
+
+  const removeItem = useCallback((itemId: string) => {
+    onUpdateEquipment(character.equipment.filter(e => e.id !== itemId))
+  }, [character.equipment, onUpdateEquipment])
+
+  const setArmor = useCallback((presetName: string) => {
+    const preset = GURPS_ARMOR_PRESETS.find(a => a.name === presetName)
+    const withoutArmor = character.equipment.filter(e => e.type !== 'armor')
+    if (!preset) {
+      onUpdateEquipment(withoutArmor)
+      return
+    }
+    const armorItem: Equipment = {
+      id: crypto.randomUUID(),
+      name: preset.name,
+      type: 'armor',
+      dr: preset.dr,
+    }
+    onUpdateEquipment([...withoutArmor, armorItem])
+  }, [character.equipment, onUpdateEquipment])
+
+  return (
+    <div className="editor-equipment-section">
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Add Weapon</h3>
+        <div className="editor-equip-add-form">
+          <div className="editor-equip-field editor-equip-field--name">
+            <label className="editor-field-label">Weapon</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={weaponName}
+              onChange={(e) => handleWeaponNameChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addWeapon() }}
+              placeholder="e.g. Broadsword"
+              list="gurps-weapons-list"
+            />
+            <datalist id="gurps-weapons-list">
+              {GURPS_WEAPON_PRESETS
+                .filter(p => !weapons.some(w => w.name.toLowerCase() === p.name.toLowerCase()))
+                .map(p => <option key={p.name} value={p.name} />)}
+            </datalist>
+          </div>
+          <div className="editor-equip-field editor-equip-field--damage">
+            <label className="editor-field-label">Damage</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={weaponDamage}
+              onChange={(e) => setWeaponDamage(e.target.value)}
+              placeholder="sw+1"
+            />
+          </div>
+          <div className="editor-equip-field editor-equip-field--type">
+            <label className="editor-field-label">Type</label>
+            <select
+              className="editor-field-input editor-field-select"
+              value={weaponDamageType}
+              onChange={(e) => setWeaponDamageType(e.target.value as DamageType)}
+            >
+              {GURPS_DAMAGE_TYPES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div className="editor-equip-field editor-equip-field--reach">
+            <label className="editor-field-label">Reach</label>
+            <select
+              className="editor-field-input editor-field-select"
+              value={weaponReach}
+              onChange={(e) => setWeaponReach(e.target.value as Reach)}
+              disabled={weaponType === 'ranged'}
+            >
+              {(['C', '1', '2', '3', 'C,1', '1,2', '2,3'] as Reach[]).map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+          <div className="editor-equip-field editor-equip-field--parry">
+            <label className="editor-field-label">Parry</label>
+            <input
+              type="number"
+              className="editor-field-input"
+              value={weaponParry}
+              onChange={(e) => setWeaponParry(parseInt(e.target.value) || 0)}
+              disabled={weaponType === 'ranged'}
+            />
+          </div>
+          <button
+            className="editor-skill-add-btn"
+            onClick={addWeapon}
+            disabled={!weaponName.trim()}
+            aria-label="Add weapon"
+          >
+            + Add
+          </button>
+        </div>
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Weapons ({weapons.length})</h3>
+        {weapons.length === 0 ? (
+          <p className="editor-skills-empty">No weapons added yet. Use the form above to add weapons.</p>
+        ) : (
+          <div className="editor-skills-list">
+            {weapons.map((w) => (
+              <div key={w.id} className="editor-skill-row editor-equip-row">
+                <span className="editor-skill-name">{w.name}</span>
+                <span className="editor-equip-badge editor-equip-badge--damage">{w.damage ?? '—'}</span>
+                <span className="editor-equip-badge editor-equip-badge--dmgtype">{w.damageType ?? '—'}</span>
+                {w.type === 'melee' && (
+                  <>
+                    <span className="editor-equip-badge">R:{w.reach ?? '—'}</span>
+                    <span className="editor-equip-badge">P:{w.parry ?? 0}</span>
+                  </>
+                )}
+                {w.type === 'ranged' && (
+                  <span className="editor-equip-badge editor-equip-badge--ranged">ranged</span>
+                )}
+                <button
+                  className="editor-skill-remove-btn"
+                  onClick={() => removeItem(w.id)}
+                  aria-label={`Remove ${w.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Armor</h3>
+        <div className="editor-equip-armor-select">
+          <label className="editor-field-label">Worn Armor</label>
+          <select
+            className="editor-field-input editor-field-select"
+            value={armor?.name ?? ''}
+            onChange={(e) => setArmor(e.target.value)}
+          >
+            <option value="">None</option>
+            {GURPS_ARMOR_PRESETS.map(a => (
+              <option key={a.name} value={a.name}>{a.name} (DR {a.dr})</option>
+            ))}
+          </select>
+          {armor && (
+            <div className="editor-equip-armor-stat">
+              <span className="editor-equip-armor-dr">DR {armor.dr}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── PF2 Equipment Panel ─── */
+
+type PF2WeaponPreset = {
+  name: string
+  damage: string
+  damageType: PF2DamageType
+  proficiencyCategory: 'simple' | 'martial' | 'advanced' | 'unarmed'
+  traits: PF2WeaponTrait[]
+  hands: 1 | 2
+  group: string
+}
+
+const PF2_WEAPON_PRESETS: PF2WeaponPreset[] = [
+  { name: 'Dagger', damage: '1d4', damageType: 'piercing', proficiencyCategory: 'simple', traits: ['agile', 'finesse', 'thrown'], hands: 1, group: 'Knife' },
+  { name: 'Mace', damage: '1d6', damageType: 'bludgeoning', proficiencyCategory: 'simple', traits: ['shove'], hands: 1, group: 'Club' },
+  { name: 'Spear', damage: '1d6', damageType: 'piercing', proficiencyCategory: 'simple', traits: ['thrown'], hands: 1, group: 'Spear' },
+  { name: 'Morningstar', damage: '1d6', damageType: 'bludgeoning', proficiencyCategory: 'simple', traits: ['versatile'], hands: 1, group: 'Club' },
+  { name: 'Staff', damage: '1d4', damageType: 'bludgeoning', proficiencyCategory: 'simple', traits: ['two_hand'], hands: 1, group: 'Club' },
+  { name: 'Longsword', damage: '1d8', damageType: 'slashing', proficiencyCategory: 'martial', traits: ['versatile'], hands: 1, group: 'Sword' },
+  { name: 'Shortsword', damage: '1d6', damageType: 'piercing', proficiencyCategory: 'martial', traits: ['agile', 'finesse'], hands: 1, group: 'Sword' },
+  { name: 'Rapier', damage: '1d6', damageType: 'piercing', proficiencyCategory: 'martial', traits: ['deadly', 'disarm', 'finesse'], hands: 1, group: 'Sword' },
+  { name: 'Scimitar', damage: '1d6', damageType: 'slashing', proficiencyCategory: 'martial', traits: ['forceful', 'sweep'], hands: 1, group: 'Sword' },
+  { name: 'Warhammer', damage: '1d8', damageType: 'bludgeoning', proficiencyCategory: 'martial', traits: ['shove'], hands: 1, group: 'Hammer' },
+  { name: 'Battleaxe', damage: '1d8', damageType: 'slashing', proficiencyCategory: 'martial', traits: ['sweep'], hands: 1, group: 'Axe' },
+  { name: 'Greatsword', damage: '1d12', damageType: 'slashing', proficiencyCategory: 'martial', traits: ['versatile'], hands: 2, group: 'Sword' },
+  { name: 'Greataxe', damage: '1d12', damageType: 'slashing', proficiencyCategory: 'martial', traits: ['sweep'], hands: 2, group: 'Axe' },
+  { name: 'Glaive', damage: '1d8', damageType: 'slashing', proficiencyCategory: 'martial', traits: ['deadly', 'forceful', 'reach'], hands: 2, group: 'Polearm' },
+  { name: 'Longbow', damage: '1d8', damageType: 'piercing', proficiencyCategory: 'martial', traits: ['deadly'], hands: 2, group: 'Bow' },
+]
+
+const PF2_ARMOR_PRESETS: { name: string; proficiencyCategory: PF2CharacterArmor['proficiencyCategory']; acBonus: number; dexCap: number | null }[] = [
+  { name: 'Explorer\'s Clothing', proficiencyCategory: 'unarmored', acBonus: 0, dexCap: null },
+  { name: 'Padded Armor', proficiencyCategory: 'light', acBonus: 1, dexCap: 3 },
+  { name: 'Leather Armor', proficiencyCategory: 'light', acBonus: 1, dexCap: 4 },
+  { name: 'Studded Leather', proficiencyCategory: 'light', acBonus: 2, dexCap: 3 },
+  { name: 'Chain Shirt', proficiencyCategory: 'light', acBonus: 2, dexCap: 3 },
+  { name: 'Scale Mail', proficiencyCategory: 'medium', acBonus: 3, dexCap: 2 },
+  { name: 'Chain Mail', proficiencyCategory: 'medium', acBonus: 4, dexCap: 1 },
+  { name: 'Breastplate', proficiencyCategory: 'medium', acBonus: 4, dexCap: 1 },
+  { name: 'Half Plate', proficiencyCategory: 'heavy', acBonus: 5, dexCap: 1 },
+  { name: 'Full Plate', proficiencyCategory: 'heavy', acBonus: 6, dexCap: 0 },
+]
+
+const PF2_ALL_WEAPON_TRAITS: PF2WeaponTrait[] = [
+  'agile', 'backstabber', 'deadly', 'disarm', 'fatal', 'finesse', 'forceful',
+  'free_hand', 'grapple', 'jousting', 'parry', 'reach', 'shove', 'sweep',
+  'thrown', 'trip', 'twin', 'two_hand', 'unarmed', 'versatile',
+]
+
+const PF2_PROF_CATEGORIES = ['simple', 'martial', 'advanced', 'unarmed'] as const
+const PF2_PHYSICAL_DAMAGE_TYPES: PF2DamageType[] = ['bludgeoning', 'piercing', 'slashing']
+
+type PF2EquipmentPanelProps = {
+  character: PF2CharacterSheet
+  onUpdateWeapons: (weapons: PF2CharacterWeapon[]) => void
+  onUpdateArmor: (armor: PF2CharacterArmor | null) => void
+  onUpdateShield: (shieldBonus: number) => void
+}
+
+const PF2EquipmentPanel = ({ character, onUpdateWeapons, onUpdateArmor, onUpdateShield }: PF2EquipmentPanelProps) => {
+  const [wpnName, setWpnName] = useState('')
+  const [wpnDamage, setWpnDamage] = useState('')
+  const [wpnDamageType, setWpnDamageType] = useState<PF2DamageType>('slashing')
+  const [wpnProf, setWpnProf] = useState<PF2CharacterWeapon['proficiencyCategory']>('martial')
+  const [wpnTraits, setWpnTraits] = useState<PF2WeaponTrait[]>([])
+  const [, setWpnHands] = useState<1 | 2>(1)
+  const [, setWpnGroup] = useState('Sword')
+
+  const handleWeaponNameChange = useCallback((name: string) => {
+    setWpnName(name)
+    const preset = PF2_WEAPON_PRESETS.find(p => p.name.toLowerCase() === name.toLowerCase())
+    if (preset) {
+      setWpnDamage(preset.damage)
+      setWpnDamageType(preset.damageType)
+      setWpnProf(preset.proficiencyCategory)
+      setWpnTraits(preset.traits)
+      setWpnHands(preset.hands)
+      setWpnGroup(preset.group)
+    }
+  }, [])
+
+  const toggleTrait = useCallback((trait: PF2WeaponTrait) => {
+    setWpnTraits(prev => prev.includes(trait) ? prev.filter(t => t !== trait) : [...prev, trait])
+  }, [])
+
+  const addWeapon = useCallback(() => {
+    const name = wpnName.trim()
+    if (!name) return
+    const weapon: PF2CharacterWeapon = {
+      id: crypto.randomUUID(),
+      name,
+      damage: wpnDamage || '1d6',
+      damageType: wpnDamageType,
+      proficiencyCategory: wpnProf,
+      traits: wpnTraits,
+      potencyRune: 0,
+      strikingRune: null,
+    }
+    onUpdateWeapons([...character.weapons, weapon])
+    setWpnName('')
+    setWpnDamage('')
+    setWpnDamageType('slashing')
+    setWpnProf('martial')
+    setWpnTraits([])
+    setWpnHands(1)
+    setWpnGroup('Sword')
+  }, [wpnName, wpnDamage, wpnDamageType, wpnProf, wpnTraits, character.weapons, onUpdateWeapons])
+
+  const removeWeapon = useCallback((weaponId: string) => {
+    onUpdateWeapons(character.weapons.filter(w => w.id !== weaponId))
+  }, [character.weapons, onUpdateWeapons])
+
+  const selectArmor = useCallback((presetName: string) => {
+    const preset = PF2_ARMOR_PRESETS.find(a => a.name === presetName)
+    if (!preset) {
+      onUpdateArmor(null)
+      return
+    }
+    onUpdateArmor({
+      id: crypto.randomUUID(),
+      name: preset.name,
+      proficiencyCategory: preset.proficiencyCategory,
+      acBonus: preset.acBonus,
+      dexCap: preset.dexCap,
+      potencyRune: 0,
+    })
+  }, [onUpdateArmor])
+
+  return (
+    <div className="editor-equipment-section">
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Add Weapon</h3>
+        <div className="editor-equip-add-form editor-equip-add-form--pf2">
+          <div className="editor-equip-field editor-equip-field--name">
+            <label className="editor-field-label">Weapon</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={wpnName}
+              onChange={(e) => handleWeaponNameChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addWeapon() }}
+              placeholder="e.g. Longsword"
+              list="pf2-weapons-list"
+            />
+            <datalist id="pf2-weapons-list">
+              {PF2_WEAPON_PRESETS
+                .filter(p => !character.weapons.some(w => w.name.toLowerCase() === p.name.toLowerCase()))
+                .map(p => <option key={p.name} value={p.name} />)}
+            </datalist>
+          </div>
+          <div className="editor-equip-field editor-equip-field--damage">
+            <label className="editor-field-label">Damage</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={wpnDamage}
+              onChange={(e) => setWpnDamage(e.target.value)}
+              placeholder="1d8"
+            />
+          </div>
+          <div className="editor-equip-field editor-equip-field--type">
+            <label className="editor-field-label">Dmg Type</label>
+            <select
+              className="editor-field-input editor-field-select"
+              value={wpnDamageType}
+              onChange={(e) => setWpnDamageType(e.target.value as PF2DamageType)}
+            >
+              {PF2_PHYSICAL_DAMAGE_TYPES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div className="editor-equip-field editor-equip-field--prof">
+            <label className="editor-field-label">Proficiency</label>
+            <select
+              className="editor-field-input editor-field-select"
+              value={wpnProf}
+              onChange={(e) => setWpnProf(e.target.value as PF2CharacterWeapon['proficiencyCategory'])}
+            >
+              {PF2_PROF_CATEGORIES.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div className="editor-equip-field editor-equip-field--traits">
+            <label className="editor-field-label">Traits</label>
+            <div className="editor-equip-traits-grid">
+              {PF2_ALL_WEAPON_TRAITS.map(trait => (
+                <label key={trait} className={`editor-equip-trait-chip ${wpnTraits.includes(trait) ? 'active' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={wpnTraits.includes(trait)}
+                    onChange={() => toggleTrait(trait)}
+                    className="editor-equip-trait-checkbox"
+                  />
+                  <span>{trait.replace('_', ' ')}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <button
+            className="editor-skill-add-btn"
+            onClick={addWeapon}
+            disabled={!wpnName.trim()}
+            aria-label="Add weapon"
+          >
+            + Add
+          </button>
+        </div>
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Weapons ({character.weapons.length})</h3>
+        {character.weapons.length === 0 ? (
+          <p className="editor-skills-empty">No weapons added yet. Use the form above to add weapons.</p>
+        ) : (
+          <div className="editor-skills-list">
+            {character.weapons.map((w) => (
+              <div key={w.id} className="editor-skill-row editor-equip-row editor-equip-row--pf2">
+                <span className="editor-skill-name">{w.name}</span>
+                <span className="editor-equip-badge editor-equip-badge--damage">{w.damage}</span>
+                <span className="editor-equip-badge editor-equip-badge--dmgtype">{w.damageType}</span>
+                <span className="editor-equip-badge editor-equip-badge--prof">{w.proficiencyCategory}</span>
+                {w.traits.length > 0 && (
+                  <span className="editor-equip-traits-inline">
+                    {w.traits.map(t => t.replace('_', ' ')).join(', ')}
+                  </span>
+                )}
+                <button
+                  className="editor-skill-remove-btn"
+                  onClick={() => removeWeapon(w.id)}
+                  aria-label={`Remove ${w.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Armor</h3>
+        <div className="editor-equip-armor-select">
+          <label className="editor-field-label">Worn Armor</label>
+          <select
+            className="editor-field-input editor-field-select"
+            value={character.armor?.name ?? ''}
+            onChange={(e) => selectArmor(e.target.value)}
+          >
+            <option value="">None (Unarmored)</option>
+            {PF2_ARMOR_PRESETS.map(a => (
+              <option key={a.name} value={a.name}>
+                {a.name} (+{a.acBonus} AC{a.dexCap !== null ? `, Dex cap +${a.dexCap}` : ''})
+              </option>
+            ))}
+          </select>
+          {character.armor && (
+            <div className="editor-equip-armor-stats">
+              <span className="editor-equip-badge editor-equip-badge--damage">+{character.armor.acBonus} AC</span>
+              <span className="editor-equip-badge">{character.armor.proficiencyCategory}</span>
+              {character.armor.dexCap !== null && (
+                <span className="editor-equip-badge">Dex cap +{character.armor.dexCap}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Shield</h3>
+        <div className="editor-equip-armor-select">
+          <label className="editor-field-label">Shield Bonus</label>
+          <input
+            type="number"
+            className="editor-field-input"
+            value={character.shieldBonus}
+            onChange={(e) => onUpdateShield(parseInt(e.target.value) || 0)}
+            min={0}
+            max={5}
+            style={{ width: 80 }}
+          />
+          <span className="editor-equip-shield-hint">
+            {character.shieldBonus === 0 ? 'No shield' : `+${character.shieldBonus} AC when raised`}
+          </span>
+        </div>
       </div>
     </div>
   )

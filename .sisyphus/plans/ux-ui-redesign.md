@@ -1435,7 +1435,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 13. Build character editor — Equipment tab (replace prompt())
+- [x] 13. Build character editor — Equipment tab (replace prompt())
 
   **What to do**:
   - Add Equipment tab content to `CharacterEditor.tsx`
