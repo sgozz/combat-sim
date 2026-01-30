@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
+import { useCharacterRoster } from './hooks/useCharacterRoster'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { Dashboard } from './components/Dashboard'
 import { CharacterArmory } from './components/armory/CharacterArmory'
@@ -9,7 +10,7 @@ import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { isGurpsCombatant } from '../shared/rulesets'
 
-import type { GridPosition, RulesetId } from '../shared/types'
+import type { CharacterSheet, GridPosition, RulesetId } from '../shared/types'
 import './App.css'
 
 function AppRoutes() {
@@ -39,6 +40,24 @@ function AppRoutes() {
     spectateMatch,
     stopSpectating
   } = useGameSocket()
+
+  const {
+    characters: rosterCharacters,
+    loadCharacters,
+    saveCharacter,
+    deleteCharacter,
+    toggleFavorite,
+  } = useCharacterRoster()
+
+  const handleDuplicateCharacter = useCallback((character: CharacterSheet) => {
+    const duplicate = {
+      ...character,
+      id: crypto.randomUUID(),
+      name: `${character.name} (Copy)`,
+      isFavorite: false,
+    }
+    saveCharacter(duplicate)
+  }, [saveCharacter])
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
@@ -204,7 +223,15 @@ function AppRoutes() {
       } />
       
       <Route path="/armory" element={
-        user ? <CharacterArmory /> : <Navigate to="/" replace />
+        user ? (
+          <CharacterArmory
+            characters={rosterCharacters}
+            onLoadCharacters={loadCharacters}
+            onDeleteCharacter={deleteCharacter}
+            onToggleFavorite={toggleFavorite}
+            onDuplicateCharacter={handleDuplicateCharacter}
+          />
+        ) : <Navigate to="/" replace />
       } />
       
       <Route path="/lobby/:matchId" element={

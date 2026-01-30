@@ -1,0 +1,459 @@
+/* ─── Character Armory ─── */
+
+.character-armory {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ─── */
+
+.armory-header {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.armory-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.armory-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.armory-btn-back {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.armory-btn-back:hover {
+  background: var(--bg-interactive);
+  color: var(--text-primary);
+}
+
+.armory-btn-new {
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: white;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.armory-btn-new:hover {
+  background: #5159e6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
+}
+
+/* ─── Main Content ─── */
+
+.armory-main {
+  flex: 1;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.armory-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ─── Filter Bar ─── */
+
+.armory-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.armory-filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.armory-filter-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.armory-filter-buttons {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-interactive);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.armory-filter-btn {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.armory-filter-btn:hover {
+  color: var(--text-primary);
+}
+
+.armory-filter-btn.active {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: 0 1px 4px rgba(100, 108, 255, 0.3);
+}
+
+.armory-filter-select {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: var(--bg-interactive);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: border-color var(--transition-fast);
+}
+
+.armory-filter-select:hover {
+  border-color: var(--accent-primary);
+}
+
+.armory-filter-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.1);
+}
+
+.armory-filter-spacer {
+  flex: 1;
+}
+
+.armory-char-count {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ─── Empty State ─── */
+
+.armory-empty-state {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-xl);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-lg);
+}
+
+.armory-empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.4;
+  display: block;
+}
+
+.armory-empty-text {
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-lg);
+}
+
+.armory-empty-cta {
+  padding: var(--space-md) var(--space-xl);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: white;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  font-family: var(--font-sans);
+}
+
+.armory-empty-cta:hover {
+  background: #5159e6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
+}
+
+/* ─── Character Grid ─── */
+
+.armory-character-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+/* ─── Character Card ─── */
+
+.armory-character-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+}
+
+.armory-character-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.armory-card-header {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.armory-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.armory-card-name {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.armory-btn-favorite {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: var(--text-xl);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+  color: var(--accent-warning);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.armory-btn-favorite:hover {
+  transform: scale(1.2);
+  background: none;
+  border: none;
+}
+
+.armory-ruleset-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.armory-ruleset-badge.ruleset-gurps {
+  background: rgba(100, 108, 255, 0.15);
+  color: #8b8fff;
+  border: 1px solid rgba(100, 108, 255, 0.25);
+}
+
+.armory-ruleset-badge.ruleset-pf2 {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* ─── Card Body (clickable) ─── */
+
+.armory-card-body {
+  padding: var(--space-md) var(--space-lg);
+  cursor: pointer;
+  flex: 1;
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.armory-card-body:hover {
+  background: var(--bg-elevated);
+}
+
+.armory-card-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 48px;
+}
+
+.armory-stat-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.armory-stat-value {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Card Actions ─── */
+
+.armory-card-actions {
+  display: flex;
+  gap: 1px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--border-subtle);
+}
+
+.armory-btn-action {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.armory-btn-action:hover {
+  background: var(--bg-interactive);
+  color: var(--text-primary);
+}
+
+.armory-btn-action.btn-delete:hover {
+  color: var(--accent-danger);
+}
+
+.armory-btn-action.btn-delete.confirm {
+  background: var(--accent-danger);
+  color: white;
+  font-weight: var(--font-semibold);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 1024px) {
+  .armory-character-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .armory-header-content {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .armory-title {
+    font-size: var(--text-lg);
+  }
+
+  .armory-main {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .armory-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .armory-filter-group {
+    justify-content: space-between;
+  }
+
+  .armory-filter-spacer {
+    display: none;
+  }
+
+  .armory-character-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .armory-card-body {
+    padding: var(--space-md);
+  }
+
+  .armory-card-header {
+    padding: var(--space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .armory-header-content {
+    flex-wrap: wrap;
+  }
+
+  .armory-btn-back {
+    order: 1;
+  }
+
+  .armory-title {
+    order: 2;
+    flex-basis: auto;
+  }
+
+  .armory-btn-new {
+    order: 3;
+    margin-left: auto;
+  }
+}

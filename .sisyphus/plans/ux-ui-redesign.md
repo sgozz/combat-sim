@@ -1222,7 +1222,7 @@ Phase 5 - Polish & Tests:
 
 ### Phase 3: Character Armory
 
-- [ ] 10. Build character roster list view
+- [x] 10. Build character roster list view
 
   **What to do**:
   - Create `src/components/armory/CharacterArmory.tsx` replacing the placeholder from Task 3
