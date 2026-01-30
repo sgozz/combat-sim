@@ -1083,7 +1083,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 8. Build stats summary component
+- [x] 8. Build stats summary component
 
   **What to do**:
   - Create `src/components/dashboard/StatsBar.tsx` — compact stats row for the dashboard

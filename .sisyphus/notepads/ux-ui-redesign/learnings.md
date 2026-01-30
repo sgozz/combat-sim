@@ -387,3 +387,45 @@ Ready for Phase 1: Login screen redesign.
 - MatchCard reused: 5 references ✓
 - LSP diagnostics: clean (both Dashboard.tsx and App.tsx) ✓
 - Build succeeded ✓
+
+## [2026-01-30] Task 8: Stats Summary Component
+
+### Component Design
+- StatsBar: compact stats row with 4 stat cards (Total Matches, Wins, Losses, Win Rate)
+- Client-side derivation only: no server API needed
+- Props: myMatches (MatchSummary[]) + currentUserId (string)
+
+### Data Derivation Logic
+- Total: filter myMatches by status === 'finished'
+- Wins: filter finished by winnerId === currentUserId
+- Losses: filter finished by winnerId exists AND !== currentUserId
+- Win Rate: (wins / total * 100).toFixed(1) or "--" if no matches
+
+### Color Coding
+- Win rate >50%: green (--accent-success)
+- Win rate 40-50%: yellow (--accent-warning)
+- Win rate <40%: red (--accent-danger)
+
+### CSS Token Usage
+- All colors, spacing, typography, radii from design tokens
+- 2 files created: StatsBar.tsx (55 lines), StatsBar.css (55 lines)
+
+### Mobile Responsive
+- Desktop: 1x4 flex row
+- Mobile (<768px): 2x2 grid with reduced padding/font sizes
+
+### Gotchas
+- Empty state: show "--" when totalMatches === 0 (not "0")
+- Losses calculation: must check winnerId exists (draws don't count as losses)
+- Win rate precision: .toFixed(1) for one decimal place
+
+### Integration
+- Imported into Dashboard.tsx, placed before Quick Actions section
+- Props passed from existing Dashboard props (myMatches, user.id)
+
+### Verification Results
+- StatsBar.tsx created ✓
+- StatsBar.css created ✓
+- Stat labels: 10 matches ✓ (target: ≥3)
+- LSP diagnostics: clean ✓
+- Build succeeded ✓

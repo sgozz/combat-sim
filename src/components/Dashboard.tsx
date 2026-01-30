@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MatchCard } from './MatchCard'
+import { StatsBar } from './dashboard/StatsBar'
 import type { MatchSummary, User, RulesetId } from '../../shared/types'
 import './Dashboard.css'
 
@@ -81,6 +82,8 @@ export const Dashboard = ({
 
       <main className="dashboard-main">
         <div className="dashboard-container">
+          <StatsBar myMatches={myMatches} currentUserId={user.id} />
+
           {/* Quick Actions */}
           <section className="dashboard-quick-actions">
             <div className="dashboard-create-action">
