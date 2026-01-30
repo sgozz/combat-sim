@@ -1564,7 +1564,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 15. Integrate Pathbuilder import in new editor
+- [x] 15. Integrate Pathbuilder import in new editor
 
   **What to do**:
   - Add "Import from Pathbuilder" button to PF2 character editor (visible only when `rulesetId === 'pf2'`)

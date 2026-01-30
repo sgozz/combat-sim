@@ -111,6 +111,26 @@
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
+.editor-btn-import {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: #e2a84b;
+  background: rgba(226, 168, 75, 0.1);
+  border: 1px solid rgba(226, 168, 75, 0.3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.editor-btn-import:hover {
+  background: rgba(226, 168, 75, 0.2);
+  border-color: rgba(226, 168, 75, 0.5);
+  color: #f0bd6a;
+}
+
 .editor-btn-cancel {
   padding: var(--space-sm) var(--space-md);
   font-size: var(--text-sm);

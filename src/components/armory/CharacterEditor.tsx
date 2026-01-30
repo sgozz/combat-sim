@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { rulesets } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
+import { PathbuilderImport } from '../rulesets/pf2/PathbuilderImport'
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import type { GurpsCharacterSheet } from '../../../shared/rulesets/gurps/characterSheet'
 import type { PF2CharacterSheet } from '../../../shared/rulesets/pf2/characterSheet'
-import type { PF2CharacterWeapon, PF2CharacterArmor, PF2Feat } from '../../../shared/rulesets/pf2/characterSheet'
-import type { Skill, Equipment, DamageType, Reach, EquipmentType, Advantage, Disadvantage } from '../../../shared/rulesets/gurps/types'
+import type { PF2CharacterWeapon, PF2CharacterArmor } from '../../../shared/rulesets/pf2/characterSheet'
+import type { Skill, Equipment, DamageType, Reach, EquipmentType } from '../../../shared/rulesets/gurps/types'
 import type { PF2Skill, Proficiency, PF2DamageType, PF2WeaponTrait } from '../../../shared/rulesets/pf2/types'
 import type { Abilities } from '../../../shared/rulesets/pf2/types'
 import './CharacterEditor.css'
@@ -27,6 +28,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
   const [activeTab, setActiveTab] = useState<Tab>('attributes')
   const [character, setCharacter] = useState<CharacterSheet | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [showPathbuilderImport, setShowPathbuilderImport] = useState(false)
 
   useEffect(() => {
     if (isNew) {
@@ -128,6 +130,15 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
           <span className={`editor-ruleset-badge ruleset-${character.rulesetId}`}>
             {character.rulesetId === 'gurps' ? 'GURPS' : 'PF2'}
           </span>
+          {character.rulesetId === 'pf2' && (
+            <button
+              onClick={() => setShowPathbuilderImport(true)}
+              className="editor-btn-import"
+              title="Import character from Pathbuilder 2e"
+            >
+              ↓ Import from Pathbuilder
+            </button>
+          )}
           <button onClick={handleCancel} className="editor-btn-cancel">
             Cancel
           </button>
@@ -216,6 +227,16 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
           </div>
         )}
       </main>
+
+      {showPathbuilderImport && (
+        <PathbuilderImport
+          onImport={(imported) => {
+            setCharacter({ ...imported, id: character.id })
+            setShowPathbuilderImport(false)
+          }}
+          onCancel={() => setShowPathbuilderImport(false)}
+        />
+      )}
     </div>
   )
 }
