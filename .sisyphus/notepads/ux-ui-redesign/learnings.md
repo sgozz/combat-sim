@@ -562,3 +562,42 @@ Ready for Phase 1: Login screen redesign.
 - Build: succeeded ✓
 - onSelect grep: 3 matches ✓
 - Files created: CharacterPicker.tsx, CharacterPicker.css ✓
+
+## [2026-01-31] Task 17: Lobby Full-Screen Layout
+
+### Implementation Details
+- Full-screen 3-column layout with header, main grid, footer
+- Grid: 280px / 1fr / 280px columns, max-width 1200px centered
+- Three panel placeholders: Players (Task 18), Character Preview (Task 19), Match Settings (Task 20)
+- Header: back button, match name (truncated with ellipsis), ruleset badge (color-coded), player count
+- Footer: invite code display + copy-link button (copies full URL with ?join=CODE)
+- Reconnecting indicator: fixed yellow banner at top with spinner
+- Loading state: centered spinner while myMatches loads
+- Match-not-found guard: redirects to /home when match not in myMatches (only after matches loaded)
+
+### Props Pattern
+- LobbyScreen receives: myMatches, user, connectionState, sendMessage
+- Props passed from App.tsx at route level (same pattern as Dashboard)
+- void sendMessage/user to suppress unused warnings (will be consumed by child task components)
+
+### Responsive Breakpoints
+- Desktop (>1024px): 3-column grid (280px / 1fr / 280px)
+- Tablet (768-1024px): 2-column grid, preview spans full width at top
+- Mobile (<768px): single column, stacked vertically
+
+### CSS Stats
+- 92 var(--) token references
+- Zero hardcoded colors
+- All classes namespaced with `lobby-` prefix
+- Ruleset badge uses rgba() for translucent backgrounds matching accent colors
+
+### Gotchas
+- Match-not-found redirect needs `myMatches.length > 0` guard to avoid redirecting before matches load
+- Clipboard API (navigator.clipboard.writeText) returns a Promise — use .then() for copied feedback
+- App.tsx LobbyScreen route had no props — needed to wire myMatches, user, connectionState, sendMessage
+
+### Verification Results
+- matchId/useParams references: 5 ✓
+- CSS token count: 92 ✓ (target: ≥10)
+- LSP diagnostics: clean (both LobbyScreen.tsx and App.tsx) ✓
+- Build succeeded ✓

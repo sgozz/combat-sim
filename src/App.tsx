@@ -254,7 +254,14 @@ function AppRoutes() {
       } />
       
       <Route path="/lobby/:matchId" element={
-        user ? <LobbyScreen /> : <Navigate to="/" replace />
+        user ? (
+          <LobbyScreen
+            myMatches={myMatches}
+            user={user}
+            connectionState={connectionState}
+            sendMessage={sendMessage}
+          />
+        ) : <Navigate to="/" replace />
       } />
       
       <Route path="/game/:matchId" element={

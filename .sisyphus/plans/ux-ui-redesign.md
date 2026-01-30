@@ -1679,7 +1679,7 @@ Phase 5 - Polish & Tests:
 
 ### Phase 4: Lobby
 
-- [ ] 17. Build lobby full-screen layout
+- [x] 17. Build lobby full-screen layout
 
   **What to do**:
   - Create `src/components/lobby/LobbyScreen.tsx` replacing placeholder from Task 3
