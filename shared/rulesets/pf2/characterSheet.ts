@@ -49,43 +49,44 @@ export type PF2SpellInfo = {
 };
 
 export type PF2CharacterSheet = {
-  id: Id;
-  name: string;
-  rulesetId: 'pf2';
-  level: number;
-  class: string;
-  ancestry: string;
-  heritage: string;
-  background: string;
-  
-  // Abilities (NOT attributes.health - use abilities.constitution)
-  abilities: {
-    strength: number;
-    dexterity: number;
-    constitution: number;
-    intelligence: number;
-    wisdom: number;
-    charisma: number;
-  };
-  
-  derived: PF2CharacterDerivedStats;
-  
-  // Data for derived stats recalculation
-  classHP: number;
-  saveProficiencies: {
-    fortitude: Proficiency;
-    reflex: Proficiency;
-    will: Proficiency;
-  };
-  perceptionProficiency: Proficiency;
-  armorProficiency: Proficiency;
-  
-  // Equipment and features
-  skills: PF2Skill[];
-  weapons: PF2CharacterWeapon[];
-  armor: PF2CharacterArmor | null;
-  shieldBonus: number;
-  feats: PF2Feat[];
-  spells: PF2SpellInfo | null;
-  spellcasters: SpellCaster[];
+   id: Id;
+   name: string;
+   rulesetId: 'pf2';
+   level: number;
+   class: string;
+   ancestry: string;
+   heritage: string;
+   background: string;
+   
+   // Abilities (NOT attributes.health - use abilities.constitution)
+   abilities: {
+     strength: number;
+     dexterity: number;
+     constitution: number;
+     intelligence: number;
+     wisdom: number;
+     charisma: number;
+   };
+   
+   derived: PF2CharacterDerivedStats;
+   
+   // Data for derived stats recalculation
+   classHP: number;
+   saveProficiencies: {
+     fortitude: Proficiency;
+     reflex: Proficiency;
+     will: Proficiency;
+   };
+   perceptionProficiency: Proficiency;
+   armorProficiency: Proficiency;
+   
+   // Equipment and features
+   skills: PF2Skill[];
+   weapons: PF2CharacterWeapon[];
+   armor: PF2CharacterArmor | null;
+   shieldBonus: number;
+   feats: PF2Feat[];
+   spells: PF2SpellInfo | null;
+   spellcasters: SpellCaster[];
+   isFavorite?: boolean;
 };

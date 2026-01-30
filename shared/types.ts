@@ -85,34 +85,42 @@ export type MatchState = {
 };
 
 export type MatchSummary = {
-  id: Id;
-  code: string;
-  name: string;
-  creatorId: Id;
-  playerCount: number;
-  maxPlayers: number;
-  rulesetId: RulesetId;
-  status: MatchStatus;
-  players: { id: Id; name: string; isConnected: boolean }[];
-  isMyTurn: boolean;
-  winnerId?: Id;
-  winnerName?: string;
+   id: Id;
+   code: string;
+   name: string;
+   creatorId: Id;
+   playerCount: number;
+   maxPlayers: number;
+   rulesetId: RulesetId;
+   status: MatchStatus;
+   players: { id: Id; name: string; isConnected: boolean }[];
+   isMyTurn: boolean;
+   winnerId?: Id;
+   winnerName?: string;
+   readyPlayers?: string[];
 };
 
 export type ClientToServerMessage =
-  | { type: "register"; username: string }
-  | { type: "auth"; sessionToken: string }
-  | { type: "create_match"; name: string; maxPlayers: number; rulesetId: RulesetId }
-  | { type: "join_match"; code: string }
-  | { type: "leave_match"; matchId: Id }
-  | { type: "rejoin_match"; matchId: Id }
-  | { type: "list_my_matches" }
-  | { type: "list_public_matches" }
-  | { type: "spectate_match"; matchId: Id }
-  | { type: "stop_spectating"; matchId: Id }
-  | { type: "start_combat"; matchId: Id; botCount?: number }
-  | { type: "select_character"; matchId: Id; character: CharacterSheet }
-  | { type: "action"; matchId: Id; action: CombatActionPayload["type"]; payload?: CombatActionPayload };
+   | { type: "register"; username: string }
+   | { type: "auth"; sessionToken: string }
+   | { type: "create_match"; name: string; maxPlayers: number; rulesetId: RulesetId; isPublic?: boolean }
+   | { type: "join_match"; code: string }
+   | { type: "leave_match"; matchId: Id }
+   | { type: "rejoin_match"; matchId: Id }
+   | { type: "list_my_matches" }
+   | { type: "list_public_matches" }
+   | { type: "spectate_match"; matchId: Id }
+   | { type: "stop_spectating"; matchId: Id }
+   | { type: "start_combat"; matchId: Id; botCount?: number }
+   | { type: "select_character"; matchId: Id; character: CharacterSheet }
+   | { type: "action"; matchId: Id; action: CombatActionPayload["type"]; payload?: CombatActionPayload }
+   | { type: "list_characters" }
+   | { type: "save_character"; character: CharacterSheet }
+   | { type: "delete_character"; characterId: string }
+   | { type: "toggle_favorite"; characterId: string }
+   | { type: "player_ready"; matchId: string; ready: boolean }
+   | { type: "update_match_settings"; matchId: string; settings: { isPublic?: boolean } }
+   | { type: "list_public_waiting" };
 
 export type VisualEffect = 
   | { type: 'damage'; attackerId: Id; targetId: Id; value: number; position: GridPosition }
@@ -126,22 +134,30 @@ export type PendingAction =
   | { type: 'exit_close_combat_request'; exitingId: Id; targetId: Id };
 
 export type ServerToClientMessage =
-   | { type: "auth_ok"; user: User; sessionToken: string }
-   | { type: "session_invalid" }
-   | { type: "my_matches"; matches: MatchSummary[] }
-   | { type: "public_matches"; matches: MatchSummary[] }
-   | { type: "match_created"; match: MatchSummary }
-   | { type: "match_joined"; matchId: Id }
-   | { type: "match_left"; matchId: Id }
-   | { type: "match_state"; state: MatchState }
-   | { type: "spectating"; matchId: Id }
-   | { type: "stopped_spectating"; matchId: Id }
-   | { type: "match_updated"; match: MatchSummary }
-   | { type: "player_joined"; matchId: Id; player: Player }
-   | { type: "player_left"; matchId: Id; playerId: Id; playerName: string }
-   | { type: "player_disconnected"; matchId: Id; playerId: Id; playerName: string }
-   | { type: "player_reconnected"; matchId: Id; playerId: Id; playerName: string }
-   | { type: "visual_effect"; matchId: Id; effect: VisualEffect }
-   | { type: "pending_action"; matchId: Id; action: PendingAction }
-   | { type: "reaction_prompt"; matchId: Id; reactorId: Id; triggerAction: string }
-   | { type: "error"; message: string };
+    | { type: "auth_ok"; user: User; sessionToken: string; activeMatches?: MatchSummary[] }
+    | { type: "session_invalid" }
+    | { type: "my_matches"; matches: MatchSummary[] }
+    | { type: "public_matches"; matches: MatchSummary[] }
+    | { type: "match_created"; match: MatchSummary }
+    | { type: "match_joined"; matchId: Id }
+    | { type: "match_left"; matchId: Id }
+    | { type: "match_state"; state: MatchState }
+    | { type: "spectating"; matchId: Id }
+    | { type: "stopped_spectating"; matchId: Id }
+    | { type: "match_updated"; match: MatchSummary }
+    | { type: "player_joined"; matchId: Id; player: Player }
+    | { type: "player_left"; matchId: Id; playerId: Id; playerName: string }
+    | { type: "player_disconnected"; matchId: Id; playerId: Id; playerName: string }
+    | { type: "player_reconnected"; matchId: Id; playerId: Id; playerName: string }
+    | { type: "visual_effect"; matchId: Id; effect: VisualEffect }
+    | { type: "pending_action"; matchId: Id; action: PendingAction }
+    | { type: "reaction_prompt"; matchId: Id; reactorId: Id; triggerAction: string }
+    | { type: "character_list"; characters: CharacterSheet[] }
+    | { type: "character_saved"; characterId: string }
+    | { type: "character_deleted"; characterId: string }
+    | { type: "character_favorited"; characterId: string; isFavorite: boolean }
+    | { type: "player_ready_update"; matchId: string; playerId: string; ready: boolean }
+    | { type: "all_players_ready"; matchId: string }
+    | { type: "match_settings_updated"; matchId: string; settings: { isPublic: boolean } }
+    | { type: "public_waiting_list"; matches: MatchSummary[] }
+    | { type: "error"; message: string };
