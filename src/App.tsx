@@ -177,28 +177,13 @@ function AppRoutes() {
   })) ?? []
   const isPlayerTurn = !!matchState && !spectatingMatchId && matchState.activeTurnPlayerId === user?.id
 
-  if (connectionState === 'connecting') {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        color: 'white',
-        fontSize: '1.2em'
-      }}>
-        Connecting to server...
-      </div>
-    )
-  }
-
   return (
     <Routes>
       <Route path="/" element={
         user ? (
           <Navigate to="/home" replace />
         ) : (
-          <WelcomeScreen onComplete={register} authError={authError} />
+          <WelcomeScreen onComplete={register} authError={authError} connectionState={connectionState} />
         )
       } />
       

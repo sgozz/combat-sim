@@ -239,3 +239,94 @@ Navigation consolidation can now proceed to remove screen/activeMatchId coupling
 - Kept all GameScreen props except lobbyId, matchCode, isCreator, onStartMatch, onOpenCharacterEditor, inLobbyButNoMatch
 - Routes now use :matchId param pattern for dynamic routing
 - Navigate with replace: true to avoid unnecessary history entries
+
+## [2026-01-30] Task 3: Navigation Consolidation
+
+### Architecture Changes
+- **Removed ScreenState**: Type and state management completely eliminated from all hooks
+- **Router-only navigation**: All screen transitions now via React Router (no dual system)
+- **activeMatchId source**: Moved from hook state to URL params (useParams() in components)
+- **Route guards**: Implemented for auth (unauthenticated → `/`, authenticated on `/` → `/home`)
+- **Match status routing**: Waiting matches → `/lobby/:id`, active/paused → `/game/:id`
+
+### Route Structure
+- `/` - WelcomeScreen (unauthenticated only, redirects to /home if authenticated)
+- `/home` - Dashboard placeholder (authenticated, default landing)
+- `/armory` - CharacterArmory placeholder (authenticated)
+- `/lobby/:matchId` - LobbyScreen placeholder (authenticated, waiting matches)
+- `/game/:matchId` - GameScreen (authenticated, active/paused matches)
+- `/matches` - MatchBrowser (kept for backward compatibility)
+- `*` - Catch-all redirects to /home or / based on auth
+
+### State Ownership Changes
+- **activeMatchId**: Removed from hook state, derived from URL via useParams()
+- **screen**: Removed entirely (replaced by route paths)
+- **tcs.screenState**: Removed from localStorage
+- **tcs.activeMatchId**: Kept in localStorage for tab-visibility reconnection only
+
+### Component Changes
+- **GameScreen**: Now uses useParams() to get matchId from URL instead of prop
+- **Lobby overlay**: Extracted from GameScreen (lines 291-393), now placeholder in LobbyScreen
+- **Character editor modal**: Removed from GameScreen (will be in Armory in Phase 3)
+- **Placeholder components**: Created Dashboard, CharacterArmory, LobbyScreen with "Coming soon" text
+
+### Gotchas
+- **useParams() timing**: Must be called inside route component, not in parent
+- **Navigation effects**: Must check match status to route to correct screen (/lobby vs /game)
+- **Reconnection logic**: Simplified for Phase 0 (full implementation when activeMatches is available)
+- **?join=CODE handling**: URL param extracted on mount, cleared after use
+- **Backward compatibility**: Kept /matches route for existing links
+
+### Verification Results
+- ScreenState references: 0 ✓
+- Build succeeded ✓
+- All tests passed (2183/2183) ✓
+- All new routes exist ✓
+- LSP diagnostics clean ✓
+
+### Phase 0 Complete
+All 5 foundation tasks done:
+1. CSS design tokens ✓
+2. Hook decomposition ✓
+3. Navigation consolidation ✓
+4. WS message types ✓
+5. Server handlers ✓
+
+Ready for Phase 1: Login screen redesign.
+
+
+## [2026-01-30] Task 6: WelcomeScreen Redesign
+
+### Design Decisions
+- Modern/clean aesthetic: larger title (--text-3xl), more whitespace, clearer hierarchy
+- Status indicator: colored dot + text (green/yellow/red) for connection state
+- Loading state: spinner on button (inline, not full-screen overlay)
+- Connection timeout: 10s timer via useEffect + useRef, shows "Server unreachable" error
+- Error precedence: connection timeout > auth error > validation error
+
+### Architecture Changes
+- Removed early return in App.tsx (lines 180-192) for connecting state
+- Connecting state now handled entirely within WelcomeScreen
+- Props expanded: added `connectionState` (additive, non-breaking)
+- Timeout cleanup: clear on unmount AND on connectionState change
+
+### CSS Token Usage
+- 68 var(--) references in WelcomeScreen.css (all hardcoded colors removed)
+- Used: bg-primary, bg-surface, bg-elevated, bg-interactive, text-primary, text-secondary, text-muted
+- Used: accent-primary, accent-success, accent-warning, accent-danger
+- Used: space-xs through space-2xl, text-sm through text-3xl, font-medium/semibold/bold
+- Used: radius-md, radius-lg, transition-fast, transition-normal, font-sans, border-default, border-subtle
+
+### Mobile Responsive
+- Full-width card on mobile (<768px)
+- Reduced padding (--space-xl instead of --space-2xl)
+- Smaller title (--text-2xl instead of --text-3xl)
+- Removed 480px breakpoint (simplified to single breakpoint)
+
+### Verification Results
+- CSS tokens: 68 ✓ (target: ≥5)
+- Early return removed: 0 grep matches ✓
+- connectionState refs: 9 ✓ (target: ≥3)
+- Build succeeded ✓
+- Tests passed (2183/2183, 4 external failures pre-existing) ✓
+- LSP diagnostics clean (both files) ✓
