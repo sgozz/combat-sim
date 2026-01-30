@@ -33,12 +33,14 @@ export type Skill = {
 export type Advantage = {
   id: Id;
   name: string;
+  cost?: number;
   description?: string;
 };
 
 export type Disadvantage = {
   id: Id;
   name: string;
+  cost?: number;
   description?: string;
 };
 
