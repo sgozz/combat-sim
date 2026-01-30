@@ -1,0 +1,226 @@
+import { useState, useCallback, useEffect, useRef } from 'react'
+import type { ServerToClientMessage, User } from '../../shared/types'
+import type { ScreenState, ConnectionState } from './useGameSocket'
+
+const SESSION_TOKEN_KEY = 'tcs.sessionToken'
+const SCREEN_STATE_KEY = 'tcs.screenState'
+const ACTIVE_MATCH_KEY = 'tcs.activeMatchId'
+
+type UseAuthParams = {
+  socket: WebSocket | null
+  setSocket: (ws: WebSocket | null) => void
+  messageHandlers: React.MutableRefObject<Array<(msg: ServerToClientMessage) => boolean>>
+  setLogs: React.Dispatch<React.SetStateAction<string[]>>
+  setScreen: React.Dispatch<React.SetStateAction<ScreenState>>
+  setActiveMatchId: React.Dispatch<React.SetStateAction<string | null>>
+}
+
+export const useAuth = ({
+  socket,
+  setSocket,
+  messageHandlers,
+  setLogs,
+  setScreen,
+  setActiveMatchId,
+}: UseAuthParams) => {
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected')
+  const [user, setUser] = useState<User | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
+  
+  const connectingRef = useRef(false)
+  const reconnectAttemptRef = useRef(false)
+  const pendingRejoinRef = useRef<string | null>(null)
+  const reconnectDelayRef = useRef(1000)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const createWebSocket = useCallback((onOpen: (ws: WebSocket) => void) => {
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8080'
+    const ws = new WebSocket(wsUrl)
+    
+    ws.onopen = () => {
+      setLogs(prev => [...prev, 'Connected to server.'])
+      onOpen(ws)
+    }
+
+    ws.onerror = () => {
+      setLogs(prev => [...prev, 'Connection error.'])
+    }
+
+    ws.onclose = () => {
+      setSocket(null)
+      setConnectionState('disconnected')
+      connectingRef.current = false
+      reconnectAttemptRef.current = false
+    }
+
+    setSocket(ws)
+    return ws
+  }, [setLogs, setSocket])
+
+  const tryReconnect = useCallback(() => {
+    const token = localStorage.getItem(SESSION_TOKEN_KEY)
+    if (!token || connectingRef.current || reconnectAttemptRef.current) return false
+    
+    reconnectAttemptRef.current = true
+    connectingRef.current = true
+    setConnectionState('connecting')
+    
+    createWebSocket((ws: WebSocket) => {
+      ws.send(JSON.stringify({ type: 'auth', sessionToken: token }))
+      reconnectAttemptRef.current = false
+    })
+    
+    return true
+  }, [createWebSocket])
+
+  const register = useCallback((username: string) => {
+    if (connectingRef.current) return
+    connectingRef.current = true
+    setAuthError(null)
+    setConnectionState('connecting')
+    // Clear any existing session when registering a new user
+    localStorage.removeItem(SESSION_TOKEN_KEY)
+    
+    createWebSocket((ws: WebSocket) => {
+      ws.send(JSON.stringify({ type: 'register', username }))
+    })
+  }, [createWebSocket])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(SESSION_TOKEN_KEY)
+    socket?.close()
+    setUser(null)
+    setConnectionState('disconnected')
+  }, [socket])
+
+  // Register message handler
+  useEffect(() => {
+    const handleMessage = (message: ServerToClientMessage): boolean => {
+      switch (message.type) {
+        case 'auth_ok': {
+          setUser(message.user)
+          localStorage.setItem(SESSION_TOKEN_KEY, message.sessionToken)
+          setConnectionState('connected')
+          connectingRef.current = false
+          reconnectDelayRef.current = 1000
+          
+          const savedScreen = localStorage.getItem(SCREEN_STATE_KEY) as ScreenState | null
+          const savedMatchId = localStorage.getItem(ACTIVE_MATCH_KEY)
+          
+          if (savedMatchId && (savedScreen === 'match' || savedScreen === 'waiting')) {
+            setActiveMatchId(savedMatchId)
+            setScreen(savedScreen)
+            pendingRejoinRef.current = savedMatchId
+          } else {
+            setScreen('matches')
+          }
+          return true
+        }
+        
+        case 'session_invalid':
+          localStorage.removeItem(SESSION_TOKEN_KEY)
+          setConnectionState('disconnected')
+          setScreen('welcome')
+          connectingRef.current = false
+          return true
+        
+        case 'error':
+          if (connectingRef.current) {
+            setAuthError(message.message)
+            setConnectionState('disconnected')
+            connectingRef.current = false
+            return true
+          }
+          return false
+        
+        default:
+          return false
+      }
+    }
+    
+    messageHandlers.current.push(handleMessage)
+    
+    return () => {
+      const index = messageHandlers.current.indexOf(handleMessage)
+      if (index > -1) messageHandlers.current.splice(index, 1)
+    }
+  }, [messageHandlers, setScreen, setActiveMatchId])
+
+  // Initial reconnect attempt
+  useEffect(() => {
+    const token = localStorage.getItem(SESSION_TOKEN_KEY)
+    if (token && !connectingRef.current) {
+      tryReconnect()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  
+  // Reconnection with exponential backoff
+  useEffect(() => {
+    if (connectionState !== 'disconnected') {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      return
+    }
+    
+    const token = localStorage.getItem(SESSION_TOKEN_KEY)
+    if (!token) return
+    
+    setLogs(prev => [...prev, `Disconnected. Reconnecting in ${reconnectDelayRef.current / 1000}s...`])
+    reconnectTimeoutRef.current = setTimeout(() => {
+      reconnectTimeoutRef.current = null
+      if (tryReconnect()) {
+        reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 2, 30000)
+      }
+    }, reconnectDelayRef.current)
+    
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+    }
+  }, [connectionState, tryReconnect, setLogs])
+
+  // Visibility change handler
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && connectionState === 'disconnected') {
+        const token = localStorage.getItem(SESSION_TOKEN_KEY)
+        if (token) {
+          tryReconnect()
+        }
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [connectionState, tryReconnect])
+
+  // Socket cleanup
+  useEffect(() => {
+    return () => {
+      socket?.close()
+    }
+  }, [socket])
+
+  // Pending rejoin
+  useEffect(() => {
+    if (socket && socket.readyState === WebSocket.OPEN && pendingRejoinRef.current) {
+      const matchId = pendingRejoinRef.current
+      pendingRejoinRef.current = null
+      socket.send(JSON.stringify({ type: 'rejoin_match', matchId }))
+    }
+  }, [socket, connectionState])
+
+  return {
+    connectionState,
+    user,
+    authError,
+    register,
+    tryReconnect,
+    logout,
+  }
+}
