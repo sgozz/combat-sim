@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { MatchSummary, User, ClientToServerMessage } from '../../../shared/types'
+import { PlayerList } from './PlayerList'
 import './LobbyScreen.css'
 
 type LobbyScreenProps = {
@@ -28,8 +29,11 @@ export const LobbyScreen = ({
     }
   }, [match, matchId, navigate, myMatches.length])
 
-  void sendMessage
-  void user
+  const handleToggleReady = useCallback(() => {
+    if (!match) return
+    const isReady = match.readyPlayers?.includes(user?.id ?? '') ?? false
+    sendMessage({ type: 'player_ready', matchId: match.id, ready: !isReady })
+  }, [match, user, sendMessage])
 
   const handleCopyCode = useCallback(() => {
     if (!match) return
@@ -90,12 +94,12 @@ export const LobbyScreen = ({
 
       <main className="lobby-main">
         <aside className="lobby-panel lobby-panel-players">
-          <div className="lobby-panel-header">
-            <h3 className="lobby-panel-title">Players</h3>
-          </div>
           <div className="lobby-panel-body">
-            <p className="lobby-placeholder-text">Player list coming soon…</p>
-            <p className="lobby-placeholder-subtext">Task 18</p>
+            <PlayerList
+              match={match}
+              currentUserId={user?.id ?? ''}
+              onToggleReady={handleToggleReady}
+            />
           </div>
         </aside>
 

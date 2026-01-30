@@ -1751,7 +1751,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 18. Build player list with ready system
+- [x] 18. Build player list with ready system
 
   **What to do**:
   - Create `src/components/lobby/PlayerList.tsx` — lobby player list with ready indicators

@@ -601,3 +601,36 @@ Ready for Phase 1: Login screen redesign.
 - CSS token count: 92 ✓ (target: ≥10)
 - LSP diagnostics: clean (both LobbyScreen.tsx and App.tsx) ✓
 - Build succeeded ✓
+
+## [2026-01-31] Task 18: Player List with Ready System
+
+### Implementation Details
+- PlayerList.tsx: ~100 lines, fully controlled component (no internal state)
+- PlayerList.css: ~290 lines, 100% CSS tokens, zero hardcoded colors
+- Props: match (MatchSummary), currentUserId (string), onToggleReady (callback)
+- Ready toggle sends `player_ready` with `ready: !currentState` (toggle pattern)
+- Avatar shows initials (first 2 chars or first letter of each word)
+- Connection dot overlay on avatar (green=connected, gray=disconnected)
+
+### Design Decisions
+- Fully controlled component: no useState needed, all state from match prop
+- Ready button only rendered for current user (isCurrent check)
+- Ready icon: green circle with checkmark (ready) vs gray circle with hourglass (waiting)
+- Empty slots: dashed border, "Waiting for player..." + invite hint
+- Ready summary footer: "X / Y ready" with accent-success color
+- Mobile: horizontal scroll with min-width 140px cards, vertical stacking
+
+### Integration Pattern
+- LobbyScreen.tsx: Added handleToggleReady callback that computes !isReady and sends player_ready
+- Removed void sendMessage / void user — now actually consumed
+- PlayerList replaces placeholder panel (kept lobby-panel wrapper for grid layout)
+
+### Gotchas
+- user can be null in LobbyScreen props — use user?.id ?? '' for currentUserId
+- player_ready message requires both matchId and ready boolean (not just toggle)
+- Must compute ready state from match.readyPlayers before sending (toggle logic in parent)
+
+### Verification Results
+- ready grep count: 10 (target: >=3)
+- LSP diagnostics: clean (PlayerList.tsx + LobbyScreen.tsx)
+- Build succeeded
