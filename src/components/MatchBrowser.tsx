@@ -8,7 +8,7 @@ type MatchBrowserProps = {
   user: User
   matches: MatchSummary[]
   publicMatches: MatchSummary[]
-  onCreateMatch: (name: string, rulesetId: RulesetId) => void
+  onCreateMatch: (name: string, maxPlayers: number, rulesetId: RulesetId, isPublic: boolean) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
   onRefresh: () => void
@@ -76,10 +76,10 @@ export const MatchBrowser = ({
         <div className="lobby-browser-cta">
           <div 
             className="quick-match-button" 
-            onClick={() => onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}
+            onClick={() => onCreateMatch(`${user.username}'s Battle`, 4, selectedRuleset, false)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}
+            onKeyDown={(e) => e.key === 'Enter' && onCreateMatch(`${user.username}'s Battle`, 4, selectedRuleset, false)}
           >
             <span className="quick-match-icon">⚔</span>
             <div className="quick-match-text">
@@ -205,7 +205,7 @@ export const MatchBrowser = ({
             <div className="lobby-browser-empty-icon">⚔</div>
             <h3>No matches yet</h3>
             <p>Create a new match or join one with a code!</p>
-            <button className="lobby-browser-empty-button" onClick={() => onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}>
+            <button className="lobby-browser-empty-button" onClick={() => onCreateMatch(`${user.username}'s Battle`, 4, selectedRuleset, false)}>
               Create Your First Match
             </button>
           </div>

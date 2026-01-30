@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MatchCard } from './MatchCard'
 import { StatsBar } from './dashboard/StatsBar'
+import { CreateMatchDialog } from './dashboard/CreateMatchDialog'
 import type { MatchSummary, User, RulesetId } from '../../shared/types'
 import './Dashboard.css'
 
@@ -10,7 +11,7 @@ type DashboardProps = {
   myMatches: MatchSummary[]
   refreshMyMatches: () => void
   onLogout: () => void
-  onCreateMatch: (name: string, rulesetId: RulesetId) => void
+  onCreateMatch: (name: string, maxPlayers: number, rulesetId: RulesetId, isPublic: boolean) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
 }
@@ -28,7 +29,7 @@ export const Dashboard = ({
   const [joinCode, setJoinCode] = useState('')
   const [showJoinInput, setShowJoinInput] = useState(false)
   const [showCompleted, setShowCompleted] = useState(false)
-  const [selectedRuleset, setSelectedRuleset] = useState<RulesetId>('gurps')
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -86,23 +87,12 @@ export const Dashboard = ({
 
           {/* Quick Actions */}
           <section className="dashboard-quick-actions">
-            <div className="dashboard-create-action">
-              <button
-                onClick={() => onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}
-                className="dashboard-btn-primary dashboard-btn-large"
-              >
-                New Match
-              </button>
-              <select
-                className="dashboard-ruleset-select"
-                value={selectedRuleset}
-                onChange={(e) => setSelectedRuleset(e.target.value as RulesetId)}
-                aria-label="Select Ruleset"
-              >
-                <option value="gurps">GURPS 4e</option>
-                <option value="pf2">Pathfinder 2e</option>
-              </select>
-            </div>
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="dashboard-btn-primary dashboard-btn-large"
+            >
+              New Match
+            </button>
 
             {!showJoinInput ? (
               <button
@@ -236,6 +226,17 @@ export const Dashboard = ({
           )}
         </div>
       </main>
+
+      {showCreateDialog && (
+        <CreateMatchDialog
+          username={user.username}
+          onClose={() => setShowCreateDialog(false)}
+          onCreateMatch={(name, maxPlayers, rulesetId, isPublic) => {
+            onCreateMatch(name, maxPlayers, rulesetId, isPublic)
+            setShowCreateDialog(false)
+          }}
+        />
+      )}
     </div>
   )
 }

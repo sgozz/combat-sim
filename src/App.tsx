@@ -86,8 +86,8 @@ function AppRoutes() {
 
 
 
-  const handleCreateMatch = (name: string, rulesetId: RulesetId) => {
-    sendMessage({ type: 'create_match', name, maxPlayers: 4, rulesetId })
+  const handleCreateMatch = (name: string, maxPlayers: number, rulesetId: RulesetId, isPublic: boolean) => {
+    sendMessage({ type: 'create_match', name, maxPlayers, rulesetId, isPublic })
   }
 
   const handleJoinByCode = (code: string) => {

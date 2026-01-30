@@ -1145,7 +1145,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 9. Build match creation dialog
+- [x] 9. Build match creation dialog
 
   **What to do**:
   - Create `src/components/dashboard/CreateMatchDialog.tsx` — modal dialog opened from Dashboard
