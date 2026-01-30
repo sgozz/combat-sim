@@ -532,3 +532,33 @@ Ready for Phase 1: Login screen redesign.
 4. Redesign lobby screens (Tasks 17-21)
 5. Polish and test (Tasks 22-24)
 
+
+## [2026-01-31] Task 16: Character Picker Component
+
+### Implementation Details
+- Compact card layout: horizontal row with name/meta, stat pills, ruleset badge, checkmark
+- Filter by rulesetId prop using isGurpsCharacter/isPF2Character type guards
+- GURPS meta: shows highest-level skill name; PF2 meta: shows class + level
+- Stats: HP for all, ST for GURPS, AC for PF2
+- Selected state: accent-primary border + inner glow + checkmark circle
+- Empty state: icon + ruleset-specific message + create CTA
+- Mobile: horizontal scroll with min-width cards; Desktop: vertical list
+
+### Design Decisions
+- Used `<button>` for cards (keyboard accessible, aria-pressed for selection state)
+- No internal state needed — fully controlled via props (selectedCharacterId, onSelect)
+- Ruleset badge kept on each card even though list is pre-filtered (confirms identity at a glance)
+- Stat pills use bg-interactive background for subtle depth contrast against card surface
+- getCharacterMeta() helper: extracts top skill (GURPS) or class+level (PF2) for compact display
+
+### CSS Patterns
+- All classes namespaced with `character-picker-` prefix
+- Zero hardcoded colors (100% CSS tokens)
+- Section comments kept in CSS for navigability (structural landmarks in 240-line file)
+- Mobile breakpoint at 768px — cards become horizontal-scroll with flex-shrink:0
+
+### Verification Results
+- LSP diagnostics: 0 errors ✓
+- Build: succeeded ✓
+- onSelect grep: 3 matches ✓
+- Files created: CharacterPicker.tsx, CharacterPicker.css ✓

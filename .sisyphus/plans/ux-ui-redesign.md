@@ -1622,7 +1622,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 16. Build character picker for lobby integration
+- [x] 16. Build character picker for lobby integration
 
   **What to do**:
   - Create `src/components/armory/CharacterPicker.tsx` — reusable component for selecting a character from the roster
