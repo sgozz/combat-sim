@@ -1,8 +1,238 @@
-export const Dashboard = () => {
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { MatchCard } from './MatchCard'
+import type { MatchSummary, User, RulesetId } from '../../shared/types'
+import './Dashboard.css'
+
+type DashboardProps = {
+  user: User
+  myMatches: MatchSummary[]
+  refreshMyMatches: () => void
+  onLogout: () => void
+  onCreateMatch: (name: string, rulesetId: RulesetId) => void
+  onJoinByCode: (code: string) => void
+  onSelectMatch: (matchId: string) => void
+}
+
+export const Dashboard = ({
+  user,
+  myMatches,
+  refreshMyMatches,
+  onLogout,
+  onCreateMatch,
+  onJoinByCode,
+  onSelectMatch,
+}: DashboardProps) => {
+  const navigate = useNavigate()
+  const [joinCode, setJoinCode] = useState('')
+  const [showJoinInput, setShowJoinInput] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(false)
+  const [selectedRuleset, setSelectedRuleset] = useState<RulesetId>('gurps')
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshMyMatches()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [refreshMyMatches])
+
+  const yourTurnMatches = myMatches.filter(m => m.status === 'active' && m.isMyTurn)
+  const activeMatches = myMatches.filter(
+    m => (m.status === 'active' || m.status === 'paused') && !m.isMyTurn
+  )
+  const waitingMatches = myMatches.filter(m => m.status === 'waiting')
+  const completedMatches = myMatches
+    .filter(m => m.status === 'finished')
+    .slice(0, 5)
+
+  const handleJoinSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (joinCode.trim()) {
+      onJoinByCode(joinCode.trim().toUpperCase())
+      setJoinCode('')
+      setShowJoinInput(false)
+    }
+  }
+
+  const hasMatches = myMatches.length > 0
+
   return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>Dashboard</h1>
-      <p>Coming soon in Phase 2</p>
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <div className="dashboard-header-content">
+          <h1 className="dashboard-title">Tactical Combat</h1>
+          <div className="dashboard-header-actions">
+            <span className="dashboard-username">{user.username}</span>
+            <button
+              onClick={() => navigate('/armory')}
+              className="dashboard-btn-header"
+            >
+              Armory
+            </button>
+            <button
+              onClick={onLogout}
+              className="dashboard-btn-header dashboard-btn-logout"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="dashboard-main">
+        <div className="dashboard-container">
+          {/* Quick Actions */}
+          <section className="dashboard-quick-actions">
+            <div className="dashboard-create-action">
+              <button
+                onClick={() => onCreateMatch(`${user.username}'s Battle`, selectedRuleset)}
+                className="dashboard-btn-primary dashboard-btn-large"
+              >
+                New Match
+              </button>
+              <select
+                className="dashboard-ruleset-select"
+                value={selectedRuleset}
+                onChange={(e) => setSelectedRuleset(e.target.value as RulesetId)}
+                aria-label="Select Ruleset"
+              >
+                <option value="gurps">GURPS 4e</option>
+                <option value="pf2">Pathfinder 2e</option>
+              </select>
+            </div>
+
+            {!showJoinInput ? (
+              <button
+                onClick={() => setShowJoinInput(true)}
+                className="dashboard-btn-secondary dashboard-btn-large"
+              >
+                Join by Code
+              </button>
+            ) : (
+              <form onSubmit={handleJoinSubmit} className="dashboard-join-form">
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="Enter code (e.g. ABC123)"
+                  className="dashboard-join-input"
+                  autoFocus
+                  maxLength={6}
+                />
+                <button type="submit" className="dashboard-btn-primary" disabled={!joinCode.trim()}>
+                  Join
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowJoinInput(false)
+                    setJoinCode('')
+                  }}
+                  className="dashboard-btn-secondary"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
+          </section>
+
+          {/* Empty State */}
+          {!hasMatches && (
+            <div className="dashboard-empty-state">
+              <div className="dashboard-empty-icon">⚔</div>
+              <p className="dashboard-empty-text">
+                No matches yet. Create your first match!
+              </p>
+            </div>
+          )}
+
+          {/* Your Turn */}
+          {yourTurnMatches.length > 0 && (
+            <section className="dashboard-match-section">
+              <h2 className="dashboard-section-title dashboard-section-highlight">
+                ⚡ Your Turn ({yourTurnMatches.length})
+              </h2>
+              <div className="dashboard-match-grid">
+                {yourTurnMatches.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    currentUserId={user.id}
+                    onSelect={onSelectMatch}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Active Matches */}
+          {activeMatches.length > 0 && (
+            <section className="dashboard-match-section">
+              <h2 className="dashboard-section-title">
+                Active Matches ({activeMatches.length})
+              </h2>
+              <div className="dashboard-match-grid">
+                {activeMatches.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    currentUserId={user.id}
+                    onSelect={onSelectMatch}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Waiting for Players */}
+          {waitingMatches.length > 0 && (
+            <section className="dashboard-match-section">
+              <h2 className="dashboard-section-title">
+                Waiting for Players ({waitingMatches.length})
+              </h2>
+              <div className="dashboard-match-grid">
+                {waitingMatches.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    currentUserId={user.id}
+                    onSelect={onSelectMatch}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Recent Completed */}
+          {completedMatches.length > 0 && (
+            <section className="dashboard-match-section">
+              <div className="dashboard-section-header">
+                <h2 className="dashboard-section-title">
+                  Recent Completed ({completedMatches.length})
+                </h2>
+                <button
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="dashboard-btn-collapse"
+                >
+                  {showCompleted ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {showCompleted && (
+                <div className="dashboard-match-grid">
+                  {completedMatches.map(match => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      currentUserId={user.id}
+                      onSelect={onSelectMatch}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+      </main>
     </div>
   )
 }

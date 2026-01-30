@@ -913,7 +913,7 @@ Phase 5 - Polish & Tests:
 
 ### Phase 1: Login / Welcome Screen
 
-- [ ] 6. Redesign WelcomeScreen with loading states and connection feedback
+- [x] 6. Redesign WelcomeScreen with loading states and connection feedback
 
   **What to do**:
   - Redesign `WelcomeScreen.tsx` with modern/clean style using CSS tokens from Task 1

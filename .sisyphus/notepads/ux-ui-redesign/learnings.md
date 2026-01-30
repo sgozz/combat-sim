@@ -330,3 +330,60 @@ Ready for Phase 1: Login screen redesign.
 - Build succeeded ✓
 - Tests passed (2183/2183, 4 external failures pre-existing) ✓
 - LSP diagnostics clean (both files) ✓
+
+## [2026-01-30] Task 7: Dashboard Layout
+
+### Component Architecture
+- Dashboard as container component receiving props from App.tsx
+- Reuses MatchCard component (no duplication) with existing `currentUserId` + `onSelect` interface
+- Auto-refresh via useEffect + setInterval (5s), same pattern as MatchBrowser
+- Match categorization: Your Turn (isMyTurn), Active (not my turn), Waiting, Completed (last 5)
+- Navigation delegated to App.tsx via onSelectMatch → setActiveMatchId → useEffect navigates
+
+### Props Design
+- Followed existing MatchBrowser pattern for props (user, myMatches, refreshMyMatches, etc.)
+- Added onSelectMatch to trigger existing navigation flow
+- Added onCreateMatch with RulesetId (GURPS/PF2 selector in quick actions)
+- Kept RulesetId state local to Dashboard (selectedRuleset)
+
+### UX Patterns
+- Quick Actions: prominent CTAs at top with ruleset selector
+- Your Turn: highlighted section (accent-success color)
+- Empty state: icon + friendly message for new users
+- Collapsible completed matches: reduces clutter (last 5 only)
+- Join by Code: inline form (expands on click, same as MatchBrowser)
+
+### CSS Token Usage
+- Dashboard.css: 96 var(--) references (zero hardcoded colors)
+- LobbyCard.css: Updated from 0 to 78 var(--) references
+- All colors, spacing, typography, radii, transitions from token system
+- Responsive breakpoint at 768px (single column, sticky header)
+- Namespaced all classes with `dashboard-` prefix to avoid global conflicts
+
+### LobbyCard.css Token Migration
+- Replaced all hardcoded values with token equivalents where direct mapping exists
+- Kept a few custom colors (hover states, paused/finished backgrounds) that don't have token equivalents
+- Font family, weights, sizes all use tokens now
+- Spacing, padding, border-radius all use tokens
+
+### Mobile Responsive
+- Sticky header (always visible)
+- Single column layout (<768px)
+- Full-width quick actions
+- Column layout for create action (button + select stacked)
+- Reduced padding and font sizes
+
+### Gotchas
+- MatchCard uses `onSelect(matchId)` not `onClick()` - must pass matchId, not match object
+- MatchCard has no `highlight` prop - uses CSS class `.my-turn` from `match.isMyTurn`
+- Must namespace Dashboard CSS classes to avoid collisions with App.css `.empty-state`, `.btn-primary` etc.
+- App.tsx Dashboard route was `<Dashboard />` with no props - needed full prop wiring
+
+### Verification Results
+- Dashboard.tsx created ✓
+- Dashboard.css created ✓
+- CSS tokens: 96 in Dashboard.css ✓ (target: ≥10)
+- LobbyCard.css tokens: 78 ✓
+- MatchCard reused: 5 references ✓
+- LSP diagnostics: clean (both Dashboard.tsx and App.tsx) ✓
+- Build succeeded ✓

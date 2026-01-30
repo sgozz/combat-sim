@@ -188,7 +188,19 @@ function AppRoutes() {
       } />
       
       <Route path="/home" element={
-        user ? <Dashboard /> : <Navigate to="/" replace />
+        user ? (
+          <Dashboard
+            user={user}
+            myMatches={myMatches}
+            refreshMyMatches={refreshMyMatches}
+            onLogout={handleLogout}
+            onCreateMatch={handleCreateMatch}
+            onJoinByCode={handleJoinByCode}
+            onSelectMatch={handleSelectMatch}
+          />
+        ) : (
+          <Navigate to="/" replace />
+        )
       } />
       
       <Route path="/armory" element={
