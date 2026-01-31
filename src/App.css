@@ -4319,6 +4319,7 @@
   padding: 6px 8px;
   min-height: 44px;
   width: 100%;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #2a2a35 0%, #1a1a25 100%);
   border: 2px solid #444;
   border-radius: 6px;
