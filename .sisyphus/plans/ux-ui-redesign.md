@@ -1947,7 +1947,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 21. Build start match flow
+- [x] 21. Build start match flow
 
   **What to do**:
   - Add "Start Match" button to LobbyScreen — visible only to creator

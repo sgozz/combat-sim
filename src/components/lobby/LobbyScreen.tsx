@@ -21,6 +21,10 @@ export const LobbyScreen = ({
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
   const [codeCopied, setCodeCopied] = useState(false)
+  const [botCount, setBotCount] = useState(0)
+  const [showStartConfirm, setShowStartConfirm] = useState(false)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
 
   const match = myMatches.find(m => m.id === matchId)
 
@@ -30,6 +34,13 @@ export const LobbyScreen = ({
     }
   }, [match, matchId, navigate, myMatches.length])
 
+  useEffect(() => {
+    if (match?.status === 'active' && matchId) {
+      setIsStarting(false)
+      navigate(`/game/${matchId}`, { replace: true })
+    }
+  }, [match?.status, matchId, navigate])
+
   const handleToggleReady = useCallback(() => {
     if (!match) return
     const isReady = match.readyPlayers?.includes(user?.id ?? '') ?? false
@@ -38,7 +49,8 @@ export const LobbyScreen = ({
 
   const isCreator = user?.id === match?.creatorId
 
-  const handleUpdateBotCount = useCallback((_count: number) => {
+  const handleUpdateBotCount = useCallback((count: number) => {
+    setBotCount(count)
   }, [])
 
   const handleToggleVisibility = useCallback(() => {
@@ -59,6 +71,46 @@ export const LobbyScreen = ({
     navigate('/home')
   }, [navigate])
 
+  const allPlayersReady = match?.players.every(p => match.readyPlayers?.includes(p.id)) ?? false
+  const totalCombatants = (match?.playerCount ?? 0) + botCount
+  const canStart = isCreator && allPlayersReady && totalCombatants >= 2
+
+  const getStartButtonTooltip = (): string => {
+    if (!allPlayersReady) return 'Waiting for all players to ready'
+    if (totalCombatants < 2) return 'Need at least 2 combatants'
+    return ''
+  }
+
+  const handleStartClick = useCallback(() => {
+    setShowStartConfirm(true)
+  }, [])
+
+  const handleConfirmStart = useCallback(() => {
+    if (!match) return
+    setIsStarting(true)
+    setShowStartConfirm(false)
+    sendMessage({ type: 'start_combat', matchId: match.id, botCount: botCount > 0 ? botCount : undefined })
+  }, [match, botCount, sendMessage])
+
+  const handleCancelStart = useCallback(() => {
+    setShowStartConfirm(false)
+  }, [])
+
+  const handleLeaveClick = useCallback(() => {
+    setShowLeaveConfirm(true)
+  }, [])
+
+  const handleConfirmLeave = useCallback(() => {
+    if (!match) return
+    sendMessage({ type: 'leave_match', matchId: match.id })
+    setShowLeaveConfirm(false)
+    navigate('/home')
+  }, [match, sendMessage, navigate])
+
+  const handleCancelLeave = useCallback(() => {
+    setShowLeaveConfirm(false)
+  }, [])
+
   if (!match) {
     return (
       <div className="lobby-screen">
@@ -71,6 +123,7 @@ export const LobbyScreen = ({
   }
 
   const rulesetLabel = match.rulesetId === 'gurps' ? 'GURPS' : 'PF2'
+  const startTooltip = getStartButtonTooltip()
 
   return (
     <div className="lobby-screen">
@@ -136,33 +189,126 @@ export const LobbyScreen = ({
 
       <footer className="lobby-footer">
         <div className="lobby-footer-inner">
-          <div className="lobby-invite-section">
-            <span className="lobby-invite-label">Invite Code</span>
-            <code className="lobby-invite-code">{match.code}</code>
+          <div className="lobby-footer-left">
+            <button
+              className="lobby-leave-btn"
+              onClick={handleLeaveClick}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M10.5 11.5L14 8L10.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Leave Match
+            </button>
           </div>
-          <button
-            className={`lobby-copy-btn ${codeCopied ? 'lobby-copy-btn--copied' : ''}`}
-            onClick={handleCopyCode}
-          >
-            {codeCopied ? (
-              <>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8L7 12L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Copied!
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M11 3H4C3.44772 3 3 3.44772 3 4V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                Copy Link
-              </>
-            )}
-          </button>
+
+          <div className="lobby-footer-center">
+            <div className="lobby-invite-section">
+              <span className="lobby-invite-label">Invite Code</span>
+              <code className="lobby-invite-code">{match.code}</code>
+            </div>
+            <button
+              className={`lobby-copy-btn ${codeCopied ? 'lobby-copy-btn--copied' : ''}`}
+              onClick={handleCopyCode}
+            >
+              {codeCopied ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8L7 12L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M11 3H4C3.44772 3 3 3.44772 3 4V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  Copy Link
+                </>
+              )}
+            </button>
+          </div>
+
+          {isCreator && (
+            <div className="lobby-footer-right">
+              <div className="lobby-start-wrapper" title={startTooltip || undefined}>
+                <button
+                  className={`lobby-start-btn ${isStarting ? 'lobby-start-btn--loading' : ''}`}
+                  onClick={handleStartClick}
+                  disabled={!canStart || isStarting}
+                >
+                  {isStarting ? (
+                    <>
+                      <span className="lobby-start-spinner" />
+                      Starting…
+                    </>
+                  ) : (
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M4 2.5V15.5L15.5 9L4 2.5Z" fill="currentColor"/>
+                      </svg>
+                      Start Match
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </footer>
+
+      {showStartConfirm && (
+        <div className="lobby-dialog-overlay" onClick={handleCancelStart}>
+          <div className="lobby-dialog" onClick={e => e.stopPropagation()}>
+            <div className="lobby-dialog-icon lobby-dialog-icon--start">
+              <svg width="28" height="28" viewBox="0 0 18 18" fill="none">
+                <path d="M4 2.5V15.5L15.5 9L4 2.5Z" fill="currentColor"/>
+              </svg>
+            </div>
+            <h3 className="lobby-dialog-title">Start Match?</h3>
+            <p className="lobby-dialog-text">
+              Start match with <strong>{match.playerCount} player{match.playerCount !== 1 ? 's' : ''}</strong>
+              {botCount > 0 && <> and <strong>{botCount} bot{botCount !== 1 ? 's' : ''}</strong></>}?
+            </p>
+            <div className="lobby-dialog-actions">
+              <button className="lobby-dialog-btn lobby-dialog-btn--cancel" onClick={handleCancelStart}>
+                Cancel
+              </button>
+              <button className="lobby-dialog-btn lobby-dialog-btn--confirm" onClick={handleConfirmStart}>
+                Start Match
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div className="lobby-dialog-overlay" onClick={handleCancelLeave}>
+          <div className="lobby-dialog" onClick={e => e.stopPropagation()}>
+            <div className="lobby-dialog-icon lobby-dialog-icon--leave">
+              <svg width="28" height="28" viewBox="0 0 16 16" fill="none">
+                <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M10.5 11.5L14 8L10.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h3 className="lobby-dialog-title">Leave Match?</h3>
+            <p className="lobby-dialog-text">
+              You will be removed from this match. You can rejoin later using the invite code.
+            </p>
+            <div className="lobby-dialog-actions">
+              <button className="lobby-dialog-btn lobby-dialog-btn--cancel" onClick={handleCancelLeave}>
+                Stay
+              </button>
+              <button className="lobby-dialog-btn lobby-dialog-btn--danger" onClick={handleConfirmLeave}>
+                Leave Match
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

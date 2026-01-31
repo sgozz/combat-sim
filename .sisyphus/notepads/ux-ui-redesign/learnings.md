@@ -696,3 +696,36 @@ Ready for Phase 1: Login screen redesign.
 - botCount/isPublic grep: 17 ✓ (target: ≥2)
 - LSP diagnostics: 0 errors (both files) ✓
 - Build succeeded ✓
+
+## [2026-01-31] Task 21: Start Match Flow
+
+### Implementation Details
+- Start Match button: creator-only, disabled with tooltip when not all ready or <2 combatants
+- Leave Match button: always visible, red secondary style with door icon
+- Confirmation dialogs: custom overlay + dialog (not window.confirm), with backdrop blur + scale animation
+- Loading state: spinner on Start button + "Starting…" text, disabled during initialization
+- Navigation: App.tsx's existing useEffect handles routing when myMatches status changes to 'active'
+- botCount: lifted from MatchSettings to LobbyScreen via handleUpdateBotCount callback
+
+### Architecture Decisions
+- No direct match_state listening needed in LobbyScreen — App.tsx navigation effect auto-routes on status change
+- botCount stored in LobbyScreen (parent of MatchSettings), passed to start_combat message
+- Dialog pattern: overlay with stopPropagation on dialog div, cancel on overlay click
+
+### CSS Patterns
+- Footer restructured: 3-section layout (left=leave, center=invite, right=start)
+- Mobile: flex-wrap with order property to stack invite full-width on top, leave/start side-by-side below
+- Dialog: fixed overlay with z-index 200, backdrop-filter blur, scale+translate entrance animation
+- All button styles use color-mix() for hover/disabled states (no hardcoded opacity)
+
+### Gotchas
+- GameScreen.tsx had NO inLobbyButNoMatch references — already cleaned in Task 3
+- inLobbyButNoMatch only remains in useGameActions.ts (combat UI, not lobby — don't touch)
+- start_combat message type already defined in shared/types.ts with optional botCount
+- match.readyPlayers is optional (string[]) — must use ?. and ?? guards
+
+### Verification Results
+- start_combat/Start Match grep: 4 ✓
+- lobby overlay/inLobbyButNoMatch in GameScreen: 0 ✓
+- LSP diagnostics: 0 errors ✓
+- Build succeeded ✓
