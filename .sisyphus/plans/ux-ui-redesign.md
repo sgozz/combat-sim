@@ -72,12 +72,12 @@ Redesign all pre-game UX into a modern, clean interface optimized for experience
 - Playwright e2e tests for each new screen
 
 ### Definition of Done
-- [ ] All 5 routes render correctly on desktop (>1200px) and mobile (<768px)
-- [ ] Zero `window.prompt()` calls in codebase
-- [ ] `useGameSocket` decomposed into focused hooks (each <100 lines)
-- [ ] Ready system functional in lobby (all players must ready before start)
-- [ ] Character roster: create, edit, delete, list, favorite, filter by ruleset
-- [ ] `npx vitest run` — all existing tests pass (zero regressions)
+- [x] All 5 routes render correctly on desktop (>1200px) and mobile (<768px)
+- [x] Zero `window.prompt()` calls in codebase
+- [x] `useGameSocket` decomposed into focused hooks (each <100 lines)
+- [x] Ready system functional in lobby (all players must ready before start)
+- [x] Character roster: create, edit, delete, list, favorite, filter by ruleset
+- [x] `npx vitest run` — all existing tests pass (zero regressions)
 - [ ] `npx playwright test` — all existing + new e2e tests pass
 
 ### Must Have
@@ -1001,7 +1001,7 @@ Phase 5 - Polish & Tests:
 
 ### Phase 2: Dashboard / Home
 
-- [ ] 7. Build Dashboard layout and match list
+- [x] 7. Build Dashboard layout and match list
 
   **What to do**:
   - Create `src/components/Dashboard.tsx` replacing the placeholder from Task 3
@@ -2259,16 +2259,16 @@ grep -E "'/home'|'/armory'|'/lobby/'" src/App.tsx | wc -l                # Expec
 ```
 
 ### Final Checklist
-- [ ] All 5 routes render on desktop and mobile
-- [ ] Zero `window.prompt()` calls in codebase
-- [ ] `useGameSocket` decomposed into <100 line hooks
-- [ ] CSS design tokens used across all new components
-- [ ] Ready system functional in lobby
-- [ ] Character roster: CRUD + favorite + filter by ruleset
-- [ ] Match creation dialog with name, ruleset, players, visibility
-- [ ] Dashboard with match list, stats, quick actions
-- [ ] Full-screen lobby with player list, character preview, settings
-- [ ] Pathbuilder import works in new editor
-- [ ] All existing tests pass (zero regressions)
-- [ ] New e2e tests cover complete pre-game flow
-- [ ] Old components cleaned up (MatchBrowser, lobby overlay, old editors)
+- [x] All 5 routes render on desktop and mobile
+- [x] Zero `window.prompt()` calls in codebase
+- [x] `useGameSocket` decomposed into <100 line hooks
+- [x] CSS design tokens used across all new components
+- [x] Ready system functional in lobby
+- [x] Character roster: CRUD + favorite + filter by ruleset
+- [x] Match creation dialog with name, ruleset, players, visibility
+- [x] Dashboard with match list, stats, quick actions
+- [x] Full-screen lobby with player list, character preview, settings
+- [x] Pathbuilder import works in new editor
+- [x] All existing tests pass (zero regressions)
+- [x] New e2e tests cover complete pre-game flow
+- [x] Old components cleaned up (MatchBrowser, lobby overlay, old editors)
