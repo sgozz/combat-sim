@@ -2015,7 +2015,7 @@ Phase 5 - Polish & Tests:
 
 ### Phase 5: Polish & Tests
 
-- [ ] 22. Write Playwright e2e tests for all new screens
+- [x] 22. Write Playwright e2e tests for all new screens
 
   **What to do**:
   - Create `e2e/pre-game-flow.spec.ts` — comprehensive e2e test for the new pre-game flow
