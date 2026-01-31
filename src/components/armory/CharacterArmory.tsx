@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { CharacterSheet, RulesetId } from '../../../shared/types'
+import type { CharacterSheet } from '../../../shared/types'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import './CharacterArmory.css'
 
@@ -12,7 +12,6 @@ type CharacterArmoryProps = {
   onDuplicateCharacter: (character: CharacterSheet) => void
 }
 
-type FilterRuleset = 'all' | 'gurps' | 'pf2'
 type SortBy = 'name' | 'date' | 'favorite'
 
 export const CharacterArmory = ({
@@ -23,35 +22,14 @@ export const CharacterArmory = ({
   onDuplicateCharacter,
 }: CharacterArmoryProps) => {
   const navigate = useNavigate()
-  const [filterRuleset, setFilterRuleset] = useState<FilterRuleset>('all')
   const [sortBy, setSortBy] = useState<SortBy>('date')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [showNewCharMenu, setShowNewCharMenu] = useState(false)
 
   useEffect(() => {
     onLoadCharacters()
   }, [onLoadCharacters])
 
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (showNewCharMenu) {
-        setShowNewCharMenu(false)
-      }
-    }
-    
-    if (showNewCharMenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showNewCharMenu])
-
   const filteredCharacters = characters
-    .filter((char) => {
-      if (filterRuleset === 'all') return true
-      if (filterRuleset === 'gurps') return isGurpsCharacter(char)
-      if (filterRuleset === 'pf2') return isPF2Character(char)
-      return true
-    })
     .sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name)
       if (sortBy === 'favorite') {
@@ -72,11 +50,6 @@ export const CharacterArmory = ({
     }
   }
 
-  const handleNewCharacter = (ruleset: RulesetId) => {
-    setShowNewCharMenu(false)
-    navigate(`/armory/new?ruleset=${ruleset}`)
-  }
-
   return (
     <div className="character-armory">
       <header className="armory-header">
@@ -85,48 +58,18 @@ export const CharacterArmory = ({
             ← Back
           </button>
           <h1 className="armory-title">Armory</h1>
-          <div className="armory-new-char-wrapper">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowNewCharMenu(!showNewCharMenu)
-              }} 
-              className="armory-btn-new"
-            >
-              + New Character
-            </button>
-            {showNewCharMenu && (
-              <div className="armory-new-char-menu">
-                <button onClick={() => handleNewCharacter('gurps')} className="armory-new-char-option">
-                  GURPS Character
-                </button>
-                <button onClick={() => handleNewCharacter('pf2')} className="armory-new-char-option">
-                  Pathfinder 2e Character
-                </button>
-              </div>
-            )}
-          </div>
+          <button 
+            onClick={() => navigate('/armory/new')} 
+            className="armory-btn-new"
+          >
+            + New Character
+          </button>
         </div>
       </header>
 
       <main className="armory-main">
         <div className="armory-container">
           <div className="armory-filter-bar">
-            <div className="armory-filter-group">
-              <span className="armory-filter-label">Ruleset</span>
-              <div className="armory-filter-buttons">
-                {(['all', 'gurps', 'pf2'] as const).map((value) => (
-                  <button
-                    key={value}
-                    className={`armory-filter-btn ${filterRuleset === value ? 'active' : ''}`}
-                    onClick={() => setFilterRuleset(value)}
-                  >
-                    {value === 'all' ? 'All' : value === 'gurps' ? 'GURPS' : 'PF2'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="armory-filter-group">
               <span className="armory-filter-label">Sort</span>
               <select

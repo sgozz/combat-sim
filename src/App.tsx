@@ -9,7 +9,7 @@ import { LobbyScreen } from './components/lobby/LobbyScreen'
 import { GameScreen } from './components/game/GameScreen'
 import { isGurpsCombatant } from '../shared/rulesets'
 
-import type { CharacterSheet, GridPosition, RulesetId } from '../shared/types'
+import type { CharacterSheet, GridPosition } from '../shared/types'
 import './App.css'
 
 function AppRoutes() {
@@ -40,6 +40,7 @@ function AppRoutes() {
     saveCharacter,
     deleteCharacter,
     toggleFavorite,
+    setPreferredRuleset,
   } = useGameSocket()
 
 
@@ -102,8 +103,8 @@ function AppRoutes() {
 
 
 
-  const handleCreateMatch = (name: string, maxPlayers: number, rulesetId: RulesetId, isPublic: boolean) => {
-    sendMessage({ type: 'create_match', name, maxPlayers, rulesetId, isPublic })
+  const handleCreateMatch = (name: string, maxPlayers: number, isPublic: boolean) => {
+    sendMessage({ type: 'create_match', name, maxPlayers, isPublic })
   }
 
   const handleJoinByCode = (code: string) => {
@@ -203,21 +204,22 @@ function AppRoutes() {
         )
       } />
       
-      <Route path="/home" element={
-        user ? (
-          <Dashboard
-            user={user}
-            myMatches={myMatches}
-            refreshMyMatches={refreshMyMatches}
-            onLogout={handleLogout}
-            onCreateMatch={handleCreateMatch}
-            onJoinByCode={handleJoinByCode}
-            onSelectMatch={handleSelectMatch}
-          />
-        ) : (
-          <Navigate to="/" replace />
-        )
-      } />
+       <Route path="/home" element={
+         user ? (
+           <Dashboard
+             user={user}
+             myMatches={myMatches}
+             refreshMyMatches={refreshMyMatches}
+             onLogout={handleLogout}
+             onCreateMatch={handleCreateMatch}
+             onJoinByCode={handleJoinByCode}
+             onSelectMatch={handleSelectMatch}
+             setPreferredRuleset={setPreferredRuleset}
+           />
+         ) : (
+           <Navigate to="/" replace />
+         )
+       } />
       
       <Route path="/armory" element={
         user ? (
@@ -231,23 +233,25 @@ function AppRoutes() {
         ) : <Navigate to="/" replace />
       } />
       
-      <Route path="/armory/new" element={
-        user ? (
-          <CharacterEditor
-            characters={rosterCharacters}
-            onSaveCharacter={saveCharacter}
-          />
-        ) : <Navigate to="/" replace />
-      } />
-      
-      <Route path="/armory/:id" element={
-        user ? (
-          <CharacterEditor
-            characters={rosterCharacters}
-            onSaveCharacter={saveCharacter}
-          />
-        ) : <Navigate to="/" replace />
-      } />
+       <Route path="/armory/new" element={
+         user ? (
+           <CharacterEditor
+             characters={rosterCharacters}
+             onSaveCharacter={saveCharacter}
+             preferredRulesetId={user.preferredRulesetId}
+           />
+         ) : <Navigate to="/" replace />
+       } />
+       
+       <Route path="/armory/:id" element={
+         user ? (
+           <CharacterEditor
+             characters={rosterCharacters}
+             onSaveCharacter={saveCharacter}
+             preferredRulesetId={user.preferredRulesetId}
+           />
+         ) : <Navigate to="/" replace />
+       } />
       
       <Route path="/lobby/:matchId" element={
         user ? (

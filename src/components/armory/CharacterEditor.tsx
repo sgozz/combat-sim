@@ -18,10 +18,10 @@ type Tab = 'attributes' | 'skills' | 'equipment' | 'traits'
 type CharacterEditorProps = {
   characters: CharacterSheet[]
   onSaveCharacter: (character: CharacterSheet) => void
-  defaultRulesetId?: RulesetId
+  preferredRulesetId?: RulesetId
 }
 
-export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId = 'gurps' }: CharacterEditorProps) => {
+export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetId = 'gurps' }: CharacterEditorProps) => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const isNew = !id || id === 'new'
@@ -33,10 +33,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
 
   useEffect(() => {
     if (isNew) {
-      const urlParams = new URLSearchParams(window.location.search)
-      const rulesetFromUrl = urlParams.get('ruleset') as RulesetId | null
-      const rulesetId: RulesetId = (rulesetFromUrl === 'gurps' || rulesetFromUrl === 'pf2') ? rulesetFromUrl : defaultRulesetId
-      const bundle = rulesets[rulesetId]
+      const bundle = rulesets[preferredRulesetId]
       if (bundle) {
         const newChar = bundle.ruleset.createCharacter('New Character')
         setCharacter(newChar)
@@ -50,7 +47,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
         navigate('/armory')
       }
     }
-  }, [id, isNew, characters, navigate, defaultRulesetId])
+  }, [id, isNew, characters, navigate, preferredRulesetId])
 
   if (!character) {
     return (

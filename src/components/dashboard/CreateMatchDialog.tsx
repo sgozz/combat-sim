@@ -4,13 +4,13 @@ import './CreateMatchDialog.css'
 
 type CreateMatchDialogProps = {
   username: string
+  preferredRulesetId: RulesetId
   onClose: () => void
-  onCreateMatch: (name: string, maxPlayers: number, rulesetId: RulesetId, isPublic: boolean) => void
+  onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean) => void
 }
 
-export const CreateMatchDialog = ({ username, onClose, onCreateMatch }: CreateMatchDialogProps) => {
+export const CreateMatchDialog = ({ username, preferredRulesetId, onClose, onCreateMatch }: CreateMatchDialogProps) => {
   const [matchName, setMatchName] = useState(`${username}'s Battle`)
-  const [rulesetId, setRulesetId] = useState<RulesetId>('gurps')
   const [maxPlayers, setMaxPlayers] = useState(4)
   const [isPublic, setIsPublic] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -36,7 +36,7 @@ export const CreateMatchDialog = ({ username, onClose, onCreateMatch }: CreateMa
     setIsCreating(true)
 
     try {
-      onCreateMatch(matchName.trim(), maxPlayers, rulesetId, isPublic)
+      onCreateMatch(matchName.trim(), maxPlayers, isPublic)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create match')
       setIsCreating(false)
@@ -66,24 +66,12 @@ export const CreateMatchDialog = ({ username, onClose, onCreateMatch }: CreateMa
 
           <div className="cmd-field">
             <label className="cmd-label">Ruleset</label>
-            <div className="cmd-toggle-group">
-              <button
-                type="button"
-                className={`cmd-toggle-btn ${rulesetId === 'gurps' ? 'cmd-toggle-active' : ''}`}
-                onClick={() => setRulesetId('gurps')}
-                disabled={isCreating}
-              >
-                GURPS 4e
-              </button>
-              <button
-                type="button"
-                className={`cmd-toggle-btn ${rulesetId === 'pf2' ? 'cmd-toggle-active' : ''}`}
-                onClick={() => setRulesetId('pf2')}
-                disabled={isCreating}
-              >
-                Pathfinder 2e
-              </button>
+            <div className={`cmd-ruleset-badge ruleset-${preferredRulesetId}`}>
+              {preferredRulesetId === 'gurps' ? 'GURPS 4e' : 'Pathfinder 2e'}
             </div>
+            <p className="cmd-hint">
+              This match will use {preferredRulesetId === 'gurps' ? 'GURPS 4e' : 'Pathfinder 2e'}
+            </p>
           </div>
 
           <div className="cmd-field">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MatchCard } from './MatchCard'
 import { StatsBar } from './dashboard/StatsBar'
@@ -6,14 +6,20 @@ import { CreateMatchDialog } from './dashboard/CreateMatchDialog'
 import type { MatchSummary, User, RulesetId } from '../../shared/types'
 import './Dashboard.css'
 
+const RULESET_LABELS: Record<RulesetId, string> = {
+  gurps: 'GURPS',
+  pf2: 'PF2',
+}
+
 type DashboardProps = {
   user: User
   myMatches: MatchSummary[]
   refreshMyMatches: () => void
   onLogout: () => void
-  onCreateMatch: (name: string, maxPlayers: number, rulesetId: RulesetId, isPublic: boolean) => void
+  onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
+  setPreferredRuleset: (rulesetId: RulesetId) => void
 }
 
 export const Dashboard = ({
@@ -24,12 +30,26 @@ export const Dashboard = ({
   onCreateMatch,
   onJoinByCode,
   onSelectMatch,
+  setPreferredRuleset,
 }: DashboardProps) => {
   const navigate = useNavigate()
   const [joinCode, setJoinCode] = useState('')
   const [showJoinInput, setShowJoinInput] = useState(false)
   const [showCompleted, setShowCompleted] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showRulesetDialog, setShowRulesetDialog] = useState(false)
+  const [rulesetToast, setRulesetToast] = useState<string | null>(null)
+
+  const currentRulesetId = user.preferredRulesetId
+  const otherRulesetId: RulesetId = currentRulesetId === 'gurps' ? 'pf2' : 'gurps'
+
+  const handleSwitchRuleset = useCallback(() => {
+    setPreferredRuleset(otherRulesetId)
+    setShowRulesetDialog(false)
+    setRulesetToast(`Switched to ${RULESET_LABELS[otherRulesetId]}`)
+    refreshMyMatches()
+    setTimeout(() => setRulesetToast(null), 3000)
+  }, [otherRulesetId, setPreferredRuleset, refreshMyMatches])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,6 +85,13 @@ export const Dashboard = ({
           <h1 className="dashboard-title">Tactical Combat</h1>
           <div className="dashboard-header-actions">
             <span className="dashboard-username">{user.username}</span>
+            <button
+              onClick={() => setShowRulesetDialog(true)}
+              className={`dashboard-ruleset-badge ruleset-${currentRulesetId}`}
+              title={`Playing ${RULESET_LABELS[currentRulesetId]} — click to switch`}
+            >
+              {RULESET_LABELS[currentRulesetId]}
+            </button>
             <button
               onClick={() => navigate('/armory')}
               className="dashboard-btn-header"
@@ -230,12 +257,42 @@ export const Dashboard = ({
       {showCreateDialog && (
         <CreateMatchDialog
           username={user.username}
+          preferredRulesetId={user.preferredRulesetId}
           onClose={() => setShowCreateDialog(false)}
-          onCreateMatch={(name, maxPlayers, rulesetId, isPublic) => {
-            onCreateMatch(name, maxPlayers, rulesetId, isPublic)
+          onCreateMatch={(name, maxPlayers, isPublic) => {
+            onCreateMatch(name, maxPlayers, isPublic)
             setShowCreateDialog(false)
           }}
         />
+      )}
+
+      {showRulesetDialog && (
+        <div className="dashboard-dialog-overlay" onClick={() => setShowRulesetDialog(false)}>
+          <div className="dashboard-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dashboard-dialog-title">Switch Ruleset</h3>
+            <p className="dashboard-dialog-text">
+              Switch to <strong>{RULESET_LABELS[otherRulesetId]}</strong>?
+            </p>
+            <div className="dashboard-dialog-actions">
+              <button
+                className="dashboard-dialog-btn dashboard-dialog-btn--cancel"
+                onClick={() => setShowRulesetDialog(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="dashboard-dialog-btn dashboard-dialog-btn--confirm"
+                onClick={handleSwitchRuleset}
+              >
+                Switch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rulesetToast && (
+        <div className="dashboard-toast">{rulesetToast}</div>
       )}
     </div>
   )

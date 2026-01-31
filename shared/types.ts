@@ -105,7 +105,7 @@ export type MatchSummary = {
 export type ClientToServerMessage =
    | { type: "register"; username: string; preferredRulesetId?: RulesetId }
    | { type: "auth"; sessionToken: string }
-   | { type: "create_match"; name: string; maxPlayers: number; rulesetId: RulesetId; isPublic?: boolean }
+    | { type: "create_match"; name: string; maxPlayers: number; isPublic?: boolean; rulesetId?: RulesetId }
    | { type: "join_match"; code: string }
    | { type: "leave_match"; matchId: Id }
    | { type: "rejoin_match"; matchId: Id }
