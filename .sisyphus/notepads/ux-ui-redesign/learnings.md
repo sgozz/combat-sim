@@ -634,3 +634,32 @@ Ready for Phase 1: Login screen redesign.
 - ready grep count: 10 (target: >=3)
 - LSP diagnostics: clean (PlayerList.tsx + LobbyScreen.tsx)
 - Build succeeded
+
+## [2026-01-31] Task 19: Character Preview Panel
+
+### Implementation Details
+- Two sub-components (GurpsStats, PF2Stats) for ruleset-specific display, each guarded by type guard
+- Picker mode vs preview mode controlled by `showPicker` state (defaults to picker if no character selected)
+- Cancel button only shown when switching characters (already have one selected)
+- GURPS: ST/DX/IQ/HT, HP/FP/Move/Dodge, top 5 skills (sorted by level), weapons, armor, point total
+- PF2: class+level+ancestry, 6 abilities (3-col grid), HP/AC/Speed/Perc, trained+ skills with proficiency badge, weapons, armor
+- PF2 skills filtered to non-untrained, proficiency shown as initial letter with color-coded badge (T/E/M/L)
+- `void currentUserId` — prop accepted for future use (other players' compact cards) but not yet consumed
+
+### CSS Patterns
+- 100% CSS tokens, zero hardcoded colors
+- All classes `character-preview-` namespaced
+- PF2 proficiency badges use `data-prof` attribute selectors for color coding
+- Responsive: 2-col attr grid on mobile, stacked action buttons
+
+### Gotchas
+- GurpsCharacterSheet.skills uses `id` field (not index) for React keys
+- PF2 skills have `proficiency` field (string), not numeric level — displayed as badge letter
+- PF2 armor is nullable (`PF2CharacterArmor | null`) — must guard before rendering
+- Equipment filter for GURPS weapons: check `type === 'melee' || type === 'ranged'`
+
+### Verification Results
+- CharacterPicker refs: 2 ✓
+- Type guard refs: 5 ✓ (target: ≥2)
+- LSP diagnostics: 0 errors ✓
+- Build succeeded ✓

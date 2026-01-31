@@ -1814,7 +1814,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 19. Build character preview panel
+- [x] 19. Build character preview panel
 
   **What to do**:
   - Create `src/components/lobby/CharacterPreview.tsx` — shows selected character details in lobby
