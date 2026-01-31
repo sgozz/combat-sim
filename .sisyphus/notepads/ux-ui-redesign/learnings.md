@@ -845,3 +845,35 @@ Ready for Phase 1: Login screen redesign.
 - Navigation now exclusively uses Router: /, /home, /armory, /lobby/:matchId, /game/:matchId
 - No more /matches route (old MatchBrowser screen)
 - Dashboard fully replaces MatchBrowser functionality
+
+## [2026-01-31] Task 14: Traits Tab Implementation (3rd Attempt - Success)
+
+### Implementation Details
+- Added GurpsTraitsPanel component: Advantages + Disadvantages sections with inline forms
+- Added PF2TraitsPanel component: Feats section with inline form (name, type dropdown, level, description)
+- Both panels follow exact same pattern as GurpsSkillsPanel/PF2SkillsPanel (state + useCallback + datalist)
+- Autocomplete via datalist: 15 common advantages, 15 common disadvantages, 15 common feats
+- Removed ALL window.prompt() calls from useCharacterEditor.ts (refactored to accept params)
+- Updated old GurpsCharacterEditor.tsx and PF2CharacterEditor.tsx to pass params instead of relying on prompts
+
+### Files Modified
+- src/components/armory/CharacterEditor.tsx: Replaced placeholder, added 2 panel components (~290 lines)
+- src/components/rulesets/useCharacterEditor.ts: Refactored 5 functions to accept params (no more window.prompt)
+- src/components/rulesets/gurps/GurpsCharacterEditor.tsx: Updated 4 button onClick handlers
+- src/components/rulesets/pf2/PF2CharacterEditor.tsx: Updated 3 button onClick handlers
+
+### Type Imports Added
+- Advantage, Disadvantage from gurps/types.ts
+- PF2Feat from pf2/characterSheet.ts
+
+### Gotchas
+- Old editors (GurpsCharacterEditor, PF2CharacterEditor) still exist in rulesets/ and are registered in component registry
+- They called window.prompt via useCharacterEditor hook — needed to refactor hook AND update callers
+- PF2Feat.type is `string` (not union type) — used string array for dropdown options
+- Previous attempts (2 failures) only changed imports without implementing the actual panels
+
+### Verification Results
+- "Traits editor coming soon" placeholder: 0 occurrences ✓
+- window.prompt in codebase: 0 occurrences ✓
+- Build succeeded with zero errors ✓
+- LSP diagnostics: clean on all 4 modified files ✓

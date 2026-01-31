@@ -88,7 +88,7 @@ export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel
         <div className="char-section">
           <label className="char-label">
             Advantages
-            <button className="add-btn" onClick={addAdvantage}>+ Add</button>
+            <button className="add-btn" onClick={() => addAdvantage({ name: 'New Advantage' })}>+ Add</button>
           </label>
           <div className="list-items">
             {character.advantages.length === 0 ? (
@@ -107,7 +107,7 @@ export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel
         <div className="char-section">
           <label className="char-label">
             Disadvantages
-            <button className="add-btn" onClick={addDisadvantage}>+ Add</button>
+            <button className="add-btn" onClick={() => addDisadvantage({ name: 'New Disadvantage' })}>+ Add</button>
           </label>
           <div className="list-items">
             {character.disadvantages.length === 0 ? (
@@ -126,7 +126,7 @@ export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel
         <div className="char-section">
           <label className="char-label">
             Skills
-            <button className="add-btn" onClick={addSkill}>+ Add</button>
+            <button className="add-btn" onClick={() => addSkill({ name: 'New Skill', level: 12 })}>+ Add</button>
           </label>
           <div className="list-items">
             {character.skills.length === 0 ? (
@@ -147,7 +147,7 @@ export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel
         <div className="char-section">
           <label className="char-label">
             Equipment
-            <button className="add-btn" onClick={addEquipment}>+ Add</button>
+            <button className="add-btn" onClick={() => addEquipment({ name: 'New Weapon', damage: '1d6', damageType: 'crushing' })}>+ Add</button>
           </label>
           <div className="list-items">
             {character.equipment.length === 0 ? (

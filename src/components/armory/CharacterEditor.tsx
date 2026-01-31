@@ -7,9 +7,10 @@ import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import type { GurpsCharacterSheet } from '../../../shared/rulesets/gurps/characterSheet'
 import type { PF2CharacterSheet } from '../../../shared/rulesets/pf2/characterSheet'
 import type { PF2CharacterWeapon, PF2CharacterArmor } from '../../../shared/rulesets/pf2/characterSheet'
-import type { Skill, Equipment, DamageType, Reach, EquipmentType } from '../../../shared/rulesets/gurps/types'
+import type { Skill, Equipment, DamageType, Reach, EquipmentType, Advantage, Disadvantage } from '../../../shared/rulesets/gurps/types'
 import type { PF2Skill, Proficiency, PF2DamageType, PF2WeaponTrait } from '../../../shared/rulesets/pf2/types'
 import type { Abilities } from '../../../shared/rulesets/pf2/types'
+import type { PF2Feat } from '../../../shared/rulesets/pf2/characterSheet'
 import './CharacterEditor.css'
 
 type Tab = 'attributes' | 'skills' | 'equipment' | 'traits'
@@ -220,10 +221,19 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
 
         {activeTab === 'traits' && (
           <div className="editor-tab-panel" role="tabpanel">
-            <div className="editor-placeholder">
-              <span className="editor-placeholder-icon">✨</span>
-              <p className="editor-placeholder-text">Traits editor coming soon</p>
-            </div>
+            {isGurpsCharacter(character) && (
+              <GurpsTraitsPanel
+                character={character}
+                onUpdateAdvantages={(advantages) => setCharacter({ ...character, advantages })}
+                onUpdateDisadvantages={(disadvantages) => setCharacter({ ...character, disadvantages })}
+              />
+            )}
+            {isPF2Character(character) && (
+              <PF2TraitsPanel
+                character={character}
+                onUpdateFeats={(feats) => setCharacter({ ...character, feats })}
+              />
+            )}
           </div>
         )}
       </main>
@@ -1135,6 +1145,352 @@ const PF2EquipmentPanel = ({ character, onUpdateWeapons, onUpdateArmor, onUpdate
             {character.shieldBonus === 0 ? 'No shield' : `+${character.shieldBonus} AC when raised`}
           </span>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── GURPS Traits Panel ─── */
+
+const GURPS_COMMON_ADVANTAGES = [
+  'Combat Reflexes', 'High Pain Threshold', 'Acute Vision', 'Danger Sense', 'Luck',
+  'Ambidexterity', 'Fearlessness', 'Hard to Kill', 'Night Vision', 'Rapid Healing',
+  'Shield Wall Training', 'Weapon Bond', 'Enhanced Dodge', 'Fit', 'Tough Skin',
+]
+
+const GURPS_COMMON_DISADVANTAGES = [
+  'Bad Temper', 'Overconfidence', 'Impulsiveness', 'Code of Honor', 'Phobia',
+  'Bloodlust', 'Curious', 'Greed', 'Honesty', 'Sense of Duty',
+  'Stubbornness', 'Compulsive Behavior', 'Berserk', 'Loner', 'Oblivious',
+]
+
+type GurpsTraitsPanelProps = {
+  character: GurpsCharacterSheet
+  onUpdateAdvantages: (advantages: Advantage[]) => void
+  onUpdateDisadvantages: (disadvantages: Disadvantage[]) => void
+}
+
+const GurpsTraitsPanel = ({ character, onUpdateAdvantages, onUpdateDisadvantages }: GurpsTraitsPanelProps) => {
+  const [newAdvName, setNewAdvName] = useState('')
+  const [newAdvDesc, setNewAdvDesc] = useState('')
+  const [newDisadvName, setNewDisadvName] = useState('')
+  const [newDisadvDesc, setNewDisadvDesc] = useState('')
+
+  const addAdvantage = useCallback(() => {
+    const name = newAdvName.trim()
+    if (!name) return
+    if (character.advantages.some(a => a.name.toLowerCase() === name.toLowerCase())) return
+    const advantage: Advantage = {
+      id: crypto.randomUUID(),
+      name,
+      description: newAdvDesc.trim() || undefined,
+    }
+    onUpdateAdvantages([...character.advantages, advantage])
+    setNewAdvName('')
+    setNewAdvDesc('')
+  }, [newAdvName, newAdvDesc, character.advantages, onUpdateAdvantages])
+
+  const removeAdvantage = useCallback((advId: string) => {
+    onUpdateAdvantages(character.advantages.filter(a => a.id !== advId))
+  }, [character.advantages, onUpdateAdvantages])
+
+  const addDisadvantage = useCallback(() => {
+    const name = newDisadvName.trim()
+    if (!name) return
+    if (character.disadvantages.some(d => d.name.toLowerCase() === name.toLowerCase())) return
+    const disadvantage: Disadvantage = {
+      id: crypto.randomUUID(),
+      name,
+      description: newDisadvDesc.trim() || undefined,
+    }
+    onUpdateDisadvantages([...character.disadvantages, disadvantage])
+    setNewDisadvName('')
+    setNewDisadvDesc('')
+  }, [newDisadvName, newDisadvDesc, character.disadvantages, onUpdateDisadvantages])
+
+  const removeDisadvantage = useCallback((disadvId: string) => {
+    onUpdateDisadvantages(character.disadvantages.filter(d => d.id !== disadvId))
+  }, [character.disadvantages, onUpdateDisadvantages])
+
+  return (
+    <div className="editor-traits-section">
+      {/* Advantages */}
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Add Advantage</h3>
+        <div className="editor-skill-add-form editor-trait-add-form">
+          <div className="editor-skill-add-field editor-skill-add-field--name">
+            <label className="editor-field-label">Advantage Name</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={newAdvName}
+              onChange={(e) => setNewAdvName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addAdvantage() }}
+              placeholder="e.g. Combat Reflexes"
+              list="gurps-advantages-list"
+            />
+            <datalist id="gurps-advantages-list">
+              {GURPS_COMMON_ADVANTAGES
+                .filter(a => !character.advantages.some(existing => existing.name.toLowerCase() === a.toLowerCase()))
+                .map(a => <option key={a} value={a} />)}
+            </datalist>
+          </div>
+          <div className="editor-skill-add-field editor-trait-add-field--desc">
+            <label className="editor-field-label">Description (optional)</label>
+            <textarea
+              className="editor-field-input editor-field-textarea"
+              value={newAdvDesc}
+              onChange={(e) => setNewAdvDesc(e.target.value)}
+              placeholder="Brief description..."
+              rows={2}
+            />
+          </div>
+          <button
+            className="editor-skill-add-btn"
+            onClick={addAdvantage}
+            disabled={!newAdvName.trim()}
+            aria-label="Add advantage"
+          >
+            + Add
+          </button>
+        </div>
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Advantages ({character.advantages.length})</h3>
+        {character.advantages.length === 0 ? (
+          <p className="editor-skills-empty">No advantages added yet. Use the form above to add advantages.</p>
+        ) : (
+          <div className="editor-skills-list">
+            {character.advantages.map((adv) => (
+              <div key={adv.id} className="editor-skill-row editor-trait-row">
+                <div className="editor-trait-info">
+                  <span className="editor-skill-name">{adv.name}</span>
+                  {adv.description && (
+                    <span className="editor-trait-description">{adv.description}</span>
+                  )}
+                </div>
+                <button
+                  className="editor-skill-remove-btn"
+                  onClick={() => removeAdvantage(adv.id)}
+                  aria-label={`Remove ${adv.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Disadvantages */}
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Add Disadvantage</h3>
+        <div className="editor-skill-add-form editor-trait-add-form">
+          <div className="editor-skill-add-field editor-skill-add-field--name">
+            <label className="editor-field-label">Disadvantage Name</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={newDisadvName}
+              onChange={(e) => setNewDisadvName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addDisadvantage() }}
+              placeholder="e.g. Bad Temper"
+              list="gurps-disadvantages-list"
+            />
+            <datalist id="gurps-disadvantages-list">
+              {GURPS_COMMON_DISADVANTAGES
+                .filter(d => !character.disadvantages.some(existing => existing.name.toLowerCase() === d.toLowerCase()))
+                .map(d => <option key={d} value={d} />)}
+            </datalist>
+          </div>
+          <div className="editor-skill-add-field editor-trait-add-field--desc">
+            <label className="editor-field-label">Description (optional)</label>
+            <textarea
+              className="editor-field-input editor-field-textarea"
+              value={newDisadvDesc}
+              onChange={(e) => setNewDisadvDesc(e.target.value)}
+              placeholder="Brief description..."
+              rows={2}
+            />
+          </div>
+          <button
+            className="editor-skill-add-btn"
+            onClick={addDisadvantage}
+            disabled={!newDisadvName.trim()}
+            aria-label="Add disadvantage"
+          >
+            + Add
+          </button>
+        </div>
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Disadvantages ({character.disadvantages.length})</h3>
+        {character.disadvantages.length === 0 ? (
+          <p className="editor-skills-empty">No disadvantages added yet. Use the form above to add disadvantages.</p>
+        ) : (
+          <div className="editor-skills-list">
+            {character.disadvantages.map((disadv) => (
+              <div key={disadv.id} className="editor-skill-row editor-trait-row">
+                <div className="editor-trait-info">
+                  <span className="editor-skill-name">{disadv.name}</span>
+                  {disadv.description && (
+                    <span className="editor-trait-description">{disadv.description}</span>
+                  )}
+                </div>
+                <button
+                  className="editor-skill-remove-btn"
+                  onClick={() => removeDisadvantage(disadv.id)}
+                  aria-label={`Remove ${disadv.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── PF2 Traits Panel ─── */
+
+const PF2_COMMON_FEATS = [
+  'Power Attack', 'Toughness', 'Shield Block', 'Sudden Charge', 'Point-Blank Shot',
+  'Fleet', 'Incredible Initiative', 'Reactive Shield', 'Intimidating Strike', 'Cleave',
+  'Natural Ambition', 'Ancestral Paragon', 'Assurance', 'Skill Training', 'Armor Proficiency',
+]
+
+const PF2_FEAT_TYPES = ['class', 'ancestry', 'general', 'skill'] as const
+
+type PF2TraitsPanelProps = {
+  character: PF2CharacterSheet
+  onUpdateFeats: (feats: PF2Feat[]) => void
+}
+
+const PF2TraitsPanel = ({ character, onUpdateFeats }: PF2TraitsPanelProps) => {
+  const [newFeatName, setNewFeatName] = useState('')
+  const [newFeatType, setNewFeatType] = useState<string>('class')
+  const [newFeatLevel, setNewFeatLevel] = useState(1)
+  const [newFeatDesc, setNewFeatDesc] = useState('')
+
+  const addFeat = useCallback(() => {
+    const name = newFeatName.trim()
+    if (!name) return
+    if (character.feats.some(f => f.name.toLowerCase() === name.toLowerCase())) return
+    const feat: PF2Feat = {
+      id: crypto.randomUUID(),
+      name,
+      type: newFeatType,
+      level: newFeatLevel,
+      description: newFeatDesc.trim() || undefined,
+    }
+    onUpdateFeats([...character.feats, feat])
+    setNewFeatName('')
+    setNewFeatType('class')
+    setNewFeatLevel(1)
+    setNewFeatDesc('')
+  }, [newFeatName, newFeatType, newFeatLevel, newFeatDesc, character.feats, onUpdateFeats])
+
+  const removeFeat = useCallback((featId: string) => {
+    onUpdateFeats(character.feats.filter(f => f.id !== featId))
+  }, [character.feats, onUpdateFeats])
+
+  return (
+    <div className="editor-traits-section">
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Add Feat</h3>
+        <div className="editor-skill-add-form editor-trait-add-form editor-trait-add-form--pf2">
+          <div className="editor-skill-add-field editor-skill-add-field--name">
+            <label className="editor-field-label">Feat Name</label>
+            <input
+              type="text"
+              className="editor-field-input"
+              value={newFeatName}
+              onChange={(e) => setNewFeatName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addFeat() }}
+              placeholder="e.g. Power Attack"
+              list="pf2-feats-list"
+            />
+            <datalist id="pf2-feats-list">
+              {PF2_COMMON_FEATS
+                .filter(f => !character.feats.some(existing => existing.name.toLowerCase() === f.toLowerCase()))
+                .map(f => <option key={f} value={f} />)}
+            </datalist>
+          </div>
+          <div className="editor-skill-add-field editor-skill-add-field--ability">
+            <label className="editor-field-label">Type</label>
+            <select
+              className="editor-field-input editor-field-select"
+              value={newFeatType}
+              onChange={(e) => setNewFeatType(e.target.value)}
+            >
+              {PF2_FEAT_TYPES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div className="editor-skill-add-field editor-skill-add-field--level">
+            <label className="editor-field-label">Level</label>
+            <input
+              type="number"
+              className="editor-field-input"
+              value={newFeatLevel}
+              onChange={(e) => setNewFeatLevel(parseInt(e.target.value) || 1)}
+              min={1}
+              max={20}
+            />
+          </div>
+          <div className="editor-skill-add-field editor-trait-add-field--desc">
+            <label className="editor-field-label">Description (optional)</label>
+            <textarea
+              className="editor-field-input editor-field-textarea"
+              value={newFeatDesc}
+              onChange={(e) => setNewFeatDesc(e.target.value)}
+              placeholder="Brief description..."
+              rows={2}
+            />
+          </div>
+          <button
+            className="editor-skill-add-btn"
+            onClick={addFeat}
+            disabled={!newFeatName.trim()}
+            aria-label="Add feat"
+          >
+            + Add
+          </button>
+        </div>
+      </div>
+
+      <div className="editor-section-group">
+        <h3 className="editor-section-title">Feats ({character.feats.length})</h3>
+        {character.feats.length === 0 ? (
+          <p className="editor-skills-empty">No feats added yet. Use the form above to add feats.</p>
+        ) : (
+          <div className="editor-skills-list">
+            {character.feats.map((feat) => (
+              <div key={feat.id} className="editor-skill-row editor-trait-row editor-trait-row--pf2">
+                <div className="editor-trait-info">
+                  <span className="editor-skill-name">{feat.name}</span>
+                  {feat.description && (
+                    <span className="editor-trait-description">{feat.description}</span>
+                  )}
+                </div>
+                <span className="editor-skill-ability-badge">{feat.type}</span>
+                <span className="editor-equip-badge">Lv {feat.level}</span>
+                <button
+                  className="editor-skill-remove-btn"
+                  onClick={() => removeFeat(feat.id)}
+                  aria-label={`Remove ${feat.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

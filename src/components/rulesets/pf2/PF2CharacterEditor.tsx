@@ -116,7 +116,7 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
         <div className="char-section">
           <label className="char-label">
             Feats
-            <button className="add-btn" onClick={addAdvantage}>+ Add</button>
+            <button className="add-btn" onClick={() => addAdvantage({ name: 'New Feat' })}>+ Add</button>
           </label>
           <div className="list-items">
             {pf2Character.feats.length === 0 ? (
@@ -135,7 +135,7 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
         <div className="char-section">
           <label className="char-label">
             Skills
-            <button className="add-btn" onClick={addSkill}>+ Add</button>
+            <button className="add-btn" onClick={() => addSkill({ name: 'New Skill', ability: 'intelligence', proficiency: 'trained' })}>+ Add</button>
           </label>
           <div className="list-items">
             {pf2Character.skills.length === 0 ? (
@@ -156,7 +156,7 @@ export const PF2CharacterEditor = ({ character, setCharacter, onSave, onCancel }
         <div className="char-section">
           <label className="char-label">
             Weapons
-            <button className="add-btn" onClick={addEquipment}>+ Add</button>
+            <button className="add-btn" onClick={() => addEquipment({ name: 'New Weapon', damage: '1d6', damageType: 'crushing' })}>+ Add</button>
           </label>
           <div className="list-items">
             {pf2Character.weapons.length === 0 ? (

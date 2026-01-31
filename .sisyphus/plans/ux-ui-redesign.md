@@ -1502,7 +1502,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 14. Build character editor — Traits tab (replace prompt())
+- [x] 14. Build character editor — Traits tab (replace prompt())
 
   **What to do**:
   - Add Traits tab content to `CharacterEditor.tsx`

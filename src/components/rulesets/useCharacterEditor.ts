@@ -79,25 +79,18 @@ export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCh
     }
   }
 
-  const addSkill = () => {
-    const name = window.prompt('Skill name')?.trim()
+  const addSkill = (params?: { name: string; level?: number; ability?: keyof Abilities; proficiency?: Proficiency }) => {
+    if (!params) return
+    const name = params.name.trim()
     if (!name) return
     
     if (isPF2Character(character)) {
-      const abilityInput = window.prompt('Ability (str, dex, con, int, wis, cha)', 'int')?.trim().toLowerCase()
-      const abilityMap: Record<string, keyof Abilities> = {
-        str: 'strength', dex: 'dexterity', con: 'constitution',
-        int: 'intelligence', wis: 'wisdom', cha: 'charisma'
-      }
-      const ability = abilityMap[abilityInput ?? 'int'] ?? 'intelligence'
-      const profInput = window.prompt('Proficiency (untrained, trained, expert, master, legendary)', 'trained')?.trim().toLowerCase()
-      const validProfs: Proficiency[] = ['untrained', 'trained', 'expert', 'master', 'legendary']
-      const proficiency: Proficiency = validProfs.includes(profInput as Proficiency) ? (profInput as Proficiency) : 'trained'
+      const ability = params.ability ?? 'intelligence'
+      const proficiency: Proficiency = params.proficiency ?? 'trained'
       const newSkill: PF2Skill = { id: uuid(), name, ability, proficiency }
       setCharacter({ ...character, skills: [...character.skills, newSkill] })
     } else if (isGurpsCharacter(character)) {
-      const levelStr = window.prompt('Skill level', '12')
-      const level = Math.max(1, Math.min(20, Number(levelStr) || 12))
+      const level = Math.max(1, Math.min(20, params.level ?? 12))
       const newSkill: Skill = { id: uuid(), name, level }
       setCharacter({ ...character, skills: [...character.skills, newSkill] })
     }
@@ -111,15 +104,13 @@ export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCh
     }
   }
 
-  const addEquipment = () => {
+  const addEquipment = (params?: { name: string; damage?: string; damageType?: DamageType }) => {
     if (!isGurpsCharacter(character)) return
-    
-    const name = window.prompt('Weapon name')?.trim()
+    if (!params) return
+    const name = params.name.trim()
     if (!name) return
-    const damage = window.prompt('Damage formula (e.g., 1d8, 2d6)', '1d6')?.trim() || '1d6'
-    const typeInput = window.prompt('Damage type (crushing, cutting, impaling, piercing)', 'crushing')?.trim().toLowerCase()
-    const validTypes: DamageType[] = ['crushing', 'cutting', 'impaling', 'piercing']
-    const damageType: DamageType = validTypes.includes(typeInput as DamageType) ? (typeInput as DamageType) : 'crushing'
+    const damage = params.damage ?? '1d6'
+    const damageType: DamageType = params.damageType ?? 'crushing'
     const newEquip: Equipment = { 
       id: uuid(), 
       name, 
@@ -137,13 +128,12 @@ export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCh
     setCharacter({ ...character, equipment: character.equipment.filter((e: Equipment) => e.id !== equipId) })
   }
 
-  const addAdvantage = () => {
+  const addAdvantage = (params?: { name: string; description?: string }) => {
     if (!isGurpsCharacter(character)) return
-    
-    const name = window.prompt('Advantage name')?.trim()
+    if (!params) return
+    const name = params.name.trim()
     if (!name) return
-    const description = window.prompt('Description (optional)')?.trim()
-    const newAdvantage: Advantage = { id: uuid(), name, description: description || undefined }
+    const newAdvantage: Advantage = { id: uuid(), name, description: params.description?.trim() || undefined }
     setCharacter({ ...character, advantages: [...character.advantages, newAdvantage] })
   }
 
@@ -152,13 +142,12 @@ export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCh
     setCharacter({ ...character, advantages: character.advantages.filter((a: Advantage) => a.id !== id) })
   }
 
-  const addDisadvantage = () => {
+  const addDisadvantage = (params?: { name: string; description?: string }) => {
     if (!isGurpsCharacter(character)) return
-    
-    const name = window.prompt('Disadvantage name')?.trim()
+    if (!params) return
+    const name = params.name.trim()
     if (!name) return
-    const description = window.prompt('Description (optional)')?.trim()
-    const newDisadvantage: Disadvantage = { id: uuid(), name, description: description || undefined }
+    const newDisadvantage: Disadvantage = { id: uuid(), name, description: params.description?.trim() || undefined }
     setCharacter({ ...character, disadvantages: [...character.disadvantages, newDisadvantage] })
   }
 
