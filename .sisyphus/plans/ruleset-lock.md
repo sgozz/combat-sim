@@ -64,15 +64,15 @@ Add `preferredRulesetId` to the user model and thread it through the entire app 
 - `loadCharactersByOwner` filters by preferred ruleset (app-level)
 
 ### Definition of Done
-- [ ] New user registration includes ruleset selection
-- [ ] Existing users default to GURPS on reconnect
-- [ ] Create Match uses preferred ruleset automatically
-- [ ] Armory shows only characters for preferred ruleset
-- [ ] Match lists filtered by preferred ruleset
-- [ ] Ruleset switchable from dashboard header
-- [ ] `npx vitest run` passes
-- [ ] `npm run build` succeeds
-- [ ] `npm run lint` passes (no new errors)
+- [x] New user registration includes ruleset selection
+- [x] Existing users default to GURPS on reconnect
+- [x] Create Match uses preferred ruleset automatically
+- [x] Armory shows only characters for preferred ruleset
+- [x] Match lists filtered by preferred ruleset
+- [x] Ruleset switchable from dashboard header
+- [x] `npx vitest run` passes
+- [x] `npm run build` succeeds
+- [x] `npm run lint` passes (no new errors)
 
 ### Must Have
 - One-time ruleset selection at registration
@@ -293,7 +293,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 4. Client Auth Hook — Store preferredRulesetId
+- [x] 4. Client Auth Hook — Store preferredRulesetId
 
   **What to do**:
   - Update `useAuth` hook to store `preferredRulesetId` from `auth_ok` response
@@ -336,7 +336,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 5. Dashboard Header — Ruleset Badge + Switch Dialog
+- [x] 5. Dashboard Header — Ruleset Badge + Switch Dialog
 
   **What to do**:
   - Add ruleset badge to dashboard header (between username and Armory button)
@@ -379,7 +379,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 6. CreateMatchDialog Simplification
+- [x] 6. CreateMatchDialog Simplification
 
   **What to do**:
   - Remove ruleset toggle buttons from CreateMatchDialog
@@ -419,7 +419,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 7. CharacterArmory Simplification
+- [x] 7. CharacterArmory Simplification
 
   **What to do**:
   - Remove filter bar (All/GURPS/PF2 buttons) — all characters are same ruleset now
@@ -464,7 +464,7 @@ Wave 3 (After Wave 2):
 
 ---
 
-- [ ] 8. Update Tests + Final Verification
+- [x] 8. Update Tests + Final Verification
 
   **What to do**:
   - Update `src/components/armory/CharacterArmory.test.tsx` — remove filter tests, update for single button
@@ -535,12 +535,12 @@ npm run build           # Client + server build succeeds
 ```
 
 ### Final Checklist
-- [ ] New user can choose GURPS or PF2 at login
-- [ ] Existing user defaults to GURPS with toast
-- [ ] CreateMatchDialog has no ruleset picker
-- [ ] Armory has no filter bar or ruleset dropdown
-- [ ] Match lists show only preferred ruleset matches
-- [ ] Dashboard header shows ruleset badge
-- [ ] Ruleset switchable via badge click
-- [ ] All tests pass
-- [ ] No `any`, `@ts-ignore`, or hardcoded colors
+- [x] New user can choose GURPS or PF2 at login
+- [x] Existing user defaults to GURPS with toast
+- [x] CreateMatchDialog has no ruleset picker
+- [x] Armory has no filter bar or ruleset dropdown
+- [x] Match lists show only preferred ruleset matches
+- [x] Dashboard header shows ruleset badge
+- [x] Ruleset switchable via badge click
+- [x] All tests pass
+- [x] No `any`, `@ts-ignore`, or hardcoded colors

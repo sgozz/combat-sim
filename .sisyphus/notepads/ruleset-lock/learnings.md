@@ -148,3 +148,210 @@ Need to check both `connection` and `connection.sessionToken` exist before using
 ### Build Verification
 - `npm run build` succeeds with no TypeScript errors
 - Both client (Vite) and server (tsc) compile cleanly
+
+## Wave 7: CharacterArmory Simplification (2026-01-31)
+
+### Armory UI Simplification Pattern
+
+1. **Removed Filter Bar (All/GURPS/PF2 buttons)**:
+   - Deleted entire `armory-filter-group` for ruleset filtering
+   - Kept sort dropdown (Date Created/Name/Favorites First)
+   - Kept character count display
+   - Rationale: Server now filters characters by `user.preferredRulesetId` — no need for client-side filtering
+
+2. **Removed "+ New Character" Dropdown**:
+   - Deleted `showNewCharMenu` state and click-outside handler
+   - Deleted `handleNewCharacter(ruleset)` function
+   - Replaced dropdown with single button: `onClick={() => navigate('/armory/new')}`
+   - No query param needed — server knows user's preferred ruleset
+
+3. **CharacterEditor Props Update**:
+   - Changed prop name: `defaultRulesetId` → `preferredRulesetId`
+   - Removed URL param reading: `new URLSearchParams(window.location.search).get('ruleset')`
+   - Now uses prop directly: `const bundle = rulesets[preferredRulesetId]`
+   - Dependency array updated: `[id, isNew, characters, navigate, preferredRulesetId]`
+
+4. **App.tsx Route Updates**:
+   - Both `/armory/new` and `/armory/:id` routes now pass `preferredRulesetId={user.preferredRulesetId}`
+   - Removed `RulesetId` import (no longer used in App.tsx directly)
+   - Pattern: Props flow from `user` → `CharacterEditor` → character creation
+
+### Mono-Ruleset Experience Achieved
+- Users see only characters for their preferred ruleset
+- New characters created with user's preferred ruleset (no choice needed)
+- No multi-ruleset UI clutter in armory
+- Server enforces ruleset consistency
+
+### Build Status
+- CharacterArmory.tsx: ✅ No errors
+- CharacterEditor.tsx: ✅ No errors
+- App.tsx: ✅ No errors
+- Pre-existing Dashboard.tsx errors (unused `setPreferredRuleset` prop from previous task) — not blocking this task
+
+## Wave 8: CreateMatchDialog Simplification (2026-01-31)
+
+### Dialog Simplification Pattern
+
+1. **Remove Interactive Ruleset Selection**:
+   - Removed toggle buttons from CreateMatchDialog
+   - Replaced with static badge showing user's preferred ruleset
+   - Badge uses `.ruleset-${rulesetId}` class for styling (matches existing patterns)
+
+2. **Callback Signature Changes**:
+   - `onCreateMatch` signature changed from `(name, maxPlayers, rulesetId, isPublic)` to `(name, maxPlayers, isPublic)`
+   - Server uses `user.preferredRulesetId` instead of client-provided value
+   - Enforces server-side ruleset preference (client cannot override)
+
+3. **Message Type Updates**:
+   - `create_match` message: made `rulesetId` optional (moved to end, after `isPublic`)
+   - Pattern: `{ type: "create_match"; name: string; maxPlayers: number; isPublic?: boolean; rulesetId?: RulesetId }`
+   - Server ignores client-provided `rulesetId` if present
+
+4. **Component Threading**:
+   - CreateMatchDialog now requires `preferredRulesetId` prop from parent
+   - Dashboard passes `user.preferredRulesetId` to CreateMatchDialog
+   - App.tsx passes `setPreferredRuleset` to Dashboard (for future use)
+
+5. **Cleanup Pattern**:
+   - Removed unused ruleset switching UI (dialog + toast) from Dashboard
+   - Removed `RULESET_LABELS` constant (no longer needed)
+   - Removed `useCallback` import when no longer used
+   - Removed `showRulesetDialog`, `rulesetToast`, `handleSwitchRuleset` state/handlers
+
+6. **Type Safety**:
+   - Kept `RulesetId` type imports where needed for prop signatures
+   - Removed unused type imports (e.g., `RulesetId` from Dashboard when not used)
+   - All type signatures properly aligned between components
+
+### Build Verification
+- `npm run build` succeeds with no TypeScript errors
+- Both client (Vite) and server (tsc) compile cleanly
+
+## Wave 9: Dashboard Ruleset Badge + Switch Dialog (2026-01-31)
+
+### Badge Pattern
+- Badge placed in header between username and Armory button
+- Uses `<button>` (not `<div>`) for accessibility/clickability
+- CSS classes: `dashboard-ruleset-badge ruleset-{rulesetId}` — matches armory badge pattern
+- Color scheme: GURPS = blue-purple (`rgba(100, 108, 255, *)`), PF2 = red (`rgba(239, 68, 68, *)`)
+- Hover states darken the background and border for visual feedback
+
+### Dialog Pattern
+- Follows `LobbyScreen.tsx` dialog pattern: overlay + dialog box + stopPropagation
+- CSS classes namespaced with `dashboard-dialog-*` to avoid collision with lobby styles
+- Animations: `dashboard-fade-in` (overlay) + `dashboard-dialog-in` (scale + translate)
+- Confirm button uses `--accent-primary` (not `--accent-success` like lobby's start-match dialog)
+
+### Toast Pattern
+- Simple fixed-position toast at bottom center
+- Auto-dismiss after 3s via `setTimeout(() => setRulesetToast(null), 3000)`
+- Animation: `dashboard-toast-in` (fade + slide up)
+- z-index: 300 (above dialog overlay at 200)
+
+### State Flow
+- `setPreferredRuleset(rulesetId)` sends WebSocket message → server responds with `auth_ok` → user state updates → badge re-renders
+- `refreshMyMatches()` called after switch to reload match lists with new ruleset filter
+- `RULESET_LABELS` constant maps `RulesetId` → display string
+
+### Key Discovery
+- `setPreferredRuleset` was already destructured in App.tsx and passed as prop to Dashboard (from Wave 8)
+- A partial badge implementation (non-interactive `<div>`) already existed — replaced with clickable `<button>`
+- Previous wave had cleaned out dialog/toast code; this wave re-added it properly
+
+## Task 8: Update Tests + Final Verification (2026-01-31)
+
+### Test Updates for Single-Ruleset Experience
+
+**Updated Tests:**
+1. `CharacterArmory.test.tsx`:
+   - Removed filter button tests (All/GURPS/PF2)
+   - Removed dropdown menu tests for "+ New Character"
+   - Updated navigation to use `/armory/new` (no query param)
+   - Reduced from 19 to 14 tests
+
+2. `CharacterEditor.test.tsx`:
+   - Changed `renderEditor` helper to accept `preferredRulesetId` prop
+   - Updated tests to pass `preferredRulesetId` instead of URL params
+   - Updated rerender calls to include the prop
+
+3. `LobbyScreen.test.tsx`:
+   - Added `preferredRulesetId` to User mock object
+
+**New Test Files:**
+1. `WelcomeScreen.test.tsx` (16 tests):
+   - Username input validation
+   - Ruleset card selection (GURPS/PF2)
+   - Button state (disabled/enabled)
+   - `onComplete` callback with correct params
+   - Connection state handling
+   - Form disable during connection
+   - Learned: Validation tests should check button state, not error messages when button is disabled
+
+2. `Dashboard.test.tsx` (12 tests):
+   - Ruleset badge rendering (GURPS/PF2)
+   - Badge click opens switch dialog
+   - Dialog confirm calls `setPreferredRuleset`
+   - Toast notification on switch
+   - Navigation to armory
+   - Logout functionality
+
+3. `CreateMatchDialog.test.tsx` (18 tests):
+   - Static badge display (GURPS 4e / Pathfinder 2e)
+   - No toggle buttons for ruleset selection
+   - `onCreateMatch` called without `rulesetId` parameter
+   - Max players slider
+   - Visibility toggle (Private/Public)
+   - Match name validation
+   - Learned: Range input (slider) requires `fireEvent.change()` not `user.clear()` + `user.type()`
+
+### Test Patterns & Gotchas
+
+**React Testing Library:**
+- Use `fireEvent.change()` for range inputs (sliders), not userEvent
+- When multiple elements have same text, use `getAllByText()` or add selector
+- Check button `disabled` state for validation tests, not error messages
+- Use `closest('button')` to get parent button from child text element
+
+**Type Guards:**
+- Always include `preferredRulesetId` in User mock objects
+- Pass `preferredRulesetId` as prop to components that need it
+
+**Test Organization:**
+- Group related tests in describe blocks
+- Use clear, descriptive test names that explain intent
+- Prefer testing behavior over implementation
+
+### Test Coverage
+
+**Total Component Tests: 94 passing**
+- CharacterArmory: 14 tests
+- CharacterEditor: 10 tests
+- LobbyScreen: 17 tests
+- CharacterPicker: 7 tests
+- WelcomeScreen: 16 tests (new)
+- Dashboard: 12 tests (new)
+- CreateMatchDialog: 18 tests (new)
+
+**Verification:**
+- All tests pass: ✅
+- Lint clean (no new errors): ✅
+- Build succeeds: ✅
+
+### Key Learnings
+
+1. **Prop-based Configuration > URL Params**: 
+   - Tests are cleaner when components accept props
+   - Easier to test different scenarios
+   - No need to manipulate browser history
+
+2. **Test User Interactions, Not Implementation**:
+   - Focus on what user sees and does
+   - Check outcomes (button state, callbacks) not internals
+
+3. **Slider Testing Requires fireEvent**:
+   - userEvent doesn't work with range inputs
+   - Use `fireEvent.change(slider, { target: { value: '6' } })`
+
+4. **Validation Testing**:
+   - When button is disabled, check `button.disabled` state
+   - Don't expect error messages to show when submission is prevented
