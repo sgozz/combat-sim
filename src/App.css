@@ -4278,6 +4278,10 @@
   gap: 1rem;
 }
 
+.card:has(.pf2-action-panel) {
+  padding: 0.5rem;
+}
+
 .pf2-action-panel .pf2-action-header {
   display: flex;
   justify-content: space-between;
