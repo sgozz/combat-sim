@@ -877,3 +877,33 @@ Ready for Phase 1: Login screen redesign.
 - window.prompt in codebase: 0 occurrences ✓
 - Build succeeded with zero errors ✓
 - LSP diagnostics: clean on all 4 modified files ✓
+
+## [2026-01-31] Bugfix: Pathfinder Character Creation
+
+### Issue Reported
+User reported inability to create Pathfinder 2e characters - only GURPS characters could be created.
+
+### Root Cause
+The "New Character" button in CharacterArmory navigated to `/armory/new` without any way to specify the ruleset. CharacterEditor defaulted to 'gurps' when creating new characters.
+
+### Solution Implemented
+1. Added dropdown menu to "New Character" button with two options:
+   - "GURPS Character"
+   - "Pathfinder 2e Character"
+2. Modified navigation to pass ruleset as query parameter: `/armory/new?ruleset=pf2`
+3. Updated CharacterEditor to read ruleset from URL query parameter
+4. Added click-outside handler to close dropdown menu
+
+### Technical Details
+- State: `showNewCharMenu` to control dropdown visibility
+- CSS: Positioned dropdown menu with hover effects using design tokens
+- URL pattern: `/armory/new?ruleset=gurps` or `/armory/new?ruleset=pf2`
+- Fallback: If query param is invalid, uses `defaultRulesetId` ('gurps')
+
+### Files Modified
+- `src/components/armory/CharacterArmory.tsx`: Dropdown menu UI and navigation
+- `src/components/armory/CharacterArmory.css`: Menu styling
+- `src/components/armory/CharacterEditor.tsx`: Query parameter parsing
+
+### User Experience
+Users can now create characters for either ruleset by selecting from the dropdown menu before character creation begins.

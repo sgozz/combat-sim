@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { MatchSummary, User, ClientToServerMessage } from '../../../shared/types'
+import type { MatchSummary, User, ClientToServerMessage, CharacterSheet } from '../../../shared/types'
 import { PlayerList } from './PlayerList'
 import { MatchSettings } from './MatchSettings'
+import { CharacterPreview } from './CharacterPreview'
 import './LobbyScreen.css'
 
 type LobbyScreenProps = {
@@ -10,6 +11,7 @@ type LobbyScreenProps = {
   user: User | null
   connectionState: 'connecting' | 'connected' | 'disconnected'
   sendMessage: (message: ClientToServerMessage) => void
+  characters: CharacterSheet[]
 }
 
 export const LobbyScreen = ({
@@ -17,6 +19,7 @@ export const LobbyScreen = ({
   user,
   connectionState,
   sendMessage,
+  characters,
 }: LobbyScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
@@ -25,6 +28,7 @@ export const LobbyScreen = ({
   const [showStartConfirm, setShowStartConfirm] = useState(false)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null)
 
   const match = myMatches.find(m => m.id === matchId)
 
@@ -68,8 +72,10 @@ export const LobbyScreen = ({
   }, [match])
 
   const handleBack = useCallback(() => {
+    if (!match) return
+    sendMessage({ type: 'leave_match', matchId: match.id })
     navigate('/home')
-  }, [navigate])
+  }, [match, sendMessage, navigate])
 
   const allPlayersReady = match?.players.every(p => match.readyPlayers?.includes(p.id)) ?? false
   const totalCombatants = (match?.playerCount ?? 0) + botCount
@@ -110,6 +116,19 @@ export const LobbyScreen = ({
   const handleCancelLeave = useCallback(() => {
     setShowLeaveConfirm(false)
   }, [])
+
+  const handleSelectCharacter = useCallback((characterId: string) => {
+    if (!match) return
+    const character = characters.find(c => c.id === characterId)
+    if (!character) return
+    
+    setSelectedCharacterId(characterId)
+    sendMessage({ type: 'select_character', matchId: match.id, character })
+  }, [match, characters, sendMessage])
+
+  const handleNavigateToArmory = useCallback(() => {
+    navigate('/armory')
+  }, [navigate])
 
   if (!match) {
     return (
@@ -169,11 +188,17 @@ export const LobbyScreen = ({
 
         <section className="lobby-panel lobby-panel-preview">
           <div className="lobby-panel-header">
-            <h3 className="lobby-panel-title">Character Preview</h3>
+            <h3 className="lobby-panel-title">Your Character</h3>
           </div>
           <div className="lobby-panel-body">
-            <p className="lobby-placeholder-text">Character preview coming soon…</p>
-            <p className="lobby-placeholder-subtext">Task 19</p>
+            <CharacterPreview
+              characters={characters}
+              selectedCharacterId={selectedCharacterId}
+              rulesetId={match.rulesetId}
+              currentUserId={user?.id ?? ''}
+              onSelectCharacter={handleSelectCharacter}
+              onNavigateToArmory={handleNavigateToArmory}
+            />
           </div>
         </section>
 

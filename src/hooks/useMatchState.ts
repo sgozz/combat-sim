@@ -23,7 +23,7 @@ export const useMatchState = ({
         case 'match_state':
           setMatchState(message.state)
           setLogs(message.state.log)
-          return true
+          return false
         
         case 'visual_effect': {
           if (message.matchId !== activeMatchId) return false

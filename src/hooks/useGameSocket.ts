@@ -51,7 +51,10 @@ export const useGameSocket = () => {
     setLogs: matchState.setLogs,
   })
 
-  const roster = useCharacterRoster()
+  const roster = useCharacterRoster({
+    sendMessage,
+    messageHandlers,
+  })
 
   return {
     socket,

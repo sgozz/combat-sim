@@ -70,6 +70,12 @@ export const useMatches = ({
           setMyMatches(prev => prev.filter(m => m.id !== message.matchId))
           return true
         
+        case 'match_state':
+          setMyMatches(prev => prev.map(m =>
+            m.id === message.state.id ? { ...m, status: message.state.status } : m
+          ))
+          return true
+        
         case 'match_updated':
           setMyMatches(prev => prev.map(m => m.id === message.match.id ? message.match : m))
           return true
@@ -121,6 +127,22 @@ export const useMatches = ({
           if (message.matchId === activeMatchId) {
             setLogs(prev => [...prev, `${message.playerName} reconnected.`])
           }
+          return true
+        
+        case 'player_ready_update':
+          setMyMatches(prev => prev.map(m => {
+            if (m.id === message.matchId) {
+              const currentReady = m.readyPlayers ?? []
+              const readyPlayers = message.ready
+                ? [...currentReady.filter(id => id !== message.playerId), message.playerId]
+                : currentReady.filter(id => id !== message.playerId)
+              return { ...m, readyPlayers }
+            }
+            return m
+          }))
+          return true
+        
+        case 'all_players_ready':
           return true
         
         case 'public_matches':

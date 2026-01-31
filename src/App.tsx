@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
-import { useCharacterRoster } from './hooks/useCharacterRoster'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { Dashboard } from './components/Dashboard'
 import { CharacterArmory } from './components/armory/CharacterArmory'
@@ -35,16 +34,15 @@ function AppRoutes() {
     sendMessage,
     logout,
     refreshMyMatches,
-    stopSpectating
-  } = useGameSocket()
-
-  const {
+    stopSpectating,
     characters: rosterCharacters,
     loadCharacters,
     saveCharacter,
     deleteCharacter,
     toggleFavorite,
-  } = useCharacterRoster()
+  } = useGameSocket()
+
+
 
   const handleDuplicateCharacter = useCallback((character: CharacterSheet) => {
     const duplicate = {
@@ -256,6 +254,7 @@ function AppRoutes() {
             user={user}
             connectionState={connectionState}
             sendMessage={sendMessage}
+            characters={rosterCharacters}
           />
         ) : <Navigate to="/" replace />
       } />

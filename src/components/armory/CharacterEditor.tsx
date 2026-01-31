@@ -42,6 +42,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
         setCharacter(newChar)
       }
     } else {
+      if (characters.length === 0) return
       const existing = characters.find(c => c.id === id)
       if (existing) {
         setCharacter(existing)
