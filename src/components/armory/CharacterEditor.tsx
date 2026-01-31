@@ -33,7 +33,9 @@ export const CharacterEditor = ({ characters, onSaveCharacter, defaultRulesetId 
 
   useEffect(() => {
     if (isNew) {
-      const rulesetId: RulesetId = defaultRulesetId
+      const urlParams = new URLSearchParams(window.location.search)
+      const rulesetFromUrl = urlParams.get('ruleset') as RulesetId | null
+      const rulesetId: RulesetId = (rulesetFromUrl === 'gurps' || rulesetFromUrl === 'pf2') ? rulesetFromUrl : defaultRulesetId
       const bundle = rulesets[rulesetId]
       if (bundle) {
         const newChar = bundle.ruleset.createCharacter('New Character')

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { CharacterSheet } from '../../../shared/types'
+import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import './CharacterArmory.css'
 
@@ -26,10 +26,24 @@ export const CharacterArmory = ({
   const [filterRuleset, setFilterRuleset] = useState<FilterRuleset>('all')
   const [sortBy, setSortBy] = useState<SortBy>('date')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [showNewCharMenu, setShowNewCharMenu] = useState(false)
 
   useEffect(() => {
     onLoadCharacters()
   }, [onLoadCharacters])
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showNewCharMenu) {
+        setShowNewCharMenu(false)
+      }
+    }
+    
+    if (showNewCharMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showNewCharMenu])
 
   const filteredCharacters = characters
     .filter((char) => {
@@ -58,6 +72,11 @@ export const CharacterArmory = ({
     }
   }
 
+  const handleNewCharacter = (ruleset: RulesetId) => {
+    setShowNewCharMenu(false)
+    navigate(`/armory/new?ruleset=${ruleset}`)
+  }
+
   return (
     <div className="character-armory">
       <header className="armory-header">
@@ -66,9 +85,27 @@ export const CharacterArmory = ({
             ← Back
           </button>
           <h1 className="armory-title">Armory</h1>
-          <button onClick={() => navigate('/armory/new')} className="armory-btn-new">
-            + New Character
-          </button>
+          <div className="armory-new-char-wrapper">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowNewCharMenu(!showNewCharMenu)
+              }} 
+              className="armory-btn-new"
+            >
+              + New Character
+            </button>
+            {showNewCharMenu && (
+              <div className="armory-new-char-menu">
+                <button onClick={() => handleNewCharacter('gurps')} className="armory-new-char-option">
+                  GURPS Character
+                </button>
+                <button onClick={() => handleNewCharacter('pf2')} className="armory-new-char-option">
+                  Pathfinder 2e Character
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
