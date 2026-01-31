@@ -21,6 +21,7 @@ export type User = {
   id: Id;
   username: string;
   isBot: boolean;
+  preferredRulesetId: RulesetId;
 };
 
 export type Player = {
@@ -102,7 +103,7 @@ export type MatchSummary = {
 };
 
 export type ClientToServerMessage =
-   | { type: "register"; username: string }
+   | { type: "register"; username: string; preferredRulesetId?: RulesetId }
    | { type: "auth"; sessionToken: string }
    | { type: "create_match"; name: string; maxPlayers: number; rulesetId: RulesetId; isPublic?: boolean }
    | { type: "join_match"; code: string }
@@ -121,7 +122,8 @@ export type ClientToServerMessage =
    | { type: "toggle_favorite"; characterId: string }
    | { type: "player_ready"; matchId: string; ready: boolean }
    | { type: "update_match_settings"; matchId: string; settings: { isPublic?: boolean } }
-   | { type: "list_public_waiting" };
+   | { type: "list_public_waiting" }
+   | { type: "set_preferred_ruleset"; rulesetId: RulesetId };
 
 export type VisualEffect = 
   | { type: 'damage'; attackerId: Id; targetId: Id; value: number; position: GridPosition }

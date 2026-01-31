@@ -105,6 +105,13 @@ export const initializeDatabase = (): BetterSqliteDatabase => {
     db.exec("ALTER TABLE matches ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0");
   }
 
+  // Migration: Add preferred_ruleset_id column to users table
+  const userColumns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  const hasPreferredRulesetId = userColumns.some((column) => column.name === 'preferred_ruleset_id');
+  if (!hasPreferredRulesetId) {
+    db.exec("ALTER TABLE users ADD COLUMN preferred_ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
+  }
+
   return db;
 };
 
@@ -117,26 +124,26 @@ export type Session = {
 
 export const findUserByUsername = (username: string): User | null => {
   const row = state.db.prepare(
-    "SELECT id, username, is_bot FROM users WHERE username = ?"
+    "SELECT id, username, is_bot, preferred_ruleset_id FROM users WHERE username = ?"
   ).get(username) as UserRow | undefined;
   if (!row) return null;
-  return { id: row.id, username: row.username, isBot: row.is_bot === 1 };
+  return { id: row.id, username: row.username, isBot: row.is_bot === 1, preferredRulesetId: row.preferred_ruleset_id as RulesetId };
 };
 
 export const findUserById = (userId: string): User | null => {
   const row = state.db.prepare(
-    "SELECT id, username, is_bot FROM users WHERE id = ?"
+    "SELECT id, username, is_bot, preferred_ruleset_id FROM users WHERE id = ?"
   ).get(userId) as UserRow | undefined;
   if (!row) return null;
-  return { id: row.id, username: row.username, isBot: row.is_bot === 1 };
+  return { id: row.id, username: row.username, isBot: row.is_bot === 1, preferredRulesetId: row.preferred_ruleset_id as RulesetId };
 };
 
-export const createUser = (username: string, isBot = false): User => {
+export const createUser = (username: string, isBot = false, preferredRulesetId: string = 'gurps'): User => {
   const id = randomUUID();
   state.db.prepare(
-    "INSERT INTO users (id, username, is_bot) VALUES (?, ?, ?)"
-  ).run(id, username, isBot ? 1 : 0);
-  return { id, username, isBot };
+    "INSERT INTO users (id, username, is_bot, preferred_ruleset_id) VALUES (?, ?, ?, ?)"
+  ).run(id, username, isBot ? 1 : 0, preferredRulesetId);
+  return { id, username, isBot, preferredRulesetId: preferredRulesetId as RulesetId };
 };
 
 export const findSessionByToken = (token: string): Session | null => {
@@ -427,9 +434,9 @@ export const loadPersistedMatches = (): void => {
 };
 
 export const loadPersistedUsers = (): void => {
-  const rows = state.db.prepare("SELECT id, username, is_bot FROM users").all() as UserRow[];
+  const rows = state.db.prepare("SELECT id, username, is_bot, preferred_ruleset_id FROM users").all() as UserRow[];
   for (const row of rows) {
-    state.users.set(row.id, { id: row.id, username: row.username, isBot: row.is_bot === 1 });
+    state.users.set(row.id, { id: row.id, username: row.username, isBot: row.is_bot === 1, preferredRulesetId: row.preferred_ruleset_id as RulesetId });
   }
 };
 

@@ -12,6 +12,7 @@ export type UserRow = {
   username: string;
   is_bot: number;
   default_character_id: string | null;
+  preferred_ruleset_id: string;
   created_at: number;
 };
 
