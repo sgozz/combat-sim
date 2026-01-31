@@ -55,11 +55,11 @@ const pf2Char: PF2CharacterSheet = {
   spellcasters: [],
 }
 
-const renderEditor = (characters: Array<GurpsCharacterSheet | PF2CharacterSheet>) => {
+const renderEditor = (characters: Array<GurpsCharacterSheet | PF2CharacterSheet>, preferredRulesetId: 'gurps' | 'pf2' = 'gurps') => {
   const onSaveCharacter = vi.fn()
   render(
     <MemoryRouter>
-      <CharacterEditor characters={characters} onSaveCharacter={onSaveCharacter} />
+      <CharacterEditor characters={characters} onSaveCharacter={onSaveCharacter} preferredRulesetId={preferredRulesetId} />
     </MemoryRouter>,
   )
   return { onSaveCharacter }
@@ -73,17 +73,15 @@ describe('CharacterEditor', () => {
   })
 
   describe('new character', () => {
-    it('creates new GURPS character from ?ruleset=gurps', async () => {
-      window.history.pushState({}, '', '/armory/new?ruleset=gurps')
-      renderEditor([])
+    it('creates new GURPS character from preferredRulesetId=gurps', async () => {
+      renderEditor([], 'gurps')
 
       await screen.findByDisplayValue('New Character')
       expect(screen.queryByText('GURPS')).not.toBeNull()
     })
 
-    it('creates new PF2 character from ?ruleset=pf2', async () => {
-      window.history.pushState({}, '', '/armory/new?ruleset=pf2')
-      renderEditor([])
+    it('creates new PF2 character from preferredRulesetId=pf2', async () => {
+      renderEditor([], 'pf2')
 
       await screen.findByDisplayValue('New Character')
       expect(screen.queryByText('PF2')).not.toBeNull()
@@ -130,7 +128,7 @@ describe('CharacterEditor', () => {
       const onSaveCharacter = vi.fn()
       const { rerender } = render(
         <MemoryRouter>
-          <CharacterEditor characters={[]} onSaveCharacter={onSaveCharacter} />
+          <CharacterEditor characters={[]} onSaveCharacter={onSaveCharacter} preferredRulesetId="gurps" />
         </MemoryRouter>,
       )
 
@@ -138,7 +136,7 @@ describe('CharacterEditor', () => {
 
       rerender(
         <MemoryRouter>
-          <CharacterEditor characters={[gurpsChar]} onSaveCharacter={onSaveCharacter} />
+          <CharacterEditor characters={[gurpsChar]} onSaveCharacter={onSaveCharacter} preferredRulesetId="gurps" />
         </MemoryRouter>,
       )
 

@@ -113,34 +113,13 @@ describe('CharacterArmory', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/armory/gurps-1')
   })
 
-  it('clicking "+ New Character" shows dropdown menu', async () => {
+  it('clicking "+ New Character" navigates to /armory/new', async () => {
     const user = userEvent.setup()
     renderArmory([])
 
     await user.click(screen.getByRole('button', { name: '+ New Character' }))
 
-    expect(screen.queryByText('GURPS Character')).not.toBeNull()
-    expect(screen.queryByText('Pathfinder 2e Character')).not.toBeNull()
-  })
-
-  it('clicking "GURPS Character" from dropdown navigates to /armory/new?ruleset=gurps', async () => {
-    const user = userEvent.setup()
-    renderArmory([])
-
-    await user.click(screen.getByRole('button', { name: '+ New Character' }))
-    await user.click(screen.getByRole('button', { name: 'GURPS Character' }))
-
-    expect(mockNavigate).toHaveBeenCalledWith('/armory/new?ruleset=gurps')
-  })
-
-  it('clicking "Pathfinder 2e Character" navigates to /armory/new?ruleset=pf2', async () => {
-    const user = userEvent.setup()
-    renderArmory([])
-
-    await user.click(screen.getByRole('button', { name: '+ New Character' }))
-    await user.click(screen.getByRole('button', { name: 'Pathfinder 2e Character' }))
-
-    expect(mockNavigate).toHaveBeenCalledWith('/armory/new?ruleset=pf2')
+    expect(mockNavigate).toHaveBeenCalledWith('/armory/new')
   })
 
   it('clicking "← Back" navigates to /home', async () => {
@@ -186,37 +165,6 @@ describe('CharacterArmory', () => {
 
     await user.click(screen.getByLabelText('Toggle favorite'))
     expect(onToggleFavorite).toHaveBeenCalledWith('gurps-1')
-  })
-
-  it('filter by GURPS shows only GURPS characters', async () => {
-    const user = userEvent.setup()
-    renderArmory([gurpsChar, pf2Char])
-
-    await user.click(screen.getByRole('button', { name: 'GURPS' }))
-
-    expect(screen.queryByText('Conan')).not.toBeNull()
-    expect(screen.queryByText('Elara')).toBeNull()
-  })
-
-  it('filter by PF2 shows only PF2 characters', async () => {
-    const user = userEvent.setup()
-    renderArmory([gurpsChar, pf2Char])
-
-    await user.click(screen.getByRole('button', { name: 'PF2' }))
-
-    expect(screen.queryByText('Elara')).not.toBeNull()
-    expect(screen.queryByText('Conan')).toBeNull()
-  })
-
-  it('filter All shows all characters', async () => {
-    const user = userEvent.setup()
-    renderArmory([gurpsChar, pf2Char])
-
-    await user.click(screen.getByRole('button', { name: 'GURPS' }))
-    await user.click(screen.getByRole('button', { name: 'All' }))
-
-    expect(screen.queryByText('Conan')).not.toBeNull()
-    expect(screen.queryByText('Elara')).not.toBeNull()
   })
 
   it('clicking explicit Edit button navigates to /armory/:id', async () => {

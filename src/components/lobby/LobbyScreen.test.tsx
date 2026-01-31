@@ -49,6 +49,7 @@ const user: User = {
   id: 'user-1',
   username: 'TestUser',
   isBot: false,
+  preferredRulesetId: 'gurps',
 }
 
 const renderLobby = (matchOverrides?: Partial<MatchSummary>, overrides?: Partial<{
