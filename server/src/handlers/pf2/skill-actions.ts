@@ -41,77 +41,80 @@ const getSkillBonus = (
 };
 
 export const handlePF2Grapple = async (
-  socket: WebSocket,
-  matchId: string,
-  match: MatchState,
-  player: Player,
-  actorCombatant: CombatantState,
-  payload: { targetId: string }
+   socket: WebSocket,
+   matchId: string,
+   match: MatchState,
+   player: Player,
+   actorCombatant: CombatantState,
+   payload: { targetId: string }
 ): Promise<void> => {
-  if (!isPF2Combatant(actorCombatant)) return;
+   if (!isPF2Combatant(actorCombatant)) return;
 
-  const actionsRemaining = actorCombatant.actionsRemaining;
-  if (actionsRemaining < 1) {
-    sendMessage(socket, { type: "error", message: "No actions remaining." });
-    return;
-  }
+   const actionsRemaining = actorCombatant.actionsRemaining;
+   if (actionsRemaining < 1) {
+     sendMessage(socket, { type: "error", message: "No actions remaining." });
+     return;
+   }
 
-  const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
-  if (!targetCombatant || !isPF2Combatant(targetCombatant)) {
-    sendMessage(socket, { type: "error", message: "Invalid target." });
-    return;
-  }
+   const targetCombatant = match.combatants.find(c => c.playerId === payload.targetId);
+   if (!targetCombatant || !isPF2Combatant(targetCombatant)) {
+     sendMessage(socket, { type: "error", message: "Invalid target." });
+     return;
+   }
 
-  const actorCharacter = getCharacterById(match, actorCombatant.characterId);
-  const targetCharacter = getCharacterById(match, targetCombatant.characterId);
-  
-  if (!actorCharacter || !isPF2Character(actorCharacter) || !targetCharacter || !isPF2Character(targetCharacter)) {
-    sendMessage(socket, { type: "error", message: "Character not found." });
-    return;
-  }
+   const actorCharacter = getCharacterById(match, actorCombatant.characterId);
+   const targetCharacter = getCharacterById(match, targetCombatant.characterId);
+   
+   if (!actorCharacter || !isPF2Character(actorCharacter) || !targetCharacter || !isPF2Character(targetCharacter)) {
+     sendMessage(socket, { type: "error", message: "Character not found." });
+     return;
+   }
 
-  const athleticsBonus = getSkillBonus(actorCharacter, 'Athletics') + actorCombatant.mapPenalty;
+   const athleticsBonus = getSkillBonus(actorCharacter, 'Athletics') + actorCombatant.mapPenalty;
 
-  const reflexDC = 10 + targetCharacter.derived.reflexSave;
+   const fortitudeDC = 10 + targetCharacter.derived.fortitudeSave;
 
-  const result = rollCheck(athleticsBonus, reflexDC);
+   const result = rollCheck(athleticsBonus, fortitudeDC);
 
-  let logMessage = `${player.name} attempts to Trip: [${result.roll}+${result.modifier}=${result.total} vs DC ${result.dc}] ${result.degree}`;
-  
-  const updatedCombatants = match.combatants.map((c) => {
-    if (c.playerId === player.id && isPF2Combatant(c)) {
-      if (result.degree === 'critical_failure') {
-        logMessage += ` - ${player.name} falls prone!`;
-        return {
-          ...updateCombatantActions(c, 1, -5),
-          conditions: [...c.conditions, { condition: 'prone' as const }],
-        };
-      }
-      return updateCombatantActions(c, 1, -5);
-    }
-    
-    if (c.playerId === payload.targetId && isPF2Combatant(c)) {
-      if (result.degree === 'success' || result.degree === 'critical_success') {
-        logMessage += ` - Target falls prone and is flat-footed!`;
-        return {
-          ...c,
-          conditions: [...c.conditions, { condition: 'prone' as const }, { condition: 'flat_footed' as const }],
-        };
-      }
-    }
-    
-    return c;
-  });
+   let logMessage = `${player.name} attempts to Grapple: [${result.roll}+${result.modifier}=${result.total} vs DC ${result.dc}] ${result.degree}`;
+   
+   const updatedCombatants = match.combatants.map((c) => {
+     if (c.playerId === player.id && isPF2Combatant(c)) {
+       if (result.degree === 'critical_failure') {
+         logMessage += ` - Grapple attempt fails!`;
+         return updateCombatantActions(c, 1, -5);
+       }
+       return updateCombatantActions(c, 1, -5);
+     }
+     
+     if (c.playerId === payload.targetId && isPF2Combatant(c)) {
+       if (result.degree === 'critical_success') {
+         logMessage += ` - Target is grabbed and restrained!`;
+         return {
+           ...c,
+           conditions: [...c.conditions, { condition: 'grabbed' as const }, { condition: 'restrained' as const }],
+         };
+       } else if (result.degree === 'success') {
+         logMessage += ` - Target is grabbed!`;
+         return {
+           ...c,
+           conditions: [...c.conditions, { condition: 'grabbed' as const }],
+         };
+       }
+     }
+     
+     return c;
+   });
 
-  const updated: MatchState = {
-    ...match,
-    combatants: updatedCombatants,
-    log: [...match.log, logMessage],
-  };
-  
-  state.matches.set(matchId, updated);
-  await updateMatchState(matchId, updated);
-  await sendToMatch(matchId, { type: "match_state", state: updated });
+   const updated: MatchState = {
+     ...match,
+     combatants: updatedCombatants,
+     log: [...match.log, logMessage],
+   };
+   
+   state.matches.set(matchId, updated);
+   await updateMatchState(matchId, updated);
+   await sendToMatch(matchId, { type: "match_state", state: updated });
 };
 
 export const handlePF2Trip = async (
