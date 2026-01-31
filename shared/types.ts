@@ -98,6 +98,7 @@ export type MatchSummary = {
    winnerId?: Id;
    winnerName?: string;
    readyPlayers?: string[];
+   isPublic?: boolean;
 };
 
 export type ClientToServerMessage =

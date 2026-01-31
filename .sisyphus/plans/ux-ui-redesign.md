@@ -1885,7 +1885,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 20. Build match settings and bot controls
+- [x] 20. Build match settings and bot controls
 
   **What to do**:
   - Create `src/components/lobby/MatchSettings.tsx` — settings panel for match creator

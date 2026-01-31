@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { MatchSummary, User, ClientToServerMessage } from '../../../shared/types'
 import { PlayerList } from './PlayerList'
+import { MatchSettings } from './MatchSettings'
 import './LobbyScreen.css'
 
 type LobbyScreenProps = {
@@ -34,6 +35,16 @@ export const LobbyScreen = ({
     const isReady = match.readyPlayers?.includes(user?.id ?? '') ?? false
     sendMessage({ type: 'player_ready', matchId: match.id, ready: !isReady })
   }, [match, user, sendMessage])
+
+  const isCreator = user?.id === match?.creatorId
+
+  const handleUpdateBotCount = useCallback((_count: number) => {
+  }, [])
+
+  const handleToggleVisibility = useCallback(() => {
+    if (!match) return
+    sendMessage({ type: 'update_match_settings', matchId: match.id, settings: { isPublic: !(match.isPublic ?? false) } })
+  }, [match, sendMessage])
 
   const handleCopyCode = useCallback(() => {
     if (!match) return
@@ -114,13 +125,12 @@ export const LobbyScreen = ({
         </section>
 
         <aside className="lobby-panel lobby-panel-settings">
-          <div className="lobby-panel-header">
-            <h3 className="lobby-panel-title">Match Settings</h3>
-          </div>
-          <div className="lobby-panel-body">
-            <p className="lobby-placeholder-text">Settings coming soon…</p>
-            <p className="lobby-placeholder-subtext">Task 20</p>
-          </div>
+          <MatchSettings
+            match={match}
+            isCreator={isCreator ?? false}
+            onUpdateBotCount={handleUpdateBotCount}
+            onToggleVisibility={handleToggleVisibility}
+          />
         </aside>
       </main>
 

@@ -663,3 +663,36 @@ Ready for Phase 1: Login screen redesign.
 - Type guard refs: 5 ✓ (target: ≥2)
 - LSP diagnostics: 0 errors ✓
 - Build succeeded ✓
+
+## [2026-01-31] Task 20: Match Settings and Bot Controls
+
+### Implementation Details
+- MatchSettings.tsx: ~175 lines, controlled component with local botCount state
+- MatchSettings.css: ~270 lines, 100% CSS tokens, zero hardcoded colors
+- Added `isPublic?: boolean` to MatchSummary type (was missing from Task 5)
+- Bot count: +/- buttons with React state, clamped to 0-4
+- Visibility toggle: Public/Private with colored dot indicator
+- Invite section: code display + shareable URL, both with copy-to-clipboard + feedback
+
+### Design Decisions
+- Bot count stored as local state in MatchSettings (not server state) — passed to start_combat via Task 21
+- Visibility toggle sends update_match_settings WS message immediately on click
+- Copy feedback: separate codeCopied/urlCopied states with 2s timeout (same pattern as LobbyScreen footer)
+- SVG icons inline (BotIcon, EyeIcon, LinkIcon, CopyIcon, CheckIcon) — matches lobby component conventions
+- isCreator computed in LobbyScreen, passed as boolean prop
+
+### CSS Patterns
+- All classes namespaced with `match-settings-` prefix
+- Section dividers via `.match-settings-divider` (1px bg-color line)
+- Mobile: code-row and url-row stack vertically (<768px)
+- Toggle button shows description text ("Anyone can join" / "Invite only") as hint
+
+### Gotchas
+- MatchSummary type was missing `isPublic` field — had to add it to shared/types.ts
+- `match.isPublic ?? false` needed since field is optional
+- handleUpdateBotCount is a no-op placeholder — Task 21 will wire it to start_combat
+
+### Verification Results
+- botCount/isPublic grep: 17 ✓ (target: ≥2)
+- LSP diagnostics: 0 errors (both files) ✓
+- Build succeeded ✓
