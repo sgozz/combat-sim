@@ -58,8 +58,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   background-color: var(--bg-interactive);
   border: 1px solid var(--border-default);
@@ -114,6 +114,7 @@
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -184,7 +185,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background-color: var(--bg-interactive);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);

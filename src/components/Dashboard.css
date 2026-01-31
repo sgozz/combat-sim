@@ -1,5 +1,6 @@
 .dashboard {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -11,6 +12,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  padding-top: env(safe-area-inset-top);
 }
 
 .dashboard-header-content {
@@ -43,6 +45,7 @@
 
 .dashboard-btn-header {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -89,6 +92,7 @@
 
 .dashboard-btn-primary {
   padding: var(--space-md) var(--space-xl);
+  min-height: 44px;
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: white;
@@ -113,6 +117,7 @@
 
 .dashboard-btn-secondary {
   padding: var(--space-md) var(--space-xl);
+  min-height: 44px;
   font-size: var(--text-base);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -136,6 +141,7 @@
 
 .dashboard-ruleset-select {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
   background: var(--bg-interactive);
@@ -161,6 +167,7 @@
   flex: 1;
   min-width: 140px;
   padding: var(--space-md);
+  min-height: 44px;
   font-size: var(--text-base);
   color: var(--text-primary);
   background: var(--bg-interactive);
@@ -233,6 +240,7 @@
 
 .dashboard-btn-collapse {
   padding: var(--space-xs) var(--space-sm);
+  min-height: 44px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
   background: transparent;
@@ -297,5 +305,24 @@
 
   .dashboard-section-title {
     font-size: var(--text-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-main {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .dashboard-quick-actions {
+    margin-bottom: var(--space-lg);
+  }
+
+  .dashboard-btn-large {
+    font-size: var(--text-base);
   }
 }

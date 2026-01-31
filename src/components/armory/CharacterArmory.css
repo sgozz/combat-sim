@@ -2,6 +2,7 @@
 
 .character-armory {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -15,6 +16,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  padding-top: env(safe-area-inset-top);
 }
 
 .armory-header-content {
@@ -37,6 +39,7 @@
 
 .armory-btn-back {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -56,6 +59,7 @@
 
 .armory-btn-new {
   padding: var(--space-sm) var(--space-lg);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: white;
@@ -123,7 +127,8 @@
 }
 
 .armory-filter-btn {
-  padding: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -146,7 +151,8 @@
 }
 
 .armory-filter-select {
-  padding: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
   background: var(--bg-interactive);
@@ -203,6 +209,7 @@
 
 .armory-empty-cta {
   padding: var(--space-md) var(--space-xl);
+  min-height: 44px;
   font-size: var(--text-base);
   font-weight: var(--font-semibold);
   color: white;
@@ -363,6 +370,7 @@
 .armory-btn-action {
   flex: 1;
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);

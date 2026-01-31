@@ -2082,7 +2082,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 23. Mobile responsive polish
+- [x] 23. Mobile responsive polish
 
   **What to do**:
   - Review all new screens (Login, Dashboard, Armory, Lobby) at mobile breakpoints (480px, 768px)

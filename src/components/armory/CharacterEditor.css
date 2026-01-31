@@ -1,5 +1,6 @@
 .character-editor {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -7,6 +8,7 @@
 
 .editor-loading {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-primary);
   display: flex;
   align-items: center;
@@ -22,6 +24,7 @@
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-default);
   padding: var(--space-md) var(--space-lg);
+  padding-top: calc(var(--space-md) + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -32,6 +35,7 @@
 
 .editor-btn-back {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -54,6 +58,7 @@
   flex: 1;
   min-width: 0;
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-xl);
   font-weight: var(--font-bold);
   color: var(--text-primary);
@@ -113,6 +118,7 @@
 
 .editor-btn-import {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: #e2a84b;
@@ -133,6 +139,7 @@
 
 .editor-btn-cancel {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -152,6 +159,7 @@
 
 .editor-btn-save {
   padding: var(--space-sm) var(--space-lg);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: white;
@@ -191,6 +199,7 @@
 
 .editor-tab {
   padding: var(--space-md) var(--space-lg);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-muted);
@@ -396,6 +405,7 @@
 
 .editor-field-input {
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-base);
   color: var(--text-primary);
   background: var(--bg-elevated);
@@ -506,7 +516,7 @@
   transition: all var(--transition-fast);
   font-family: var(--font-sans);
   white-space: nowrap;
-  height: 38px;
+  height: 44px;
   flex-shrink: 0;
 }
 
@@ -639,8 +649,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   font-size: var(--text-sm);
   color: var(--text-muted);

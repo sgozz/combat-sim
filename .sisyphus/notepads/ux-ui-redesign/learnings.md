@@ -771,3 +771,44 @@ Ready for Phase 1: Login screen redesign.
 - Route assertions: 8 page.waitForURL() calls ✓
 - Screenshots: 21 saved to .sisyphus/evidence/ ✓
 - LSP diagnostics: 0 errors ✓
+
+## [2026-01-31] Task 23: Mobile Responsive Polish
+
+### Implementation Details
+- Reviewed 12 CSS files across all new screens (WelcomeScreen, Dashboard, CharacterArmory, CharacterEditor, LobbyScreen, PlayerList, CharacterPreview, MatchSettings, CreateMatchDialog, CharacterPicker, StatsBar, index.css)
+- Fixed touch targets: Added `min-height: 44px` to all interactive elements (buttons, inputs, selects, tabs)
+- Fixed Safari mobile 100vh bug: Added `100dvh` fallback alongside `100vh` on all full-height containers
+- Added `env(safe-area-inset-*)` to: body (top, left, right), dashboard header, armory header, editor header, lobby footer
+- Added 480px breakpoint to Dashboard (header actions, reduced padding, font sizes)
+- Fixed editor skill add button height (38px → 44px) and skill remove button (28x28 → 44x44)
+- Fixed match settings bot buttons (32x32 → 44x44)
+- Verified z-index stacking: headers (100) < lobby dialogs (200) < modal overlays (1000) < game toast (2000+) — no conflicts
+
+### Screens Modified (12 files)
+1. `src/index.css` — dvh, safe-area body padding
+2. `src/components/WelcomeScreen.css` — dvh, touch targets (btn-primary, btn-secondary, form-input)
+3. `src/components/Dashboard.css` — dvh, touch targets (7 elements), 480px breakpoint
+4. `src/components/armory/CharacterArmory.css` — dvh, safe-area header, touch targets (5 elements)
+5. `src/components/armory/CharacterEditor.css` — dvh x2, safe-area header, touch targets (8 elements)
+6. `src/components/armory/CharacterPicker.css` — touch targets (3 elements)
+7. `src/components/lobby/LobbyScreen.css` — dvh, safe-area footer, touch targets (4 elements)
+8. `src/components/lobby/PlayerList.css` — touch targets (ready-btn)
+9. `src/components/lobby/CharacterPreview.css` — touch targets (3 elements)
+10. `src/components/lobby/MatchSettings.css` — touch targets (3 elements)
+11. `src/components/dashboard/CreateMatchDialog.css` — touch targets (3 elements)
+12. `src/components/dashboard/StatsBar.css` — no changes needed (already compliant)
+
+### Gotchas
+- `dvh` unit: Must keep `vh` as fallback for browsers that don't support dynamic viewport units
+- `env(safe-area-inset-*)`: Silently evaluates to 0 on non-notched devices — safe to add everywhere
+- z-index conflicts: New screens use 100-200 range, well below existing game UI overlays (1000-3000)
+- Editor tabs already had `overflow-x: auto` + `-webkit-overflow-scrolling: touch` — no fix needed
+- Modals (CreateMatchDialog, lobby dialogs) already have good mobile breakpoints with responsive padding
+
+### Verification Results
+- Build succeeded ✓ (zero TypeScript errors)
+- Screenshots saved to .sisyphus/evidence/mobile-{480,768}-{welcome,dashboard,armory}.png ✓
+- Visual inspection: no overflow, no truncation, proper stacking at both breakpoints ✓
+- Touch targets: all interactive elements ≥44px height ✓
+- Safe area insets: applied to headers and bottom bars ✓
+- z-index: no stacking conflicts ✓

@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   position: relative;
@@ -72,7 +73,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background: transparent;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -202,6 +204,7 @@
 .lobby-footer {
   flex-shrink: 0;
   padding: var(--space-md) var(--space-lg);
+  padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
   background-color: var(--bg-surface);
   border-top: 1px solid var(--border-default);
 }
@@ -257,7 +260,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background-color: var(--bg-interactive);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -283,6 +287,7 @@
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background-color: transparent;
   border: 1px solid color-mix(in srgb, var(--accent-danger) 40%, transparent);
   border-radius: var(--radius-md);
@@ -307,6 +312,7 @@
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-lg);
+  min-height: 44px;
   background-color: var(--accent-success);
   border: 1px solid var(--accent-success);
   border-radius: var(--radius-md);
@@ -425,6 +431,7 @@
 .lobby-dialog-btn {
   flex: 1;
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);

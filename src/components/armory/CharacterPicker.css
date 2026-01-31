@@ -29,7 +29,8 @@
 
 .character-picker-btn-create {
   font-size: var(--text-xs);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background: transparent;
   border: 1px dashed var(--border-default);
   color: var(--accent-primary);
@@ -58,6 +59,7 @@
   gap: var(--space-sm);
   width: 100%;
   padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -202,7 +204,8 @@
 
 .character-picker-empty-cta {
   font-size: var(--text-sm);
-  padding: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   background: var(--accent-primary);
   border: none;
   border-radius: var(--radius-md);

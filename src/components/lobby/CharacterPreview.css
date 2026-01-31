@@ -32,7 +32,8 @@
 
 .character-preview-btn-cancel {
   align-self: center;
-  padding: var(--space-xs) var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-secondary);
@@ -106,7 +107,8 @@
 .character-preview-btn-change,
 .character-preview-btn-edit {
   flex: 1;
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   border-radius: var(--radius-md);
