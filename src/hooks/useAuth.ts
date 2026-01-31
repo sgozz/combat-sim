@@ -82,12 +82,17 @@ export const useAuth = ({
     })
   }, [createWebSocket])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(SESSION_TOKEN_KEY)
-    socket?.close()
-    setUser(null)
-    setConnectionState('disconnected')
-  }, [socket])
+   const logout = useCallback(() => {
+     localStorage.removeItem(SESSION_TOKEN_KEY)
+     socket?.close()
+     setUser(null)
+     setConnectionState('disconnected')
+   }, [socket])
+
+   const setPreferredRuleset = useCallback((rulesetId: RulesetId) => {
+     if (!socket || socket.readyState !== WebSocket.OPEN) return
+     socket.send(JSON.stringify({ type: 'set_preferred_ruleset', rulesetId }))
+   }, [socket])
 
   // Register message handler
   useEffect(() => {
@@ -115,17 +120,17 @@ export const useAuth = ({
           connectingRef.current = false
           return true
         
-        case 'error':
-          if (connectingRef.current) {
-            setAuthError(message.message)
-            setConnectionState('disconnected')
-            connectingRef.current = false
-            return true
-          }
-          return false
-        
-        default:
-          return false
+         case 'error':
+           if (connectingRef.current) {
+             setAuthError(message.message)
+             setConnectionState('disconnected')
+             connectingRef.current = false
+             return true
+           }
+           return false
+         
+         default:
+           return false
       }
     }
     
@@ -206,12 +211,14 @@ export const useAuth = ({
     }
   }, [socket, connectionState])
 
-  return {
-    connectionState,
-    user,
-    authError,
-    register,
-    tryReconnect,
-    logout,
-  }
+   return {
+     connectionState,
+     user,
+     authError,
+     register,
+     tryReconnect,
+     logout,
+     setPreferredRuleset,
+     preferredRulesetId: user?.preferredRulesetId ?? null,
+   }
 }
