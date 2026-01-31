@@ -176,15 +176,22 @@ export const loadCharacterById = (characterId: string): CharacterSheet | null =>
   return JSON.parse(row.data_json) as CharacterSheet;
 };
 
-export const loadCharactersByOwner = (ownerId: string): CharacterSheet[] => {
+export const loadCharactersByOwner = (ownerId: string, rulesetId?: string): CharacterSheet[] => {
   const rows = state.db.prepare(
     "SELECT data_json, is_favorite FROM characters WHERE owner_id = ?"
   ).all(ownerId) as Array<{ data_json: string; is_favorite: number }>;
-  return rows.map(row => {
+  
+  let characters = rows.map(row => {
     const sheet = JSON.parse(row.data_json) as CharacterSheet;
     sheet.isFavorite = Boolean(row.is_favorite);
     return sheet;
   });
+  
+  if (rulesetId) {
+    characters = characters.filter(char => char.rulesetId === rulesetId);
+  }
+  
+  return characters;
 };
 
 export const upsertCharacter = (character: CharacterSheet, ownerId: string): void => {
@@ -274,14 +281,24 @@ export const getMatchMember = (matchId: string, userId: string): MatchMemberRow 
   return row ?? null;
 };
 
-export const getUserMatches = (userId: string): MatchRow[] => {
+export const getUserMatches = (userId: string, rulesetId?: string): MatchRow[] => {
+  if (!rulesetId) {
+    return state.db.prepare(
+      `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
+       FROM matches m
+       INNER JOIN match_members mm ON m.id = mm.match_id
+       WHERE mm.user_id = ?
+       ORDER BY m.created_at DESC`
+    ).all(userId) as MatchRow[];
+  }
+  
   return state.db.prepare(
     `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
      FROM matches m
      INNER JOIN match_members mm ON m.id = mm.match_id
-     WHERE mm.user_id = ?
+     WHERE mm.user_id = ? AND (m.ruleset_id = ? OR m.status IN ('active', 'paused'))
      ORDER BY m.created_at DESC`
-  ).all(userId) as MatchRow[];
+  ).all(userId, rulesetId) as MatchRow[];
 };
 
 export const removeMatchMember = (matchId: string, userId: string): void => {
@@ -327,10 +344,16 @@ export const deleteCharacter = (characterId: string, ownerId: string): void => {
   `).run(characterId, ownerId);
 };
 
-export const getPublicWaitingMatches = (): MatchRow[] => {
+export const getPublicWaitingMatches = (rulesetId?: string): MatchRow[] => {
+  if (!rulesetId) {
+    return state.db.prepare(`
+      SELECT * FROM matches WHERE is_public = 1 AND status = 'waiting' ORDER BY created_at DESC
+    `).all() as MatchRow[];
+  }
+  
   return state.db.prepare(`
-    SELECT * FROM matches WHERE is_public = 1 AND status = 'waiting' ORDER BY created_at DESC
-  `).all() as MatchRow[];
+    SELECT * FROM matches WHERE is_public = 1 AND status = 'waiting' AND ruleset_id = ? ORDER BY created_at DESC
+  `).all(rulesetId) as MatchRow[];
 };
 
 export const getReadyPlayers = (matchId: string): string[] => {
