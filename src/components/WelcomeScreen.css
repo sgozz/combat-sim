@@ -13,7 +13,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: var(--space-2xl);
-  max-width: 480px;
+  max-width: 540px;
   width: 100%;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   animation: welcome-fade-in 0.6s ease-out;
@@ -133,6 +133,70 @@
   color: var(--text-muted);
 }
 
+/* ─── Ruleset Cards ─── */
+
+.ruleset-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.ruleset-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.ruleset-card:hover:not(:disabled) {
+  border-color: var(--border-subtle);
+}
+
+.ruleset-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ruleset-card.ruleset-gurps.selected {
+  border-color: rgba(100, 108, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(100, 108, 255, 0.3), 0 4px 12px rgba(100, 108, 255, 0.15);
+  background: rgba(100, 108, 255, 0.06);
+}
+
+.ruleset-card.ruleset-pf2.selected {
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3), 0 4px 12px rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.ruleset-card-name {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.ruleset-card.ruleset-gurps .ruleset-card-name {
+  color: #8b8fff;
+}
+
+.ruleset-card.ruleset-pf2 .ruleset-card-name {
+  color: #f87171;
+}
+
+.ruleset-card-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 .error-message {
   padding: var(--space-md);
   background: rgba(239, 68, 68, 0.1);
@@ -229,5 +293,9 @@
 
   .welcome-subtitle {
     font-size: var(--text-sm);
+  }
+
+  .ruleset-cards {
+    grid-template-columns: 1fr;
   }
 }

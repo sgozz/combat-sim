@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { ServerToClientMessage, User } from '../../shared/types'
+import type { ServerToClientMessage, User, RulesetId } from '../../shared/types'
 import type { ConnectionState } from './useGameSocket'
 
 const SESSION_TOKEN_KEY = 'tcs.sessionToken'
@@ -70,16 +70,15 @@ export const useAuth = ({
     return true
   }, [createWebSocket])
 
-  const register = useCallback((username: string) => {
+  const register = useCallback((username: string, preferredRulesetId?: RulesetId) => {
     if (connectingRef.current) return
     connectingRef.current = true
     setAuthError(null)
     setConnectionState('connecting')
-    // Clear any existing session when registering a new user
     localStorage.removeItem(SESSION_TOKEN_KEY)
     
     createWebSocket((ws: WebSocket) => {
-      ws.send(JSON.stringify({ type: 'register', username }))
+      ws.send(JSON.stringify({ type: 'register', username, preferredRulesetId }))
     })
   }, [createWebSocket])
 

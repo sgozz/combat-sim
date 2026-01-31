@@ -1,15 +1,30 @@
 import { useState, useEffect, useRef } from 'react'
+import type { RulesetId } from '../../shared/types'
 import { Tutorial } from './ui/Tutorial'
 import './WelcomeScreen.css'
 
 type WelcomeScreenProps = {
-  onComplete: (nickname: string) => void
+  onComplete: (username: string, preferredRulesetId: RulesetId) => void
   authError?: string | null
   connectionState: 'disconnected' | 'connecting' | 'connected'
 }
 
+const RULESET_INFO: { id: RulesetId; name: string; description: string }[] = [
+  {
+    id: 'gurps',
+    name: 'GURPS 4e',
+    description: 'Hex-based tactical combat with detailed hit locations, posture, and maneuver selection.',
+  },
+  {
+    id: 'pf2',
+    name: 'Pathfinder 2e',
+    description: 'Three-action economy on a square grid with attacks of opportunity and multiple attack penalty.',
+  },
+]
+
 export const WelcomeScreen = ({ onComplete, authError, connectionState }: WelcomeScreenProps) => {
   const [nickname, setNickname] = useState('')
+  const [selectedRuleset, setSelectedRuleset] = useState<RulesetId | null>(null)
   const [error, setError] = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
   const [connectionTimeout, setConnectionTimeout] = useState(false)
@@ -55,10 +70,16 @@ export const WelcomeScreen = ({ onComplete, authError, connectionState }: Welcom
       return
     }
 
-    onComplete(trimmed)
+    if (!selectedRuleset) {
+      setError('Please select a ruleset')
+      return
+    }
+
+    onComplete(trimmed, selectedRuleset)
   }
 
   const isConnecting = connectionState === 'connecting'
+  const canSubmit = nickname.trim().length >= 3 && !!selectedRuleset && !isConnecting
   const displayError = connectionTimeout
     ? 'Server unreachable. Please try again.'
     : authError || error
@@ -99,6 +120,27 @@ export const WelcomeScreen = ({ onComplete, authError, connectionState }: Welcom
             />
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Choose your ruleset</label>
+            <div className="ruleset-cards">
+              {RULESET_INFO.map((ruleset) => (
+                <button
+                  key={ruleset.id}
+                  type="button"
+                  className={`ruleset-card ruleset-${ruleset.id}${selectedRuleset === ruleset.id ? ' selected' : ''}`}
+                  onClick={() => {
+                    setSelectedRuleset(ruleset.id)
+                    setError('')
+                  }}
+                  disabled={isConnecting}
+                >
+                  <span className="ruleset-card-name">{ruleset.name}</span>
+                  <span className="ruleset-card-desc">{ruleset.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {displayError && (
             <div className="error-message">
               {displayError}
@@ -108,7 +150,7 @@ export const WelcomeScreen = ({ onComplete, authError, connectionState }: Welcom
           <button
             type="submit"
             className="btn-primary"
-            disabled={isConnecting || !nickname.trim()}
+            disabled={!canSubmit}
           >
             {isConnecting ? (
               <>
