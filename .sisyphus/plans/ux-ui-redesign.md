@@ -2136,7 +2136,7 @@ Phase 5 - Polish & Tests:
 
 ---
 
-- [ ] 24. Cleanup old components and dead CSS
+- [x] 24. Cleanup old components and dead CSS
 
   **What to do**:
   - Remove or archive `src/components/MatchBrowser.tsx` (replaced by Dashboard)

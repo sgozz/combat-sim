@@ -812,3 +812,36 @@ Ready for Phase 1: Login screen redesign.
 - Touch targets: all interactive elements ≥44px height ✓
 - Safe area insets: applied to headers and bottom bars ✓
 - z-index: no stacking conflicts ✓
+
+## [2026-01-31] Task 24: Cleanup Old Components
+
+### Implementation Details
+- Removed MatchBrowser.tsx (old match browser component, replaced by Dashboard)
+- Removed LobbyBrowser.css (CSS for old MatchBrowser component)
+- Removed MatchBrowser import from App.tsx
+- Removed /matches route from App.tsx
+- Removed unused variables from useGameSocket destructuring: publicMatches, fetchPublicMatches, spectateMatch
+
+### Files Deleted
+- src/components/MatchBrowser.tsx (deleted via git rm)
+- src/components/LobbyBrowser.css (deleted via git rm)
+
+### Files Modified
+- src/App.tsx: Removed import, removed route, removed unused variables from hook destructuring
+
+### Verification Results
+- MatchBrowser.tsx deleted ✓
+- LobbyBrowser.css deleted ✓
+- App.tsx LSP diagnostics: 0 errors ✓
+- npm run build: succeeded with zero errors ✓
+- npx vitest run: 1508 tests passed ✓
+
+### Gotchas
+- LobbyBrowser.css was only imported by MatchBrowser.tsx (no other references)
+- App.css had no old classes to remove (already clean from previous tasks)
+- publicMatches, fetchPublicMatches, spectateMatch were only used by MatchBrowser route
+
+### Architecture Notes
+- Navigation now exclusively uses Router: /, /home, /armory, /lobby/:matchId, /game/:matchId
+- No more /matches route (old MatchBrowser screen)
+- Dashboard fully replaces MatchBrowser functionality

@@ -7,7 +7,6 @@ import { Dashboard } from './components/Dashboard'
 import { CharacterArmory } from './components/armory/CharacterArmory'
 import { CharacterEditor } from './components/armory/CharacterEditor'
 import { LobbyScreen } from './components/lobby/LobbyScreen'
-import { MatchBrowser } from './components/MatchBrowser'
 import { GameScreen } from './components/game/GameScreen'
 import { isGurpsCombatant } from '../shared/rulesets'
 
@@ -22,7 +21,6 @@ function AppRoutes() {
     connectionState,
     user,
     myMatches,
-    publicMatches,
     activeMatchId,
     matchState,
     logs,
@@ -37,8 +35,6 @@ function AppRoutes() {
     sendMessage,
     logout,
     refreshMyMatches,
-    fetchPublicMatches,
-    spectateMatch,
     stopSpectating
   } = useGameSocket()
 
@@ -295,26 +291,7 @@ function AppRoutes() {
         )
       } />
       
-      <Route path="/matches" element={
-        !user ? (
-          <Navigate to="/" replace />
-        ) : (
-          <MatchBrowser
-            user={user}
-            matches={myMatches}
-            publicMatches={publicMatches}
-            onCreateMatch={handleCreateMatch}
-            onJoinByCode={handleJoinByCode}
-            onSelectMatch={handleSelectMatch}
-            onRefresh={refreshMyMatches}
-            onFetchPublicMatches={fetchPublicMatches}
-            onSpectate={spectateMatch}
-            onLogout={handleLogout}
-          />
-        )
-      } />
-      
-      <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
+       <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
     </Routes>
   )
 }
