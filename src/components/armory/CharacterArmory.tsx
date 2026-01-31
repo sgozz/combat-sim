@@ -216,8 +216,8 @@ const CharacterCard = ({
             {character.isFavorite ? '★' : '☆'}
           </button>
         </div>
-        <span className={`armory-ruleset-badge ruleset-${character.rulesetId}`}>
-          {character.rulesetId === 'gurps' ? 'GURPS 4e' : 'Pathfinder 2e'}
+        <span className={`armory-ruleset-badge ruleset-${isGurpsCharacter(character) ? 'gurps' : 'pf2'}`}>
+          {isGurpsCharacter(character) ? 'GURPS 4e' : 'Pathfinder 2e'}
         </span>
       </div>
 
@@ -261,6 +261,15 @@ const CharacterCard = ({
       </div>
 
       <div className="armory-card-actions">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit()
+          }}
+          className="armory-btn-action btn-edit"
+        >
+          Edit
+        </button>
         <button
           onClick={(e) => {
             e.stopPropagation()

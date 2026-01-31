@@ -87,6 +87,8 @@ function AppRoutes() {
 
   useEffect(() => {
     if (activeMatchId) {
+      // Don't redirect away from armory (user may be creating a character mid-lobby)
+      if (location.pathname.startsWith('/armory')) return
       const match = myMatches.find(m => m.id === activeMatchId)
       if (match) {
         if (match.status === 'waiting') {
@@ -96,7 +98,7 @@ function AppRoutes() {
         }
       }
     }
-  }, [activeMatchId, myMatches, navigate])
+  }, [activeMatchId, myMatches, navigate, location.pathname])
 
 
 

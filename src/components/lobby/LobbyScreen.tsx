@@ -127,8 +127,12 @@ export const LobbyScreen = ({
   }, [match, characters, sendMessage])
 
   const handleNavigateToArmory = useCallback(() => {
-    navigate('/armory')
-  }, [navigate])
+    if (match) {
+      navigate(`/armory/new?ruleset=${match.rulesetId}`)
+    } else {
+      navigate('/armory')
+    }
+  }, [navigate, match])
 
   if (!match) {
     return (

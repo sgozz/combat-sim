@@ -387,6 +387,16 @@
   color: var(--text-primary);
 }
 
+.armory-btn-action.btn-edit {
+  color: var(--accent-primary, #646cff);
+  font-weight: var(--font-semibold);
+}
+
+.armory-btn-action.btn-edit:hover {
+  background: rgba(100, 108, 255, 0.12);
+  color: var(--accent-primary, #8b8fff);
+}
+
 .armory-btn-action.btn-delete:hover {
   color: var(--accent-danger);
 }
