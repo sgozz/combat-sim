@@ -41,6 +41,13 @@ export const decidePF2BotAction = (
   );
   if (enemies.length === 0) return null;
 
+  const character = _character ?? asPF2Character(match, botCombatant.characterId);
+  const weapon = character?.weapons[0];
+  const isRanged = weapon?.range !== undefined || weapon?.traits?.includes('thrown');
+  const weaponRange = weapon?.range ?? 0;
+  const rangeIncrement = weapon?.rangeIncrement ?? (weaponRange / 6);
+  const maxRange = weaponRange;
+
   let nearest: CombatantState = enemies[0];
   let minDistance = calculateGridDistance(botCombatant.position, nearest.position, gridSystem);
   for (const enemy of enemies) {
@@ -53,6 +60,7 @@ export const decidePF2BotAction = (
 
   const distance = minDistance;
 
+  // Melee range attack
   if (distance <= 1) {
     const mapPenalty = botCombatant.mapPenalty || 0;
     if (mapPenalty > -10) {
@@ -61,7 +69,20 @@ export const decidePF2BotAction = (
     return null;
   }
 
-  const character = _character ?? asPF2Character(match, botCombatant.characterId);
+  // Ranged attack if weapon has range and target is within max range
+  if (isRanged && maxRange > 0 && distance <= maxRange) {
+    // Calculate range penalty: -2 per increment beyond first
+    const rangePenalty = Math.floor((distance - 1) / rangeIncrement) * -2;
+    // Only attack if penalty is not too severe (max -10)
+    if (rangePenalty >= -10) {
+      const mapPenalty = botCombatant.mapPenalty || 0;
+      if (mapPenalty > -10) {
+        return { type: 'strike', targetId: nearest.playerId };
+      }
+    }
+  }
+
+  // Move toward enemy if not in range
   const speed = character.derived.speed ?? 25;
   const maxSquares = Math.floor(speed / 5);
   const newPosition = computeGridMoveToward(
