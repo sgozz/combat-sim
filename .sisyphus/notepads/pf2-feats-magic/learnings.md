@@ -526,3 +526,97 @@ Implemented Sudden Charge feat action that costs 2 actions, allows double Stride
 - Task 9+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
 - Future: Add Sudden Charge UI button (2-action cost indicator)
 - Future: Consider refactoring shared attack logic into helper function (DRY with Power Attack)
+
+## Task 9: Intimidating Strike Feat Action Implementation (2026-02-01)
+
+### Implementation Summary
+Implemented Intimidating Strike feat action that costs 2 actions, makes a Strike attack, and applies frightened condition on hit (frightened 1 on normal hit, frightened 2 on critical hit).
+
+### Files Modified
+- `server/src/handlers/pf2/attack.ts` - Added `handlePF2IntimidatingStrike()` function
+- `server/src/handlers/pf2/attack.test.ts` - Added 6 Intimidating Strike tests (all passing)
+- `server/src/handlers/pf2/router.ts` - Added routing for `pf2_intimidating_strike` message type
+- `shared/rulesets/pf2/feats.ts` - Added Intimidating Strike to FEAT_EFFECTS registry
+
+### Architecture Patterns
+1. **Strike + Condition Pattern**: `handlePF2IntimidatingStrike()` combines attack and condition application
+   - First executes Strike attack (same logic as `handlePF2AttackAction()`)
+   - Then applies frightened condition ONLY on hit (success or critical success)
+   - Frightened value depends on attack degree: 1 for success, 2 for critical success
+
+2. **Two-Phase Combatant Update**: Separate damage and condition application
+   - Phase 1: `updatedCombatants` - Apply damage, HP reduction, dying/unconscious
+   - Phase 2: `finalCombatants` - Apply frightened condition only on hit
+   - Prevents condition from being applied on miss
+
+3. **Guard Clauses**: Same pattern as Power Attack and Sudden Charge
+   - Feat check → action cost check → target validation → execute
+   - Type guards (`isPF2Combatant`, `isPF2Character`) ensure safe property access
+
+### Intimidating Strike Mechanics (PF2 SRD)
+- **Actions**: 2 actions (⚔️⚔️)
+- **Requirements**: Intimidating Strike feat + 2 actions remaining + wielding melee weapon
+- **Effect**: 
+  1. Make melee Strike
+  2. On hit: target becomes frightened 1
+  3. On critical hit: target becomes frightened 2
+- **Special**: Uses Intimidation skill modifier (simplified in our implementation)
+
+### Test Coverage
+- 6 new tests in `attack.test.ts` (all passing)
+- Total attack test suite: 28 tests passing
+- Tests cover:
+  - 2-action cost
+  - Frightened 1 on normal hit
+  - Frightened 2 on critical hit
+  - NO frightened on miss
+  - Feat requirement
+  - Action requirement (needs 2 actions)
+
+### Key Learnings
+1. **TDD Approach**: Tests written first revealed the need for:
+   - Two-phase combatant update pattern (damage first, then condition)
+   - Conditional frightened application (only on hit, not on miss)
+   - Proper log message formatting with frightened value
+
+2. **Condition Application Pattern**: Frightened applied AFTER damage resolution
+   - `updatedCombatants` handles damage/HP/dying
+   - `finalCombatants` handles frightened condition
+   - Prevents condition from being applied if target dies from damage
+
+3. **Degree-Based Condition Values**: Frightened value depends on attack roll degree
+   - `critical_success` → frightened 2
+   - `success` → frightened 1
+   - `failure` or `critical_failure` → no condition
+   - Pattern reusable for other degree-based effects
+
+4. **Log Message Clarity**: Clear indication of condition application
+   - `. Target is frightened 1!` or `. Target is frightened 2!`
+   - Appended to attack log entry for single-line readability
+   - Matches Demoralize pattern from skill-actions.ts
+
+5. **Code Reuse**: 95% of Intimidating Strike logic is identical to Strike
+   - Only differences: action cost (2 vs 1), frightened application on hit
+   - Future refactoring opportunity: extract shared attack logic to helper function
+   - Pattern consistent with Power Attack and Sudden Charge
+
+### Integration Points
+- **Router**: `pf2_intimidating_strike` message type added to PF2ActionPayload union
+- **Feat Registry**: Intimidating Strike registered in `FEAT_EFFECTS` with handler name
+- **Condition System**: Reuses existing frightened condition from conditions.ts
+- **UI**: Backend ready, UI implementation pending (future task)
+
+### Performance Notes
+- Same performance characteristics as normal Strike action
+- Condition application is O(n) where n = number of combatants (map operation)
+- No caching needed - conditions applied once per attack
+
+### Documentation
+- Function includes docstring for public API (necessary for exported function)
+- Test names are self-documenting
+- Log messages use emoji for visual clarity (⚔️⚔️)
+
+### Next Steps
+- Task 10+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
+- Future: Add Intimidating Strike UI button (2-action cost indicator)
+- Future: Consider refactoring shared attack logic into helper function (DRY with Power Attack, Sudden Charge)

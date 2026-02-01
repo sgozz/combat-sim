@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { WebSocket } from 'ws';
-import { handlePF2AttackAction, handlePF2PowerAttack, handlePF2SuddenCharge } from './attack';
+import { handlePF2AttackAction, handlePF2PowerAttack, handlePF2SuddenCharge, handlePF2IntimidatingStrike } from './attack';
 import {
   createPF2Combatant,
   createPF2Character,
@@ -1373,6 +1373,347 @@ describe('PF2 Attack Handler', () => {
       expect(mockSendMessage).toHaveBeenCalledWith(socket, {
         type: 'error',
         message: 'Destination not reachable with double Stride.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Intimidating Strike', () => {
+    it('should cost 2 actions', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'intimidating_strike', name: 'Intimidating Strike', type: 'class', level: 2 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5],
+        modifier: 3,
+        total: 8,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_intimidating_strike' as const, targetId: 'player2' };
+      await handlePF2IntimidatingStrike(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player1',
+              actionsRemaining: 1,
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it('should trigger Demoralize on hit', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'intimidating_strike', name: 'Intimidating Strike', type: 'class', level: 2 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        conditions: [],
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5],
+        modifier: 3,
+        total: 8,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_intimidating_strike' as const, targetId: 'player2' };
+      await handlePF2IntimidatingStrike(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player2',
+              conditions: expect.arrayContaining([
+                expect.objectContaining({ condition: 'frightened', value: 1 }),
+              ]),
+            }),
+          ]),
+          log: expect.arrayContaining([
+            expect.stringContaining('Intimidating Strike'),
+            expect.stringContaining('frightened 1'),
+          ]),
+        }),
+      });
+    });
+
+    it('should NOT trigger Demoralize on miss', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'intimidating_strike', name: 'Intimidating Strike', type: 'class', level: 2 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        conditions: [],
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 5,
+        modifier: 6,
+        total: 11,
+        dc: 15,
+        degree: 'failure',
+      });
+
+      const payload = { type: 'pf2_intimidating_strike' as const, targetId: 'player2' };
+      await handlePF2IntimidatingStrike(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player2',
+              conditions: [],
+            }),
+          ]),
+          log: expect.not.arrayContaining([
+            expect.stringContaining('frightened'),
+          ]),
+        }),
+      });
+    });
+
+    it('should apply frightened 2 on critical hit', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'intimidating_strike', name: 'Intimidating Strike', type: 'class', level: 2 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        conditions: [],
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 20,
+        modifier: 6,
+        total: 26,
+        dc: 15,
+        degree: 'critical_success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5],
+        modifier: 3,
+        total: 8,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_intimidating_strike' as const, targetId: 'player2' };
+      await handlePF2IntimidatingStrike(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player2',
+              conditions: expect.arrayContaining([
+                expect.objectContaining({ condition: 'frightened', value: 2 }),
+              ]),
+            }),
+          ]),
+          log: expect.arrayContaining([
+            expect.stringContaining('frightened 2'),
+          ]),
+        }),
+      });
+    });
+
+    it('should require Intimidating Strike feat', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+
+      const payload = { type: 'pf2_intimidating_strike' as const, targetId: 'player2' };
+      await handlePF2IntimidatingStrike(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'You do not have the Intimidating Strike feat.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+
+    it('should require 2 actions', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'intimidating_strike', name: 'Intimidating Strike', type: 'class', level: 2 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 1,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+
+      const payload = { type: 'pf2_intimidating_strike' as const, targetId: 'player2' };
+      await handlePF2IntimidatingStrike(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'Intimidating Strike requires 2 actions.',
       });
       expect(mockUpdateMatchState).not.toHaveBeenCalled();
     });

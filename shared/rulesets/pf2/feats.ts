@@ -40,6 +40,11 @@ export const FEAT_EFFECTS = new Map<string, PF2FeatEffect>([
     handler: 'handleSuddenCharge',
     description: 'Stride twice and make a melee Strike'
   }],
+  ['Intimidating Strike', {
+    type: 'action',
+    handler: 'handleIntimidatingStrike',
+    description: 'Make a Strike and apply frightened on hit'
+  }],
   ['Reactive Shield', {
     type: 'reaction',
     handler: 'handleReactiveShield',
