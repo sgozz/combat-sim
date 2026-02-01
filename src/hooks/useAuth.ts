@@ -4,6 +4,8 @@ import type { ConnectionState } from './useGameSocket'
 
 const SESSION_TOKEN_KEY = 'tcs.sessionToken'
 const ACTIVE_MATCH_KEY = 'tcs.activeMatchId'
+const SAVED_USERNAME_KEY = 'tcs.savedUsername'
+const SAVED_RULESET_KEY = 'tcs.savedRuleset'
 
 type UseAuthParams = {
   socket: WebSocket | null
@@ -103,6 +105,10 @@ export const useAuth = ({
         case 'auth_ok': {
           setUser(message.user)
           localStorage.setItem(SESSION_TOKEN_KEY, message.sessionToken)
+          localStorage.setItem(SAVED_USERNAME_KEY, message.user.username)
+          if (message.user.preferredRulesetId) {
+            localStorage.setItem(SAVED_RULESET_KEY, message.user.preferredRulesetId)
+          }
           setConnectionState('connected')
           connectingRef.current = false
           reconnectDelayRef.current = 1000
@@ -223,4 +229,13 @@ export const useAuth = ({
      setPreferredRuleset,
      preferredRulesetId: user?.preferredRulesetId ?? null,
    }
+}
+
+export const getSavedUsername = (): string | null => {
+  return localStorage.getItem(SAVED_USERNAME_KEY)
+}
+
+export const getSavedRuleset = (): RulesetId | null => {
+  const saved = localStorage.getItem(SAVED_RULESET_KEY)
+  return saved as RulesetId | null
 }

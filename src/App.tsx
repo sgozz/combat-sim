@@ -75,16 +75,11 @@ function AppRoutes() {
     if (connectionState === 'connected' && user) {
       refreshMyMatches()
       
-      // Handle pending join code
       if (pendingJoinCodeRef.current && !activeMatchId) {
         sendMessage({ type: 'join_match', code: pendingJoinCodeRef.current })
         pendingJoinCodeRef.current = null
       }
-      // Reconnection logic: navigate to /home if on welcome screen
-      else if (location.pathname === '/') {
-        navigate('/home', { replace: true })
-      }
-    } else if (connectionState === 'disconnected' && location.pathname !== '/') {
+    } else if (connectionState === 'disconnected' && !user && location.pathname !== '/') {
       navigate('/', { replace: true })
     }
   }, [connectionState, user, navigate, location.pathname, activeMatchId, sendMessage, refreshMyMatches])

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { RulesetId } from '../../shared/types'
+import { getSavedUsername, getSavedRuleset } from '../hooks/useAuth'
 import { Tutorial } from './ui/Tutorial'
 import './WelcomeScreen.css'
 
@@ -23,8 +24,8 @@ const RULESET_INFO: { id: RulesetId; name: string; description: string }[] = [
 ]
 
 export const WelcomeScreen = ({ onComplete, authError, connectionState }: WelcomeScreenProps) => {
-  const [nickname, setNickname] = useState('')
-  const [selectedRuleset, setSelectedRuleset] = useState<RulesetId | null>(null)
+  const [nickname, setNickname] = useState(getSavedUsername() ?? '')
+  const [selectedRuleset, setSelectedRuleset] = useState<RulesetId | null>(getSavedRuleset())
   const [error, setError] = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
   const [connectionTimeout, setConnectionTimeout] = useState(false)
