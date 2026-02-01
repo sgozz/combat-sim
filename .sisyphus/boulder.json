@@ -1,8 +1,9 @@
 {
-  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/combat-sim-cleanup.md",
-  "started_at": "2026-02-01T13:56:28.685Z",
+  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/combat-sim-fixes.md",
+  "started_at": "2026-02-01T18:45:00.000Z",
   "session_ids": [
-    "ses_3e68262a0ffeLZMfI0hl6aJjr1"
+    "ses_3e68262a0ffeLZMfI0hl6aJjr1",
+    "ses_3e5602302ffe4lN4UqsOsaIATK"
   ],
-  "plan_name": "combat-sim-cleanup"
+  "plan_name": "combat-sim-fixes"
 }

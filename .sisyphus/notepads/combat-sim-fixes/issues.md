@@ -1,0 +1,1 @@
+- 2026-02-01: Pathbuilder export lacks explicit weapon traits; thrown detection relies on name/display and may miss some weapons.

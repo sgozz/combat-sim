@@ -1,0 +1,1 @@
+- 2026-02-01: Pathbuilder weapon range defaults inferred via name/display heuristics for longbow/shortbow/thrown due to missing traits data.

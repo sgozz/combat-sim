@@ -1,0 +1,2 @@
+- 2026-02-01: Added PF2 ranged distance checks with range penalties (increment default = range/6) and applied penalties to attack bonus.
+- 2026-02-01: Lobby auto-bot toggles only in waiting matches, driven from join/leave handlers.
