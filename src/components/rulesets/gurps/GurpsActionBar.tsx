@@ -563,25 +563,28 @@ export const GurpsActionBar = ({
 
         {(() => {
           const maneuversAllowingStep: ManeuverType[] = ['move', 'attack', 'all_out_attack', 'all_out_defense', 'move_and_attack', 'aim', 'evaluate', 'ready']
-          const canRotate = isMyTurn 
-            && !inCloseCombat 
-            && currentManeuver 
+          const canRotate = isMyTurn
+            && !inCloseCombat
+            && currentManeuver
             && maneuversAllowingStep.includes(currentManeuver)
             && (!inMovementPhase || movePointsRemaining > 0)
-          
+
+          const freeRotationUsed = turnMovement?.freeRotationUsed ?? false
+          const rotationCost = freeRotationUsed ? 1 : 0
+
           return canRotate ? (
             <div className="action-bar-facing">
               <button
                 className="action-bar-btn small"
                 onClick={() => onAction('turn_left', { type: 'turn_left' })}
-                title="Turn Left"
+                title={inMovementPhase ? `Turn Left (${rotationCost} MP)` : 'Turn Left'}
               >
                 <span className="action-bar-icon">↶</span>
               </button>
               <button
                 className="action-bar-btn small"
                 onClick={() => onAction('turn_right', { type: 'turn_right' })}
-                title="Turn Right"
+                title={inMovementPhase ? `Turn Right (${rotationCost} MP)` : 'Turn Right'}
               >
                 <span className="action-bar-icon">↷</span>
               </button>

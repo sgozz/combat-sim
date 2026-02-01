@@ -76,7 +76,14 @@ const getCellColor = (
     }
 
     if (isPlayerTurn && reachableHex) {
-      return isHovered ? '#66ff66' : '#2a5a2a'
+      const cost = reachableHex.cost
+      if (cost <= 2) {
+        return isHovered ? '#66ff66' : '#2a5a2a'
+      } else if (cost <= 4) {
+        return isHovered ? '#ffdd44' : '#5a4a1a'
+      } else {
+        return isHovered ? '#ff8844' : '#5a2a1a'
+      }
     }
   }
 

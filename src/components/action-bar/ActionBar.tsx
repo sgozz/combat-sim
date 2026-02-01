@@ -166,18 +166,22 @@ export const ActionBarMovementControls = ({
 export type ActionBarFacingControlsProps = {
   onTurnLeft: () => void
   onTurnRight: () => void
+  rotationCost?: number
+  inMovementPhase?: boolean
 }
 
 export const ActionBarFacingControls = ({
   onTurnLeft,
-  onTurnRight
+  onTurnRight,
+  rotationCost = 0,
+  inMovementPhase = false
 }: ActionBarFacingControlsProps) => {
   return (
     <div className="action-bar-facing">
-      <ActionBarButton size="small" onClick={onTurnLeft} title="Turn Left">
+      <ActionBarButton size="small" onClick={onTurnLeft} title={inMovementPhase ? `Turn Left (${rotationCost} MP)` : 'Turn Left'}>
         <ActionBarIcon>↶</ActionBarIcon>
       </ActionBarButton>
-      <ActionBarButton size="small" onClick={onTurnRight} title="Turn Right">
+      <ActionBarButton size="small" onClick={onTurnRight} title={inMovementPhase ? `Turn Right (${rotationCost} MP)` : 'Turn Right'}>
         <ActionBarIcon>↷</ActionBarIcon>
       </ActionBarButton>
     </div>

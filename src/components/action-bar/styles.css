@@ -50,15 +50,15 @@
   /* Action Bar Buttons */
   .action-bar-btn {
     flex: 1 1 auto;
-    min-width: 56px;
-    max-width: 80px;
-    min-height: 48px;
+    min-width: 64px;
+    max-width: 88px;
+    min-height: 56px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.2rem;
-    padding: 0.5rem 0.4rem;
+    padding: 0.6rem 0.5rem;
     background: #333;
     border: 1px solid #555;
     border-radius: 8px;
@@ -66,7 +66,7 @@
     cursor: pointer;
     transition: all 0.15s ease;
     box-sizing: border-box;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
@@ -109,9 +109,9 @@
   /* Small buttons for movement controls */
   .action-bar-btn.small {
     flex: 0 0 auto;
-    min-width: 48px;
-    max-width: 48px;
-    min-height: 48px;
+    min-width: 52px;
+    max-width: 52px;
+    min-height: 52px;
     padding: 0.5rem;
   }
 
@@ -256,9 +256,10 @@
   }
 
   .action-bar-movement-controls .action-bar-btn.small {
-    min-width: 44px;
-    max-width: 44px;
-    padding: 0.4rem;
+    min-width: 52px;
+    max-width: 52px;
+    min-height: 52px;
+    padding: 0.5rem;
   }
 
   /* Maneuver Popup */
@@ -501,10 +502,17 @@
   }
 
   .action-bar-btn.small {
-    min-width: 40px;
-    max-width: 40px;
-    min-height: 40px;
-    padding: 0.35rem;
+    min-width: 48px;
+    max-width: 48px;
+    min-height: 48px;
+    padding: 0.4rem;
+  }
+
+  .action-bar-movement-controls .action-bar-btn.small {
+    min-width: 48px;
+    max-width: 48px;
+    min-height: 48px;
+    padding: 0.4rem;
   }
 
   .action-bar-btn.char-btn {
