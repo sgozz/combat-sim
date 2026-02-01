@@ -246,6 +246,25 @@ export const handleMessage = async (
       await addMatchMember(matchRow.id, user.id, null);
       
       const members = await getMatchMembers(matchRow.id);
+      
+      for (const member of members) {
+        if (member.user_id !== user.id) {
+          const existingUser = state.users.get(member.user_id);
+          if (existingUser) {
+            sendMessage(socket, { 
+              type: "player_joined", 
+              matchId: matchRow.id, 
+              player: { 
+                id: existingUser.id, 
+                name: existingUser.username, 
+                isBot: existingUser.isBot,
+                characterId: member.character_id ?? ""
+              } 
+            });
+          }
+        }
+      }
+      
       const newPlayer: Player = { id: user.id, name: user.username, isBot: false, characterId: "" };
       for (const member of members) {
         if (member.user_id !== user.id) {
