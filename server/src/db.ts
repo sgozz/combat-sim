@@ -360,7 +360,7 @@ export const getReadyPlayers = (matchId: string): string[] => {
   return Array.from(state.readySets.get(matchId) ?? []);
 };
 
-export const buildJoinableMatchSummary = (matchRow: MatchRow, forUserId: string): MatchSummary => {
+export const buildJoinableMatchSummary = (matchRow: MatchRow): MatchSummary => {
   const members = getMatchMembers(matchRow.id);
   const players: { id: string; name: string; isConnected: boolean }[] = [];
   
