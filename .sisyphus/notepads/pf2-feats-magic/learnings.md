@@ -620,3 +620,92 @@ Implemented Intimidating Strike feat action that costs 2 actions, makes a Strike
 - Task 10+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
 - Future: Add Intimidating Strike UI button (2-action cost indicator)
 - Future: Consider refactoring shared attack logic into helper function (DRY with Power Attack, Sudden Charge)
+
+## Task 10: Combat Grab Feat Action Implementation (2026-02-01)
+
+### Implementation Summary
+Implemented Combat Grab feat action that costs 1 action, makes a Strike attack, and automatically applies grabbed condition on hit.
+
+### Files Modified
+- `server/src/handlers/pf2/attack.ts` - Added `handlePF2CombatGrab()` function
+- `server/src/handlers/pf2/attack.test.ts` - Added 4 Combat Grab tests (all passing)
+- `server/src/handlers/pf2/router.ts` - Added routing for `pf2_combat_grab` message type
+- `shared/rulesets/pf2/feats.ts` - Added Combat Grab to FEAT_EFFECTS registry
+
+### Architecture Patterns
+1. **Strike + Grapple Combo**: `handlePF2CombatGrab()` combines attack and condition application
+   - First executes Strike attack (same logic as `handlePF2AttackAction()`)
+   - Then applies grabbed condition ONLY on hit (success or critical success)
+   - Follows same two-phase update pattern as Intimidating Strike
+
+2. **Two-Phase Combatant Update**: Separate damage and condition application
+   - Phase 1: `updatedCombatants` - Apply damage, HP reduction, dying/unconscious
+   - Phase 2: `finalCombatants` - Apply grabbed condition only on hit
+   - Prevents condition from being applied on miss
+
+3. **Guard Clauses**: Same pattern as other feat actions
+   - Feat check → action cost check → target validation → execute
+   - Type guards (`isPF2Combatant`, `isPF2Character`) ensure safe property access
+
+### Combat Grab Mechanics (PF2 SRD)
+- **Actions**: 1 action (⚔️) - same as normal Strike
+- **Requirements**: Combat Grab feat + 1 action remaining + wielding melee weapon + one hand free
+- **Effect**: 
+  1. Make melee Strike while keeping one hand free
+  2. On hit: automatically grab target (applies grabbed condition)
+  3. Target remains grabbed until end of your next turn or until it Escapes
+
+### Test Coverage
+- 4 new tests in `attack.test.ts` (all passing)
+- Total attack test suite: 32 tests passing
+- Tests cover:
+  - 1-action cost (normal Strike cost)
+  - Grabbed condition applied on hit
+  - NO grabbed condition on miss
+  - Feat requirement
+
+### Key Learnings
+1. **TDD Approach**: Tests written first revealed the need for:
+   - Two-phase combatant update pattern (damage first, then condition)
+   - Conditional grabbed application (only on hit, not on miss)
+   - Proper log message formatting with grabbed indicator
+
+2. **Simpler than Intimidating Strike**: No degree-based condition values
+   - Grabbed always applied on hit (success or critical success)
+   - No differentiation between normal hit and critical hit
+   - Simpler condition logic than frightened (no value parameter)
+
+3. **Code Reuse**: 95% of Combat Grab logic is identical to Strike
+   - Only differences: feat check, grabbed application on hit
+   - Follows same pattern as Intimidating Strike (Strike + condition)
+   - Consistent with existing feat action implementations
+
+4. **Log Message Format**: Consistent emoji usage (⚔️) for 1-action feats
+   - `. Target is grabbed!` appended to attack log entry
+   - Matches Intimidating Strike pattern for visual consistency
+
+5. **Grabbed Condition**: Reuses existing grabbed condition from conditions.ts
+   - No value parameter (unlike frightened)
+   - Applied as `{ condition: 'grabbed' as const }`
+   - Consistent with existing condition application patterns
+
+### Integration Points
+- **Router**: `pf2_combat_grab` message type added to PF2ActionPayload union
+- **Feat Registry**: Combat Grab registered in `FEAT_EFFECTS` with handler name
+- **Condition System**: Reuses existing grabbed condition from conditions.ts
+- **UI**: Backend ready, UI implementation pending (future task)
+
+### Performance Notes
+- Same performance characteristics as normal Strike action
+- Condition application is O(n) where n = number of combatants (map operation)
+- No caching needed - conditions applied once per attack
+
+### Documentation
+- Function includes docstring for public API (necessary for exported function)
+- Test names are self-documenting
+- Log messages use emoji for visual clarity (⚔️)
+
+### Next Steps
+- Task 11+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
+- Future: Add Combat Grab UI button (1-action cost indicator)
+- Future: Consider refactoring shared attack logic into helper function (DRY with other Strike-based feats)

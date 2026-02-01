@@ -45,6 +45,11 @@ export const FEAT_EFFECTS = new Map<string, PF2FeatEffect>([
     handler: 'handleIntimidatingStrike',
     description: 'Make a Strike and apply frightened on hit'
   }],
+  ['Combat Grab', {
+    type: 'action',
+    handler: 'handleCombatGrab',
+    description: 'Make a Strike and automatically Grapple on hit'
+  }],
   ['Reactive Shield', {
     type: 'reaction',
     handler: 'handleReactiveShield',

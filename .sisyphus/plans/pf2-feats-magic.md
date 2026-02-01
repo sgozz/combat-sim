@@ -664,7 +664,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 9. Implement Intimidating Strike
+- [x] 9. Implement Intimidating Strike
 
   **What to do**:
   - Add effect to `FEAT_EFFECTS`
@@ -696,7 +696,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 10. Implement Combat Grab
+- [x] 10. Implement Combat Grab
 
   **What to do**:
   - Add effect to `FEAT_EFFECTS`

@@ -2,7 +2,7 @@ import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
 import type { CombatantState } from "../../../../shared/rulesets";
 import { sendMessage } from "../../helpers";
-import { handlePF2AttackAction, handlePF2PowerAttack, handlePF2SuddenCharge, handlePF2IntimidatingStrike } from "./attack";
+import { handlePF2AttackAction, handlePF2PowerAttack, handlePF2SuddenCharge, handlePF2IntimidatingStrike, handlePF2CombatGrab } from "./attack";
 import { handlePF2DropProne, handlePF2Stand, handlePF2Step, handlePF2RaiseShield } from "./actions";
 import { handlePF2RequestMove, handlePF2Stride } from "./stride";
 import { handlePF2ReactionChoice } from "./reaction";
@@ -19,6 +19,7 @@ type PF2ActionPayload =
   | { type: "pf2_power_attack"; targetId: string }
   | { type: "pf2_sudden_charge"; targetHex: { q: number; r: number }; strikeTargetId: string }
   | { type: "pf2_intimidating_strike"; targetId: string }
+  | { type: "pf2_combat_grab"; targetId: string }
   | { type: "pf2_drop_prone" }
   | { type: "pf2_stand" }
   | { type: "pf2_step"; to: { q: number; r: number } }
@@ -55,6 +56,9 @@ export const handlePF2Action = async (
     
     case "pf2_intimidating_strike":
       return handlePF2IntimidatingStrike(socket, matchId, match, player, actorCombatant, payload);
+    
+    case "pf2_combat_grab":
+      return handlePF2CombatGrab(socket, matchId, match, player, actorCombatant, payload);
     
     case "pf2_drop_prone":
       return handlePF2DropProne(socket, matchId, match, player, actorCombatant);
