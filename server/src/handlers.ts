@@ -500,7 +500,7 @@ export const handleMessage = async (
       const user = requireUser(socket);
       if (!user) return;
       
-      const characters = await loadCharactersByOwner(user.id, user.preferredRulesetId);
+      const characters = await loadCharactersByOwner(user.id);
       sendMessage(socket, { type: "character_list", characters });
       return;
     }
