@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { WebSocket } from 'ws';
-import { handlePF2AttackAction, handlePF2PowerAttack } from './attack';
+import { handlePF2AttackAction, handlePF2PowerAttack, handlePF2SuddenCharge } from './attack';
 import {
   createPF2Combatant,
   createPF2Character,
@@ -21,6 +21,8 @@ const mockAdvanceTurn = vi.fn();
 const mockScheduleBotTurn = vi.fn();
 const mockRollCheck = vi.fn();
 const mockRollDamage = vi.fn();
+const mockGetReachableSquares = vi.fn();
+const mockGridToHex = vi.fn();
 
 vi.mock('../../state', () => ({
   state: { matches: new Map() },
@@ -59,6 +61,11 @@ vi.mock('../../../../shared/rulesets/serverAdapter', () => ({
   }),
 }));
 
+vi.mock('../../../../shared/rulesets/pf2/rules', () => ({
+  getReachableSquares: (...args: unknown[]) => mockGetReachableSquares(...args),
+  gridToHex: (...args: unknown[]) => mockGridToHex(...args),
+}));
+
 describe('PF2 Attack Handler', () => {
   let socket: WebSocket;
   let matchId: string;
@@ -73,6 +80,8 @@ describe('PF2 Attack Handler', () => {
       ...state,
       activeTurnPlayerId: 'player2',
     }));
+    mockGridToHex.mockImplementation((pos) => ({ q: pos.x, r: pos.z }));
+    mockGetReachableSquares.mockReturnValue(new Map());
   });
 
   describe('handlePF2AttackAction', () => {
@@ -1034,6 +1043,336 @@ describe('PF2 Attack Handler', () => {
       expect(mockSendMessage).toHaveBeenCalledWith(socket, {
         type: 'error',
         message: 'Power Attack requires 2 actions.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Sudden Charge', () => {
+    it('should cost 2 actions', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'sudden_charge', name: 'Sudden Charge', type: 'class', level: 1 }],
+        derived: { ...createPF2Character().derived, speed: 25 },
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 2, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockGetReachableSquares.mockReturnValue(new Map([['2,0', { position: { q: 2, r: 0 }, cost: 2 }]]));
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5],
+        modifier: 3,
+        total: 8,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_sudden_charge' as const, targetHex: { q: 2, r: 0 }, strikeTargetId: 'player2' };
+      await handlePF2SuddenCharge(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player1',
+              actionsRemaining: 1,
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it('should allow double Stride movement (up to 2x speed)', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'sudden_charge', name: 'Sudden Charge', type: 'class', level: 1 }],
+        derived: { ...createPF2Character().derived, speed: 25 },
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 5, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockGetReachableSquares.mockReturnValue(new Map([['5,0', { position: { q: 5, r: 0 }, cost: 5 }]]));
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5],
+        modifier: 3,
+        total: 8,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_sudden_charge' as const, targetHex: { q: 5, r: 0 }, strikeTargetId: 'player2' };
+      await handlePF2SuddenCharge(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player1',
+              position: { x: 5, y: 0, z: 0 },
+            }),
+          ]),
+          log: expect.arrayContaining([
+            expect.stringContaining('Sudden Charge'),
+            expect.stringContaining('(0, 0)'),
+            expect.stringContaining('(5, 0)'),
+          ]),
+        }),
+      });
+    });
+
+    it('should end with Strike attack', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'sudden_charge', name: 'Sudden Charge', type: 'class', level: 1 }],
+        derived: { ...createPF2Character().derived, speed: 25 },
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        mapPenalty: 0,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 2, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockGetReachableSquares.mockReturnValue(new Map([['2,0', { position: { q: 2, r: 0 }, cost: 2 }]]));
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5],
+        modifier: 3,
+        total: 8,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_sudden_charge' as const, targetHex: { q: 2, r: 0 }, strikeTargetId: 'player2' };
+      await handlePF2SuddenCharge(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player2',
+              currentHP: 12,
+            }),
+            expect.objectContaining({
+              playerId: 'player1',
+              mapPenalty: -5,
+            }),
+          ]),
+          log: expect.arrayContaining([
+            expect.stringContaining('Sudden Charge'),
+            expect.stringContaining('attacks'),
+            expect.stringContaining('Hit'),
+          ]),
+        }),
+      });
+    });
+
+    it('should require Sudden Charge feat', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 2, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+
+      const payload = { type: 'pf2_sudden_charge' as const, targetHex: { q: 2, r: 0 }, strikeTargetId: 'player2' };
+      await handlePF2SuddenCharge(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'You do not have the Sudden Charge feat.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+
+    it('should require 2 actions', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'sudden_charge', name: 'Sudden Charge', type: 'class', level: 1 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 1,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 2, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+
+      const payload = { type: 'pf2_sudden_charge' as const, targetHex: { q: 2, r: 0 }, strikeTargetId: 'player2' };
+      await handlePF2SuddenCharge(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'Sudden Charge requires 2 actions.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+
+    it('should reject movement beyond 2x speed', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'sudden_charge', name: 'Sudden Charge', type: 'class', level: 1 }],
+        derived: { ...createPF2Character().derived, speed: 25 },
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 10, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+
+      const payload = { type: 'pf2_sudden_charge' as const, targetHex: { q: 10, r: 0 }, strikeTargetId: 'player2' };
+      await handlePF2SuddenCharge(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'Destination not reachable with double Stride.',
       });
       expect(mockUpdateMatchState).not.toHaveBeenCalled();
     });

@@ -434,3 +434,95 @@ Implemented Power Attack feat action that costs 2 actions, adds +1 damage die, a
 - Task 8+: Implement remaining feat effects (Sudden Charge, Quick Draw, etc.)
 - Future: Add Power Attack UI button (2-action cost indicator)
 - Future: Consider refactoring shared attack logic into helper function
+
+## Task 8: Sudden Charge Feat Action Implementation (2026-02-01)
+
+### Implementation Summary
+Implemented Sudden Charge feat action that costs 2 actions, allows double Stride movement (up to 2x speed), and ends with a melee Strike.
+
+### Files Modified
+- `server/src/handlers/pf2/attack.ts` - Added `handlePF2SuddenCharge()` function and movement imports
+- `server/src/handlers/pf2/attack.test.ts` - Added 6 Sudden Charge tests (all passing)
+- `server/src/handlers/pf2/router.ts` - Added routing for `pf2_sudden_charge` message type
+
+### Architecture Patterns
+1. **Movement + Attack Combo**: `handlePF2SuddenCharge()` combines movement and attack logic
+   - First validates movement using `getReachableSquares()` with 2x speed
+   - Moves combatant to target hex
+   - Then executes Strike attack from new position
+   - Follows same attack resolution flow as `handlePF2AttackAction()`
+
+2. **Guard Clauses**: Early returns for invalid states (same pattern as Power Attack)
+   - Feat check → action cost check → movement validation → target validation → execute
+   - Type guards (`isPF2Combatant`, `isPF2Character`) ensure safe property access
+
+3. **Movement Validation**:
+   - Uses `getReachableSquares(startPos, doubleSpeed, occupiedSquares)` from `pf2/rules.ts`
+   - Checks if destination hex is in reachable set
+   - Validates target is within melee reach (1 hex) after movement
+
+### Sudden Charge Mechanics (PF2 SRD)
+- **Actions**: 2 actions (⚔️⚔️)
+- **Requirements**: Sudden Charge feat + 2 actions remaining
+- **Effect**: 
+  1. Stride twice (up to 2x speed total movement)
+  2. Make melee Strike if target within reach after movement
+- **Special**: Can use with Burrow, Climb, Fly, or Swim if you have those movement types
+
+### Test Coverage
+- 6 new tests in `attack.test.ts` (all passing)
+- Total attack test suite: 22 tests passing
+- Tests cover:
+  - 2-action cost
+  - Double Stride movement (up to 2x speed)
+  - Strike attack at destination
+  - Feat requirement
+  - Action requirement (needs 2 actions)
+  - Movement range validation (rejects beyond 2x speed)
+
+### Key Learnings
+1. **TDD Approach**: Tests written first revealed the need for:
+   - Mock setup for `getReachableSquares()` and `gridToHex()` from `pf2/rules.ts`
+   - Proper reachable squares Map structure: `Map<string, { position, cost }>`
+   - Key format for reachable squares: `"q,r"` (e.g., `"2,0"`)
+
+2. **Movement + Attack Pattern**: Sudden Charge required combining two existing patterns
+   - Movement validation from `stride.ts` (reachable squares calculation)
+   - Attack resolution from `attack.ts` (Strike logic)
+   - Created intermediate `movedMatch` state before executing attack
+
+3. **Position Updates**: Movement updates position before attack
+   - `movedCombatants` array created with updated position
+   - `movedMatch` state used for distance calculations in attack
+   - Final state includes both movement and attack effects
+
+4. **Mock Management**: New mocks needed for movement functions
+   - `mockGetReachableSquares` returns Map with destination hex
+   - `mockGridToHex` converts position to hex coordinates
+   - Both mocks set up in `beforeEach` with default empty/identity values
+
+5. **Log Message Format**: Consistent emoji usage (⚔️⚔️) for 2-action feats
+   - Includes movement path: `"from (0, 0) to (2, 0)"`
+   - Matches Power Attack pattern for visual consistency
+
+### Integration Points
+- **Router**: `pf2_sudden_charge` message type added to PF2ActionPayload union
+- **Feat Registry**: Sudden Charge already registered in `FEAT_EFFECTS` (Task 4)
+- **Movement System**: Reuses `getReachableSquares()` from `pf2/rules.ts`
+- **Attack System**: Reuses Strike logic from `handlePF2AttackAction()`
+- **UI**: Backend ready, UI implementation pending (future task)
+
+### Performance Notes
+- `getReachableSquares()` is O(n) where n = reachable hexes (typically < 100)
+- No caching needed - movement calculated once per action
+- Same attack performance characteristics as normal Strike action
+
+### Documentation
+- Function includes docstring for public API (necessary for exported function)
+- Test names are self-documenting
+- Log messages use emoji for visual clarity
+
+### Next Steps
+- Task 9+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
+- Future: Add Sudden Charge UI button (2-action cost indicator)
+- Future: Consider refactoring shared attack logic into helper function (DRY with Power Attack)

@@ -631,7 +631,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 8. Implement Sudden Charge
+- [x] 8. Implement Sudden Charge
 
   **What to do**:
   - Add Sudden Charge effect to `FEAT_EFFECTS`
