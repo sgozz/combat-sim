@@ -1,8 +1,10 @@
 {
   "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/fix-lobby-sync.md",
   "started_at": "2026-02-01T11:13:24.495Z",
+  "completed_at": "2026-02-01T11:40:00.000Z",
   "session_ids": [
     "ses_3e733e8b6ffeNcQ8aEVz8L3C2W"
   ],
-  "plan_name": "fix-lobby-sync"
+  "plan_name": "fix-lobby-sync",
+  "status": "completed"
 }

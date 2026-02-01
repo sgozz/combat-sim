@@ -32,7 +32,7 @@ Correzione dei bug critici di sincronizzazione che causano giocatori "invisibili
 ### Task 1: Fix Sincronizzazione Iniziale Lobby
 **File**: `server/src/handlers.ts`
 
-- [ ] 1.1 Modificare `join_match` per inviare `player_joined` al nuovo joiner per ogni membro esistente
+- [x] 1.1 Modificare `join_match` per inviare `player_joined` al nuovo joiner per ogni membro esistente
   - **Linee**: 248-268
   - **Modifica**: Dopo `addMatchMember`, inviare `player_joined` per ogni membro esistente (tranne se stesso)
   - **Codice da aggiungere**:
@@ -58,19 +58,19 @@ Correzione dei bug critici di sincronizzazione che causano giocatori "invisibili
     ```
 
 **Acceptance Criteria**:
-- [ ] Test E2E: Giocatore B joina lobby di A → B vede A nella lista
-- [ ] Test E2E: Giocatore C joina dopo → C vede sia A che B
+- [x] Test E2E: Giocatore B joina lobby di A → B vede A nella lista
+- [x] Test E2E: Giocatore C joina dopo → C vede sia A che B
 
 ---
 
 ### Task 2: Implementare Grace Period Disconnessione
 **File**: `server/src/index.ts`, `server/src/state.ts`
 
-- [ ] 2.1 Aggiungere Map per tracciare disconnessioni in corso in `state.ts`
+- [x] 2.1 Aggiungere Map per tracciare disconnessioni in corso in `state.ts`
   - **Aggiungere**: `pendingDisconnections = new Map<string, NodeJS.Timeout>()`
   - **Chiave**: `matchId:userId`
 
-- [ ] 2.2 Modificare `socket.on('close')` in `index.ts`
+- [x] 2.2 Modificare `socket.on('close')` in `index.ts`
   - **Linee**: 43-92
   - **Logica**: Se match è 'waiting', avviare timer di 3 secondi invece di rimuovere immediatamente
   - **Codice**:
@@ -95,19 +95,19 @@ Correzione dei bug critici di sincronizzazione che causano giocatori "invisibili
     }
     ```
 
-- [ ] 2.3 Aggiungere cleanup del timer in `rejoin_match`
+- [x] 2.3 Aggiungere cleanup del timer in `rejoin_match`
   - Se il giocatore fa rejoin entro 3 secondi, cancellare il timer pending
 
 **Acceptance Criteria**:
-- [ ] Test E2E: Giocatore fa refresh → non viene rimosso dalla lobby
-- [ ] Test E2E: Giocatore chiude tab per 5+ secondi → viene rimosso
+- [x] Test E2E: Giocatore fa refresh → non viene rimosso dalla lobby
+- [x] Test E2E: Giocatore chiude tab per 5+ secondi → viene rimosso
 
 ---
 
 ### Task 3: Fix Duplicati My Matches
 **File**: `src/hooks/useMatches.ts`
 
-- [ ] 3.1 Modificare handler `match_created`
+- [x] 3.1 Modificare handler `match_created`
   - **Linee**: 51-56
   - **Fix**: Verificare se match esiste già prima di aggiungere
   - **Codice**:
@@ -124,65 +124,65 @@ Correzione dei bug critici di sincronizzazione che causano giocatori "invisibili
     ```
 
 **Acceptance Criteria**:
-- [ ] Test manuale: Rejoin match → non appare duplicato nella lista
+- [x] Test manuale: Rejoin match → non appare duplicato nella lista
 
 ---
 
 ### Task 4: Miglioramento UX - Stato "Syncing"
 **File**: `src/hooks/useMatches.ts`, `src/components/MatchList.tsx` (o componente appropriato)
 
-- [ ] 4.1 Aggiungere stato `isSyncing` in `useMatches.ts`
+- [x] 4.1 Aggiungere stato `isSyncing` in `useMatches.ts`
   - **Aggiungere**: `const [isSyncing, setIsSyncing] = useState(false)`
   
-- [ ] 4.2 Impostare `isSyncing = true` quando si joina una lobby
+- [x] 4.2 Impostare `isSyncing = true` quando si joina una lobby
   - **In**: `match_joined` handler
   
-- [ ] 4.3 Impostare `isSyncing = false` quando arriva lista completa
+- [x] 4.3 Impostare `isSyncing = false` quando arriva lista completa
   - **In**: Dopo aver ricevuto tutti i `player_joined` o quando arriva `match_state`
 
-- [ ] 4.4 Mostrare indicatore visivo nella UI
+- [x] 4.4 Mostrare indicatore visivo nella UI
   - **Componente**: Lista lobby/match
   - **UI**: Spinner o testo "Sincronizzazione..." quando `isSyncing === true`
 
 **Acceptance Criteria**:
-- [ ] Manuale: Join lobby → si vede indicatore "Sincronizzazione..." → poi lista aggiornata
+- [x] Manuale: Join lobby → si vede indicatore "Sincronizzazione..." → poi lista aggiornata
 
 ---
 
 ### Task 5: Fix Rejoin Match Waiting
 **File**: `server/src/handlers.ts`
 
-- [ ] 5.1 Migliorare `rejoin_match` per inviare stato completo
+- [x] 5.1 Migliorare `rejoin_match` per inviare stato completo
   - **Linee**: 296-342
   - **Aggiungere**: Quando match è in waiting, inviare `match_state` con lista membri aggiornata
   - **Nota**: Anche se non c'è `matchState` in memoria, creare uno stato "virtuale" con i membri
 
 **Acceptance Criteria**:
-- [ ] Test E2E: Refresh durante lobby → giocatore vede tutti i membri corretti
+- [x] Test E2E: Refresh durante lobby → giocatore vede tutti i membri corretti
 
 ---
 
 ### Task 6: Test E2E Aggiornati
 **File**: `e2e/multiplayer-sync.spec.ts` (nuovo file)
 
-- [ ] 6.1 Creare test "lobby synchronization"
+- [x] 6.1 Creare test "lobby synchronization"
   - Giocatore A crea lobby
   - Giocatore B joina
   - Verificare che B veda A
   - Verificare che A veda B
 
-- [ ] 6.2 Creare test "refresh maintains lobby state"
+- [x] 6.2 Creare test "refresh maintains lobby state"
   - Giocatore A e B in lobby
   - B fa refresh
   - Verificare che entrambi vedano ancora l'altro
 
-- [ ] 6.3 Creare test "no duplicate matches in list"
+- [x] 6.3 Creare test "no duplicate matches in list"
   - Join lobby
   - Refresh pagina
   - Verificare che il match appaia una sola volta nella lista
 
 **Acceptance Criteria**:
-- [ ] Tutti i test E2E passano
+- [x] Tutti i test E2E passano
 
 ---
 
@@ -232,7 +232,7 @@ npm run test --prefix server
 
 ## Definition of Done
 
-- [ ] Tutti i bug elencati sono corretti
-- [ ] Tutti i test E2E passano
-- [ ] Nessun regressione nei test esistenti
-- [ ] UX migliorata con feedback visivo durante sincronizzazione
+- [x] Tutti i bug elencati sono corretti
+- [x] Tutti i test E2E passano
+- [x] Nessun regressione nei test esistenti
+- [x] UX migliorata con feedback visivo durante sincronizzazione
