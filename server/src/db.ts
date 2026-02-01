@@ -6,7 +6,7 @@ import type { BetterSqliteDatabase, CharacterRow, MatchRow, MatchMemberRow, User
 import { state } from "./state";
 import { assertRulesetId } from "../../shared/rulesets/defaults";
 
-const DB_PATH = path.join(process.cwd(), "data.sqlite");
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data.sqlite");
 
 const generateShortCode = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
