@@ -212,7 +212,7 @@ export type PF2CombatActionPayload =
   | { type: 'pf2_disarm'; targetId: string }
   | { type: 'pf2_feint'; targetId: string }
   | { type: 'pf2_demoralize'; targetId: string }
-  | { type: 'pf2_cast_spell'; casterIndex: number; spellName: string; spellLevel: number; targetId?: string };
+  | { type: 'pf2_cast_spell'; casterIndex: number; spellName: string; spellLevel: number; targetId?: string; targetHex?: { q: number; r: number } };
 
 // --- Spell Casting Types ---
 
@@ -271,4 +271,6 @@ export type SpellDefinition = {
   conditions?: ConditionValue[];
   duration?: string;
   heighten?: HeightenData;
+  areaShape?: 'burst';
+  areaRadius?: number;
 };

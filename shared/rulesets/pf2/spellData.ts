@@ -48,6 +48,8 @@ export const SPELL_DATABASE: Record<string, SpellDefinition> = {
       interval: 1,
       damagePerLevel: '+2d6',
     },
+    areaShape: 'burst',
+    areaRadius: 4,
   },
   'Heal': {
     name: 'Heal',
@@ -87,6 +89,8 @@ export const SPELL_DATABASE: Record<string, SpellDefinition> = {
     castActions: 2,
     targetType: 'area',
     duration: '1 minute',
+    areaShape: 'burst',
+    areaRadius: 1,
   },
   'Ray of Frost': {
     name: 'Ray of Frost',

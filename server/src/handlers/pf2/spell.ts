@@ -12,7 +12,7 @@ import {
   applyHealing,
   getAbilityModifier,
 } from "../../../../shared/rulesets/pf2/rules";
-import { getSpell } from "../../../../shared/rulesets/pf2/spellData";
+import { getSpell, getHeightenedDamage } from "../../../../shared/rulesets/pf2/spellData";
 import type { PF2CombatantState } from "../../../../shared/rulesets/pf2/types";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -23,12 +23,47 @@ import {
   getCharacterById,
 } from "../../helpers";
 
+function hexDistance(q1: number, r1: number, q2: number, r2: number): number {
+  const s1 = -q1 - r1;
+  const s2 = -q2 - r2;
+  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2));
+}
+
+function worldToHex(x: number, z: number): { q: number; r: number } {
+  const HEX_SIZE = 1;
+  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * z) / HEX_SIZE;
+  const r = (2 / 3 * z) / HEX_SIZE;
+
+  const cubeX = q;
+  const cubeZ = r;
+  const cubeY = -cubeX - cubeZ;
+
+  let rx = Math.round(cubeX);
+  let ry = Math.round(cubeY);
+  let rz = Math.round(cubeZ);
+
+  const xDiff = Math.abs(rx - cubeX);
+  const yDiff = Math.abs(ry - cubeY);
+  const zDiff = Math.abs(rz - cubeZ);
+
+  if (xDiff > yDiff && xDiff > zDiff) {
+    rx = -ry - rz;
+  } else if (yDiff > zDiff) {
+    ry = -rx - rz;
+  } else {
+    rz = -rx - ry;
+  }
+
+  return { q: rx, r: rz };
+}
+
 type CastSpellPayload = {
   type: "pf2_cast_spell";
   casterIndex: number;
   spellName: string;
   spellLevel: number;
   targetId?: string;
+  targetHex?: { q: number; r: number };
 };
 
 export const handlePF2CastSpell = async (
@@ -91,6 +126,129 @@ export const handlePF2CastSpell = async (
     logEntry += ` (level ${payload.spellLevel})`;
   }
   logEntry += ` [spell attack +${spellAttack}, DC ${spellDC}]`;
+
+  if (spellDef.targetType === 'area' && payload.targetHex && spellDef.areaShape === 'burst' && spellDef.areaRadius !== undefined) {
+    const centerHex = payload.targetHex;
+    const radius = spellDef.areaRadius;
+
+    const affectedCombatants = match.combatants.filter(c => {
+      if (!isPF2Combatant(c)) return false;
+      const combatantHex = worldToHex(c.position.x, c.position.z);
+      const distance = hexDistance(centerHex.q, centerHex.r, combatantHex.q, combatantHex.r);
+      return distance <= radius;
+    });
+
+    logEntry += ` at hex (${centerHex.q}, ${centerHex.r}) affecting ${affectedCombatants.length} target(s)`;
+
+    const tradition = caster.tradition.toLowerCase();
+    const abilityKey = tradition === 'arcane' ? 'intelligence' 
+      : tradition === 'divine' ? 'wisdom'
+      : tradition === 'occult' ? 'charisma'
+      : 'wisdom';
+    const abilityMod = getAbilityModifier(pf2Char.abilities[abilityKey]);
+
+    const heightenedFormula = getHeightenedDamage(spellDef, payload.spellLevel);
+    const damageFormula = heightenedFormula.replace('{mod}', String(abilityMod));
+    const baseDamageRoll = rollDamage(damageFormula, spellDef.damageType!);
+
+    const updatedCombatants = match.combatants.map(c => {
+      const isAffected = affectedCombatants.find(ac => ac.playerId === c.playerId);
+      const isCaster = c.playerId === player.id;
+
+      if (!isAffected && !isCaster) {
+        return c;
+      }
+
+      if (!isPF2Combatant(c)) return c;
+
+      let updated = { ...c };
+
+      if (isAffected) {
+        const targetChar = getCharacterById(match, c.characterId);
+        if (targetChar && isPF2Character(targetChar)) {
+          const pf2TargetChar = targetChar as PF2CharacterSheet;
+
+          if (spellDef.damageFormula && spellDef.save) {
+            const saveType = spellDef.save;
+            const targetSave = pf2TargetChar.derived[`${saveType}Save` as keyof typeof pf2TargetChar.derived] as number;
+            const saveRoll = rollCheck(targetSave, spellDC);
+
+            let damageDealt = 0;
+            if (saveRoll.degree === 'critical_failure') {
+              damageDealt = baseDamageRoll.total * 2;
+              logEntry += `\n  ${pf2TargetChar.name}: Critical Failure! ${damageDealt} ${spellDef.damageType} damage (doubled)`;
+            } else if (saveRoll.degree === 'failure') {
+              damageDealt = baseDamageRoll.total;
+              logEntry += `\n  ${pf2TargetChar.name}: Failure! ${damageDealt} ${spellDef.damageType} damage`;
+            } else if (saveRoll.degree === 'success') {
+              damageDealt = Math.floor(baseDamageRoll.total / 2);
+              logEntry += `\n  ${pf2TargetChar.name}: Success! ${damageDealt} ${spellDef.damageType} damage (half)`;
+            } else {
+              damageDealt = 0;
+              logEntry += `\n  ${pf2TargetChar.name}: Critical Success! No damage`;
+            }
+
+            if (damageDealt > 0) {
+              const newHP = Math.max(0, updated.currentHP - damageDealt);
+              updated.currentHP = newHP;
+
+              if (newHP <= 0) {
+                const newDying = 1 + updated.wounded;
+                const deathThreshold = 4 - updated.doomed;
+                const isDead = newDying >= deathThreshold;
+
+                updated.dying = isDead ? updated.dying : newDying;
+                updated.statusEffects = isDead
+                  ? [...updated.statusEffects.filter(e => e !== 'unconscious'), 'dead']
+                  : [...updated.statusEffects.filter(e => e !== 'unconscious'), 'unconscious'];
+                updated.conditions = isDead
+                  ? updated.conditions
+                  : [...updated.conditions.filter(cond => cond.condition !== 'unconscious'), { condition: 'unconscious' as const }];
+              }
+            }
+          }
+        }
+      }
+
+      if (isCaster) {
+        updated.actionsRemaining = updated.actionsRemaining - 2;
+
+        if (castResult.isFocus) {
+          updated.focusPointsUsed += 1;
+        } else if (!castResult.isCantrip) {
+          const existingSlot = updated.spellSlotUsage.find(
+            s => s.casterIndex === payload.casterIndex && s.level === payload.spellLevel
+          );
+          if (existingSlot) {
+            updated.spellSlotUsage = updated.spellSlotUsage.map(s =>
+              s.casterIndex === payload.casterIndex && s.level === payload.spellLevel
+                ? { ...s, used: s.used + 1 }
+                : s
+            );
+          } else {
+            updated.spellSlotUsage = [...updated.spellSlotUsage, {
+              casterIndex: payload.casterIndex,
+              level: payload.spellLevel,
+              used: 1,
+            }];
+          }
+        }
+      }
+
+      return updated;
+    });
+
+    const finalState: MatchState = {
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, logEntry],
+    };
+
+    state.matches.set(matchId, finalState);
+    await updateMatchState(matchId, finalState);
+    sendToMatch(matchId, { type: "match_state", state: finalState });
+    return;
+  }
 
   let targetCombatant: PF2CombatantState | undefined;
   let targetCharacter: PF2CharacterSheet | undefined;

@@ -852,7 +852,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 15. Implement burst area spell resolution
+- [x] 15. Implement burst area spell resolution
 
   **What to do**:
   - Modify `server/src/handlers/pf2/spell.ts`:

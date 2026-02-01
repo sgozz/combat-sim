@@ -67,9 +67,39 @@ export const PF2ActionBar = ({
       return
     }
 
+    // For area spells, prompt for hex selection
+    if (spellDef.targetType === 'area') {
+      const hexInput = prompt('Enter target hex coordinates (format: q,r)\nExample: 5,5')
+      if (!hexInput) return
+      
+      const parts = hexInput.split(',').map(s => s.trim())
+      if (parts.length !== 2) {
+        alert('Invalid format. Use: q,r (e.g., 5,5)')
+        return
+      }
+      
+      const q = parseInt(parts[0], 10)
+      const r = parseInt(parts[1], 10)
+      
+      if (isNaN(q) || isNaN(r)) {
+        alert('Invalid coordinates. Both q and r must be numbers.')
+        return
+      }
+
+      onAction('pf2_cast_spell', {
+        type: 'pf2_cast_spell',
+        casterIndex: 0,
+        spellName,
+        spellLevel: castLevel,
+        targetHex: { q, r }
+      })
+      setShowSpellPicker(false)
+      return
+    }
+
     onAction('pf2_cast_spell', {
       type: 'pf2_cast_spell',
-      casterIndex: 0, // Always use first spellcaster for now
+      casterIndex: 0,
       spellName,
       spellLevel: castLevel,
       targetId: selectedTargetId ?? undefined

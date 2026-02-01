@@ -42,9 +42,13 @@ vi.mock('../../../../shared/rulesets/pf2/rules', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../shared/rulesets/pf2/spellData', () => ({
-  getSpell: (...args: unknown[]) => mockGetSpell(...args),
-}));
+vi.mock('../../../../shared/rulesets/pf2/spellData', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../shared/rulesets/pf2/spellData')>();
+  return {
+    ...actual,
+    getSpell: (...args: unknown[]) => mockGetSpell(...args),
+  };
+});
 
 describe('handlePF2CastSpell', () => {
   let socket: WebSocket;
@@ -649,7 +653,7 @@ describe('handlePF2CastSpell', () => {
         playerId: 'player1',
         characterId: 'char1',
         actionsRemaining: 3,
-        focusPointsUsed: 0,
+        position: { x: 100, y: 0, z: 100 },
       });
       const player = createPlayer({ id: 'player1' });
       const match = createMatch({
@@ -833,6 +837,310 @@ describe('handlePF2CastSpell', () => {
         message: 'No spellcaster at that index.',
       });
       expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Area Spells - Fireball', () => {
+    it('should affect all combatants within burst radius', async () => {
+      const wizardCaster = createWizardCaster();
+      wizardCaster.slots.push({ level: 3, total: 1, used: 0 });
+      wizardCaster.knownSpells.push({ level: 3, spells: ['Fireball'] });
+
+      const actorChar = createPF2Character({
+        id: 'char1',
+        name: 'Wizard',
+        spellcasters: [wizardCaster],
+        abilities: { strength: 10, dexterity: 14, constitution: 12, intelligence: 18, wisdom: 10, charisma: 10 },
+      });
+
+      const target1Char = createPF2Character({ id: 'char2', name: 'Goblin1' });
+      const target2Char = createPF2Character({ id: 'char3', name: 'Goblin2' });
+      const target3Char = createPF2Character({ id: 'char4', name: 'Goblin3' });
+
+      const actorCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+
+      // Target 1: At center (q: 5, r: 5) - distance 0
+      const target1Combatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 12.99, y: 0, z: 7.5 },
+      });
+
+      // Target 2: 3 hexes away (q: 8, r: 5) - distance 3
+      const target2Combatant = createPF2Combatant({
+        playerId: 'player3',
+        characterId: 'char3',
+        currentHP: 20,
+        position: { x: 18.19, y: 0, z: 7.5 },
+      });
+
+      // Target 3: 5 hexes away (q: 10, r: 5) - distance 5 (outside radius)
+      const target3Combatant = createPF2Combatant({
+        playerId: 'player4',
+        characterId: 'char4',
+        currentHP: 20,
+        position: { x: 21.65, y: 0, z: 7.5 },
+      });
+
+      const player = createPlayer({ id: 'player1' });
+      const match = createMatch({
+        combatants: [actorCombatant, target1Combatant, target2Combatant, target3Combatant],
+        characters: [actorChar, target1Char, target2Char, target3Char],
+        players: [
+          { id: 'player1', name: 'Wizard', isBot: false, characterId: 'char1' },
+          { id: 'player2', name: 'Goblin1', isBot: false, characterId: 'char2' },
+          { id: 'player3', name: 'Goblin2', isBot: false, characterId: 'char3' },
+          { id: 'player4', name: 'Goblin3', isBot: false, characterId: 'char4' },
+        ],
+      });
+
+      mockGetCombatantByPlayerId.mockReturnValue(actorCombatant);
+      mockGetCharacterById.mockImplementation((_match, charId) => {
+        if (charId === 'char1') return actorChar;
+        if (charId === 'char2') return target1Char;
+        if (charId === 'char3') return target2Char;
+        if (charId === 'char4') return target3Char;
+        return undefined;
+      });
+      mockCanCastSpell.mockReturnValue({ success: true, spellLevel: 3 });
+      mockCalculateSpellAttack.mockReturnValue(10);
+      mockCalculateSpellDC.mockReturnValue(18);
+      mockGetAbilityModifier.mockReturnValue(4);
+      mockGetSpell.mockReturnValue({
+        name: 'Fireball',
+        level: 3,
+        tradition: 'arcane',
+        castActions: 2,
+        targetType: 'area',
+        save: 'reflex',
+        damageFormula: '6d6',
+        damageType: 'fire',
+        areaShape: 'burst',
+        areaRadius: 4,
+      });
+
+      // Mock save rolls - target1 fails, target2 succeeds
+      let callCount = 0;
+      mockRollCheck.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return { roll: 10, modifier: 3, total: 13, dc: 18, degree: 'failure', natural20: false, natural1: false } as D20RollResult;
+        } else {
+          return { roll: 15, modifier: 3, total: 18, dc: 18, degree: 'success', natural20: false, natural1: false } as D20RollResult;
+        }
+      });
+
+      mockRollDamage.mockReturnValue({ total: 21, rolls: [3, 4, 5, 2, 6, 1], damageType: 'fire' } as DamageRoll);
+
+      await handlePF2CastSpell(socket, matchId, match, player, actorCombatant, {
+        type: 'pf2_cast_spell',
+        casterIndex: 0,
+        spellName: 'Fireball',
+        spellLevel: 3,
+        targetHex: { q: 5, r: 5 },
+      });
+
+      expect(mockSendMessage).not.toHaveBeenCalled();
+      expect(mockUpdateMatchState).toHaveBeenCalled();
+
+      const finalState = mockSendToMatch.mock.calls[0][1].state;
+
+      // Target 1 (at center) should take full damage (21), capped at 0
+      const updatedTarget1 = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player2');
+      expect(updatedTarget1.currentHP).toBe(0);
+
+      // Target 2 (3 hexes away) should take half damage (10)
+      const updatedTarget2 = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player3');
+      expect(updatedTarget2.currentHP).toBe(20 - 10);
+
+      // Target 3 (5 hexes away, outside radius) should be unaffected
+      const updatedTarget3 = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player4');
+      expect(updatedTarget3.currentHP).toBe(20);
+
+      // Caster should have used 2 actions and 1 spell slot
+      const updatedCaster = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player1');
+      expect(updatedCaster.actionsRemaining).toBe(1);
+      expect(updatedCaster.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
+    });
+
+    it('should roll independent saves for each target', async () => {
+      const wizardCaster = createWizardCaster();
+      wizardCaster.slots.push({ level: 3, total: 1, used: 0 });
+      wizardCaster.knownSpells.push({ level: 3, spells: ['Fireball'] });
+
+      const actorChar = createPF2Character({
+        id: 'char1',
+        name: 'Wizard',
+        spellcasters: [wizardCaster],
+        abilities: { strength: 10, dexterity: 14, constitution: 12, intelligence: 18, wisdom: 10, charisma: 10 },
+      });
+
+      const target1Char = createPF2Character({ id: 'char2', name: 'Goblin1' });
+      const target2Char = createPF2Character({ id: 'char3', name: 'Goblin2' });
+
+      const actorCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+
+      const target1Combatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 50,
+        position: { x: 1, y: 0, z: 0 },
+      });
+
+      const target2Combatant = createPF2Combatant({
+        playerId: 'player3',
+        characterId: 'char3',
+        currentHP: 50,
+        position: { x: 2, y: 0, z: 0 },
+      });
+
+      const player = createPlayer({ id: 'player1' });
+      const match = createMatch({
+        combatants: [actorCombatant, target1Combatant, target2Combatant],
+        characters: [actorChar, target1Char, target2Char],
+        players: [
+          { id: 'player1', name: 'Wizard', isBot: false, characterId: 'char1' },
+          { id: 'player2', name: 'Goblin1', isBot: false, characterId: 'char2' },
+          { id: 'player3', name: 'Goblin2', isBot: false, characterId: 'char3' },
+        ],
+      });
+
+      mockGetCombatantByPlayerId.mockReturnValue(actorCombatant);
+      mockGetCharacterById.mockImplementation((_match, charId) => {
+        if (charId === 'char1') return actorChar;
+        if (charId === 'char2') return target1Char;
+        if (charId === 'char3') return target2Char;
+        return undefined;
+      });
+      mockCanCastSpell.mockReturnValue({ success: true, spellLevel: 3 });
+      mockCalculateSpellAttack.mockReturnValue(10);
+      mockCalculateSpellDC.mockReturnValue(18);
+      mockGetAbilityModifier.mockReturnValue(4);
+      mockGetSpell.mockReturnValue({
+        name: 'Fireball',
+        level: 3,
+        tradition: 'arcane',
+        castActions: 2,
+        targetType: 'area',
+        save: 'reflex',
+        damageFormula: '6d6',
+        damageType: 'fire',
+        areaShape: 'burst',
+        areaRadius: 4,
+      });
+
+      let callCount = 0;
+      mockRollCheck.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return { roll: 5, modifier: 3, total: 8, dc: 18, degree: 'critical_failure', natural20: false, natural1: false } as D20RollResult;
+        } else if (callCount === 2) {
+          return { roll: 20, modifier: 3, total: 23, dc: 18, degree: 'critical_success', natural20: false, natural1: false } as D20RollResult;
+        } else {
+          return { roll: 20, modifier: 3, total: 23, dc: 18, degree: 'critical_success', natural20: false, natural1: false } as D20RollResult;
+        }
+      });
+
+      mockRollDamage.mockReturnValue({ total: 21, rolls: [3, 4, 5, 2, 6, 1], damageType: 'fire' } as DamageRoll);
+
+      await handlePF2CastSpell(socket, matchId, match, player, actorCombatant, {
+        type: 'pf2_cast_spell',
+        casterIndex: 0,
+        spellName: 'Fireball',
+        spellLevel: 3,
+        targetHex: { q: 1, r: 0 },
+      });
+
+      const finalState = mockSendToMatch.mock.calls[0][1].state;
+
+      // Verify spell was cast and affected targets
+      expect(finalState.log[finalState.log.length - 1]).toContain('Fireball');
+      expect(finalState.log[finalState.log.length - 1]).toContain('affecting');
+      
+      // Verify caster used resources
+      const updatedCaster = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player1');
+      expect(updatedCaster.actionsRemaining).toBe(1);
+      expect(updatedCaster.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
+    });
+
+    it('should handle area spell with no combatants in radius', async () => {
+      const wizardCaster = createWizardCaster();
+      wizardCaster.slots.push({ level: 3, total: 1, used: 0 });
+      wizardCaster.knownSpells.push({ level: 3, spells: ['Fireball'] });
+
+      const actorChar = createPF2Character({
+        id: 'char1',
+        name: 'Wizard',
+        spellcasters: [wizardCaster],
+        abilities: { strength: 10, dexterity: 14, constitution: 12, intelligence: 18, wisdom: 10, charisma: 10 },
+      });
+
+      const actorCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+
+      const player = createPlayer({ id: 'player1' });
+      const match = createMatch({
+        combatants: [actorCombatant],
+        characters: [actorChar],
+        players: [{ id: 'player1', name: 'Wizard', isBot: false, characterId: 'char1' }],
+      });
+
+      mockGetCombatantByPlayerId.mockReturnValue(actorCombatant);
+      mockGetCharacterById.mockReturnValue(actorChar);
+      mockCanCastSpell.mockReturnValue({ success: true, spellLevel: 3 });
+      mockCalculateSpellAttack.mockReturnValue(10);
+      mockCalculateSpellDC.mockReturnValue(18);
+      mockGetAbilityModifier.mockReturnValue(4);
+      mockGetSpell.mockReturnValue({
+        name: 'Fireball',
+        level: 3,
+        tradition: 'arcane',
+        castActions: 2,
+        targetType: 'area',
+        save: 'reflex',
+        damageFormula: '6d6',
+        damageType: 'fire',
+        areaShape: 'burst',
+        areaRadius: 4,
+      });
+
+      mockRollDamage.mockReturnValue({ total: 21, rolls: [3, 4, 5, 2, 6, 1], damageType: 'fire' } as DamageRoll);
+
+      await handlePF2CastSpell(socket, matchId, match, player, actorCombatant, {
+        type: 'pf2_cast_spell',
+        casterIndex: 0,
+        spellName: 'Fireball',
+        spellLevel: 3,
+        targetHex: { q: 10, r: 10 },
+      });
+
+      expect(mockSendMessage).not.toHaveBeenCalled();
+      expect(mockUpdateMatchState).toHaveBeenCalled();
+
+      const finalState = mockSendToMatch.mock.calls[0][1].state;
+
+      // Caster should still use actions and spell slot
+      const updatedCaster = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player1');
+      expect(updatedCaster.actionsRemaining).toBe(1);
+      expect(updatedCaster.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
+
+      // Log should mention Fireball
+      expect(finalState.log.some((entry: string) => entry.includes('Fireball'))).toBe(true);
     });
   });
 });

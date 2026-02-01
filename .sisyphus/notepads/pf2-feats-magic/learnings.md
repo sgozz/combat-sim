@@ -934,3 +934,66 @@ Successfully integrated SpellPicker component into PF2ActionBar with Cast Spell 
 - Task 15: Implement area spell targeting with hex selection
 - Task 16: Integration testing and polish
 
+
+## Task 15: Burst Area Spell Resolution (Fireball)
+
+### Implementation Summary
+- **Server-side**: Added area spell resolution in `handlePF2CastSpell`
+  - Detects `targetType === 'area'` and `areaShape === 'burst'`
+  - Accepts `targetHex: { q, r }` in payload
+  - Calculates affected hexes using hex distance formula
+  - Rolls independent saves for each combatant in radius
+  - Applies damage based on save degree (crit fail: x2, fail: full, success: half, crit success: 0)
+  
+- **Client-side**: Updated `PF2ActionBar` to handle area spells
+  - Detects area spells in `handleSpellSelect`
+  - Prompts user for hex coordinates (simple text input)
+  - Sends `targetHex` in `pf2_cast_spell` message
+  
+- **Data**: Updated spell definitions
+  - Added `areaShape: 'burst'` and `areaRadius: 4` to Fireball
+  - Added `areaShape: 'burst'` and `areaRadius: 1` to Bless
+  
+- **Types**: Extended type definitions
+  - Added `areaShape?: 'burst'` and `areaRadius?: number` to `SpellDefinition`
+  - Added `targetHex?: { q, r }` to `CastSpellPayload` and `PF2CombatActionPayload`
+
+### Hex Math Utilities
+Implemented inline hex distance calculation:
+```typescript
+function hexDistance(q1, r1, q2, r2): number {
+  const s1 = -q1 - r1;
+  const s2 = -q2 - r2;
+  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2));
+}
+
+function worldToHex(x, z): { q, r } {
+  // Converts world coordinates to hex cube coordinates
+  // Uses flat-top hex grid with HEX_SIZE = 1
+}
+```
+
+### Key Patterns
+- **Caster can be affected**: PF2 rules allow casters to be in their own area spells
+- **Independent saves**: Each combatant rolls their own save, even if at same position
+- **Heightening works**: Area spells use `getHeightenedDamage()` for scaling
+- **Resource consumption**: Caster's actions/slots updated once, not per target
+
+### Test Coverage
+- ✅ Area spell affects all combatants within radius
+- ✅ Area spell respects hex distance boundaries
+- ✅ Area spell with no combatants in radius (valid, no damage)
+- ✅ Caster resource consumption (actions, spell slots)
+
+### Edge Cases Handled
+- Combatants outside radius are unaffected
+- HP capped at 0 (no negative HP)
+- Dying/unconscious status applied when HP reaches 0
+- Caster can be affected by their own spell
+- Multiple combatants at same hex position
+
+### Future Enhancements (Not Implemented)
+- Visual hex selection UI (currently uses text prompt)
+- Area preview showing affected hexes
+- Other area shapes (cone, line, emanation)
+- Desktop UI support (only mobile ActionBar implemented)
