@@ -79,7 +79,7 @@ export const PlayerList = ({ match, currentUserId, onToggleReady, isSyncing }: P
                 {ready ? '✓' : '⏳'}
               </span>
 
-              {isCurrent && (
+              {isCurrent && match.playerCount > 1 && (
                 <button
                   className={`player-list-ready-btn player-list-ready-btn--${
                     ready ? 'ready' : 'not-ready'

@@ -102,7 +102,13 @@ describe('LobbyScreen', () => {
 
   it('clicking Ready sends player_ready message', async () => {
     const userEventInstance = userEvent.setup()
-    const { sendMessage } = renderLobby()
+    const { sendMessage } = renderLobby({
+      playerCount: 2,
+      players: [
+        { id: 'user-1', name: 'TestUser', isConnected: true },
+        { id: 'user-2', name: 'Player2', isConnected: true }
+      ]
+    })
 
     await userEventInstance.click(screen.getByRole('button', { name: 'Ready' }))
     expect(sendMessage).toHaveBeenCalledWith({ type: 'player_ready', matchId: 'match-1', ready: true })
@@ -110,7 +116,14 @@ describe('LobbyScreen', () => {
 
   it('clicking Unready sends player_ready with ready=false', async () => {
     const userEventInstance = userEvent.setup()
-    const { sendMessage } = renderLobby({ readyPlayers: ['user-1'] })
+    const { sendMessage } = renderLobby({
+      playerCount: 2,
+      players: [
+        { id: 'user-1', name: 'TestUser', isConnected: true },
+        { id: 'user-2', name: 'Player2', isConnected: true }
+      ],
+      readyPlayers: ['user-1']
+    })
 
     await userEventInstance.click(screen.getByRole('button', { name: 'Unready' }))
     expect(sendMessage).toHaveBeenCalledWith({ type: 'player_ready', matchId: 'match-1', ready: false })

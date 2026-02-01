@@ -85,12 +85,13 @@ export const LobbyScreen = ({
     navigate('/home')
   }, [match, sendMessage, navigate])
 
-  const allPlayersReady = match?.players.every(p => match.readyPlayers?.includes(p.id)) ?? false
-  const totalCombatants = (match?.playerCount ?? 0) + botCount
+  const playerCount = match?.playerCount ?? 0
+  const allPlayersReady = playerCount === 1 || (match?.players.every(p => match.readyPlayers?.includes(p.id)) ?? false)
+  const totalCombatants = playerCount + botCount
   const canStart = isCreator && allPlayersReady && totalCombatants >= 2
 
   const getStartButtonTooltip = (): string => {
-    if (!allPlayersReady) return 'Waiting for all players to ready'
+    if (playerCount > 1 && !allPlayersReady) return 'Waiting for all players to ready'
     if (totalCombatants < 2) return 'Need at least 2 combatants'
     return ''
   }
