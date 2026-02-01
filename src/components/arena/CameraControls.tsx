@@ -5,7 +5,7 @@ import { Vector3 } from 'three'
 import { hexToWorld } from '../../utils/hex'
 import type { GridPosition } from '../../../shared/types'
 
-export type CameraMode = 'free' | 'top' | 'isometric' | 'follow' | 'overview'
+export type CameraMode = 'free' | 'follow' | 'overview'
 
 interface OrbitControlsLike {
   enabled: boolean
@@ -35,28 +35,20 @@ export const CameraControls = ({ targetPosition, focusPositions, mode }: CameraC
   useFrame((_, delta) => {
     if (!controls) return
 
+    if (!controls.enabled) controls.enabled = true
+
     if (mode === 'free') {
-      if (!controls.enabled) controls.enabled = true
       return
     }
 
-    if (controls.enabled) controls.enabled = false
-
-    const speed = 2.0 * delta
+    const GENTLE_SUGGESTION_SPEED = 0.4
+    const speed = GENTLE_SUGGESTION_SPEED * delta
     const target = followTarget.current
 
     if (mode === 'follow') {
       const offset = new Vector3(8, 10, 8)
       const targetCamPos = target.clone().add(offset)
       camera.position.lerp(targetCamPos, speed)
-      controls.target.lerp(target, speed)
-    } else if (mode === 'top') {
-      const topPos = target.clone().add(new Vector3(0, 20, 0.1))
-      camera.position.lerp(topPos, speed)
-      controls.target.lerp(target, speed)
-    } else if (mode === 'isometric') {
-      const isoPos = target.clone().add(new Vector3(12, 12, 12))
-      camera.position.lerp(isoPos, speed)
       controls.target.lerp(target, speed)
     } else if (mode === 'overview' && focusPositions.length > 0) {
       const worldPoints = focusPositions.map((pos) => {

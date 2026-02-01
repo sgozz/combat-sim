@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
+import { useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { ArenaScene } from '../arena/ArenaScene'
@@ -11,7 +11,7 @@ import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
-import type { CameraMode } from '../arena/CameraControls'
+
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
 import { isGurpsCombatant } from '../../../shared/rulesets'
 
@@ -62,42 +62,8 @@ export const GameScreen = ({
 }: GameScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   void matchId
-  const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
-  const hasSeenMatchStart = useRef(false)
    const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
    const currentManeuver = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.maneuver : null
-
-  useEffect(() => {
-    if (matchState?.status === 'active' && !hasSeenMatchStart.current) {
-      hasSeenMatchStart.current = true
-      
-      const overviewTimer = setTimeout(() => {
-        setCameraMode('overview')
-      }, 0)
-      
-      const followTimer = setTimeout(() => {
-        setCameraMode('follow')
-      }, 3000)
-      
-      return () => {
-        clearTimeout(overviewTimer)
-        clearTimeout(followTimer)
-      }
-    }
-    
-    if (!matchState || matchState.status === 'finished') {
-      hasSeenMatchStart.current = false
-    }
-  }, [matchState?.status, matchState])
-
-  useEffect(() => {
-    if (hasSeenMatchStart.current && isPlayerTurn && cameraMode === 'overview') {
-      const timer = setTimeout(() => {
-        setCameraMode('follow')
-      }, 0)
-      return () => clearTimeout(timer)
-    }
-  }, [isPlayerTurn, cameraMode])
 
   const pendingDefense = matchState?.pendingDefense
   const isDefending = pendingDefense?.defenderId === player?.id
@@ -186,36 +152,6 @@ export const GameScreen = ({
           </div>
           
           <InitiativeTracker matchState={matchState} />
-          
-          <div className="game-header-right">
-            <div className="camera-controls">
-              <button 
-                className={`header-btn camera-btn ${cameraMode === 'follow' ? 'active' : ''}`}
-                onClick={() => setCameraMode('follow')}
-                title="Follow Active"
-              >👁</button>
-              <button 
-                className={`header-btn camera-btn ${cameraMode === 'top' ? 'active' : ''}`}
-                onClick={() => setCameraMode('top')}
-                title="Top-Down"
-              >⬇</button>
-              <button 
-                className={`header-btn camera-btn ${cameraMode === 'isometric' ? 'active' : ''}`}
-                onClick={() => setCameraMode('isometric')}
-                title="Isometric"
-              >◇</button>
-              <button 
-                className={`header-btn camera-btn ${cameraMode === 'overview' ? 'active' : ''}`}
-                onClick={() => setCameraMode('overview')}
-                title="Overview"
-              >◎</button>
-              <button 
-                className={`header-btn camera-btn ${cameraMode === 'free' ? 'active' : ''}`}
-                onClick={() => setCameraMode('free')}
-                title="Free Camera"
-              >⟲</button>
-            </div>
-          </div>
         </header>
 
         <CombatToast 
@@ -242,10 +178,10 @@ export const GameScreen = ({
              moveTarget={moveTarget}
              selectedTargetId={selectedTargetId}
              isPlayerTurn={isPlayerTurn}
-             reachableHexes={matchState?.reachableHexes ?? []}
-             visualEffects={visualEffects}
-             cameraMode={cameraMode}
-             rulesetId={matchState?.rulesetId ?? 'gurps'}
+              reachableHexes={matchState?.reachableHexes ?? []}
+              visualEffects={visualEffects}
+              cameraMode="free"
+              rulesetId={matchState?.rulesetId ?? 'gurps'}
              onGridClick={onGridClick}
              onCombatantClick={onCombatantClick}
            />
