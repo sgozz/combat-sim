@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { MatchSummary, User } from '../../../shared/types'
@@ -61,17 +61,19 @@ const renderLobby = (matchOverrides?: Partial<MatchSummary>, overrides?: Partial
   const currentUser = overrides?.user ?? user
   const sendMessage = vi.fn()
 
-  render(
-    <MemoryRouter>
-      <LobbyScreen
-        myMatches={myMatches}
-        user={currentUser}
-        connectionState="connected"
-        sendMessage={sendMessage}
-        characters={[gurpsChar]}
-      />
-    </MemoryRouter>,
-  )
+   render(
+     <MemoryRouter>
+       <LobbyScreen
+         myMatches={myMatches}
+         user={currentUser}
+         connectionState="connected"
+         sendMessage={sendMessage}
+         characters={[gurpsChar]}
+         isSyncing={false}
+         onLoadCharacters={vi.fn()}
+       />
+     </MemoryRouter>,
+   )
 
   return { sendMessage, match }
 }

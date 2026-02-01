@@ -46,12 +46,12 @@ export const LobbyScreen = ({
     }
   }, [match, matchId, navigate, myMatches.length])
 
-  useEffect(() => {
-    if (match?.status === 'active' && matchId) {
-      setIsStarting(false)
-      navigate(`/game/${matchId}`, { replace: true })
-    }
-  }, [match?.status, matchId, navigate])
+   useEffect(() => {
+     if (match?.status === 'active' && matchId) {
+       queueMicrotask(() => setIsStarting(false))
+       navigate(`/game/${matchId}`, { replace: true })
+     }
+   }, [match?.status, matchId, navigate])
 
   const handleToggleReady = useCallback(() => {
     if (!match) return
