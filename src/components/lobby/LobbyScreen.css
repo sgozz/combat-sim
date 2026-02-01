@@ -1,12 +1,12 @@
 .lobby-screen {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .lobby-loading {
@@ -152,6 +152,7 @@
   padding: var(--space-lg);
   overflow-y: auto;
   min-height: 0;
+  box-sizing: border-box;
 }
 
 .lobby-panel {
@@ -179,10 +180,11 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-start;
   padding: var(--space-lg);
   gap: var(--space-xs);
+  overflow-y: auto;
 }
 
 .lobby-placeholder-text {
@@ -487,10 +489,23 @@
   .lobby-header {
     padding: var(--space-sm) var(--space-md);
     gap: var(--space-sm);
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .lobby-back-btn {
+    order: 1;
+  }
+
+  .lobby-header-center {
+    order: 2;
+    flex-basis: 100%;
   }
 
   .lobby-match-name {
     font-size: var(--text-lg);
+    white-space: normal;
+    word-break: break-word;
   }
 
   .lobby-player-count {
@@ -500,12 +515,22 @@
   .lobby-main {
     grid-template-columns: 1fr;
     gap: var(--space-md);
+    padding: var(--space-sm);
+  }
+
+  .lobby-panel {
+    overflow: visible;
+    min-width: 0;
+  }
+
+  .lobby-panel-body {
     padding: var(--space-md);
+    overflow-y: visible;
   }
 
   .lobby-panel-preview {
     order: 0;
-    min-height: 200px;
+    min-height: 220px;
   }
 
   .lobby-footer {
@@ -513,26 +538,42 @@
   }
 
   .lobby-footer-inner {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--space-sm);
   }
 
   .lobby-footer-left {
-    order: 2;
-    flex: 1;
+    order: 3;
   }
 
   .lobby-footer-center {
     order: 1;
-    flex-basis: 100%;
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
   }
 
   .lobby-footer-right {
-    order: 3;
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
+    order: 2;
+  }
+
+  .lobby-invite-section {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .lobby-invite-code {
+    width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
+    letter-spacing: 0.06em;
+  }
+
+  .lobby-copy-btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .lobby-leave-btn {

@@ -16,6 +16,7 @@
   }
 }
 
+
 @media (max-width: 768px) {
   .app-container {
     grid-template-columns: 1fr;
@@ -35,6 +36,10 @@
     border-radius: 16px 16px 0 0;
     border: none;
     border-top: 1px solid #444;
+  }
+
+  .canvas-container {
+    padding-bottom: var(--action-bar-offset);
   }
 }
 
@@ -971,7 +976,7 @@
 
   .floating-status {
     top: auto;
-    bottom: 80px;
+    bottom: calc(0.5rem + var(--action-bar-offset));
     left: 0.5rem;
   }
 
@@ -1365,6 +1370,20 @@
   font-size: 0.9rem;
   z-index: 100;
   min-width: 150px;
+}
+
+@media (max-width: 1024px) {
+  .canvas-container {
+    padding-bottom: var(--action-bar-offset);
+  }
+
+  .move-preview {
+    bottom: calc(1rem + var(--action-bar-offset));
+  }
+
+  .target-info {
+    bottom: calc(1rem + var(--action-bar-offset));
+  }
 }
 
 .target-info-header {
