@@ -13,6 +13,7 @@ type LobbyScreenProps = {
   sendMessage: (message: ClientToServerMessage) => void
   characters: CharacterSheet[]
   isSyncing: boolean
+  onLoadCharacters: () => void
 }
 
 export const LobbyScreen = ({
@@ -22,6 +23,7 @@ export const LobbyScreen = ({
   sendMessage,
   characters,
   isSyncing,
+  onLoadCharacters,
 }: LobbyScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
@@ -33,6 +35,10 @@ export const LobbyScreen = ({
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null)
 
   const match = myMatches.find(m => m.id === matchId)
+
+  useEffect(() => {
+    onLoadCharacters()
+  }, [onLoadCharacters])
 
   useEffect(() => {
     if (!match && matchId && myMatches.length > 0) {

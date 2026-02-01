@@ -263,6 +263,7 @@ function AppRoutes() {
             sendMessage={sendMessage}
             characters={rosterCharacters}
             isSyncing={isSyncing}
+            onLoadCharacters={loadCharacters}
           />
         ) : <Navigate to="/" replace />
       } />

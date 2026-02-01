@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { ServerToClientMessage, MatchSummary, MatchState } from '../../shared/types'
 
 type UseMatchesParams = {
@@ -22,6 +22,21 @@ export const useMatches = ({
   const [publicMatches, setPublicMatches] = useState<MatchSummary[]>([])
   const [spectatingMatchId, setSpectatingMatchId] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (isSyncing) {
+      syncTimeoutRef.current = setTimeout(() => {
+        setIsSyncing(false)
+      }, 5000)
+    }
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = null
+      }
+    }
+  }, [isSyncing])
 
   const refreshMyMatches = useCallback(() => {
     sendMessage({ type: 'list_my_matches' })
@@ -59,6 +74,7 @@ export const useMatches = ({
           });
           setActiveMatchId(message.match.id)
           setMatchState(null)
+          setIsSyncing(false)
           setLogs(['Joined match.'])
           return true
         
@@ -84,9 +100,12 @@ export const useMatches = ({
           ))
           return true
         
-        case 'match_updated':
-          setMyMatches(prev => prev.map(m => m.id === message.match.id ? message.match : m))
-          return true
+    case 'match_updated':
+      setMyMatches(prev => prev.map(m => m.id === message.match.id ? message.match : m))
+      if (message.match.id === activeMatchId) {
+        setIsSyncing(false)
+      }
+      return true
         
         case 'player_joined':
           setMyMatches(prev => prev.map(m => {
