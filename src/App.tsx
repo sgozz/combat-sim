@@ -27,6 +27,7 @@ function AppRoutes() {
     pendingAction,
     authError,
     spectatingMatchId,
+    isSyncing,
     setLogs,
     setActiveMatchId,
     setPendingAction,
@@ -261,6 +262,7 @@ function AppRoutes() {
             connectionState={connectionState}
             sendMessage={sendMessage}
             characters={rosterCharacters}
+            isSyncing={isSyncing}
           />
         ) : <Navigate to="/" replace />
       } />

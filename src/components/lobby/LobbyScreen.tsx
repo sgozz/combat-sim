@@ -12,6 +12,7 @@ type LobbyScreenProps = {
   connectionState: 'connecting' | 'connected' | 'disconnected'
   sendMessage: (message: ClientToServerMessage) => void
   characters: CharacterSheet[]
+  isSyncing: boolean
 }
 
 export const LobbyScreen = ({
@@ -20,6 +21,7 @@ export const LobbyScreen = ({
   connectionState,
   sendMessage,
   characters,
+  isSyncing,
 }: LobbyScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
@@ -186,6 +188,7 @@ export const LobbyScreen = ({
               match={match}
               currentUserId={user?.id ?? ''}
               onToggleReady={handleToggleReady}
+              isSyncing={isSyncing}
             />
           </div>
         </aside>

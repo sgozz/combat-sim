@@ -5,6 +5,7 @@ type PlayerListProps = {
   match: MatchSummary
   currentUserId: string
   onToggleReady: () => void
+  isSyncing: boolean
 }
 
 const getInitials = (name: string): string => {
@@ -16,7 +17,7 @@ const getInitials = (name: string): string => {
 const isReady = (match: MatchSummary, playerId: string): boolean =>
   match.readyPlayers?.includes(playerId) ?? false
 
-export const PlayerList = ({ match, currentUserId, onToggleReady }: PlayerListProps) => {
+export const PlayerList = ({ match, currentUserId, onToggleReady, isSyncing }: PlayerListProps) => {
   const readyCount = match.readyPlayers?.length ?? 0
   const emptySlots = match.maxPlayers - match.playerCount
 
@@ -25,6 +26,13 @@ export const PlayerList = ({ match, currentUserId, onToggleReady }: PlayerListPr
       <h3 className="player-list-title">
         Players ({match.playerCount}/{match.maxPlayers})
       </h3>
+
+      {isSyncing && (
+        <div className="player-list-syncing">
+          <span className="player-list-syncing-spinner" />
+          <span className="player-list-syncing-text">Sincronizzazione...</span>
+        </div>
+      )}
 
       <ul className="player-list-items">
         {match.players.map(player => {

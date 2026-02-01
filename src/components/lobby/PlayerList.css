@@ -286,3 +286,50 @@
     text-align: left;
   }
 }
+
+/* ---- Syncing Indicator ---- */
+
+.player-list-syncing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  animation: player-list-syncing-pulse 2s ease-in-out infinite;
+}
+
+@keyframes player-list-syncing-pulse {
+  0%, 100% {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    border-color: var(--accent-primary-hover);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.player-list-syncing-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: player-list-syncing-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes player-list-syncing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.player-list-syncing-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}

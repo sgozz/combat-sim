@@ -1,8 +1,8 @@
 {
-  "active_plan": "/Users/fabio/dev/gurps-combat-sim/.sisyphus/plans/pf2-handler-tests.md",
-  "started_at": "2026-01-31T14:26:36.855Z",
+  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/fix-lobby-sync.md",
+  "started_at": "2026-02-01T11:13:24.495Z",
   "session_ids": [
-    "ses_3ef667ae9ffeMV0AEVornON4hX"
+    "ses_3e733e8b6ffeNcQ8aEVz8L3C2W"
   ],
-  "plan_name": "pf2-handler-tests"
+  "plan_name": "fix-lobby-sync"
 }

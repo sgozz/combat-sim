@@ -21,6 +21,7 @@ export const useMatches = ({
   const [myMatches, setMyMatches] = useState<MatchSummary[]>([])
   const [publicMatches, setPublicMatches] = useState<MatchSummary[]>([])
   const [spectatingMatchId, setSpectatingMatchId] = useState<string | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const refreshMyMatches = useCallback(() => {
     sendMessage({ type: 'list_my_matches' })
@@ -65,6 +66,7 @@ export const useMatches = ({
           setActiveMatchId(message.matchId)
           setMatchState(null)
           setLogs(['Joined match.'])
+          setIsSyncing(true)
           return true
         
         case 'match_left':
@@ -90,7 +92,12 @@ export const useMatches = ({
           setMyMatches(prev => prev.map(m => {
             if (m.id === message.matchId) {
               const newPlayer = { id: message.player.id, name: message.player.name, isConnected: true }
-              return { ...m, players: [...m.players, newPlayer], playerCount: m.playerCount + 1 }
+              const updatedMatch = { ...m, players: [...m.players, newPlayer], playerCount: m.playerCount + 1 }
+              const allPlayersJoined = message.matchId === activeMatchId && updatedMatch.playerCount >= updatedMatch.maxPlayers
+              if (allPlayersJoined) {
+                setIsSyncing(false)
+              }
+              return updatedMatch
             }
             return m
           }))
@@ -183,6 +190,7 @@ export const useMatches = ({
     myMatches,
     publicMatches,
     spectatingMatchId,
+    isSyncing,
     refreshMyMatches,
     fetchPublicMatches,
     spectateMatch,

@@ -70,6 +70,7 @@ export const useGameSocket = () => {
      pendingAction: matchState.pendingAction,
      authError: auth.authError,
      spectatingMatchId: matches.spectatingMatchId,
+     isSyncing: matches.isSyncing,
      setLogs: matchState.setLogs,
      setActiveMatchId: matchState.setActiveMatchId,
      setPendingAction: matchState.setPendingAction,
