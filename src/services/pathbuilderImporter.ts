@@ -13,7 +13,7 @@ export const fetchFromAPI = async (characterId: string): Promise<PathbuilderResu
     const validated = validatePathbuilderExport(data);
     if (!validated) return { success: false, error: 'Invalid Pathbuilder response format' };
     const warnings = collectWarnings(validated.build);
-    const character = mapPathbuilderToCharacter(validated);
+    const character = mapPathbuilderToCharacter(validated, characterId);
     return { success: true, character, warnings };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };

@@ -232,6 +232,14 @@ export const GurpsGameActionPanel = ({
     const freeRotationUsed = turnMovement?.freeRotationUsed ?? false
     const rotationCost = freeRotationUsed ? 1 : 0
 
+    const movementSkipped = turnMovement?.phase === 'completed' &&
+      turnMovement.startPosition.q === turnMovement.currentPosition.q &&
+      turnMovement.startPosition.r === turnMovement.currentPosition.r
+
+    const instructionText = movementSkipped && instructions?.isStep
+      ? 'Movement skipped.'
+      : (instructions?.text ?? '')
+
     return (
       <div className="action-section">
         {currentManeuver && maneuverLabel && (
@@ -241,7 +249,7 @@ export const GurpsGameActionPanel = ({
               <span className="maneuver-name">{maneuverLabel.label}</span>
             </div>
             {!inMovementPhase && (
-              <div className="maneuver-instructions">{instructions?.text ?? ''}</div>
+              <div className="maneuver-instructions">{instructionText}</div>
             )}
           </>
         )}

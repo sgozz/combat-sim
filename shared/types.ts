@@ -120,6 +120,7 @@ export type ClientToServerMessage =
    | { type: "save_character"; character: CharacterSheet }
    | { type: "delete_character"; characterId: string }
    | { type: "toggle_favorite"; characterId: string }
+   | { type: "sync_character_from_pathbuilder"; characterId: string; pathbuilderId: string }
    | { type: "player_ready"; matchId: string; ready: boolean }
    | { type: "update_match_settings"; matchId: string; settings: { isPublic?: boolean } }
    | { type: "list_public_waiting" }
@@ -159,6 +160,7 @@ export type ServerToClientMessage =
     | { type: "character_saved"; characterId: string }
     | { type: "character_deleted"; characterId: string }
     | { type: "character_favorited"; characterId: string; isFavorite: boolean }
+    | { type: "character_synced_from_pathbuilder"; character: CharacterSheet }
     | { type: "player_ready_update"; matchId: string; playerId: string; ready: boolean }
     | { type: "all_players_ready"; matchId: string }
     | { type: "match_settings_updated"; matchId: string; settings: { isPublic: boolean } }

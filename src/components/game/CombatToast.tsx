@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-type ToastType = 'attack' | 'defend' | 'damage' | 'death' | 'info' | 'my-turn' | 'opponent-turn'
+type ToastType = 'attack' | 'defend' | 'damage' | 'death' | 'info' | 'my-turn' | 'opponent-turn' | 'error'
 
 type Toast = {
   id: string
@@ -21,6 +21,7 @@ const getToastType = (message: string): ToastType => {
   if (message.includes('Hit for') || message.includes('damage')) return 'damage'
   if (message.includes('Miss')) return 'info'
   if (message.includes('attacks') || message.includes('shoots')) return 'attack'
+  if (message.includes('Error:')) return 'error'
   return 'info'
 }
 
@@ -32,6 +33,7 @@ const getToastIcon = (type: ToastType): string => {
     case 'death': return '💀'
     case 'my-turn': return '🎯'
     case 'opponent-turn': return '⏳'
+    case 'error': return '⚠️'
     default: return '📢'
   }
 }
@@ -45,9 +47,9 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
   useEffect(() => {
     if (logs.length > lastLogCount.current && logs.length > initialLogCount.current) {
       const newLogs = logs.slice(lastLogCount.current)
-      const importantLogs = newLogs.filter(log => 
-        log.includes('attacks') || 
-        log.includes('hits') || 
+      const importantLogs = newLogs.filter(log =>
+        log.includes('attacks') ||
+        log.includes('hits') ||
         log.includes('Hit for') ||
         log.includes('damage') ||
         log.includes('parries') ||
@@ -60,7 +62,8 @@ export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players
         log.includes('dies') ||
         log.includes('unconscious') ||
         log.includes('Miss') ||
-        log.includes('Critical')
+        log.includes('Critical') ||
+        log.includes('Error:')
       )
       
       const newToasts = importantLogs.map((message, i) => ({

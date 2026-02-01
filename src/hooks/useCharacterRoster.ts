@@ -27,6 +27,13 @@ export const useCharacterRoster = ({ sendMessage, messageHandlers }: UseCharacte
           setCharacters(prev => prev.filter(c => c.id !== msg.characterId))
           return true
         }
+        case 'character_synced_from_pathbuilder': {
+          // Replace the synced character in the list
+          setCharacters(prev => prev.map(c => 
+            c.id === msg.character.id ? msg.character : c
+          ))
+          return true
+        }
         default:
           return false
       }

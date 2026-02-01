@@ -35,7 +35,7 @@ const CLOSE_COMBAT_MANEUVERS: string[] = ['attack', 'all_out_attack', 'all_out_d
 const getManeuverInstructions = (maneuver: string | null) => {
   switch (maneuver) {
     case 'move':
-      return { text: 'Click a hex to move. Full movement allowed.', canAttack: false, canMove: true, isStep: false };
+      return { text: 'Full movement allowed.', canAttack: false, canMove: true, isStep: false };
     case 'attack':
       return { text: 'Click enemy to attack. You can step 1 hex first.', canAttack: true, canMove: true, isStep: true };
     case 'all_out_attack':

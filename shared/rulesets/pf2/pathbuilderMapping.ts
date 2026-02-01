@@ -220,7 +220,7 @@ export const collectWarnings = (build: PathbuilderBuild): string[] => {
   return warnings;
 };
 
-export const mapPathbuilderToCharacter = (data: PathbuilderExport): PF2CharacterSheet => {
+export const mapPathbuilderToCharacter = (data: PathbuilderExport, pathbuilderId?: string): PF2CharacterSheet => {
    const build = data.build;
    const abilities = mapAbilities(build);
    
@@ -250,5 +250,7 @@ export const mapPathbuilderToCharacter = (data: PathbuilderExport): PF2Character
       feats: mapFeats(build.feats),
       spells: mapSpells(build),
       spellcasters: mapSpellcasters(build),
+      pathbuilderId,
+      lastSyncedAt: Date.now(),
     };
 };

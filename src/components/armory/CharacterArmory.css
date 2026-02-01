@@ -407,6 +407,22 @@
   font-weight: var(--font-semibold);
 }
 
+.armory-btn-action.btn-sync {
+  color: var(--accent-success, #10b981);
+  font-weight: var(--font-semibold);
+}
+
+.armory-btn-action.btn-sync:hover {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-success, #34d399);
+}
+
+.armory-btn-action.btn-sync.confirm {
+  background: var(--accent-success);
+  color: white;
+  font-weight: var(--font-semibold);
+}
+
 /* ─── Responsive ─── */
 
 @media (max-width: 1024px) {

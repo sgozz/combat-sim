@@ -10,6 +10,7 @@ type CharacterArmoryProps = {
   onDeleteCharacter: (characterId: string) => void
   onToggleFavorite: (characterId: string) => void
   onDuplicateCharacter: (character: CharacterSheet) => void
+  onSyncCharacterFromPathbuilder?: (characterId: string, pathbuilderId: string) => void
 }
 
 type SortBy = 'name' | 'date' | 'favorite'
@@ -20,10 +21,12 @@ export const CharacterArmory = ({
   onDeleteCharacter,
   onToggleFavorite,
   onDuplicateCharacter,
+  onSyncCharacterFromPathbuilder,
 }: CharacterArmoryProps) => {
   const navigate = useNavigate()
   const [sortBy, setSortBy] = useState<SortBy>('date')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [syncConfirm, setSyncConfirm] = useState<string | null>(null)
 
   useEffect(() => {
     onLoadCharacters()
@@ -47,6 +50,20 @@ export const CharacterArmory = ({
     } else {
       setDeleteConfirm(characterId)
       setTimeout(() => setDeleteConfirm(null), 3000)
+    }
+  }
+
+  const handleSync = (character: CharacterSheet) => {
+    if (isPF2Character(character) && character.pathbuilderId) {
+      if (syncConfirm === character.id) {
+        if (onSyncCharacterFromPathbuilder) {
+          onSyncCharacterFromPathbuilder(character.id, character.pathbuilderId)
+        }
+        setSyncConfirm(null)
+      } else {
+        setSyncConfirm(character.id)
+        setTimeout(() => setSyncConfirm(null), 3000)
+      }
     }
   }
 
@@ -112,10 +129,12 @@ export const CharacterArmory = ({
                   key={character.id}
                   character={character}
                   isDeleteConfirm={deleteConfirm === character.id}
+                  isSyncConfirm={syncConfirm === character.id}
                   onEdit={() => navigate(`/armory/${character.id}`)}
                   onToggleFavorite={() => onToggleFavorite(character.id)}
                   onDuplicate={() => onDuplicateCharacter(character)}
                   onDelete={() => handleDelete(character.id)}
+                  onSync={() => handleSync(character)}
                 />
               ))}
             </div>
@@ -129,19 +148,23 @@ export const CharacterArmory = ({
 type CharacterCardProps = {
   character: CharacterSheet
   isDeleteConfirm: boolean
+  isSyncConfirm: boolean
   onEdit: () => void
   onToggleFavorite: () => void
   onDuplicate: () => void
   onDelete: () => void
+  onSync?: () => void
 }
 
 const CharacterCard = ({
   character,
   isDeleteConfirm,
+  isSyncConfirm,
   onEdit,
   onToggleFavorite,
   onDuplicate,
   onDelete,
+  onSync,
 }: CharacterCardProps) => {
   return (
     <div className="armory-character-card">
@@ -213,6 +236,18 @@ const CharacterCard = ({
         >
           Edit
         </button>
+        {isPF2Character(character) && character.pathbuilderId && onSync && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onSync()
+            }}
+            className={`armory-btn-action btn-sync ${isSyncConfirm ? 'confirm' : ''}`}
+            title="Sync from Pathbuilder"
+          >
+            {isSyncConfirm ? 'Confirm?' : '🔄'}
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation()

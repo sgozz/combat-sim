@@ -2521,6 +2521,12 @@
   box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);
 }
 
+.combat-toast-error {
+  border-color: #ff4444;
+  background: rgba(40, 0, 0, 0.95);
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+}
+
 .toast-icon {
   font-size: 1rem;
 }

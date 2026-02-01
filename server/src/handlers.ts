@@ -10,6 +10,9 @@ import { isGurpsCombatant } from "../../shared/rulesets";
 
 import { assertRulesetId } from "../../shared/rulesets/defaults";
 import { state } from "./state";
+import { mapPathbuilderToCharacter } from "../../shared/rulesets/pf2/pathbuilderMapping";
+import { validatePathbuilderExport } from "../../shared/rulesets/pf2/pathbuilder";
+import { collectWarnings } from "../../shared/rulesets/pf2/pathbuilderMapping";
 import { 
   upsertCharacter,
   findUserByUsername,
@@ -682,6 +685,83 @@ export const handleMessage = async (
       );
       
       sendMessage(socket, { type: "public_waiting_list", matches: summaries });
+      return;
+    }
+    
+    case "sync_character_from_pathbuilder": {
+      const user = requireUser(socket);
+      if (!user) return;
+      
+      // Verify the user owns this character
+      const char = state.db.prepare(`
+        SELECT owner_id, pathbuilder_id FROM characters 
+        WHERE id = ? AND ruleset_id = 'pf2'
+      `).get(message.characterId) as { owner_id: string; pathbuilder_id: string | null } | undefined;
+      
+      if (!char) {
+        sendMessage(socket, { type: "error", message: "Character not found" });
+        return;
+      }
+      
+      if (char.owner_id !== user.id) {
+        sendMessage(socket, { type: "error", message: "You do not own this character" });
+        return;
+      }
+      
+      if (!char.pathbuilder_id) {
+        sendMessage(socket, { type: "error", message: "Character was not imported from Pathbuilder" });
+        return;
+      }
+      
+      if (char.pathbuilder_id !== message.pathbuilderId) {
+        sendMessage(socket, { type: "error", message: "Pathbuilder ID mismatch" });
+        return;
+      }
+      
+      try {
+        // Fetch fresh data from Pathbuilder API
+        const response = await fetch(`https://pathbuilder2e.com/json.php?id=${message.pathbuilderId}`);
+        const data = await response.json();
+        const validated = validatePathbuilderExport(data);
+        
+        if (!validated) {
+          sendMessage(socket, { type: "error", message: "Invalid Pathbuilder response format" });
+          return;
+        }
+        
+        // Map the data to character format, preserving the existing ID
+        const warnings = collectWarnings(validated.build);
+        const updatedCharacter = mapPathbuilderToCharacter(validated, message.pathbuilderId);
+        
+        // Preserve the original character ID and update metadata
+        const finalCharacter = {
+          ...updatedCharacter,
+          id: message.characterId,
+          lastSyncedAt: Date.now()
+        };
+        
+        // Save the updated character
+        await upsertCharacter(finalCharacter, user.id);
+        
+        // Send success response with updated character
+        sendMessage(socket, { 
+          type: "character_synced_from_pathbuilder", 
+          character: finalCharacter 
+        });
+        
+        // If there were warnings, send them as info messages
+        if (warnings.length > 0) {
+          sendMessage(socket, { 
+            type: "error", 
+            message: `Sync completed with warnings: ${warnings.join(', ')}` 
+          });
+        }
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error during sync';
+        sendMessage(socket, { type: "error", message: `Pathbuilder sync failed: ${errorMessage}` });
+      }
+      
       return;
     }
     
