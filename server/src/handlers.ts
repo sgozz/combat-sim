@@ -470,7 +470,7 @@ export const handleMessage = async (
       });
       
       const readySet = state.readySets.get(message.matchId) ?? new Set();
-      const allReady = humanMembers.every(m => readySet.has(m.user_id));
+      const allReady = humanMembers.length === 1 || humanMembers.every(m => readySet.has(m.user_id));
       
       if (!allReady) {
         sendMessage(socket, { type: "error", message: "Not all players are ready" });
@@ -719,7 +719,7 @@ export const handleMessage = async (
       
       const matches = getPublicWaitingMatches(user.preferredRulesetId);
       const summaries = await Promise.all(
-        matches.map(row => buildJoinableMatchSummary(row, user.id))
+        matches.map(row => buildJoinableMatchSummary(row))
       );
       
       sendMessage(socket, { type: "public_waiting_list", matches: summaries });
