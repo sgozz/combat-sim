@@ -49,7 +49,13 @@ export const useMatches = ({
           return true
         
         case 'match_created':
-          setMyMatches(prev => [message.match, ...prev])
+          setMyMatches(prev => {
+            const exists = prev.some(m => m.id === message.match.id);
+            if (exists) {
+              return prev.map(m => m.id === message.match.id ? message.match : m);
+            }
+            return [message.match, ...prev];
+          });
           setActiveMatchId(message.match.id)
           setMatchState(null)
           setLogs(['Joined match.'])
