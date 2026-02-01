@@ -57,7 +57,7 @@ export const handlePF2Action = async (
       return handlePF2RaiseShield(socket, matchId, match, player, actorCombatant);
     
     case "pf2_request_move":
-      return handlePF2RequestMove(socket, matchId, match, player, actorCombatant, payload);
+      return handlePF2RequestMove(socket, matchId, match, player, actorCombatant);
 
     case "pf2_stride":
       return handlePF2Stride(socket, matchId, match, player, actorCombatant, payload);
