@@ -12,11 +12,14 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   })
   
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   
-  const nameInput = page.getByPlaceholder('Enter your name')
+  const nameInput = page.getByPlaceholder('Enter username')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
+  
+  // Select GURPS ruleset
+  await page.getByRole('button', { name: /GURPS 4e/i }).click()
   
   await page.getByRole('button', { name: /enter arena/i }).click()
   await page.waitForURL('**/matches', { timeout: 10000 })
@@ -78,9 +81,9 @@ test.describe('Multiplayer Lobby Sync', () => {
       const player2 = await context2.newPage()
       await player2.addInitScript(() => localStorage.clear())
       await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('networkidle')
+      await player2.waitForLoadState('domcontentloaded')
       
-      const nameInput = player2.getByPlaceholder('Enter your name')
+      const nameInput = player2.getByPlaceholder('Enter username')
       await expect(nameInput).toBeVisible({ timeout: 10000 })
       await nameInput.fill(uniqueName('Bob'))
       await player2.getByRole('button', { name: /enter arena/i }).click()
@@ -115,9 +118,9 @@ test.describe('Multiplayer Lobby Sync', () => {
       const player2 = await context2.newPage()
       await player2.addInitScript(() => localStorage.clear())
       await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('networkidle')
+      await player2.waitForLoadState('domcontentloaded')
       
-      const nameInput = player2.getByPlaceholder('Enter your name')
+      const nameInput = player2.getByPlaceholder('Enter username')
       await expect(nameInput).toBeVisible({ timeout: 10000 })
       await nameInput.fill(uniqueName('Bob'))
       await player2.getByRole('button', { name: /enter arena/i }).click()
@@ -157,9 +160,9 @@ test.describe('Multiplayer Lobby Sync', () => {
       const player2 = await context2.newPage()
       await player2.addInitScript(() => localStorage.clear())
       await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('networkidle')
+      await player2.waitForLoadState('domcontentloaded')
       
-      const nameInput = player2.getByPlaceholder('Enter your name')
+      const nameInput = player2.getByPlaceholder('Enter username')
       await expect(nameInput).toBeVisible({ timeout: 10000 })
       await nameInput.fill(uniqueName('Joiner'))
       await player2.getByRole('button', { name: /enter arena/i }).click()
@@ -167,7 +170,7 @@ test.describe('Multiplayer Lobby Sync', () => {
       await player2.waitForTimeout(1000)
       
       await player2.goto('/home')
-      await player2.waitForLoadState('networkidle')
+      await player2.waitForLoadState('domcontentloaded')
       
       await player2.reload({ waitUntil: 'networkidle' })
       await player2.waitForTimeout(1000)

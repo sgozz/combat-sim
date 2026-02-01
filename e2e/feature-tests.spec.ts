@@ -18,7 +18,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   const page = await context.newPage()
   
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   
   await page.evaluate(() => {
     localStorage.clear()
@@ -26,12 +26,15 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   })
   
   await page.reload()
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(500)
   
-  const nameInput = page.getByPlaceholder('Enter your name')
+  const nameInput = page.getByPlaceholder('Enter username')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
+  
+  // Select GURPS ruleset
+  await page.getByRole('button', { name: /GURPS 4e/i }).click()
   
   await page.getByRole('button', { name: /enter arena/i }).click()
   await page.waitForTimeout(2000)
@@ -40,7 +43,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   
   if (!quickMatchVisible) {
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1000)
   }
   

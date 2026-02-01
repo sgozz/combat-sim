@@ -11,11 +11,22 @@ async function login(context: BrowserContext, nickname: string): Promise<Page> {
     sessionStorage.clear()
   })
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
+  await page.waitForTimeout(500)
+  
   const nameInput = page.getByPlaceholder(/enter.*name/i)
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
-  await page.getByRole('button', { name: /enter arena/i }).click()
+  
+  // Select GURPS ruleset
+  const gurpsBtn = page.getByRole('button', { name: /GURPS 4e/i })
+  await expect(gurpsBtn).toBeVisible({ timeout: 5000 })
+  await gurpsBtn.click()
+  await page.waitForTimeout(300)
+  
+  const enterBtn = page.getByRole('button', { name: /enter arena/i })
+  await expect(enterBtn).toBeEnabled({ timeout: 5000 })
+  await enterBtn.click()
   await page.waitForURL('/home', { timeout: 10000 })
   return page
 }

@@ -14,11 +14,14 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   })
   
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   
-  const nameInput = page.getByPlaceholder('Enter your name')
+  const nameInput = page.getByPlaceholder('Enter username')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
+  
+  // Select GURPS ruleset
+  await page.getByRole('button', { name: /GURPS 4e/i }).click()
   
   await page.getByRole('button', { name: /enter arena/i }).click()
   await page.waitForTimeout(2000)
@@ -27,7 +30,7 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   
   if (!quickMatchVisible) {
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1000)
   }
   
@@ -172,12 +175,12 @@ test.describe('UI Elements', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     const title = page.getByText(/Tactical Combat Simulator/i)
     await expect(title).toBeVisible({ timeout: 5000 })
     
-    const nameInput = page.getByPlaceholder('Enter your name')
+    const nameInput = page.getByPlaceholder('Enter username')
     await expect(nameInput).toBeVisible({ timeout: 5000 })
     
     await nameInput.fill('TestPlayer')
@@ -195,7 +198,7 @@ test.describe('UI Elements', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     const tutorialButton = page.getByRole('button', { name: /how to play/i })
     await expect(tutorialButton).toBeVisible({ timeout: 5000 })
@@ -211,9 +214,9 @@ test.describe('UI Elements', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
-    await page.getByPlaceholder('Enter your name').fill('LobbyTester')
+    await page.getByPlaceholder('Enter username').fill('LobbyTester')
     await page.getByRole('button', { name: /enter arena/i }).click()
     
     await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
@@ -231,9 +234,9 @@ test.describe('Mobile UI', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
-    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileWarrior'))
+    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileWarrior'))
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
@@ -270,9 +273,9 @@ test.describe('Mobile UI', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
-    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileManeuver'))
+    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileManeuver'))
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
@@ -317,9 +320,9 @@ test.describe('Mobile UI', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
-    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileAttacker'))
+    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileAttacker'))
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
@@ -377,9 +380,9 @@ test.describe('Mobile UI', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
-    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileInit'))
+    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileInit'))
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     
@@ -408,9 +411,9 @@ test.describe('Mobile UI', () => {
     })
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
-    await page.getByPlaceholder('Enter your name').fill(uniqueName('MobileCam'))
+    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileCam'))
     await page.getByRole('button', { name: /enter arena/i }).click()
     await page.waitForTimeout(2000)
     

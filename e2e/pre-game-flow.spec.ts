@@ -28,11 +28,14 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   })
   
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   
   const nameInput = page.getByPlaceholder(/enter.*name/i)
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
+  
+  // Select GURPS ruleset
+  await page.getByRole('button', { name: /GURPS 4e/i }).click()
   
   await page.getByRole('button', { name: /enter arena/i }).click()
   
@@ -79,7 +82,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Navigate to welcome screen
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     // Verify welcome screen elements
     const title = page.getByText(/tactical combat simulator/i)
@@ -88,12 +91,15 @@ test.describe('Pre-Game Flow', () => {
     const nameInput = page.getByPlaceholder(/enter.*name/i)
     await expect(nameInput).toBeVisible()
     
-    // Enter name and submit
-    await nameInput.fill('TestPlayer')
-    
-    const enterBtn = page.getByRole('button', { name: /enter arena/i })
-    await expect(enterBtn).toBeVisible()
-    await enterBtn.click()
+     // Enter name and submit
+     await nameInput.fill('TestPlayer')
+     
+     // Select GURPS ruleset
+     await page.getByRole('button', { name: /GURPS 4e/i }).click()
+     
+     const enterBtn = page.getByRole('button', { name: /enter arena/i })
+     await expect(enterBtn).toBeVisible()
+     await enterBtn.click()
     
     // Verify redirect to dashboard
     await page.waitForURL('/home', { timeout: 10000 })
@@ -118,7 +124,7 @@ test.describe('Pre-Game Flow', () => {
     await page.route('ws://127.0.0.1:8080', route => route.abort())
     
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     const nameInput = page.getByPlaceholder(/enter.*name/i)
     await nameInput.fill('TimeoutTest')
@@ -178,7 +184,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Go back to dashboard
     await player.goto('/home')
-    await player.waitForLoadState('networkidle')
+    await player.waitForLoadState('domcontentloaded')
     
     // Match should appear in list
     const matchCard = player.locator('.dashboard-match-grid .match-card, .armory-character-card, .lobby-card').first()
@@ -239,7 +245,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Navigate to armory
     await player.goto('/armory')
-    await player.waitForLoadState('networkidle')
+    await player.waitForLoadState('domcontentloaded')
     
     await player.waitForURL('/armory', { timeout: 5000 })
     
@@ -261,7 +267,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Navigate to armory
     await player.goto('/armory')
-    await player.waitForLoadState('networkidle')
+    await player.waitForLoadState('domcontentloaded')
     
     // Click New Character button
     const newCharBtn = player.getByRole('button', { name: /new character|\+ character|create character/i }).first()
@@ -286,7 +292,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Navigate to new character editor
     await player.goto('/armory/new')
-    await player.waitForLoadState('networkidle')
+    await player.waitForLoadState('domcontentloaded')
     
     // Should show editor UI
     const editor = player.locator('.character-editor, .editor')
@@ -344,7 +350,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Navigate to editor
     await player.goto('/armory/new')
-    await player.waitForLoadState('networkidle')
+    await player.waitForLoadState('domcontentloaded')
     
     // Switch to skills tab if tabs exist
     const skillsTab = player.getByRole('tab', { name: /skills/i })
@@ -490,7 +496,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Step 1: Login
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     const nickname = uniqueName('FullFlow')
     await page.getByPlaceholder(/enter.*name/i).fill(nickname)
@@ -554,7 +560,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Step 1: Login
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     const nickname = uniqueName('CharFlow')
     await page.getByPlaceholder(/enter.*name/i).fill(nickname)
@@ -563,7 +569,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Step 2: Create Character
     await page.goto('/armory')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     const newCharBtn = page.getByRole('button', { name: /new character|\+ character|create character/i }).first()
     await newCharBtn.click()
@@ -583,7 +589,7 @@ test.describe('Pre-Game Flow', () => {
     
     // Step 3: Create Match
     await page.goto('/home')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
     
     await createMatch(page, 'Char Flow Match')
     await expect(page).toHaveURL(/\/lobby\/.*/)
