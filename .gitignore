@@ -29,6 +29,9 @@ dist-ssr
 *.sqlite-journal
 *.db
 
+# Data cache
+data/cache/
+
 # Playwright
 test-results/
 playwright-report/
