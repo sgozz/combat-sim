@@ -244,19 +244,22 @@ export const LobbyScreen = ({
 
           <div className="lobby-footer-center">
             <div className="lobby-invite-section">
-              <span className="lobby-invite-label">Invite Code</span>
-              <code className="lobby-invite-code">{match.code}</code>
+              <span className="lobby-invite-label">Invite Link</span>
+              <code className="lobby-invite-code" title={`${window.location.origin}?join=${match.code}`}>
+                {match.code}
+              </code>
             </div>
             <button
               className={`lobby-copy-btn ${codeCopied ? 'lobby-copy-btn--copied' : ''}`}
               onClick={handleCopyCode}
+              title="Copy invite link to clipboard"
             >
               {codeCopied ? (
                 <>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                     <path d="M3 8L7 12L13 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Copied!
+                  Link Copied!
                 </>
               ) : (
                 <>

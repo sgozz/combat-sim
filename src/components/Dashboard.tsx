@@ -70,7 +70,12 @@ export const Dashboard = ({
   const handleJoinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (joinCode.trim()) {
-      onJoinByCode(joinCode.trim().toUpperCase())
+      // Extract code from URL if a full link was pasted (e.g., "http://localhost:5173?join=ABC123")
+      const input = joinCode.trim()
+      const match = input.match(/[?&]join=([A-Z0-9]+)/i)
+      const code = match ? match[1] : input
+      
+      onJoinByCode(code.toUpperCase())
       setJoinCode('')
       setShowJoinInput(false)
     }
@@ -134,10 +139,9 @@ export const Dashboard = ({
                   type="text"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="Enter code (e.g. ABC123)"
+                  placeholder="Paste link or code"
                   className="dashboard-join-input"
                   autoFocus
-                  maxLength={6}
                 />
                 <button type="submit" className="dashboard-btn-primary" disabled={!joinCode.trim()}>
                   Join
