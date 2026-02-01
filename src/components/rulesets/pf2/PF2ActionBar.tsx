@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import type { ActionBarProps } from '../types'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { isPF2Combatant } from '../../../../shared/rulesets'
+import { SpellPicker } from './SpellPicker'
+import { getSpell } from '../../../../shared/rulesets/pf2/spellData'
 
 export const PF2ActionBar = ({ 
   matchState,
@@ -13,9 +15,11 @@ export const PF2ActionBar = ({
   onLeaveLobby,
 }: ActionBarProps) => {
    const [showCharacterSheet, setShowCharacterSheet] = useState(false)
+   const [showSpellPicker, setShowSpellPicker] = useState(false)
    
    const closeAllPanels = useCallback(() => {
      setShowCharacterSheet(false)
+     setShowSpellPicker(false)
    }, [])
 
    if (!isPF2Character(playerCharacter) || !isPF2Combatant(playerCombatant)) {
@@ -51,12 +55,43 @@ export const PF2ActionBar = ({
     )
   }
 
+  const hasSpells = playerCharacter.spellcasters && playerCharacter.spellcasters.length > 0
+
+  const handleSpellSelect = (spellName: string, castLevel: number) => {
+    const spellDef = getSpell(spellName)
+    if (!spellDef) return
+
+    // Check if single-target spell requires target
+    if (spellDef.targetType === 'single' && !selectedTargetId) {
+      alert('Please select a target first')
+      return
+    }
+
+    onAction('pf2_cast_spell', {
+      type: 'pf2_cast_spell',
+      casterIndex: 0, // Always use first spellcaster for now
+      spellName,
+      spellLevel: castLevel,
+      targetId: selectedTargetId ?? undefined
+    })
+    setShowSpellPicker(false)
+  }
+
   return (
     <>
-      {showCharacterSheet && (
+      {(showCharacterSheet || showSpellPicker) && (
         <div 
           className="action-bar-backdrop" 
           onClick={closeAllPanels}
+        />
+      )}
+
+      {showSpellPicker && hasSpells && (
+        <SpellPicker
+          spellcaster={playerCharacter.spellcasters[0]}
+          onSelectSpell={handleSpellSelect}
+          onClose={() => setShowSpellPicker(false)}
+          actionsRemaining={actionsRemaining}
         />
       )}
 
@@ -273,6 +308,17 @@ export const PF2ActionBar = ({
               <span className="action-bar-icon">😱</span>
               <span className="action-bar-label">Scare</span>
             </button>
+            {hasSpells && (
+              <button
+                className="action-bar-btn"
+                disabled={actionsRemaining < 2}
+                onClick={() => setShowSpellPicker(true)}
+                title="Cast a spell (requires 2 actions)"
+              >
+                <span className="action-bar-icon">✨</span>
+                <span className="action-bar-label">Cast Spell</span>
+              </button>
+            )}
             <button
               className="action-bar-btn"
               onClick={() => onAction('end_turn', { type: 'end_turn' })}

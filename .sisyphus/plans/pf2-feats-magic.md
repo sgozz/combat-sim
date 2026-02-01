@@ -810,7 +810,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 14. Add Cast Spell button to ActionBar
+- [x] 14. Add Cast Spell button to ActionBar
 
   **What to do**:
   - Modify `src/components/rulesets/pf2/PF2ActionBar.tsx`:

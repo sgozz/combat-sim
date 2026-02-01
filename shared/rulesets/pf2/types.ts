@@ -211,7 +211,8 @@ export type PF2CombatActionPayload =
   | { type: 'pf2_trip'; targetId: string }
   | { type: 'pf2_disarm'; targetId: string }
   | { type: 'pf2_feint'; targetId: string }
-  | { type: 'pf2_demoralize'; targetId: string };
+  | { type: 'pf2_demoralize'; targetId: string }
+  | { type: 'pf2_cast_spell'; casterIndex: number; spellName: string; spellLevel: number; targetId?: string };
 
 // --- Spell Casting Types ---
 
