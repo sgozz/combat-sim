@@ -1,6 +1,7 @@
 import type { Id } from '../../types';
 import type { BaseCombatantState } from '../base/types';
 import type { EquippedItem } from '../gurps/types';
+import type { HeightenData } from './pf2oolsParser';
 
 export type Abilities = {
   strength: number;
@@ -268,4 +269,5 @@ export type SpellDefinition = {
   healFormula?: string;
   conditions?: ConditionValue[];
   duration?: string;
+  heighten?: HeightenData;
 };

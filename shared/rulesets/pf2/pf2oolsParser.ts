@@ -13,11 +13,32 @@ export interface Pf2oolsFeat {
   tags: { source: { title: string; page: number } };
 }
 
+export interface Pf2oolsSpell {
+  type?: string;
+  name: { display: string };
+  data: {
+    level: number;
+    heightening?: {
+      type: 'interval' | 'fixed';
+      interval?: number;
+      damage?: string;
+      levels?: Record<number, { damage?: string }>;
+    };
+  };
+}
+
 export interface PF2FeatDefinition extends PF2Feat {
   actionCost?: number;
   traits: string[];
   prerequisites?: string[];
   source?: string;
+}
+
+export interface HeightenData {
+  type: 'interval' | 'fixed';
+  interval?: number;
+  damagePerLevel?: string;
+  fixedLevels?: Record<number, { damage?: string }>;
 }
 
 const TARGET_FEATS = new Set([
@@ -64,4 +85,29 @@ export function loadFeatsFromPf2ools(data: unknown[]): Map<string, PF2FeatDefini
   }
 
   return result;
+}
+
+export function parseSpellHeightening(raw: Pf2oolsSpell): HeightenData | undefined {
+  if (!raw.data.heightening) {
+    return undefined;
+  }
+
+  const heightening = raw.data.heightening;
+
+  if (heightening.type === 'interval') {
+    return {
+      type: 'interval',
+      interval: heightening.interval,
+      damagePerLevel: heightening.damage,
+    };
+  }
+
+  if (heightening.type === 'fixed') {
+    return {
+      type: 'fixed',
+      fixedLevels: heightening.levels,
+    };
+  }
+
+  return undefined;
 }

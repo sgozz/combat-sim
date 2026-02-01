@@ -7,6 +7,8 @@ import {
   rollCheck,
   applyHealing,
 } from './rules';
+import { SPELL_DATABASE, getHeightenedDamage } from './spellData';
+import { parseSpellHeightening } from './pf2oolsParser';
 import type { SpellCaster, SpellSlotUsage, Abilities, PF2CombatantState, SpellDefinition } from './types';
 
 const makeAbilities = (overrides: Partial<Abilities> = {}): Abilities => ({
@@ -255,6 +257,7 @@ describe('Spell Casting', () => {
       spellSlotUsage: [],
       focusPointsUsed: 0,
       usedReaction: false,
+      equipped: [],
     });
 
     describe('Damage Spells', () => {
@@ -426,7 +429,133 @@ describe('Spell Casting', () => {
         }
         
         expect(typeof shouldApplyCondition).toBe('boolean');
-      });
+     });
+   });
+
+  describe('Spell Heightening', () => {
+    it('parseSpellHeightening extracts interval scaling', () => {
+      const raw = {
+        name: { display: 'Electric Arc' },
+        data: {
+          level: 0,
+          heightening: {
+            type: 'interval' as const,
+            interval: 1,
+            damage: '+1d4'
+          }
+        }
+      };
+      
+      const result = parseSpellHeightening(raw);
+      
+      expect(result?.type).toBe('interval');
+      expect(result?.interval).toBe(1);
+      expect(result?.damagePerLevel).toBe('+1d4');
+    });
+
+    it('parseSpellHeightening extracts fixed scaling', () => {
+      const raw = {
+        name: { display: 'Magic Missile' },
+        data: {
+          level: 1,
+          heightening: {
+            type: 'fixed' as const,
+            levels: {
+              3: { damage: '+1' },
+              5: { damage: '+1' },
+              7: { damage: '+1' },
+              9: { damage: '+1' }
+            }
+          }
+        }
+      };
+      
+      const result = parseSpellHeightening(raw);
+      
+      expect(result?.type).toBe('fixed');
+      expect(result?.fixedLevels).toBeDefined();
+      expect(result?.fixedLevels?.[3]).toBeDefined();
+    });
+
+    it('Electric Arc heightening adds +1d4 per level', () => {
+      const spell = SPELL_DATABASE['Electric Arc'];
+      
+      const damage = getHeightenedDamage(spell, 2);
+      
+      expect(damage).toBe('3d4+{mod}');
+    });
+
+    it('Electric Arc at base level returns base formula', () => {
+      const spell = SPELL_DATABASE['Electric Arc'];
+      
+      const damage = getHeightenedDamage(spell, 0);
+      
+      expect(damage).toBe('1d4+{mod}');
+    });
+
+    it('Fireball heightening adds +2d6 per level', () => {
+      const spell = SPELL_DATABASE['Fireball'];
+      
+      const damage = getHeightenedDamage(spell, 5);
+      
+      expect(damage).toBe('10d6');
+    });
+
+    it('Fireball at base level returns base formula', () => {
+      const spell = SPELL_DATABASE['Fireball'];
+      
+      const damage = getHeightenedDamage(spell, 3);
+      
+      expect(damage).toBe('6d6');
+    });
+
+    it('Heal heightening adds +1d8 per level', () => {
+      const spell = SPELL_DATABASE['Heal'];
+      
+      const damage = getHeightenedDamage(spell, 3);
+      
+      expect(damage).toBe('3d8');
+    });
+
+    it('Heal at base level returns base formula', () => {
+      const spell = SPELL_DATABASE['Heal'];
+      
+      const damage = getHeightenedDamage(spell, 1);
+      
+      expect(damage).toBe('1d8');
+    });
+
+    it('Magic Missile fixed heightening at level 3', () => {
+      const spell = SPELL_DATABASE['Magic Missile'];
+      
+      const damage = getHeightenedDamage(spell, 3);
+      
+      expect(damage).toBe('2d4+2');
+    });
+
+    it('Magic Missile fixed heightening at level 5', () => {
+      const spell = SPELL_DATABASE['Magic Missile'];
+      
+      const damage = getHeightenedDamage(spell, 5);
+      
+      expect(damage).toBe('3d4+3');
+    });
+
+    it('Magic Missile at base level returns base formula', () => {
+      const spell = SPELL_DATABASE['Magic Missile'];
+      
+      const damage = getHeightenedDamage(spell, 1);
+      
+      expect(damage).toBe('1d4+1');
+    });
+
+    it('getHeightenedDamage returns base formula when spell has no heightening', () => {
+      const spell = SPELL_DATABASE['Ray of Frost'];
+      
+      const damage = getHeightenedDamage(spell, 5);
+      
+      expect(damage).toBe('1d4+{mod}');
     });
   });
+});
 });
