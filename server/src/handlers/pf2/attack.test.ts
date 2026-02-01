@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { WebSocket } from 'ws';
-import { handlePF2AttackAction } from './attack';
+import { handlePF2AttackAction, handlePF2PowerAttack } from './attack';
 import {
   createPF2Combatant,
   createPF2Character,
@@ -733,6 +733,309 @@ describe('PF2 Attack Handler', () => {
           ]),
         }),
       });
+    });
+  });
+
+  describe('Power Attack', () => {
+    it('should cost 2 actions', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'power_attack', name: 'Power Attack', type: 'class', level: 1 }],
+        weapons: [{
+          id: 'w1',
+          name: 'Longsword',
+          damage: '1d8',
+          damageType: 'slashing',
+          proficiencyCategory: 'martial',
+          traits: [],
+          potencyRune: 0,
+          strikingRune: null,
+        }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        mapPenalty: 0,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5, 4],
+        modifier: 3,
+        total: 12,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_power_attack' as const, targetId: 'player2' };
+      await handlePF2PowerAttack(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player1',
+              actionsRemaining: 1,
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it('should add extra damage die (1d8 becomes 2d8)', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'power_attack', name: 'Power Attack', type: 'class', level: 1 }],
+        weapons: [{
+          id: 'w1',
+          name: 'Longsword',
+          damage: '1d8',
+          damageType: 'slashing',
+          proficiencyCategory: 'martial',
+          traits: [],
+          potencyRune: 0,
+          strikingRune: null,
+        }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        mapPenalty: 0,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5, 4],
+        modifier: 3,
+        total: 12,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_power_attack' as const, targetId: 'player2' };
+      await handlePF2PowerAttack(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockRollDamage).toHaveBeenCalledWith('2d8+3', 'slashing');
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player2',
+              currentHP: 8,
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it('should count as 2 attacks for MAP (increment by 2)', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'power_attack', name: 'Power Attack', type: 'class', level: 1 }],
+        weapons: [{
+          id: 'w1',
+          name: 'Longsword',
+          damage: '1d8',
+          damageType: 'slashing',
+          proficiencyCategory: 'martial',
+          traits: [],
+          potencyRune: 0,
+          strikingRune: null,
+        }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        mapPenalty: 0,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+      mockRollCheck.mockReturnValue({
+        roll: 15,
+        modifier: 6,
+        total: 21,
+        dc: 15,
+        degree: 'success',
+      });
+      mockRollDamage.mockReturnValue({
+        rolls: [5, 4],
+        modifier: 3,
+        total: 12,
+        damageType: 'slashing',
+      });
+
+      const payload = { type: 'pf2_power_attack' as const, targetId: 'player2' };
+      await handlePF2PowerAttack(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendToMatch).toHaveBeenCalledWith(matchId, {
+        type: 'match_state',
+        state: expect.objectContaining({
+          combatants: expect.arrayContaining([
+            expect.objectContaining({
+              playerId: 'player1',
+              mapPenalty: -10,
+            }),
+          ]),
+        }),
+      });
+    });
+
+    it('should require Power Attack feat', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 3,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+
+      const payload = { type: 'pf2_power_attack' as const, targetId: 'player2' };
+      await handlePF2PowerAttack(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'You do not have the Power Attack feat.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+    });
+
+    it('should require 2 actions', async () => {
+      const attacker = createPlayer({ id: 'player1', name: 'Fighter' });
+      const attackerChar = createPF2Character({
+        id: 'char1',
+        name: 'Fighter',
+        feats: [{ id: 'power_attack', name: 'Power Attack', type: 'class', level: 1 }],
+      });
+      const targetChar = createPF2Character({ id: 'char2', name: 'Goblin' });
+      const attackerCombatant = createPF2Combatant({
+        playerId: 'player1',
+        characterId: 'char1',
+        actionsRemaining: 1,
+        position: { x: 0, y: 0, z: 0 },
+      });
+      const targetCombatant = createPF2Combatant({
+        playerId: 'player2',
+        characterId: 'char2',
+        currentHP: 20,
+        position: { x: 1, y: 0, z: 0 },
+      });
+      const match = createMatch({
+        combatants: [attackerCombatant, targetCombatant],
+        characters: [attackerChar, targetChar],
+      });
+
+      mockGetCharacterById.mockImplementation((match, id) => {
+        if (id === 'char1') return attackerChar;
+        if (id === 'char2') return targetChar;
+        return null;
+      });
+      mockCalculateGridDistance.mockReturnValue(1);
+
+      const payload = { type: 'pf2_power_attack' as const, targetId: 'player2' };
+      await handlePF2PowerAttack(socket, matchId, match, attacker, attackerCombatant, payload);
+
+      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
+        type: 'error',
+        message: 'Power Attack requires 2 actions.',
+      });
+      expect(mockUpdateMatchState).not.toHaveBeenCalled();
     });
   });
 });

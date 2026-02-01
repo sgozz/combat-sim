@@ -2,7 +2,7 @@ import type { WebSocket } from "ws";
 import type { MatchState, Player } from "../../../../shared/types";
 import type { CombatantState } from "../../../../shared/rulesets";
 import { sendMessage } from "../../helpers";
-import { handlePF2AttackAction } from "./attack";
+import { handlePF2AttackAction, handlePF2PowerAttack } from "./attack";
 import { handlePF2DropProne, handlePF2Stand, handlePF2Step, handlePF2RaiseShield } from "./actions";
 import { handlePF2RequestMove, handlePF2Stride } from "./stride";
 import { handlePF2ReactionChoice } from "./reaction";
@@ -16,6 +16,7 @@ import { scheduleBotTurn } from "../../bot";
 
 type PF2ActionPayload = 
   | { type: "attack"; targetId: string }
+  | { type: "pf2_power_attack"; targetId: string }
   | { type: "pf2_drop_prone" }
   | { type: "pf2_stand" }
   | { type: "pf2_step"; to: { q: number; r: number } }
@@ -43,6 +44,9 @@ export const handlePF2Action = async (
   switch (payload.type) {
     case "attack":
       return handlePF2AttackAction(socket, matchId, match, player, actorCombatant, payload);
+    
+    case "pf2_power_attack":
+      return handlePF2PowerAttack(socket, matchId, match, player, actorCombatant, payload);
     
     case "pf2_drop_prone":
       return handlePF2DropProne(socket, matchId, match, player, actorCombatant);

@@ -352,3 +352,85 @@ Implemented Reactive Shield reaction that raises shield as a reaction before att
 - Task 7+: Implement remaining feat effects (Power Attack, Sudden Charge, etc.)
 - Future: Integrate Reactive Shield into attack flow (offer reaction before damage)
 - Future: Add reaction UI prompt system
+
+## Task 7: Power Attack Feat Action Implementation (2026-02-01)
+
+### Implementation Summary
+Implemented Power Attack feat action that costs 2 actions, adds +1 damage die, and counts as 2 attacks for MAP calculation.
+
+### Files Modified
+- `server/src/handlers/pf2/attack.ts` - Added `handlePF2PowerAttack()` function
+- `server/src/handlers/pf2/attack.test.ts` - Added 5 Power Attack tests (all passing)
+- `server/src/handlers/pf2/router.ts` - Added routing for `pf2_power_attack` message type
+
+### Architecture Patterns
+1. **Followed Strike Pattern**: `handlePF2PowerAttack()` mirrors `handlePF2AttackAction()` structure
+   - Same guard clauses (feat check, action cost, range validation)
+   - Same attack resolution flow (roll check, calculate damage, apply effects)
+   - Same visual effects and turn advancement logic
+
+2. **Damage Die Enhancement**: Regex-based damage formula parsing
+   - Pattern: `/^(\d+)d(\d+)$/` extracts dice count and size
+   - Enhancement: `1d8` → `2d8`, `2d6` → `3d6`, etc.
+   - Preserves modifier: `enhancedDamage + strMod` passed to `rollDamage()`
+
+3. **MAP Calculation**: Counts as 2 attacks instead of 1
+   - Normal attack: `mapPenalty + penaltyStep` (e.g., 0 → -5)
+   - Power Attack: `mapPenalty + (penaltyStep * 2)` (e.g., 0 → -10)
+   - Respects agile weapon trait (-4/-8 instead of -5/-10)
+
+### Power Attack Mechanics (PF2 SRD)
+- **Actions**: 2 actions (⚔️⚔️)
+- **Requirements**: Wielding melee weapon + Power Attack feat
+- **Effect**: Make melee Strike with +1 weapon damage die
+- **Special**: Counts as 2 attacks for MAP (e.g., first Power Attack at -0, second at -10)
+
+### Test Coverage
+- 5 new tests in `attack.test.ts` (all passing)
+- Total attack test suite: 16 tests passing
+- Total PF2 handler suite: 75 tests passing
+- Tests cover:
+  - 2-action cost
+  - Extra damage die (1d8 → 2d8)
+  - MAP increment by 2 (0 → -10)
+  - Feat requirement
+  - Action requirement (needs 2 actions)
+
+### Key Learnings
+1. **TDD Approach**: Tests written first revealed:
+   - Need for `handlePF2PowerAttack` export in attack.ts
+   - Need for `pf2_power_attack` type in router payload union
+   - PF2Feat type requires `type` field (not just `id`, `name`, `level`)
+
+2. **Damage Formula Parsing**: Regex approach is simple and effective
+   - Handles standard dice notation (`1d8`, `2d6`, etc.)
+   - Gracefully falls back to original damage if pattern doesn't match
+   - Preserves ability modifier in final damage calculation
+
+3. **MAP Multiplication**: Multiplying penalty step by 2 is cleaner than incrementing twice
+   - `(penaltyStep * 2)` is more explicit than two separate increments
+   - Respects min/max penalty bounds with `Math.max(minPenalty, ...)`
+
+4. **Code Reuse**: 90% of Power Attack logic is identical to Strike
+   - Only differences: action cost (2 vs 1), damage formula, MAP increment
+   - Future refactoring opportunity: extract shared attack logic to helper function
+
+### Integration Points
+- **Router**: `pf2_power_attack` message type added to PF2ActionPayload union
+- **Feat Registry**: Power Attack already registered in `FEAT_EFFECTS` (Task 4)
+- **UI**: Backend ready, UI implementation pending (future task)
+
+### Performance Notes
+- Regex parsing is O(1) for standard damage formulas (short strings)
+- No caching needed - damage formula parsed once per attack
+- Same performance characteristics as normal Strike action
+
+### Documentation
+- Function includes docstring for public API (necessary for exported function)
+- Inline comments removed - code is self-explanatory with clear variable names
+- Test names are self-documenting
+
+### Next Steps
+- Task 8+: Implement remaining feat effects (Sudden Charge, Quick Draw, etc.)
+- Future: Add Power Attack UI button (2-action cost indicator)
+- Future: Consider refactoring shared attack logic into helper function

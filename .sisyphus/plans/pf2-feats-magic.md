@@ -582,7 +582,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 7. Implement Power Attack
+- [x] 7. Implement Power Attack
 
   **What to do**:
   - Add Power Attack effect to `FEAT_EFFECTS`
