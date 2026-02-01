@@ -1,5 +1,6 @@
 import type { Id } from '../../types';
 import type { BaseCombatantState } from '../base/types';
+import type { EquippedItem } from '../gurps/types';
 
 export type Abilities = {
   strength: number;
@@ -174,6 +175,7 @@ export type PF2CombatantState = BaseCombatantState & {
   doomed: number;
   spellSlotUsage: SpellSlotUsage[];
   focusPointsUsed: number;
+  equipped: EquippedItem[];
 };
 
 export type PF2ActionPayload =
