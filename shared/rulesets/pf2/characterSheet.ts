@@ -87,6 +87,7 @@ export type PF2CharacterSheet = {
    weapons: PF2CharacterWeapon[];
    armor: PF2CharacterArmor | null;
    shieldBonus: number;
+   shieldHardness: number;
    feats: PF2Feat[];
    spells: PF2SpellInfo | null;
    spellcasters: SpellCaster[];

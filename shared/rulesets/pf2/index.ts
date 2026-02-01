@@ -100,6 +100,7 @@ export const pf2Ruleset: Ruleset = {
     weapons: [],
     armor: null,
     shieldBonus: 0,
+    shieldHardness: 0,
     feats: [],
     spells: null,
     spellcasters: [],

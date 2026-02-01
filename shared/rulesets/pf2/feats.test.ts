@@ -36,6 +36,7 @@ const createPF2Character = (overrides: Partial<PF2CharacterSheet> = {}): PF2Char
   weapons: [],
   armor: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   feats: [],
   spells: null,
   spellcasters: [],

@@ -39,6 +39,7 @@ const pf2Char: PF2CharacterSheet = {
   weapons: [],
   armor: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   feats: [],
   spells: null,
   spellcasters: [],

@@ -89,6 +89,7 @@ describe('Ruleset type guards', () => {
     weapons: [],
     armor: null,
     shieldBonus: 0,
+    shieldHardness: 0,
     feats: [],
     spells: null,
     spellcasters: [],

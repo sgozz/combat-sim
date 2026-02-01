@@ -265,6 +265,7 @@ export const mapPathbuilderToCharacter = (data: PathbuilderExport, pathbuilderId
       weapons: mapWeapons(build.weapons),
       armor: mapArmor(build.armor),
       shieldBonus: build.acTotal?.shieldBonus ?? 0,
+      shieldHardness: (build.acTotal?.shieldBonus ?? 0) > 0 ? 5 : 0,
       feats: mapFeats(build.feats),
       spells: mapSpells(build),
       spellcasters: mapSpellcasters(build),

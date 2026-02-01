@@ -60,5 +60,6 @@ export const createDefaultCharacter = (name: string = "PF2 Character"): PF2Chara
   feats: [],
   spells: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   spellcasters: [],
 });

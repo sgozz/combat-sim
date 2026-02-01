@@ -224,6 +224,115 @@ export const handlePF2ReactionChoice = async (
   }
 };
 
+export const handleShieldBlockReaction = (
+  match: MatchState,
+  matchId: string,
+  defender: CombatantState,
+  incomingDamage: number,
+): { match: MatchState; reducedDamage: number } => {
+  if (!isPF2Combatant(defender)) {
+    return { match, reducedDamage: incomingDamage };
+  }
+
+  const defenderChar = getCharacterById(match, defender.characterId);
+  if (!defenderChar || !isPF2Character(defenderChar)) {
+    return { match, reducedDamage: incomingDamage };
+  }
+
+  if (!hasFeat(defenderChar, 'Shield Block')) {
+    return { match, reducedDamage: incomingDamage };
+  }
+
+  if (!defender.shieldRaised) {
+    return { match, reducedDamage: incomingDamage };
+  }
+
+  if (!defender.reactionAvailable) {
+    return { match, reducedDamage: incomingDamage };
+  }
+
+  const shieldHardness = defenderChar.shieldHardness;
+  const damageAfterHardness = Math.max(0, incomingDamage - shieldHardness);
+  const shieldDamage = Math.max(0, incomingDamage - shieldHardness);
+  const currentShieldHP = defender.shieldHP ?? 0;
+  const newShieldHP = Math.max(0, currentShieldHP - shieldDamage);
+  const shieldBroken = newShieldHP <= 0;
+
+  const updatedCombatants = match.combatants.map(c => {
+    if (c.playerId === defender.playerId && isPF2Combatant(c)) {
+      return {
+        ...c,
+        shieldHP: newShieldHP,
+        reactionAvailable: false,
+      };
+    }
+    return c;
+  });
+
+  let logEntry = `🛡️ ${defenderChar.name} uses Shield Block: damage reduced by ${shieldHardness} (hardness)`;
+  if (shieldDamage > 0) {
+    logEntry += `, shield takes ${shieldDamage} damage`;
+    if (shieldBroken) {
+      logEntry += ` and breaks!`;
+    }
+  }
+
+  return {
+    match: {
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, logEntry],
+    },
+    reducedDamage: damageAfterHardness,
+  };
+};
+
+export const handleReactiveShieldReaction = (
+  match: MatchState,
+  matchId: string,
+  defender: CombatantState,
+): MatchState => {
+  if (!isPF2Combatant(defender)) {
+    return match;
+  }
+
+  const defenderChar = getCharacterById(match, defender.characterId);
+  if (!defenderChar || !isPF2Character(defenderChar)) {
+    return match;
+  }
+
+  if (!hasFeat(defenderChar, 'Reactive Shield')) {
+    return match;
+  }
+
+  if (defender.shieldRaised) {
+    return match;
+  }
+
+  if (!defender.reactionAvailable) {
+    return match;
+  }
+
+  const updatedCombatants = match.combatants.map(c => {
+    if (c.playerId === defender.playerId && isPF2Combatant(c)) {
+      return {
+        ...c,
+        shieldRaised: true,
+        reactionAvailable: false,
+      };
+    }
+    return c;
+  });
+
+  const logEntry = `🛡️ ${defenderChar.name} uses Reactive Shield: shield raised as reaction`;
+
+  return {
+    ...match,
+    combatants: updatedCombatants,
+    log: [...match.log, logEntry],
+  };
+};
+
 const resumeStrideAfterReaction = async (
   matchId: string,
   match: MatchState,

@@ -28,6 +28,7 @@ export const createPF2Combatant = (overrides: Partial<PF2CombatantState> = {}): 
   usedReaction: false,
   spellSlotUsage: [],
   focusPointsUsed: 0,
+  equipped: [],
   ...overrides,
 });
 
@@ -78,6 +79,7 @@ export const createPF2Character = (overrides: Partial<PF2CharacterSheet> = {}): 
   }],
   armor: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   feats: [],
   spells: null,
   spellcasters: [],

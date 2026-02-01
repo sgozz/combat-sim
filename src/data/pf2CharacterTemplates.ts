@@ -63,6 +63,7 @@ const createPF2Template = (input: PF2TemplateInput): Omit<PF2CharacterSheet, 'id
    weapons: input.equipment.map(e => ({ id: uuid(), name: e.name, damage: e.damage, damageType: e.damageType as unknown as PF2DamageType, proficiencyCategory: 'simple', traits: [], potencyRune: 0, strikingRune: null })),
   armor: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   feats: input.advantages.map(a => ({ id: uuid(), name: a.name, type: 'class', level: 1, description: a.description })),
   spells: null,
   spellcasters: [],

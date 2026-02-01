@@ -102,6 +102,7 @@ const createPF2Combatant = (overrides: Partial<PF2CombatantState> = {}): PF2Comb
   doomed: 0,
   spellSlotUsage: [],
   focusPointsUsed: 0,
+  equipped: [],
   ...overrides,
 });
 
@@ -156,6 +157,7 @@ const createPF2Character = (name: string): PF2CharacterSheet => ({
   }],
   armor: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   feats: [],
   spells: null,
   spellcasters: [],

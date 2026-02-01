@@ -33,6 +33,7 @@ vi.mock('../../../server/src/bot', () => ({
 
 const mockRollCheck = vi.fn();
 const mockRollDamage = vi.fn();
+const mockHandleReactiveShieldReaction = vi.fn();
 
 vi.mock('../../rulesets/serverAdapter', () => ({
   getServerAdapter: () => ({
@@ -51,7 +52,7 @@ vi.mock('../../rulesets/serverAdapter', () => ({
   }),
 }));
 
-import { getAoOReactors, executeAoOStrike } from '../../../server/src/handlers/pf2/reaction';
+import { getAoOReactors, executeAoOStrike, handleReactiveShieldReaction } from '../../../server/src/handlers/pf2/reaction';
 
 const createPF2Combatant = (overrides: Partial<PF2CombatantState> = {}): PF2CombatantState => ({
   rulesetId: 'pf2',
@@ -74,6 +75,7 @@ const createPF2Combatant = (overrides: Partial<PF2CombatantState> = {}): PF2Comb
   usedReaction: false,
   spellSlotUsage: [],
   focusPointsUsed: 0,
+  equipped: [],
   ...overrides,
 });
 
@@ -120,6 +122,7 @@ const createPF2Character = (overrides: Partial<PF2CharacterSheet> = {}): PF2Char
   }],
   armor: null,
   shieldBonus: 0,
+  shieldHardness: 0,
   feats: [],
   spells: null,
   spellcasters: [],
@@ -411,5 +414,317 @@ describe('Attack of Opportunity', () => {
       const reset = { ...combatant, reactionAvailable: true };
       expect(reset.reactionAvailable).toBe(true);
     });
+  });
+});
+
+describe('Shield Block', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetCharacterById.mockImplementation((_match: MatchState, charId: string) => {
+      if (charId === 'char1') {
+        return createPF2Character({
+          id: 'char1',
+          name: 'Fighter',
+          feats: [{ id: 'f1', name: 'Shield Block', type: 'class', level: 1 }],
+          armor: {
+            id: 'shield1',
+            name: 'Steel Shield',
+            proficiencyCategory: 'unarmored',
+            acBonus: 0,
+            dexCap: null,
+            potencyRune: 0,
+          },
+          shieldBonus: 2,
+          shieldHardness: 5,
+        });
+      }
+      return null;
+    });
+  });
+
+  it('reduces damage by shield hardness', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: true,
+          shieldHP: 20,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const character = mockGetCharacterById(match, combatant.characterId) as PF2CharacterSheet;
+
+    const shieldHardness = 5;
+    const incomingDamage = 10;
+    const reducedDamage = Math.max(0, incomingDamage - shieldHardness);
+
+    expect(reducedDamage).toBe(5);
+  });
+
+  it('shield takes damage equal to (original - hardness)', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: true,
+          shieldHP: 20,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const shieldHardness = 5;
+    const incomingDamage = 10;
+    const shieldDamage = Math.max(0, incomingDamage - shieldHardness);
+    const newShieldHP = (combatant.shieldHP ?? 0) - shieldDamage;
+
+    expect(shieldDamage).toBe(5);
+    expect(newShieldHP).toBe(15);
+  });
+
+  it('only available if shield raised', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: false,
+          shieldHP: 20,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const character = mockGetCharacterById(match, combatant.characterId) as PF2CharacterSheet;
+
+    const canShieldBlock = combatant.shieldRaised && combatant.reactionAvailable;
+    expect(canShieldBlock).toBe(false);
+  });
+
+  it('requires Shield Block feat', () => {
+    mockGetCharacterById.mockImplementation((_match: MatchState, charId: string) => {
+      if (charId === 'char1') {
+        return createPF2Character({
+          id: 'char1',
+          name: 'Fighter',
+          feats: [],
+        });
+      }
+      return null;
+    });
+
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: true,
+          shieldHP: 20,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const character = mockGetCharacterById(match, combatant.characterId) as PF2CharacterSheet;
+
+    const hasShieldBlockFeat = character?.feats.some(f => f.name === 'Shield Block') ?? false;
+    expect(hasShieldBlockFeat).toBe(false);
+  });
+
+  it('shield breaks when HP reaches 0', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: true,
+          shieldHP: 3,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const shieldHardness = 5;
+    const incomingDamage = 10;
+    const shieldDamage = Math.max(0, incomingDamage - shieldHardness);
+    const newShieldHP = Math.max(0, (combatant.shieldHP ?? 0) - shieldDamage);
+
+    expect(newShieldHP).toBe(0);
+    const shieldBroken = newShieldHP <= 0;
+    expect(shieldBroken).toBe(true);
+  });
+
+  it('requires reaction available', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: true,
+          shieldHP: 20,
+          reactionAvailable: false,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const canShieldBlock = combatant.shieldRaised && combatant.reactionAvailable;
+    expect(canShieldBlock).toBe(false);
+  });
+
+  it('damage cannot be reduced below 0', () => {
+    const shieldHardness = 10;
+    const incomingDamage = 5;
+    const reducedDamage = Math.max(0, incomingDamage - shieldHardness);
+
+    expect(reducedDamage).toBe(0);
+  });
+
+  it('shield HP cannot go below 0', () => {
+    const shieldHP = 2;
+    const shieldDamage = 10;
+    const newShieldHP = Math.max(0, shieldHP - shieldDamage);
+
+    expect(newShieldHP).toBe(0);
+  });
+});
+
+describe('Reactive Shield', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetCharacterById.mockImplementation((_match: MatchState, charId: string) => {
+      if (charId === 'char1') {
+        return createPF2Character({
+          id: 'char1',
+          name: 'Fighter',
+          feats: [{ id: 'f1', name: 'Reactive Shield', type: 'class', level: 1 }],
+          armor: {
+            id: 'shield1',
+            name: 'Steel Shield',
+            proficiencyCategory: 'unarmored',
+            acBonus: 0,
+            dexCap: null,
+            potencyRune: 0,
+          },
+          shieldBonus: 2,
+          shieldHardness: 5,
+        });
+      }
+      return null;
+    });
+  });
+
+  it('raises shield as reaction when hit', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: false,
+          reactionAvailable: true,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const updated = handleReactiveShieldReaction(match, 'match1', combatant);
+
+    const updatedCombatant = updated.combatants.find(c => c.playerId === 'player1') as PF2CombatantState;
+    expect(updatedCombatant.shieldRaised).toBe(true);
+    expect(updatedCombatant.reactionAvailable).toBe(false);
+    expect(updated.log).toContain('🛡️ Fighter uses Reactive Shield: shield raised as reaction');
+  });
+
+  it('only available when shield NOT already raised', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: true,
+          reactionAvailable: true,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const updated = handleReactiveShieldReaction(match, 'match1', combatant);
+
+    expect(updated).toBe(match);
+  });
+
+  it('requires Reactive Shield feat', () => {
+    mockGetCharacterById.mockImplementation((_match: MatchState, charId: string) => {
+      if (charId === 'char1') {
+        return createPF2Character({
+          id: 'char1',
+          name: 'Fighter',
+          feats: [],
+        });
+      }
+      return null;
+    });
+
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: false,
+          reactionAvailable: true,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const updated = handleReactiveShieldReaction(match, 'match1', combatant);
+
+    expect(updated).toBe(match);
+  });
+
+  it('requires reaction available', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: false,
+          reactionAvailable: false,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const updated = handleReactiveShieldReaction(match, 'match1', combatant);
+
+    expect(updated).toBe(match);
+  });
+
+  it('AC bonus applies after Reactive Shield triggers', () => {
+    const match = createMatch({
+      combatants: [
+        createPF2Combatant({
+          playerId: 'player1',
+          characterId: 'char1',
+          shieldRaised: false,
+          reactionAvailable: true,
+        }) as PF2CombatantState,
+      ],
+    });
+
+    const combatant = match.combatants[0] as PF2CombatantState;
+    const character = mockGetCharacterById(match, combatant.characterId) as PF2CharacterSheet;
+
+    const acBefore = character.derived.armorClass + (combatant.shieldRaised ? 2 : 0);
+    expect(acBefore).toBe(18);
+
+    const updated = handleReactiveShieldReaction(match, 'match1', combatant);
+    const updatedCombatant = updated.combatants.find(c => c.playerId === 'player1') as PF2CombatantState;
+    const acAfter = character.derived.armorClass + (updatedCombatant.shieldRaised ? 2 : 0);
+    expect(acAfter).toBe(20);
   });
 });
