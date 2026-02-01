@@ -137,8 +137,16 @@ const createMatch = (overrides: Partial<MatchState> = {}): MatchState => ({
     { id: 'player2', name: 'Rogue', isBot: false, characterId: 'char2' },
   ],
   characters: [
-    createPF2Character({ id: 'char1', name: 'Fighter' }),
-    createPF2Character({ id: 'char2', name: 'Rogue' }),
+    createPF2Character({ 
+      id: 'char1', 
+      name: 'Fighter',
+      feats: [{ id: 'f1', name: 'Attack of Opportunity', type: 'class', level: 1 }]
+    }),
+    createPF2Character({ 
+      id: 'char2', 
+      name: 'Rogue',
+      feats: [{ id: 'f2', name: 'Attack of Opportunity', type: 'class', level: 1 }]
+    }),
   ],
   combatants: [
     createPF2Combatant({ playerId: 'player1', characterId: 'char1', position: { x: 0, y: 0, z: 0 } }),
@@ -159,7 +167,13 @@ describe('Attack of Opportunity', () => {
   });
 
   describe('getAoOReactors', () => {
-    it('returns reactor when enemy is within reach (distance === 1)', () => {
+    beforeEach(() => {
+      mockGetCharacterById.mockImplementation((match: MatchState, charId: string) => {
+        return match.characters.find(c => c.id === charId) ?? null;
+      });
+    });
+
+    it('returns reactor when enemy is within reach (distance === 1) AND has AoO feat', () => {
       mockCalculateGridDistance.mockReturnValue(1);
 
       const match = createMatch();
@@ -227,6 +241,38 @@ describe('Attack of Opportunity', () => {
       const reactors = getAoOReactors(match, actor);
 
       expect(reactors).toHaveLength(0);
+    });
+
+    it('returns empty array when reactor lacks Attack of Opportunity feat', () => {
+      mockCalculateGridDistance.mockReturnValue(1);
+
+      const match = createMatch({
+        characters: [
+          createPF2Character({ id: 'char1', name: 'Fighter', feats: [] }),
+          createPF2Character({ 
+            id: 'char2', 
+            name: 'Rogue',
+            feats: [{ id: 'f1', name: 'Shield Block', type: 'class', level: 1 }]
+          }),
+        ],
+      });
+      const actor = match.combatants[0];
+
+      const reactors = getAoOReactors(match, actor);
+
+      expect(reactors).toHaveLength(0);
+    });
+
+    it('returns reactor only if they have Attack of Opportunity feat', () => {
+      mockCalculateGridDistance.mockReturnValue(1);
+
+      const match = createMatch();
+      const actor = match.combatants[0];
+
+      const reactors = getAoOReactors(match, actor);
+
+      expect(reactors).toHaveLength(1);
+      expect(reactors[0].playerId).toBe('player2');
     });
   });
 
@@ -341,6 +387,12 @@ describe('Attack of Opportunity', () => {
   });
 
   describe('Step does NOT trigger AoO', () => {
+    beforeEach(() => {
+      mockGetCharacterById.mockImplementation((match: MatchState, charId: string) => {
+        return match.characters.find(c => c.id === charId) ?? null;
+      });
+    });
+
     it('Step handler (pf2_step) does not invoke getAoOReactors — only Stride does', () => {
       mockCalculateGridDistance.mockReturnValue(1);
       const match = createMatch();
@@ -348,8 +400,6 @@ describe('Attack of Opportunity', () => {
 
       const reactors = getAoOReactors(match, actor);
       expect(reactors).toHaveLength(1);
-      // Reactors exist at distance 1, but pf2_step routes to handlePF2Step (actions.ts)
-      // which never calls getAoOReactors — only handlePF2Stride (stride.ts) does
     });
   });
 

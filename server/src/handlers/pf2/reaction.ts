@@ -20,6 +20,7 @@ import {
   getConditionACModifier,
   formatConditionModifiers,
 } from "../../../../shared/rulesets/pf2/conditions";
+import { hasFeat } from "../../../../shared/rulesets/pf2/feats";
 
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 
@@ -161,6 +162,10 @@ export const getAoOReactors = (
     if (c.currentHP <= 0) return false;
     if (!isPF2Combatant(c)) return false;
     if (!c.reactionAvailable) return false;
+
+    const character = getCharacterById(match, c.characterId);
+    if (!character || !isPF2Character(character)) return false;
+    if (!hasFeat(character, 'Attack of Opportunity')) return false;
 
     const distance = calculateGridDistance(c.position, actorCombatant.position, gridSystem);
     return distance === 1;
