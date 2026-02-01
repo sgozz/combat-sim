@@ -328,6 +328,13 @@ export const handleMessage = async (
         sendMessage(socket, { type: "error", message: "You are not a member of this match." });
         return;
       }
+
+      const key = `${matchRow.id}:${user.id}`;
+      const pendingTimer = state.pendingDisconnections.get(key);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        state.pendingDisconnections.delete(key);
+      }
       
       let matchState = state.matches.get(matchRow.id);
       if (!matchState && matchRow.state_json) {

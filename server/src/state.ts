@@ -10,6 +10,7 @@ class ServerState {
   userSockets = new Map<string, Set<WebSocket>>();
   spectators = new Map<string, Set<string>>();
   botTimers = new Map<string, NodeJS.Timeout>();
+  pendingDisconnections = new Map<string, NodeJS.Timeout>();
   botCount = 1;
   readySets = new Map<string, Set<string>>();
   db!: BetterSqliteDatabase;

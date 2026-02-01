@@ -43,37 +43,52 @@ const startServer = async () => {
     socket.on("close", async () => {
       const connState = state.connections.get(socket);
       if (connState?.userId) {
-        state.removeUserSocket(connState.userId, socket);
-        const user = state.users.get(connState.userId);
+        const userId = connState.userId;
+        state.removeUserSocket(userId, socket);
+        const user = state.users.get(userId);
         
-        const userMatches = getUserMatches(connState.userId);
+        const userMatches = getUserMatches(userId);
         for (const matchRow of userMatches) {
           if (matchRow.status === 'waiting') {
-            const readySet = state.readySets.get(matchRow.id);
-            if (readySet) {
-              readySet.delete(connState.userId);
+            const key = `${matchRow.id}:${userId}`;
+            const existingTimer = state.pendingDisconnections.get(key);
+            if (existingTimer) {
+              clearTimeout(existingTimer);
             }
             
-            removeMatchMember(matchRow.id, connState.userId);
+            const timer = setTimeout(async () => {
+              const userSockets = state.getUserSockets(userId);
+              if (userSockets.size === 0) {
+                const readySet = state.readySets.get(matchRow.id);
+                if (readySet) {
+                  readySet.delete(userId);
+                }
+                
+                removeMatchMember(matchRow.id, userId);
+                
+                const memberCount = getMatchMemberCount(matchRow.id);
+                if (memberCount === 0) {
+                  state.readySets.delete(matchRow.id);
+                  state.db.prepare(`UPDATE matches SET status = 'finished' WHERE id = ?`).run(matchRow.id);
+                }
+                
+                await sendToMatch(matchRow.id, { 
+                  type: "player_left", 
+                  matchId: matchRow.id, 
+                  playerId: userId, 
+                  playerName: user?.username ?? 'Unknown' 
+                });
+              }
+              state.pendingDisconnections.delete(key);
+            }, 3000);
             
-            const memberCount = getMatchMemberCount(matchRow.id);
-            if (memberCount === 0) {
-              state.readySets.delete(matchRow.id);
-              state.db.prepare(`UPDATE matches SET status = 'finished' WHERE id = ?`).run(matchRow.id);
-            }
-            
-            await sendToMatch(matchRow.id, { 
-              type: "player_left", 
-              matchId: matchRow.id, 
-              playerId: connState.userId, 
-              playerName: user?.username ?? 'Unknown' 
-            });
+            state.pendingDisconnections.set(key, timer);
           } else if (matchRow.status === 'active' || matchRow.status === 'paused') {
-            updateMatchMemberConnection(matchRow.id, connState.userId, false);
+            updateMatchMemberConnection(matchRow.id, userId, false);
             
             const match = state.matches.get(matchRow.id);
-            if (match && match.activeTurnPlayerId === connState.userId && match.status === 'active') {
-              const paused = { ...match, status: 'paused' as const, pausedForPlayerId: connState.userId };
+            if (match && match.activeTurnPlayerId === userId && match.status === 'active') {
+              const paused = { ...match, status: 'paused' as const, pausedForPlayerId: userId };
               state.matches.set(matchRow.id, paused);
               updateMatchState(matchRow.id, paused);
               await sendToMatch(matchRow.id, { type: "match_state", state: paused });
@@ -82,7 +97,7 @@ const startServer = async () => {
             await sendToMatch(matchRow.id, { 
               type: "player_disconnected", 
               matchId: matchRow.id, 
-              playerId: connState.userId, 
+              playerId: userId, 
               playerName: user?.username ?? 'Unknown' 
             });
           }
