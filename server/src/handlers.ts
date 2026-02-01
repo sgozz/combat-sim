@@ -247,8 +247,24 @@ export const handleMessage = async (
       }
       
       await addMatchMember(matchRow.id, user.id, null);
-      
+
+      // Check if there's a bot in the lobby and remove it
       const members = await getMatchMembers(matchRow.id);
+      const botMember = members.find(member => {
+        const memberUser = state.users.get(member.user_id);
+        return memberUser?.isBot;
+      });
+
+      if (botMember && matchRow.status === 'waiting') {
+        await removeMatchMember(matchRow.id, botMember.user_id);
+
+        await sendToMatch(matchRow.id, {
+          type: "player_left",
+          matchId: matchRow.id,
+          playerId: botMember.user_id,
+          playerName: state.users.get(botMember.user_id)?.username || 'Bot'
+        });
+      }
       
       for (const member of members) {
         if (member.user_id !== user.id) {
@@ -303,6 +319,28 @@ export const handleMessage = async (
       }
       
       await removeMatchMember(message.matchId, user.id);
+
+      // Check if lobby is now empty (no human players)
+      const remainingMembers = await getMatchMembers(message.matchId);
+      const hasHumanPlayer = remainingMembers.some(member => {
+        const memberUser = state.users.get(member.user_id);
+        return memberUser && !memberUser.isBot;
+      });
+
+      if (!hasHumanPlayer && matchRow.status === 'waiting') {
+        const { bot, character } = await addBotToMatch(message.matchId, matchRow.ruleset_id as RulesetId);
+
+        await sendToMatch(message.matchId, {
+          type: "player_joined",
+          matchId: message.matchId,
+          player: {
+            id: bot.id,
+            name: bot.username,
+            isBot: true,
+            characterId: character.id
+          }
+        });
+      }
       sendMessage(socket, { type: "match_left", matchId: message.matchId });
       
       await sendToMatch(message.matchId, { 
