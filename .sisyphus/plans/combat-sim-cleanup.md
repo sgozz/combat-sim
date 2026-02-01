@@ -52,12 +52,12 @@ Portare il codebase a uno stato di "clean baseline": build stabile, test affidab
 6. **PF2 Bots**: Miglioramenti comportamento bot (se scope lo permette)
 
 ### Definition of Done
-- [ ] `npm run lint` → 0 errori, 0 warnings
-- [ ] `npx vitest run` → tutti i test passano
+- [x] `npm run lint` → 0 errori, 0 warnings
+- [x] `npx vitest run` → tutti i test passano
 - [ ] `npx playwright test` → tutti i test E2E passano
 - [ ] Coverage GURPS handlers ≥70%
-- [ ] UUID utility unificato in `shared/utils/uuid.ts`
-- [ ] Tutti i file `src/utils/uuid.ts` importano da shared
+- [x] UUID utility unificato in `shared/utils/uuid.ts`
+- [x] Tutti i file `src/utils/uuid.ts` importano da shared
 - [ ] 11 UX improvements movimento implementati e verificabili
 - [ ] Documentazione aggiornata (AGENTS.md se necessario)
 
@@ -400,7 +400,7 @@ Critical Path: 1 → 2 → 3 → 4 → 5 → 6
 
 ---
 
-- [ ] **11. Implement UX Movement Improvements - Alta Priorità**
+- [x] **11. Implement UX Movement Improvements - Alta Priorità**
 
   **What to do** (da `docs/MOVEMENT_UI_IMPROVEMENTS.md`):
   1. **MP visibile**: Ingrandire "X MP" con font bold, colore verde, icona
@@ -427,7 +427,7 @@ Critical Path: 1 → 2 → 3 → 4 → 5 → 6
 
 ---
 
-- [ ] **12. Implement UX Movement Improvements - Media Priorità**
+- [x] **12. Implement UX Movement Improvements - Media Priorità**
 
   **What to do**:
   5. **Gradiente colori hex**: Verde (1-2 MP) → Giallo (3-4) → Arancione (5+)
