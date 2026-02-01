@@ -23,6 +23,8 @@ export type PF2CharacterWeapon = {
   traits: PF2WeaponTrait[];
   potencyRune: number;
   strikingRune: 'striking' | 'greater_striking' | 'major_striking' | null;
+  range?: number;
+  rangeIncrement?: number;
 };
 
 export type PF2CharacterArmor = {

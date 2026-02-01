@@ -30,7 +30,7 @@ import {
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;
 
-const getWeaponInfo = (character: PF2CharacterSheet): { name: string; damage: string; damageType: PF2DamageType; traits: string[] } => {
+const getWeaponInfo = (character: PF2CharacterSheet): { name: string; damage: string; damageType: PF2DamageType; traits: string[]; range?: number; rangeIncrement?: number } => {
   const weapon: PF2CharacterWeapon | undefined = character.weapons[0];
   if (!weapon) {
     return {
@@ -46,6 +46,8 @@ const getWeaponInfo = (character: PF2CharacterSheet): { name: string; damage: st
     damage: weapon.damage,
     damageType: weapon.damageType,
     traits: weapon.traits,
+    range: weapon.range,
+    rangeIncrement: weapon.rangeIncrement,
   };
 };
 
@@ -95,13 +97,6 @@ export const handlePF2AttackAction = async (
     return;
   }
 
-  const gridSystem = getGridSystemForMatch(match);
-  const distance = calculateGridDistance(actorCombatant.position, targetCombatant.position, gridSystem);
-  if (distance > 1) {
-    sendMessage(socket, { type: "error", message: "Target out of melee range." });
-    return;
-  }
-
   const pf2ActionsRemaining = actorCombatant.actionsRemaining;
   if (pf2ActionsRemaining < 1) {
     sendMessage(socket, { type: "error", message: "No actions remaining." });
@@ -114,13 +109,34 @@ export const handlePF2AttackAction = async (
    }
 
     const weapon = getWeaponInfo(attackerCharacter);
+    const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
     const abilities = attackerCharacter.abilities;
     const targetAC = calculateAC(targetCharacter);
+
+    const gridSystem = getGridSystemForMatch(match);
+    const distance = calculateGridDistance(actorCombatant.position, targetCombatant.position, gridSystem);
+    if (!isRanged && distance > 1) {
+      sendMessage(socket, { type: "error", message: "Target out of melee range." });
+      return;
+    }
+
+    let rangePenalty = 0;
+    if (isRanged && weapon.range) {
+      const increment = weapon.rangeIncrement || (weapon.range / 6);
+      const maxRange = weapon.range;
+
+      if (distance > maxRange) {
+        sendMessage(socket, { type: "error", message: "Target out of range." });
+        return;
+      }
+
+      rangePenalty = Math.floor((distance - 1) / increment) * -2;
+    }
 
      const isFinesse = weapon.traits.includes('finesse');
     const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
     const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
-    const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
+    const abilityMod = isRanged ? dexMod : (isFinesse ? Math.max(strMod, dexMod) : strMod);
    
      const level = attackerCharacter.level;
      const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
@@ -128,7 +144,7 @@ export const handlePF2AttackAction = async (
      const mapPenalty = actorCombatant.mapPenalty || 0;
    
     const conditionAttackMod = getConditionAttackModifier(actorCombatant);
-    const totalAttackBonus = abilityMod + profBonus + mapPenalty + conditionAttackMod;
+    const totalAttackBonus = abilityMod + profBonus + mapPenalty + conditionAttackMod + rangePenalty;
 
     const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
     const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
@@ -139,7 +155,10 @@ export const handlePF2AttackAction = async (
     let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
     if (mapPenalty < 0) {
       logEntry += ` (MAP ${mapPenalty})`;
-   }
+    }
+    if (rangePenalty < 0) {
+      logEntry += ` (Range ${rangePenalty})`;
+    }
    const conditionLogSuffix = formatConditionModifiers(conditionAttackMod, conditionACMod);
    if (conditionLogSuffix) {
      logEntry += conditionLogSuffix;

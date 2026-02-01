@@ -55,16 +55,34 @@ const mapStrikingRune = (str: string): 'striking' | 'greater_striking' | 'major_
   return 'major_striking';
 };
 
-const mapWeapon = (w: PathbuilderWeapon): PF2CharacterWeapon => ({
-  id: uuid(),
-  name: w.name,
-  damage: `1${w.die}`,
-  damageType: mapDamageType(w.damageType),
-  proficiencyCategory: w.prof as 'simple' | 'martial' | 'advanced' | 'unarmed',
-  traits: [],
-  potencyRune: w.pot,
-  strikingRune: mapStrikingRune(w.str),
-});
+const mapWeapon = (w: PathbuilderWeapon): PF2CharacterWeapon => {
+  const weaponName = w.name.toLowerCase();
+  const weaponDisplay = w.display.toLowerCase();
+  const isLongbow = weaponName.includes('longbow');
+  const isShortbow = weaponName.includes('shortbow');
+  const isThrown = weaponName.includes('throw') || weaponDisplay.includes('thrown');
+
+  let range: number | undefined;
+  if (isLongbow) {
+    range = 100;
+  } else if (isShortbow) {
+    range = 60;
+  } else if (isThrown) {
+    range = 20;
+  }
+
+  return {
+    id: uuid(),
+    name: w.name,
+    damage: `1${w.die}`,
+    damageType: mapDamageType(w.damageType),
+    proficiencyCategory: w.prof as 'simple' | 'martial' | 'advanced' | 'unarmed',
+    traits: [],
+    potencyRune: w.pot,
+    strikingRune: mapStrikingRune(w.str),
+    range,
+  };
+};
 
 const mapWeapons = (weapons: PathbuilderWeapon[]): PF2CharacterWeapon[] => {
   return weapons.map(mapWeapon);
