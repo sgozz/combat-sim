@@ -61,8 +61,8 @@ export const decidePF2BotAction = (
     return null;
   }
 
-  const character = asPF2Character(match, botCombatant.characterId);
-  const speed = character ? (character.derived.speed ?? 25) : 25;
+  const character = _character ?? asPF2Character(match, botCombatant.characterId);
+  const speed = character.derived.speed ?? 25;
   const maxSquares = Math.floor(speed / 5);
   const newPosition = computeGridMoveToward(
     botCombatant.position,

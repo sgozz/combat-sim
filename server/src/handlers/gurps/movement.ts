@@ -16,7 +16,7 @@ import { state } from "../../state";
 import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch, getCombatantByPlayerId, getCharacterById } from "../../helpers";
 import { scheduleBotTurn } from "../../bot";
-import { checkWaitTriggers, hexDistance } from "../../../../shared/rulesets/gurps/rules";
+import { checkWaitTriggers } from "../../../../shared/rulesets/gurps/rules";
 import { executeWaitInterrupt } from "./wait-interrupt";
 import type { GurpsCombatantState } from "../../../../shared/rulesets/gurps/types";
 

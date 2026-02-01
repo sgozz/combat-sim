@@ -1,6 +1,6 @@
 import type { PF2CharacterSheet } from '../../shared/rulesets/pf2/characterSheet'
 import type { Abilities, PF2DamageType } from '../../shared/rulesets/pf2/types'
-import { uuid } from '../utils/uuid'
+import { generateUUID as uuid } from '../utils/uuid'
 
 type PF2TemplateInput = {
   name: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { ServerToClientMessage, MatchState, VisualEffect, PendingAction } from '../../shared/types'
-import { uuid } from '../utils/uuid'
+import { generateUUID as uuid } from '../utils/uuid'
 
 const ACTIVE_MATCH_KEY = 'tcs.activeMatchId'
 
@@ -18,6 +18,8 @@ export const useMatchState = ({
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
 
   useEffect(() => {
+    const handlers = messageHandlers.current
+    
     const handleMessage = (message: ServerToClientMessage): boolean => {
       switch (message.type) {
         case 'match_state':
@@ -57,11 +59,11 @@ export const useMatchState = ({
       }
     }
     
-    messageHandlers.current.push(handleMessage)
+    handlers.push(handleMessage)
     
     return () => {
-      const index = messageHandlers.current.indexOf(handleMessage)
-      if (index > -1) messageHandlers.current.splice(index, 1)
+      const index = handlers.indexOf(handleMessage)
+      if (index > -1) handlers.splice(index, 1)
     }
   }, [messageHandlers, activeMatchId])
 

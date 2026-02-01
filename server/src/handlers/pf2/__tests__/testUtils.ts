@@ -1,6 +1,6 @@
 import type { PF2CombatantState } from '../../../../../shared/rulesets/pf2/types';
 import type { PF2CharacterSheet } from '../../../../../shared/rulesets/pf2/characterSheet';
-import type { MatchState, Player, Id } from '../../../../../shared/types';
+import type { MatchState, Player } from '../../../../../shared/types';
 import { vi } from 'vitest';
 
 /**

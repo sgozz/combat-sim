@@ -1,5 +1,4 @@
 import type { MatchState, Id } from '../../../../shared/types';
-import type { WaitTrigger } from '../../../../shared/rulesets/gurps/types';
 import { isGurpsCombatant } from '../../../../shared/rulesets';
 
 /**
@@ -23,7 +22,8 @@ import { isGurpsCombatant } from '../../../../shared/rulesets';
 export const executeWaitInterrupt = (
   match: MatchState,
   waitingCombatantId: Id,
-  triggerSourceId: Id
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _triggerSourceId: Id
 ): MatchState => {
   // 1. Find waiting combatant and validate state
   const waiter = match.combatants.find(c => c.playerId === waitingCombatantId);
@@ -44,7 +44,7 @@ export const executeWaitInterrupt = (
   };
 
   // 4. Execute action based on waitTrigger.action
-  const { action, attackPayload, movePayload, readyPayload } = waiter.waitTrigger;
+  const { action } = waiter.waitTrigger;
 
   switch (action) {
     case 'attack':

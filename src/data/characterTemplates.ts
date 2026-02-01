@@ -1,7 +1,7 @@
 import type { CharacterSheet } from '../../shared/types'
 import type { GurpsCharacterSheet } from '../../shared/rulesets/gurps/characterSheet'
 import { calculateDerivedStats } from '../../shared/rulesets/gurps/rules'
-import { uuid } from '../utils/uuid'
+import { generateUUID as uuid } from '../utils/uuid'
 
 const createTemplate = (
   name: string,

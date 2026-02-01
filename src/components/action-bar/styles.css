@@ -1,0 +1,604 @@
+/**
+ * Action Bar Styles
+ * Mobile-first responsive action bar for combat simulator
+ */
+
+/* Default: Hide action bar on desktop */
+.action-bar {
+  display: none;
+}
+
+.action-bar-maneuvers {
+  display: none;
+}
+
+.action-bar-config-slot {
+  display: none;
+}
+
+.action-bar-backdrop {
+  display: none;
+}
+
+/* Mobile Action Bar - Screens < 768px */
+@media (max-width: 768px) {
+  /* Base Action Bar Container */
+  .action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(20, 20, 20, 0.98);
+    border-top: 1px solid #444;
+    padding: 0.5rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    gap: 0.4rem;
+    justify-content: center;
+    align-content: flex-end;
+    align-items: center;
+    z-index: 200;
+    backdrop-filter: blur(8px);
+    min-height: 72px;
+    max-height: 35vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  /* Action Bar Buttons */
+  .action-bar-btn {
+    flex: 1 1 auto;
+    min-width: 56px;
+    max-width: 80px;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.5rem 0.4rem;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+    font-size: 0.75rem;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .action-bar-btn:active {
+    transform: scale(0.95);
+    background: #444;
+  }
+
+  .action-bar-btn.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .action-bar-btn.primary {
+    background: #2a4a2a;
+    border-color: #4f4;
+  }
+
+  .action-bar-btn.danger {
+    background: #4a2a2a;
+    border-color: #f44;
+  }
+
+  .action-bar-btn.highlight {
+    background: #3a3a5a;
+    border-color: #646cff;
+    animation: pulse 1.5s infinite;
+  }
+
+  .action-bar-btn.warning {
+    background: #a50;
+    border-color: #c70;
+  }
+
+  .action-bar-btn.warning:hover {
+    background: #c70;
+  }
+
+  /* Small buttons for movement controls */
+  .action-bar-btn.small {
+    flex: 0 0 auto;
+    min-width: 48px;
+    max-width: 48px;
+    min-height: 48px;
+    padding: 0.5rem;
+  }
+
+  .action-bar-btn.char-btn {
+    min-width: 64px;
+    max-width: 64px;
+    padding: 0.4rem 0.5rem;
+  }
+
+  /* Button Content */
+  .action-bar-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .action-bar-btn.small .action-bar-icon {
+    font-size: 1.4rem;
+  }
+
+  .action-bar-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* Hint Text */
+  .action-bar-hint {
+    color: #aaa;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 0.5rem;
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+
+  /* Waiting Message */
+  .action-bar-waiting {
+    color: #888;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 0.75rem;
+    width: 100%;
+  }
+
+  /* Status Display */
+  .action-bar-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0.4rem;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    min-width: 56px;
+  }
+
+  /* HP Bar */
+  .action-bar-hp-bar {
+    width: 100%;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .action-bar-hp-fill {
+    height: 100%;
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+
+  .action-bar-hp-text {
+    font-size: 0.6rem;
+    color: #aaa;
+    font-family: monospace;
+  }
+
+  /* Character Button HP Display */
+  .char-btn-hp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+  }
+
+  .char-btn-hp-bar {
+    width: 100%;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .char-btn-hp-fill {
+    height: 100%;
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+
+  .char-btn-hp-text {
+    font-size: 0.55rem;
+    color: #aaa;
+    font-family: monospace;
+  }
+
+  /* Close Combat Indicator */
+  .action-bar-cc-indicator {
+    background: #b33;
+    color: white;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+    white-space: nowrap;
+  }
+
+  /* Facing Controls */
+  .action-bar-facing {
+    display: flex;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  /* Movement Controls */
+  .action-bar-movement-controls {
+    display: flex;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .action-bar-movement-controls .action-bar-btn.small {
+    min-width: 44px;
+    max-width: 44px;
+    padding: 0.4rem;
+  }
+
+  /* Maneuver Popup */
+  .action-bar-maneuvers {
+    display: flex;
+    position: fixed;
+    bottom: 80px;
+    left: 0.5rem;
+    right: 0.5rem;
+    background: rgba(15, 15, 15, 0.98);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 0.75rem;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    z-index: 199;
+    backdrop-filter: blur(8px);
+    animation: slideUp 0.2s ease-out;
+    max-height: 45vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .action-bar-maneuver-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.6rem 0.75rem;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #ccc;
+    cursor: pointer;
+    min-width: 64px;
+    min-height: 48px;
+    flex: 1 1 auto;
+    max-width: 100px;
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  .action-bar-maneuver-btn.active {
+    background: #3a4a3a;
+    border-color: #4f4;
+    color: #4f4;
+  }
+
+  .action-bar-maneuver-btn.close {
+    background: #3a2a2a;
+    border-color: #644;
+  }
+
+  .action-bar-maneuver-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Config Slot Popup */
+  .action-bar-config-slot {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 90px;
+    left: 1rem;
+    right: 1rem;
+    max-height: 50vh;
+    background: rgba(18, 18, 18, 0.96);
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 1rem;
+    gap: 1rem;
+    z-index: 150;
+    overflow-y: auto;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+  }
+
+  /* Backdrop for popups */
+  .action-bar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 198;
+  }
+
+  /* Defense Mode */
+  .action-bar.defense-mode {
+    background: linear-gradient(180deg, #2a1a1a, #1a1212);
+    border-color: #f44;
+  }
+
+  .defense-btn {
+    flex-direction: column;
+    padding: 0.5rem 0.75rem;
+    min-width: 64px;
+    min-height: 64px;
+  }
+
+  .defense-btn .defense-value {
+    font-size: 1.3rem;
+    font-weight: bold;
+  }
+
+  .defense-btn .defense-chance {
+    font-size: 0.7rem;
+    color: #8f8;
+  }
+
+  .defense-btn.dodge { border-color: #4a9; }
+  .defense-btn.parry { border-color: #59f; }
+  .defense-btn.block { border-color: #f80; }
+  .defense-btn.none { border-color: #f44; }
+
+  .defense-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Defense Overlay */
+  .action-bar-defense-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    z-index: 2500;
+    box-sizing: border-box;
+  }
+
+  .defense-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(90deg, #f44, #c22);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    animation: pulse 1.5s infinite;
+    text-align: center;
+  }
+
+  .defense-alert-icon {
+    font-size: 1.2rem;
+  }
+
+  .defense-options-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .defense-option-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ccc;
+    font-size: 0.9rem;
+  }
+
+  .defense-option-toggle input {
+    accent-color: #4a9;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  /* PF2 Action Economy */
+  .action-bar-pf2-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  /* Bot Selector */
+  .action-bar-bot-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #252525;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #3a3a3a;
+    font-size: 0.85rem;
+    color: #fff;
+  }
+
+  /* Animations */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+}
+
+/* Smaller Mobile Screens - < 380px */
+@media (max-width: 380px) {
+  .action-bar {
+    padding: 0.4rem;
+    gap: 0.3rem;
+    min-height: 64px;
+  }
+
+  .action-bar-btn {
+    min-width: 48px;
+    max-width: 64px;
+    min-height: 44px;
+    padding: 0.4rem 0.3rem;
+  }
+
+  .action-bar-btn.small {
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 40px;
+    padding: 0.35rem;
+  }
+
+  .action-bar-btn.char-btn {
+    min-width: 52px;
+    max-width: 52px;
+  }
+
+  .action-bar-icon {
+    font-size: 1.2rem;
+  }
+
+  .action-bar-label {
+    font-size: 0.6rem;
+  }
+
+  .action-bar-maneuvers {
+    bottom: 72px;
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .action-bar-maneuver-btn {
+    min-width: 56px;
+    min-height: 44px;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .action-bar-hint {
+    font-size: 0.7rem;
+    min-height: 40px;
+  }
+}
+
+/* Large Mobile Screens - 768px to 1024px (tablets) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(20, 20, 20, 0.98);
+    border-top: 1px solid #444;
+    padding: 0.5rem 1rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    backdrop-filter: blur(8px);
+    min-height: 80px;
+  }
+
+  .action-bar-btn {
+    flex: 0 1 auto;
+    min-width: 64px;
+    max-width: 100px;
+    min-height: 56px;
+    padding: 0.6rem 1rem;
+  }
+
+  .panel-right {
+    display: none !important;
+  }
+}
+
+/* Landscape Mobile - Short Height */
+@media (max-width: 768px) and (max-height: 500px) {
+  .action-bar {
+    min-height: 56px;
+    max-height: 25vh;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .action-bar-btn {
+    min-height: 40px;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .action-bar-icon {
+    font-size: 1.2rem;
+  }
+
+  .action-bar-label {
+    font-size: 0.6rem;
+  }
+
+  .action-bar-maneuvers {
+    max-height: 35vh;
+    bottom: 70px;
+  }
+
+  .action-bar-config-slot {
+    max-height: 40vh;
+  }
+}

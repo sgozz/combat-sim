@@ -3,7 +3,7 @@ import { gurpsUiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
 import type { CharacterSheet } from '../../types';
 import { isGurpsCharacter } from '../../types';
-import { uuid } from '../../utils/uuid';
+import { generateUUID as uuid } from '../../utils/uuid';
 
 export const gurpsRuleset: Ruleset = {
   id: 'gurps',

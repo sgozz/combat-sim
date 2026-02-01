@@ -417,11 +417,7 @@ test.describe('Pre-Game Flow', () => {
     // Toggle ready
     await readyBtn.click()
     await player.waitForTimeout(1000)
-    
-    // Button text should change or indicator should appear
-    const readyIndicator = player.locator('.ready-icon, .player-card').getByText(/ready/i).first()
 
-    
     // At least button should still be visible after toggle
     await expect(readyBtn).toBeVisible()
     

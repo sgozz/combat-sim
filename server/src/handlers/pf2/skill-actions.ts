@@ -8,7 +8,6 @@ import { state } from "../../state";
 import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
 import { rollCheck, getAbilityModifier, getProficiencyBonus } from "../../../../shared/rulesets/pf2/rules";
-import type { Abilities, Proficiency, PF2Skill } from "../../../../shared/rulesets/pf2/types";
 
 const updateCombatantActions = (
   combatant: CombatantState,

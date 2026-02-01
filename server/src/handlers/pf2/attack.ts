@@ -122,11 +122,10 @@ export const handlePF2AttackAction = async (
     const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
     const abilityMod = isFinesse ? Math.max(strMod, dexMod) : strMod;
    
-    const level = attackerCharacter.level;
-    const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
-   
-    const isAgile = weapon.traits.includes('agile');
-    const mapPenalty = actorCombatant.mapPenalty || 0;
+     const level = attackerCharacter.level;
+     const profBonus = adapter.pf2!.getProficiencyBonus('trained', level);
+
+     const mapPenalty = actorCombatant.mapPenalty || 0;
    
     const conditionAttackMod = getConditionAttackModifier(actorCombatant);
     const totalAttackBonus = abilityMod + profBonus + mapPenalty + conditionAttackMod;

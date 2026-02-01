@@ -31,30 +31,6 @@ const gurpsChar: GurpsCharacterSheet = {
   pointsTotal: 150,
 }
 
-const pf2Char: PF2CharacterSheet = {
-  rulesetId: 'pf2',
-  id: 'pf2-1',
-  name: 'Elara',
-  level: 5,
-  class: 'Fighter',
-  ancestry: 'Human',
-  heritage: 'Versatile Heritage',
-  background: 'Soldier',
-  abilities: { strength: 16, dexterity: 14, constitution: 15, intelligence: 10, wisdom: 12, charisma: 11 },
-  derived: { hitPoints: 45, armorClass: 18, speed: 25, fortitudeSave: 6, reflexSave: 5, willSave: 4, perception: 3 },
-  classHP: 10,
-  saveProficiencies: { fortitude: 'trained', reflex: 'untrained', will: 'untrained' },
-  perceptionProficiency: 'untrained',
-  armorProficiency: 'trained',
-  skills: [],
-  weapons: [],
-  armor: null,
-  shieldBonus: 0,
-  feats: [],
-  spells: null,
-  spellcasters: [],
-}
-
 const renderEditor = (characters: Array<GurpsCharacterSheet | PF2CharacterSheet>, preferredRulesetId: 'gurps' | 'pf2' = 'gurps') => {
   const onSaveCharacter = vi.fn()
   render(

@@ -41,7 +41,7 @@ export const WelcomeScreen = ({ onComplete, authError, connectionState }: Welcom
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
       }
-      setConnectionTimeout(false)
+      queueMicrotask(() => setConnectionTimeout(false))
     }
 
     return () => {

@@ -1,10 +1,8 @@
 {
-  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/fix-lobby-sync.md",
-  "started_at": "2026-02-01T11:13:24.495Z",
-  "completed_at": "2026-02-01T11:40:00.000Z",
+  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/combat-sim-cleanup.md",
+  "started_at": "2026-02-01T13:56:28.685Z",
   "session_ids": [
-    "ses_3e733e8b6ffeNcQ8aEVz8L3C2W"
+    "ses_3e68262a0ffeLZMfI0hl6aJjr1"
   ],
-  "plan_name": "fix-lobby-sync",
-  "status": "completed"
+  "plan_name": "combat-sim-cleanup"
 }

@@ -197,11 +197,12 @@ export const useMatches = ({
       }
     }
     
-    messageHandlers.current.push(handleMessage)
+    const handlers = messageHandlers.current
+    handlers.push(handleMessage)
     
     return () => {
-      const index = messageHandlers.current.indexOf(handleMessage)
-      if (index > -1) messageHandlers.current.splice(index, 1)
+      const index = handlers.indexOf(handleMessage)
+      if (index > -1) handlers.splice(index, 1)
     }
   }, [messageHandlers, activeMatchId, setActiveMatchId, setMatchState, setLogs])
 

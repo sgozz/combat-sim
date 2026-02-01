@@ -3,7 +3,7 @@ import { pf2UiAdapter } from './ui';
 import { calculateDerivedStats } from './rules';
 import type { CharacterSheet } from '../../types';
 import { isPF2Character } from '../../types';
-import { uuid } from '../../utils/uuid';
+import { generateUUID as uuid } from '../../utils/uuid';
 export type {
   PF2Abilities,
   PF2CharacterDerivedStats,

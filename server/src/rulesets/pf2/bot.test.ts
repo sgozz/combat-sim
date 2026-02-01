@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { MatchState, GridPosition, Player } from '../../../../shared/types';
+import type { MatchState, GridPosition } from '../../../../shared/types';
 import type { PF2CombatantState } from '../../../../shared/rulesets/pf2/types';
 import type { PF2CharacterSheet } from '../../../../shared/rulesets/pf2/characterSheet';
 
@@ -27,7 +27,7 @@ vi.mock('../../helpers', () => {
 
   return {
     getGridSystemForMatch: () => squareGrid8,
-    calculateGridDistance: (from: GridPosition, to: GridPosition, _grid: unknown) =>
+    calculateGridDistance: (from: GridPosition, to: GridPosition) =>
       Math.max(Math.abs(from.x - to.x), Math.abs(from.z - to.z)),
     isDefeated: (c: { currentHP: number; statusEffects: string[] }) =>
       c.currentHP <= 0 || c.statusEffects.includes('unconscious'),
@@ -309,7 +309,7 @@ describe('PF2 Bot AI', () => {
       match.characters[0].id = 'char-bot1';
       match.characters[1].id = 'char-enemy1';
 
-      mockGetCharacterById.mockImplementation((_match, charId) => {
+      mockGetCharacterById.mockImplementation((_, charId) => {
         return match.characters.find(c => c.id === charId) ?? null;
       });
 
@@ -332,7 +332,7 @@ describe('PF2 Bot AI', () => {
       enemyChar.id = 'char-enemy1';
       match.characters = [botChar, enemyChar];
 
-      mockGetCharacterById.mockImplementation((_match, charId) => {
+      mockGetCharacterById.mockImplementation((_, charId) => {
         return match.characters.find(c => c.id === charId) ?? null;
       });
 
@@ -355,7 +355,7 @@ describe('PF2 Bot AI', () => {
       enemyChar.id = 'char-enemy1';
       match.characters = [botChar, enemyChar];
 
-      mockGetCharacterById.mockImplementation((_match, charId) => {
+      mockGetCharacterById.mockImplementation((_, charId) => {
         return match.characters.find(c => c.id === charId) ?? null;
       });
 
@@ -388,7 +388,7 @@ describe('PF2 Bot AI', () => {
       enemyChar.id = 'char-enemy1';
       match.characters = [botChar, enemyChar];
 
-      mockGetCharacterById.mockImplementation((_match, charId) => {
+      mockGetCharacterById.mockImplementation((_, charId) => {
         return match.characters.find(c => c.id === charId) ?? null;
       });
 
@@ -437,13 +437,13 @@ describe('PF2 Bot AI', () => {
 
   describe('multi-action loop simulation', () => {
     it('bot uses all 3 actions when adjacent (2 strikes + stride or 3 strikes max)', () => {
-      let bot = createPF2Combatant({
+      const bot = createPF2Combatant({
         position: { x: 0, y: 0, z: 0 },
         actionsRemaining: 3,
         mapPenalty: 0,
       });
       const enemy = createEnemy({ position: { x: 1, y: 0, z: 0 } });
-      let match = createMatch([bot, enemy]);
+      const match = createMatch([bot, enemy]);
       const char = createPF2Character('bot1');
 
       const actions: string[] = [];

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { getServerAdapter, isGurpsMatch } from './serverAdapter'
-import type { MatchState } from '../types'
+import type { MatchState, RulesetId } from '../types'
 
 describe('Server Adapter Registry', () => {
   describe('getServerAdapter', () => {
@@ -51,7 +51,7 @@ describe('Server Adapter Registry', () => {
     })
 
     it('Unknown ruleset throws error', () => {
-      expect(() => getServerAdapter('unknown' as any)).toThrow('Unknown ruleset: unknown')
+      expect(() => getServerAdapter('unknown' as RulesetId)).toThrow('Unknown ruleset: unknown')
     })
   })
 

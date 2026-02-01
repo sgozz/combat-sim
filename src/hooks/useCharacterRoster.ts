@@ -9,6 +9,10 @@ type UseCharacterRosterOptions = {
 export const useCharacterRoster = ({ sendMessage, messageHandlers }: UseCharacterRosterOptions) => {
   const [characters, setCharacters] = useState<CharacterSheet[]>([])
 
+  const loadCharacters = useCallback(() => {
+    sendMessage({ type: 'list_characters' })
+  }, [sendMessage])
+
   useEffect(() => {
     const handler = (msg: ServerToClientMessage): boolean => {
       switch (msg.type) {
@@ -32,11 +36,7 @@ export const useCharacterRoster = ({ sendMessage, messageHandlers }: UseCharacte
     return () => {
       messageHandlers.current = messageHandlers.current.filter(h => h !== handler)
     }
-  }, [messageHandlers, sendMessage])
-
-  const loadCharacters = useCallback(() => {
-    sendMessage({ type: 'list_characters' })
-  }, [sendMessage])
+  }, [messageHandlers, sendMessage, loadCharacters])
 
   const saveCharacter = useCallback((character: CharacterSheet) => {
     sendMessage({ type: 'save_character', character })

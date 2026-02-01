@@ -2,8 +2,6 @@ import type { WebSocket } from "ws";
 import type { MatchState, Player, ReachableHexInfo } from "../../../../shared/types";
 import type { CombatantState } from "../../../../shared/rulesets";
 import { isPF2Combatant } from "../../../../shared/rulesets";
-import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
-import { assertRulesetId } from "../../../../shared/rulesets/defaults";
 import { getReachableSquares, gridToHex } from "../../../../shared/rulesets/pf2/rules";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -16,8 +14,7 @@ export const handlePF2RequestMove = async (
   matchId: string,
   match: MatchState,
   player: Player,
-  actorCombatant: CombatantState,
-  payload: { mode: 'stride' }
+  actorCombatant: CombatantState
 ): Promise<void> => {
   if (!isPF2Combatant(actorCombatant)) return;
 

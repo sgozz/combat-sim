@@ -7,7 +7,7 @@ import { calculateDerivedStats as gurpsCalculateDerivedStats, calculateTotalPoin
 import { calculateDerivedStats as pf2CalculateDerivedStats } from '../../../shared/rulesets/pf2/rules'
 import { getTemplatesForRuleset } from '../../data/characterTemplates'
 import { rulesets } from '../../../shared/rulesets'
-import { uuid } from '../../utils/uuid'
+import { generateUUID as uuid } from '../../utils/uuid'
 
 export type UseCharacterEditorProps = {
   character: CharacterSheet

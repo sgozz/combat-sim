@@ -21,12 +21,17 @@ export const useGameSocket = () => {
   useEffect(() => {
     if (!socket) return
 
-    socket.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       const message = JSON.parse(event.data as string) as ServerToClientMessage
       
       for (const handler of messageHandlers.current) {
         if (handler(message)) break
       }
+    }
+    
+    socket.addEventListener('message', handleMessage)
+    return () => {
+      socket.removeEventListener('message', handleMessage)
     }
   }, [socket])
 

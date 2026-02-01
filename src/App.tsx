@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useGameSocket } from './hooks/useGameSocket'
+import { generateUUID } from './utils/uuid'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { Dashboard } from './components/Dashboard'
 import { CharacterArmory } from './components/armory/CharacterArmory'
@@ -11,6 +12,7 @@ import { isGurpsCombatant } from '../shared/rulesets'
 
 import type { CharacterSheet, GridPosition } from '../shared/types'
 import './App.css'
+import './components/action-bar/styles.css'
 
 function AppRoutes() {
   const navigate = useNavigate()
@@ -49,7 +51,7 @@ function AppRoutes() {
   const handleDuplicateCharacter = useCallback((character: CharacterSheet) => {
     const duplicate = {
       ...character,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: `${character.name} (Copy)`,
       isFavorite: false,
     }

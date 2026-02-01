@@ -96,6 +96,8 @@ export const useAuth = ({
 
   // Register message handler
   useEffect(() => {
+    const handlers = messageHandlers.current
+    
     const handleMessage = (message: ServerToClientMessage): boolean => {
       switch (message.type) {
         case 'auth_ok': {
@@ -128,17 +130,17 @@ export const useAuth = ({
              return true
            }
            return false
-         
+          
          default:
            return false
       }
     }
     
-    messageHandlers.current.push(handleMessage)
+    handlers.push(handleMessage)
     
     return () => {
-      const index = messageHandlers.current.indexOf(handleMessage)
-      if (index > -1) messageHandlers.current.splice(index, 1)
+      const index = handlers.indexOf(handleMessage)
+      if (index > -1) handlers.splice(index, 1)
     }
   }, [messageHandlers, setActiveMatchId])
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { generateUUID } from '../../../shared/utils/uuid'
 import { rulesets } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import { PathbuilderImport } from '../rulesets/pf2/PathbuilderImport'
@@ -36,13 +37,13 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
       const bundle = rulesets[preferredRulesetId]
       if (bundle) {
         const newChar = bundle.ruleset.createCharacter('New Character')
-        setCharacter(newChar)
+        queueMicrotask(() => setCharacter(newChar))
       }
     } else {
       if (characters.length === 0) return
       const existing = characters.find(c => c.id === id)
       if (existing) {
-        setCharacter(existing)
+        queueMicrotask(() => setCharacter(existing))
       } else {
         navigate('/armory')
       }
@@ -359,7 +360,7 @@ const GurpsSkillsPanel = ({ character, onUpdateSkills }: GurpsSkillsPanelProps) 
     if (!name) return
     if (character.skills.some(s => s.name.toLowerCase() === name.toLowerCase())) return
     const skill: Skill = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       level: newSkillLevel,
     }
@@ -497,7 +498,7 @@ const PF2SkillsPanel = ({ character, onUpdateSkills }: PF2SkillsPanelProps) => {
     if (!name) return
     if (character.skills.some(s => s.name.toLowerCase() === name.toLowerCase())) return
     const skill: PF2Skill = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       ability: newSkillAbility,
       proficiency: newSkillProficiency,
@@ -686,7 +687,7 @@ const GurpsEquipmentPanel = ({ character, onUpdateEquipment }: GurpsEquipmentPan
     const name = weaponName.trim()
     if (!name) return
     const weapon: Equipment = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       type: weaponType,
       damage: weaponDamage || undefined,
@@ -715,7 +716,7 @@ const GurpsEquipmentPanel = ({ character, onUpdateEquipment }: GurpsEquipmentPan
       return
     }
     const armorItem: Equipment = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: preset.name,
       type: 'armor',
       dr: preset.dr,
@@ -948,7 +949,7 @@ const PF2EquipmentPanel = ({ character, onUpdateWeapons, onUpdateArmor, onUpdate
     const name = wpnName.trim()
     if (!name) return
     const weapon: PF2CharacterWeapon = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       damage: wpnDamage || '1d6',
       damageType: wpnDamageType,
@@ -978,7 +979,7 @@ const PF2EquipmentPanel = ({ character, onUpdateWeapons, onUpdateArmor, onUpdate
       return
     }
     onUpdateArmor({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name: preset.name,
       proficiencyCategory: preset.proficiencyCategory,
       acBonus: preset.acBonus,
@@ -1181,7 +1182,7 @@ const GurpsTraitsPanel = ({ character, onUpdateAdvantages, onUpdateDisadvantages
     if (!name) return
     if (character.advantages.some(a => a.name.toLowerCase() === name.toLowerCase())) return
     const advantage: Advantage = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       description: newAdvDesc.trim() || undefined,
     }
@@ -1199,7 +1200,7 @@ const GurpsTraitsPanel = ({ character, onUpdateAdvantages, onUpdateDisadvantages
     if (!name) return
     if (character.disadvantages.some(d => d.name.toLowerCase() === name.toLowerCase())) return
     const disadvantage: Disadvantage = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       description: newDisadvDesc.trim() || undefined,
     }
@@ -1381,7 +1382,7 @@ const PF2TraitsPanel = ({ character, onUpdateFeats }: PF2TraitsPanelProps) => {
     if (!name) return
     if (character.feats.some(f => f.name.toLowerCase() === name.toLowerCase())) return
     const feat: PF2Feat = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       type: newFeatType,
       level: newFeatLevel,

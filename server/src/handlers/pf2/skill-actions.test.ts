@@ -57,7 +57,6 @@ describe('PF2 Skill Actions Handlers', () => {
       const player = createPlayer();
       const match = createMatch();
       const actor = match.combatants[0];
-      const target = match.combatants[1];
 
       const athleticsSkill = { id: 's1', name: 'Athletics', ability: 'strength' as const, proficiency: 'trained' as const };
       const actorChar = createPF2Character({ id: 'char1', skills: [athleticsSkill] });

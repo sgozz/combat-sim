@@ -1,7 +1,7 @@
 import type { PF2CharacterSheet, PF2CharacterWeapon, PF2CharacterArmor, PF2Feat, PF2SpellInfo } from './characterSheet';
 import type { Abilities, Proficiency, PF2Skill, SpellCaster } from './types';
 import type { PathbuilderExport, PathbuilderBuild, PathbuilderWeapon, PathbuilderArmor, PathbuilderFeatTuple, PathbuilderLoreTuple, PathbuilderSpellCaster } from './pathbuilder';
-import { uuid } from '../../utils/uuid';
+import { generateUUID as uuid } from '../../utils/uuid';
 
 const getProfBonus = (rank: number, level: number): number => {
   if (rank === 0) return 0;
