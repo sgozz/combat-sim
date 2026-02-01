@@ -355,6 +355,35 @@ export const handleMessage = async (
       } else {
         const summary = await buildMatchSummary(matchRow, user.id);
         sendMessage(socket, { type: "match_created", match: summary });
+        
+        for (const member of members) {
+          if (member.user_id !== user.id) {
+            const existingUser = state.users.get(member.user_id);
+            if (existingUser) {
+              sendMessage(socket, { 
+                type: "player_joined", 
+                matchId: matchRow.id, 
+                player: { 
+                  id: existingUser.id, 
+                  name: existingUser.username, 
+                  isBot: existingUser.isBot,
+                  characterId: member.character_id ?? ""
+                } 
+              });
+            }
+          }
+        }
+        
+        for (const member of members) {
+          if (member.user_id !== user.id) {
+            sendToUser(member.user_id, { 
+              type: "player_reconnected", 
+              matchId: matchRow.id, 
+              playerId: user.id, 
+              playerName: user.username 
+            });
+          }
+        }
       }
       
       return;
