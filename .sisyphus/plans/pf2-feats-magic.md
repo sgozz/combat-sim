@@ -728,7 +728,7 @@ Wave 4 (Integration):
 
 ---
 
-- [ ] 11. Implement Knockdown
+- [x] 11. Implement Knockdown
 
   **What to do**:
   - Add effect to `FEAT_EFFECTS`

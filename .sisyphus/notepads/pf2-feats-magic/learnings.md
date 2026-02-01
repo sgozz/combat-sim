@@ -709,3 +709,94 @@ Implemented Combat Grab feat action that costs 1 action, makes a Strike attack, 
 - Task 11+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
 - Future: Add Combat Grab UI button (1-action cost indicator)
 - Future: Consider refactoring shared attack logic into helper function (DRY with other Strike-based feats)
+
+## Task 11: Knockdown Feat Action Implementation (2026-02-01)
+
+### Implementation Summary
+Implemented Knockdown feat action that costs 2 actions, makes a Strike attack, and automatically applies prone condition ONLY on critical hit.
+
+### Files Modified
+- `server/src/handlers/pf2/attack.ts` - Added `handlePF2Knockdown()` function
+- `server/src/handlers/pf2/attack.test.ts` - Added 4 Knockdown tests (all passing)
+- `server/src/handlers/pf2/router.ts` - Added routing for `pf2_knockdown` message type
+- `shared/rulesets/pf2/feats.ts` - Added Knockdown to FEAT_EFFECTS registry
+
+### Architecture Patterns
+1. **Strike + Conditional Prone Pattern**: `handlePF2Knockdown()` combines attack and condition application
+   - First executes Strike attack (same logic as `handlePF2AttackAction()`)
+   - Then applies prone condition ONLY on critical hit (not on normal hit)
+   - Follows same two-phase update pattern as Intimidating Strike and Combat Grab
+
+2. **Critical-Only Condition**: Key difference from Intimidating Strike
+   - Intimidating Strike: Applies frightened on both success and critical success (different values)
+   - Combat Grab: Applies grabbed on both success and critical success (same condition)
+   - **Knockdown**: Applies prone ONLY on critical success (automatic, no Athletics check)
+
+3. **Guard Clauses**: Same pattern as other feat actions
+   - Feat check → action cost check → target validation → execute
+   - Type guards (`isPF2Combatant`, `isPF2Character`) ensure safe property access
+
+### Knockdown Mechanics (PF2 SRD)
+- **Actions**: 2 actions (⚔️⚔️)
+- **Requirements**: Knockdown feat + 2 actions remaining + wielding two-handed melee weapon
+- **Effect**: 
+  1. Make melee Strike
+  2. On critical hit: automatically knock target prone (no Athletics check needed)
+  3. On normal hit or miss: no prone condition applied
+- **Special**: Simplified implementation - we don't check for two-handed weapon requirement
+
+### Test Coverage
+- 4 new tests in `attack.test.ts` (all passing)
+- Total attack test suite: 36 tests passing
+- Tests cover:
+  - 2-action cost
+  - Prone applied ONLY on critical hit
+  - NO prone on normal hit
+  - Feat requirement
+
+### Key Learnings
+1. **TDD Approach**: Tests written first revealed the need for:
+   - Two-phase combatant update pattern (damage first, then condition)
+   - Conditional prone application (ONLY on critical hit, not on normal hit)
+   - Proper log message formatting with prone indicator
+
+2. **Critical-Only Logic**: Simpler than Intimidating Strike
+   - Only one condition check: `if (attackRoll.degree === 'critical_success')`
+   - No degree-based condition values (prone has no value parameter)
+   - Clear inline comment explains the critical-only logic
+
+3. **Code Reuse**: 95% of Knockdown logic is identical to Strike
+   - Only differences: action cost (2 vs 1), prone application on critical hit only
+   - Follows same pattern as Intimidating Strike and Combat Grab
+   - Consistent with existing feat action implementations
+
+4. **Log Message Format**: Consistent emoji usage (⚔️⚔️) for 2-action feats
+   - `. Target is knocked prone!` appended to attack log entry (only on critical hit)
+   - Matches Intimidating Strike pattern for visual consistency
+
+5. **Prone Condition**: Reuses existing prone condition from conditions.ts
+   - No value parameter (unlike frightened)
+   - Applied as `{ condition: 'prone' as const }`
+   - Consistent with existing condition application patterns
+
+### Integration Points
+- **Router**: `pf2_knockdown` message type added to PF2ActionPayload union
+- **Feat Registry**: Knockdown registered in `FEAT_EFFECTS` with handler name
+- **Condition System**: Reuses existing prone condition from conditions.ts
+- **UI**: Backend ready, UI implementation pending (future task)
+
+### Performance Notes
+- Same performance characteristics as normal Strike action
+- Condition application is O(n) where n = number of combatants (map operation)
+- No caching needed - conditions applied once per attack
+
+### Documentation
+- Function includes docstring for public API (necessary for exported function)
+- Inline comment clarifies critical-only logic (prevents bugs)
+- Test names are self-documenting
+- Log messages use emoji for visual clarity (⚔️⚔️)
+
+### Next Steps
+- Task 12+: Implement remaining feat effects (Quick Draw, Point-Blank Shot, etc.)
+- Future: Add Knockdown UI button (2-action cost indicator)
+- Future: Consider refactoring shared attack logic into helper function (DRY with other Strike-based feats)

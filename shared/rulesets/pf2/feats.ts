@@ -50,6 +50,11 @@ export const FEAT_EFFECTS = new Map<string, PF2FeatEffect>([
     handler: 'handleCombatGrab',
     description: 'Make a Strike and automatically Grapple on hit'
   }],
+  ['Knockdown', {
+    type: 'action',
+    handler: 'handleKnockdown',
+    description: 'Make a Strike that knocks target prone on critical hit'
+  }],
   ['Reactive Shield', {
     type: 'reaction',
     handler: 'handleReactiveShield',
