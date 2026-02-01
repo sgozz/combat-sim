@@ -547,6 +547,8 @@
   background: var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .editor-skill-row {
