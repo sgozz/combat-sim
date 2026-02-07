@@ -106,7 +106,7 @@ describe('CreateMatchDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create Match' }))
 
-    expect(onCreateMatch).toHaveBeenCalledWith("TestUser's Battle", 4, false)
+    expect(onCreateMatch).toHaveBeenCalledWith("TestUser's Battle", 4, false, undefined)
     expect(onCreateMatch).toHaveBeenCalledTimes(1)
   })
 
@@ -125,7 +125,7 @@ describe('CreateMatchDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Public' }))
     await user.click(screen.getByRole('button', { name: 'Create Match' }))
 
-    expect(onCreateMatch).toHaveBeenCalledWith('Epic Battle', 5, true)
+    expect(onCreateMatch).toHaveBeenCalledWith('Epic Battle', 5, true, undefined)
   })
 
   it('Create Match button is disabled when name is empty', async () => {

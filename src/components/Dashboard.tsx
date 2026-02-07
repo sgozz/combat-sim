@@ -16,7 +16,7 @@ type DashboardProps = {
   myMatches: MatchSummary[]
   refreshMyMatches: () => void
   onLogout: () => void
-  onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean) => void
+  onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean, scenarioBiome?: string) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
   setPreferredRuleset: (rulesetId: RulesetId) => void
@@ -267,8 +267,8 @@ export const Dashboard = ({
           username={user.username}
           preferredRulesetId={user.preferredRulesetId}
           onClose={() => setShowCreateDialog(false)}
-          onCreateMatch={(name, maxPlayers, isPublic) => {
-            onCreateMatch(name, maxPlayers, isPublic)
+          onCreateMatch={(name, maxPlayers, isPublic, scenarioBiome) => {
+            onCreateMatch(name, maxPlayers, isPublic, scenarioBiome)
             setShowCreateDialog(false)
           }}
         />

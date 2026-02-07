@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { RulesetId } from '../../../shared/types'
+import type { BiomeId } from '../../../shared/map/types'
+import { ScenarioSelector } from '../lobby/ScenarioSelector'
 import './CreateMatchDialog.css'
 
 type CreateMatchDialogProps = {
   username: string
   preferredRulesetId: RulesetId
   onClose: () => void
-  onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean) => void
+  onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean, scenarioBiome?: BiomeId) => void
 }
 
 export const CreateMatchDialog = ({ username, preferredRulesetId, onClose, onCreateMatch }: CreateMatchDialogProps) => {
   const [matchName, setMatchName] = useState(`${username}'s Battle`)
   const [maxPlayers, setMaxPlayers] = useState(4)
   const [isPublic, setIsPublic] = useState(false)
+  const [scenarioBiome, setScenarioBiome] = useState<BiomeId | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,7 +39,7 @@ export const CreateMatchDialog = ({ username, preferredRulesetId, onClose, onCre
     setIsCreating(true)
 
     try {
-      onCreateMatch(matchName.trim(), maxPlayers, isPublic)
+      onCreateMatch(matchName.trim(), maxPlayers, isPublic, scenarioBiome ?? undefined)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create match')
       setIsCreating(false)
@@ -119,6 +122,20 @@ export const CreateMatchDialog = ({ username, preferredRulesetId, onClose, onCre
               {isPublic
                 ? 'Anyone can join this match from the public lobby'
                 : 'Only players with the match code can join'}
+            </p>
+          </div>
+
+          <div className="cmd-field">
+            <label className="cmd-label">Scenario</label>
+            <ScenarioSelector
+              selectedBiome={scenarioBiome}
+              onBiomeSelect={setScenarioBiome}
+              disabled={isCreating}
+            />
+            <p className="cmd-hint">
+              {scenarioBiome
+                ? `Map will be procedurally generated with ${scenarioBiome} theme`
+                : 'No terrain — classic open grid'}
             </p>
           </div>
 
