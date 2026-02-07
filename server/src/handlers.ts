@@ -61,17 +61,61 @@ import {
   handlePF2Action,
 } from "./handlers/index";
 
+const REGISTER_RATE_LIMIT = 5;
+const REGISTER_RATE_WINDOW_MS = 60 * 1000;
+const registerAttempts = new Map<string, number[]>();
+
+const isRateLimited = (ip: string): boolean => {
+  const now = Date.now();
+  const attempts = registerAttempts.get(ip) ?? [];
+  const recent = attempts.filter(t => now - t < REGISTER_RATE_WINDOW_MS);
+  registerAttempts.set(ip, recent);
+  return recent.length >= REGISTER_RATE_LIMIT;
+};
+
+const recordRegisterAttempt = (ip: string): void => {
+  const attempts = registerAttempts.get(ip) ?? [];
+  attempts.push(Date.now());
+  registerAttempts.set(ip, attempts);
+};
+
+const validateUsername = (username: string): string | null => {
+  if (username.length < 2 || username.length > 24) {
+    return "Username must be 2-24 characters.";
+  }
+  if (!/^[a-zA-Z0-9]/.test(username)) {
+    return "Username must start with a letter or number.";
+  }
+  if (!/^[a-zA-Z0-9_\- ]+$/.test(username)) {
+    return "Username can only contain letters, numbers, spaces, hyphens, and underscores.";
+  }
+  return null;
+};
+
 export const handleMessage = async (
   socket: WebSocket,
   wss: WebSocketServer,
-  message: ClientToServerMessage
+  message: ClientToServerMessage,
+  ip: string
 ): Promise<void> => {
   switch (message.type) {
     case "register": {
-      let user = await findUserByUsername(message.username);
+      const trimmedUsername = message.username.trim();
+      const usernameError = validateUsername(trimmedUsername);
+      if (usernameError) {
+        sendMessage(socket, { type: "error", message: usernameError });
+        return;
+      }
+
+      let user = await findUserByUsername(trimmedUsername);
       
       if (!user) {
-        user = await createUser(message.username, false, message.preferredRulesetId ?? 'gurps');
+        if (isRateLimited(ip)) {
+          sendMessage(socket, { type: "error", message: "Too many registration attempts. Please try again later." });
+          return;
+        }
+        recordRegisterAttempt(ip);
+        user = await createUser(trimmedUsername, false, message.preferredRulesetId ?? 'gurps');
       }
       
       state.users.set(user.id, user);

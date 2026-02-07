@@ -2,7 +2,7 @@ import http from "node:http";
 import { WebSocketServer } from "ws";
 import type { ClientToServerMessage } from "../../shared/types";
 import { state } from "./state";
-import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, removeMatchMember, updateMatchState, getMatchMemberCount } from "./db";
+import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, removeMatchMember, updateMatchState, getMatchMemberCount, cleanupExpiredSessions } from "./db";
 import { sendMessage, sendToMatch } from "./helpers";
 import { handleMessage } from "./handlers";
 
@@ -25,8 +25,9 @@ const startServer = async () => {
   const storedMatches = db.prepare("SELECT COUNT(*) as count FROM matches WHERE status IN ('waiting', 'active', 'paused')").get() as { count: number } | undefined;
   console.log(`Loaded ${storedUsers?.count ?? 0} users, ${storedCharacters?.count ?? 0} characters, ${storedMatches?.count ?? 0} active matches.`);
 
-  wss.on("connection", (socket) => {
-    state.connections.set(socket, {});
+  wss.on("connection", (socket, req) => {
+    const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    state.connections.set(socket, { ip });
 
     socket.on("message", async (data) => {
       let message: ClientToServerMessage;
@@ -37,7 +38,8 @@ const startServer = async () => {
         return;
       }
 
-      await handleMessage(socket, wss, message);
+      const connState = state.connections.get(socket);
+      await handleMessage(socket, wss, message, connState?.ip ?? 'unknown');
     });
 
     socket.on("close", async () => {
@@ -135,6 +137,11 @@ const startServer = async () => {
 
     if (cleanedCount > 0) {
       console.log(`Cleanup: removed ${cleanedCount} finished matches from memory`);
+    }
+
+    const expiredSessions = cleanupExpiredSessions();
+    if (expiredSessions > 0) {
+      console.log(`Cleanup: removed ${expiredSessions} expired sessions`);
     }
   };
 
