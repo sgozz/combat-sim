@@ -34,6 +34,7 @@ import { clearDefenseTimeout } from "../../timers";
 import { formatRoll, applyDamageToTarget } from "../shared/damage";
 import { handlePF2AttackAction } from "../pf2/attack";
 import { quickContest, getDefenseOptions, checkWaitTriggers } from "../../../../shared/rulesets/gurps/rules";
+import { hasCover } from "../../../../shared/map/terrain";
 import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
 import { executeWaitInterrupt } from "./wait-interrupt";
 import type { GurpsCombatantState } from "../../../../shared/rulesets/gurps/types";
@@ -218,7 +219,9 @@ export const resolveDefenseChoice = async (
   
   const { defenseLabel, finalDefenseValue, canRetreat, parryWeaponName } = defenseResolution;
   
-  const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
+  const defenderPos = defenderCombatant.position;
+  const coverBonus = hasCover(match.mapDefinition, defenderPos.x, defenderPos.z) ? 2 : 0;
+  const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue + coverBonus);
   
   if (defenseRoll.defended) {
     let retreatHex: { x: number; y: number; z: number } | null = null;
@@ -472,6 +475,10 @@ export const handleAttackAction = async (
     defenseDescription += defenseDescription === "normal" ? "defensive (+1)" : " + defensive (+1)";
   }
 
+  if (hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z)) {
+    defenseDescription += defenseDescription === "normal" ? "cover (+2)" : " + cover (+2)";
+  }
+
   // Check for wait triggers before attack
   const gurbsCombatants = match.combatants.filter(isGurpsCombatant) as GurpsCombatantState[];
   const adapter2 = getServerAdapter(assertRulesetId(match.rulesetId));
@@ -667,7 +674,8 @@ export const handleAttackAction = async (
     
     const { defenseLabel, finalDefenseValue, canRetreat, retreatHex, parryWeaponName: botParryWeaponName } = botDefense;
     
-const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
+    const botCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue + botCoverBonus);
     
     if (defenseRoll.defended) {
       const retreatStr = canRetreat ? ' (with retreat)' : '';
