@@ -33,7 +33,7 @@ export const useAuth = ({
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const createWebSocket = useCallback((onOpen: (ws: WebSocket) => void) => {
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8080'
+    const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8080`
     const ws = new WebSocket(wsUrl)
     
     ws.onopen = () => {
