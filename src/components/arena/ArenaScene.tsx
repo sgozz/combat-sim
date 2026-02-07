@@ -2,6 +2,7 @@ import { OrbitControls, Environment, GizmoHelper, GizmoViewport, Html } from '@r
 import { BattleGrid } from './BattleGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
+import { CombatEffects } from './CombatEffects'
 import { CameraControls, type CameraMode } from './CameraControls'
 import { getHexInDirection } from '../../utils/hex'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
@@ -145,8 +146,29 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
+      <ambientLight intensity={0.3} color="#8899bb" />
+      <directionalLight
+        position={[8, 15, 5]}
+        intensity={1.2}
+        color="#ffeedd"
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-far={50}
+        shadow-camera-left={-15}
+        shadow-camera-right={15}
+        shadow-camera-top={15}
+        shadow-camera-bottom={-15}
+        shadow-bias={-0.001}
+      />
+      <pointLight position={[-5, 8, -5]} intensity={0.3} color="#4466ff" />
+
+      <fog attach="fog" args={['#0a0a12', 15, 45]} />
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 0]} receiveShadow>
+        <planeGeometry args={[60, 60]} />
+        <meshStandardMaterial color="#111115" roughness={0.95} metalness={0.05} />
+      </mesh>
       
       <BattleGrid 
         gridType={getGridType(rulesetId)}
@@ -185,6 +207,8 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
       {visualEffects.map((effect) => (
         <FloatingText key={effect.id} effect={effect} rulesetId={rulesetId} />
       ))}
+
+      <CombatEffects visualEffects={visualEffects} gridType={getGridType(rulesetId)} />
 
        {moveTarget && <MoveMarker position={moveTarget} gridType={getGridType(rulesetId)} />}
 
