@@ -142,7 +142,7 @@ describe('SpellPicker', () => {
   })
 
   it('shows heighten indicator (↑) for heightenable spells', () => {
-    const { container } = render(<SpellPicker {...defaultProps} />)
+    render(<SpellPicker {...defaultProps} />)
 
     // Fireball and Electric Arc have heighten, Fear does not
     const fireball = screen.getByText('Fireball').closest('button')!
