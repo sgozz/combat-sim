@@ -260,8 +260,8 @@ export const PF2ActionBar = ({
             </button>
             <button
               className="action-bar-btn"
-              disabled={true}
-              onClick={() => {}}
+              disabled={actionsRemaining === 0}
+              onClick={() => onAction('pf2_request_move', { type: 'pf2_request_move', mode: 'step' })}
             >
               <span className="action-bar-icon">👣</span>
               <span className="action-bar-label">Step</span>

@@ -20,7 +20,16 @@ export const pf2Ruleset: Ruleset = {
     if (!isPF2Character(character)) {
       throw new Error('Expected PF2 character');
     }
-    const stats = calculateDerivedStats(character.abilities, character.level, character.classHP);
+    const stats = calculateDerivedStats(
+      character.abilities,
+      character.level,
+      character.classHP,
+      character.armor?.acBonus ?? 0,
+      character.armor?.dexCap ?? null,
+      character.saveProficiencies,
+      character.perceptionProficiency,
+      character.armorProficiency
+    );
     return {
       hitPoints: stats.hitPoints,
       armorClass: stats.armorClass,
@@ -62,49 +71,61 @@ export const pf2Ruleset: Ruleset = {
     },
    getAvailableActions: () => [],
   getCombatPreview: () => null,
-   createCharacter: (name: string): CharacterSheet => ({
-     id: uuid(),
-     name: name || 'New PF2 Character',
-     rulesetId: 'pf2',
-     level: 1,
-    class: 'Fighter',
-    ancestry: 'Human',
-    heritage: 'Versatile Heritage',
-    background: 'Warrior',
-    abilities: {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
-      wisdom: 10,
-      charisma: 10,
-    },
-    derived: {
-      hitPoints: 10,
-      armorClass: 10,
-      speed: 25,
-      fortitudeSave: 0,
-      reflexSave: 0,
-      willSave: 0,
-      perception: 0,
-    },
-    classHP: 10,
-    saveProficiencies: {
-      fortitude: 'trained',
-      reflex: 'trained',
-      will: 'trained',
-    },
-    perceptionProficiency: 'trained',
-    armorProficiency: 'trained',
-    skills: [],
-    weapons: [],
-    armor: null,
-    shieldBonus: 0,
-    shieldHardness: 0,
-    feats: [],
-    spells: null,
-    spellcasters: [],
-   } as CharacterSheet),
+   createCharacter: (name: string): CharacterSheet => {
+     const abilities = {
+       strength: 10,
+       dexterity: 10,
+       constitution: 10,
+       intelligence: 10,
+       wisdom: 10,
+       charisma: 10,
+     };
+     const level = 1;
+     const classHP = 10;
+     const saveProficiencies = {
+       fortitude: 'trained' as const,
+       reflex: 'trained' as const,
+       will: 'trained' as const,
+     };
+     const perceptionProficiency = 'trained' as const;
+     const armorProficiency = 'trained' as const;
+     
+     const derived = calculateDerivedStats(
+       abilities,
+       level,
+       classHP,
+       0,
+       null,
+       saveProficiencies,
+       perceptionProficiency,
+       armorProficiency
+     );
+     
+     return {
+       id: uuid(),
+       name: name || 'New PF2 Character',
+       rulesetId: 'pf2',
+       level,
+       class: 'Fighter',
+       ancestry: 'Human',
+       heritage: 'Versatile Heritage',
+       background: 'Warrior',
+       abilities,
+       derived,
+       classHP,
+       saveProficiencies,
+       perceptionProficiency,
+       armorProficiency,
+       skills: [],
+       weapons: [],
+       armor: null,
+       shieldBonus: 0,
+       shieldHardness: 0,
+       feats: [],
+       spells: null,
+       spellcasters: [],
+     } as CharacterSheet;
+   },
 };
 
 export const pf2Bundle = {

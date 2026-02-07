@@ -14,7 +14,8 @@ export const handlePF2RequestMove = async (
   matchId: string,
   match: MatchState,
   player: Player,
-  actorCombatant: CombatantState
+  actorCombatant: CombatantState,
+  payload?: { mode?: 'stride' | 'step' }
 ): Promise<void> => {
   if (!isPF2Combatant(actorCombatant)) return;
 
@@ -24,6 +25,7 @@ export const handlePF2RequestMove = async (
     return;
   }
 
+  const mode = payload?.mode ?? 'stride';
   const character = getCharacterById(match, actorCombatant.characterId);
   const speed = (character && isPF2Character(character)) ? character.derived.speed : 25;
 
@@ -33,7 +35,30 @@ export const handlePF2RequestMove = async (
     .filter(c => c.playerId !== player.id)
     .map(c => gridToHex(c.position));
 
-  const reachable = getReachableSquares(startPos, speed, occupiedSquares);
+  let reachable: Map<string, { position: { q: number; r: number }; cost: number }>;
+  
+  if (mode === 'step') {
+    const adjacent = [
+      { q: startPos.q + 1, r: startPos.r },
+      { q: startPos.q - 1, r: startPos.r },
+      { q: startPos.q, r: startPos.r + 1 },
+      { q: startPos.q, r: startPos.r - 1 },
+      { q: startPos.q + 1, r: startPos.r - 1 },
+      { q: startPos.q - 1, r: startPos.r + 1 },
+      { q: startPos.q + 1, r: startPos.r + 1 },
+      { q: startPos.q - 1, r: startPos.r - 1 },
+    ];
+    
+    reachable = new Map();
+    adjacent
+      .filter(pos => !occupiedSquares.some(occ => occ.q === pos.q && occ.r === pos.r))
+      .forEach(pos => {
+        const key = `${pos.q},${pos.r}`;
+        reachable.set(key, { position: pos, cost: 5 });
+      });
+  } else {
+    reachable = getReachableSquares(startPos, speed, occupiedSquares);
+  }
 
   const reachableHexes: ReachableHexInfo[] = [];
   reachable.forEach((cell) => {

@@ -296,7 +296,7 @@ export const getUserMatches = (userId: string, rulesetId?: string): MatchRow[] =
     `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
      FROM matches m
      INNER JOIN match_members mm ON m.id = mm.match_id
-     WHERE mm.user_id = ? AND (m.ruleset_id = ? OR m.status IN ('active', 'paused'))
+     WHERE mm.user_id = ? AND (m.ruleset_id = ? OR m.status IN ('active', 'paused', 'finished'))
      ORDER BY m.created_at DESC`
   ).all(userId, rulesetId) as MatchRow[];
 };

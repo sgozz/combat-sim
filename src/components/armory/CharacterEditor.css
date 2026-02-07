@@ -56,7 +56,7 @@
 
 .editor-name-input {
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
   padding: var(--space-sm) var(--space-md);
   min-height: 44px;
   font-size: var(--text-xl);
