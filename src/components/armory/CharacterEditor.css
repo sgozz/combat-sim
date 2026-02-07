@@ -948,11 +948,17 @@
 
 @media (max-width: 768px) {
   .editor-equip-add-form {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    align-items: flex-end;
   }
 
-  .editor-equip-field--name,
+  .editor-equip-field--name {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
   .editor-equip-field--damage,
   .editor-equip-field--type,
   .editor-equip-field--reach,
@@ -962,9 +968,27 @@
     min-width: 0;
   }
 
+  .editor-equip-add-form > .editor-skill-add-btn {
+    grid-column: 1 / -1;
+  }
+
   .editor-equip-add-form--pf2 {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    align-items: flex-end;
+  }
+
+  .editor-equip-add-form--pf2 .editor-equip-field--name {
+    grid-column: 1 / -1;
+  }
+
+  .editor-equip-add-form--pf2 .editor-equip-field--traits {
+    grid-column: 1 / -1;
+  }
+
+  .editor-equip-add-form--pf2 > .editor-skill-add-btn {
+    grid-column: 1 / -1;
   }
 
   .editor-equip-armor-select {
@@ -974,6 +998,11 @@
 
   .editor-equip-armor-select .editor-field-input {
     max-width: none;
+  }
+
+  .editor-btn-save {
+    position: sticky;
+    bottom: 0;
   }
 }
 
