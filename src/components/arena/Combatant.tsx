@@ -7,6 +7,8 @@ import type { CharacterSheet, VisualEffect } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import { isGurpsCombatant } from '../../../shared/rulesets'
+import { getModelEntry, MODEL_LIST } from '../../data/modelRegistry'
+import type { AnimationKey } from '../../data/modelRegistry'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -14,7 +16,7 @@ const getGridSystem = (gridType: GridType): GridSystem => {
   return gridType === 'square' ? squareGrid8 : hexGrid
 }
 
-type AnimationState = 'idle' | 'walk' | 'run' | 'death' | 'jump' | 'punch' | 'working'
+type AnimationState = AnimationKey
 
 type CombatantProps = {
   combatant: CombatantState
@@ -38,17 +40,24 @@ const STATUS_ICONS: Record<string, string> = {
   close_combat: '⚔️',
 }
 
-useGLTF.preload('/models/human.glb')
-
-const MODEL_ROTATION_OFFSET = Math.PI / 2
-const MODEL_SCALE = 0.342
+for (const entry of MODEL_LIST) {
+  useGLTF.preload(entry.path)
+}
 
 const INDICATOR_DISTANCE = 0.7
 const INDICATOR_HEIGHT = 0.05
 const INDICATOR_LATERAL_OFFSET = Math.PI / 2
 
-function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; isPlayer: boolean; animationState: AnimationState }) {
-  const { scene, animations } = useGLTF('/models/human.glb')
+type CombatantModelProps = {
+  modelId: string | undefined
+  emissive: string
+  isPlayer: boolean
+  animationState: AnimationState
+}
+
+function CombatantModel({ modelId, emissive, isPlayer, animationState }: CombatantModelProps) {
+  const model = getModelEntry(modelId)
+  const { scene, animations } = useGLTF(model.path)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
 
@@ -99,16 +108,8 @@ function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; 
   })
 
   useEffect(() => {
-    const animationMap: Record<AnimationState, string> = {
-      idle: 'Human Armature|Idle',
-      walk: 'Human Armature|Walk',
-      run: 'Human Armature|Run',
-      death: 'Human Armature|Death',
-      jump: 'Human Armature|Jump',
-      punch: 'Human Armature|Punch',
-      working: 'Human Armature|Working'
-    }
-    const action = actionsRef.current[animationMap[animationState]]
+    const clipName = model.animations[animationState]
+    const action = actionsRef.current[clipName]
     if (action) {
       Object.values(actionsRef.current).forEach(a => a?.fadeOut(0.2))
       action.reset().fadeIn(0.2)
@@ -118,11 +119,11 @@ function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; 
       }
       action.play()
     }
-  }, [animationState, clonedScene])
+  }, [animationState, clonedScene, model.animations])
 
   return (
-    <group rotation={[0, MODEL_ROTATION_OFFSET, 0]}>
-      <primitive object={clonedScene} scale={MODEL_SCALE} />
+    <group rotation={[0, model.rotationOffset, 0]}>
+      <primitive object={clonedScene} scale={model.scale} />
       <mesh 
         position={[
           INDICATOR_DISTANCE * Math.cos(INDICATOR_LATERAL_OFFSET), 
@@ -272,7 +273,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
 
   return (
     <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>
-      <HumanModel emissive={emissive} isPlayer={isPlayer} animationState={animationState} />
+      <CombatantModel modelId={character?.modelId} emissive={emissive} isPlayer={isPlayer} animationState={animationState} />
 
       {isSelected && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>

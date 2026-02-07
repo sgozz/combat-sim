@@ -10,7 +10,8 @@ const createTemplate = (
   equipment: { name: string; damage: string; damageType: 'crushing' | 'cutting' | 'impaling'; reach: 'C' | '1' | '2' | 'C,1' | '1,2'; parry: number }[],
   armor: { name: string; dr: number; coveredLocations: ('eye' | 'skull' | 'face' | 'neck' | 'torso' | 'vitals' | 'groin' | 'arm_right' | 'arm_left' | 'hand_right' | 'hand_left' | 'leg_right' | 'leg_left' | 'foot_right' | 'foot_left')[] }[],
   advantages: { name: string; description?: string }[],
-  disadvantages: { name: string; description?: string }[]
+  disadvantages: { name: string; description?: string }[],
+  modelId?: string
 ): Omit<GurpsCharacterSheet, 'id'> => ({
   name,
   rulesetId: 'gurps',
@@ -24,6 +25,7 @@ const createTemplate = (
   advantages: advantages.map(a => ({ id: uuid(), ...a })),
   disadvantages: disadvantages.map(d => ({ id: uuid(), ...d })),
   pointsTotal: 100,
+  modelId,
 })
 
 export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>> = {
@@ -48,7 +50,8 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Code of Honor', description: "Knight's code" },
       { name: 'Sense of Duty', description: 'Kingdom' },
-    ]
+    ],
+    'warrior'
   ),
 
   swashbuckler: createTemplate(
@@ -70,7 +73,8 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Overconfidence', description: 'Believes in own skill' },
       { name: 'Compulsive Carousing', description: 'Loves parties' },
-    ]
+    ],
+    'rogue'
   ),
 
   barbarian: createTemplate(
@@ -93,7 +97,8 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Bad Temper', description: 'Quick to anger' },
       { name: 'Illiteracy', description: 'Cannot read or write' },
-    ]
+    ],
+    'monk'
   ),
 
   duelist: createTemplate(
@@ -114,7 +119,8 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Sense of Duty', description: 'Family honor' },
       { name: 'Proud', description: 'Cannot accept insults' },
-    ]
+    ],
+    'rogue'
   ),
 
   guardsman: createTemplate(
@@ -135,7 +141,8 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Duty', description: 'City watch' },
       { name: 'Sense of Duty', description: 'Protect citizens' },
-    ]
+    ],
+    'warrior'
   ),
 
   thug: createTemplate(
@@ -156,7 +163,8 @@ export const CHARACTER_TEMPLATES: Record<string, Omit<GurpsCharacterSheet, 'id'>
     [
       { name: 'Bad Temper', description: 'Quick to anger' },
       { name: 'Bully', description: 'Picks on weaker targets' },
-    ]
+    ],
+    'rogue'
   ),
 }
 

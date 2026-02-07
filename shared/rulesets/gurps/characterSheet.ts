@@ -13,4 +13,5 @@ export type GurpsCharacterSheet = {
    equipment: Equipment[];
    pointsTotal: number;
    isFavorite?: boolean;
+   modelId?: string;
 };

@@ -1034,4 +1034,51 @@
   .editor-derived-row {
     gap: var(--space-xs);
   }
+
+  .editor-model-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+.editor-model-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-md);
+}
+
+.editor-model-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-md);
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+}
+
+.editor-model-option:hover {
+  border-color: var(--border-default);
+  background: var(--bg-interactive);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.editor-model-option.active {
+  border-color: var(--accent-primary);
+  background: rgba(100, 108, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.15);
+}
+
+.editor-model-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.editor-model-option.active .editor-model-label {
+  color: var(--accent-primary);
 }
