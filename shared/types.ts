@@ -1,5 +1,6 @@
 import type { CombatantState, CombatActionPayload, PendingDefenseState } from './rulesets';
 import type { CharacterSheet } from './rulesets/characterSheet';
+import type { MapDefinition, BiomeId } from './map';
 
 export type PendingReaction = {
   reactorId: string;
@@ -83,6 +84,7 @@ export type MatchState = {
   reachableHexes?: ReachableHexInfo[];
    pendingDefense?: PendingDefenseState;
    pendingReaction?: PendingReaction;
+   mapDefinition?: MapDefinition;
 };
 
 export type MatchSummary = {
@@ -100,6 +102,7 @@ export type MatchSummary = {
    winnerName?: string;
    readyPlayers?: string[];
    isPublic?: boolean;
+   mapBiome?: BiomeId;
 };
 
 export type ClientToServerMessage =
