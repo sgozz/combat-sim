@@ -101,8 +101,14 @@ function AppRoutes() {
 
 
 
-  const handleCreateMatch = (name: string, maxPlayers: number, isPublic: boolean) => {
-    sendMessage({ type: 'create_match', name, maxPlayers, isPublic })
+  const handleCreateMatch = (name: string, maxPlayers: number, isPublic: boolean, scenarioBiome?: string) => {
+    sendMessage({
+      type: 'create_match',
+      name,
+      maxPlayers,
+      isPublic,
+      ...(scenarioBiome ? { scenarioBiome: scenarioBiome as 'dungeon' | 'wilderness' } : {}),
+    })
   }
 
   const handleJoinByCode = (code: string) => {
