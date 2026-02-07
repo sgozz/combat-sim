@@ -4434,6 +4434,34 @@
   color: #aaa;
 }
 
+.pf2-action-btn.cast-spell {
+  border-color: #a6c;
+}
+
+.pf2-action-btn.cast-spell:hover:not(:disabled) {
+  border-color: #c8e;
+  box-shadow: 0 0 10px rgba(170, 100, 200, 0.3);
+}
+
+.pf2-action-btn.cast-spell.active {
+  background: linear-gradient(135deg, #3a2a45 0%, #2a1a35 100%);
+  border-color: #c8e;
+  box-shadow: 0 0 12px rgba(170, 100, 200, 0.4);
+}
+
+.pf2-spell-picker-desktop {
+  margin-top: 0.5rem;
+  border: 1px solid #555;
+  border-radius: 8px;
+  background: rgba(30, 30, 40, 0.95);
+  overflow: hidden;
+}
+
+.pf2-spell-picker-desktop .action-bar-maneuvers {
+  border-radius: 8px;
+  max-height: 50vh;
+}
+
 .pf2-turn-controls {
   display: flex;
   flex-direction: column;
