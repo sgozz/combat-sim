@@ -141,6 +141,14 @@ export const CharacterArmory = ({
           )}
         </div>
       </main>
+
+      <button
+        onClick={() => navigate('/armory/new')}
+        className="armory-fab"
+        aria-label="New Character"
+      >
+        +
+      </button>
     </div>
   )
 }
