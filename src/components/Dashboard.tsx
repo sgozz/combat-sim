@@ -102,7 +102,7 @@ export const Dashboard = ({
               className="dashboard-btn-header dashboard-btn-armory"
               title="Armory"
             >
-              <span className="dashboard-btn-icon">⚔</span>
+              <span className="dashboard-btn-icon" aria-hidden="true">⚔</span>
               <span className="dashboard-btn-label">Armory</span>
             </button>
             <button
@@ -110,7 +110,7 @@ export const Dashboard = ({
               className="dashboard-btn-header dashboard-btn-logout"
               title="Logout"
             >
-              <span className="dashboard-btn-icon">⏻</span>
+              <span className="dashboard-btn-icon" aria-hidden="true">⏻</span>
               <span className="dashboard-btn-label">Logout</span>
             </button>
           </div>
