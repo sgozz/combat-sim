@@ -691,6 +691,14 @@
     margin-left: auto;
   }
 
+  .editor-btn-import {
+    display: none;
+  }
+
+  .editor-btn-cancel {
+    display: none;
+  }
+
   .editor-tabs {
     padding: 0 var(--space-md);
   }
@@ -1009,10 +1017,6 @@
 @media (max-width: 480px) {
   .editor-header-actions {
     gap: var(--space-xs);
-  }
-
-  .editor-btn-cancel {
-    display: none;
   }
 
   .editor-attr-grid {
