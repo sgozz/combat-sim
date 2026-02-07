@@ -269,7 +269,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   const inCloseCombat = isGurpsCombatant(combatant) && combatant.inCloseCombatWith != null
 
   return (
-    <group ref={groupRef} position={[targetX, 0, targetZ]} onClick={(e) => { e.stopPropagation(); onClick() }}>
+    <group ref={groupRef} onClick={(e) => { e.stopPropagation(); onClick() }}>
       <HumanModel emissive={emissive} isPlayer={isPlayer} animationState={animationState} />
 
       {isSelected && (
