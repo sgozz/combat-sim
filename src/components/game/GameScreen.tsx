@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnStepper } from './TurnStepper'
 
@@ -182,9 +183,13 @@ export const GameScreen = ({
               visualEffects={visualEffects}
               cameraMode="free"
               rulesetId={matchState?.rulesetId ?? 'gurps'}
-             onGridClick={onGridClick}
-             onCombatantClick={onCombatantClick}
-           />
+              onGridClick={onGridClick}
+              onCombatantClick={onCombatantClick}
+            />
+          <EffectComposer>
+            <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.9} intensity={0.4} />
+            <Vignette eskil={false} offset={0.1} darkness={0.8} />
+          </EffectComposer>
         </Canvas>
       </main>
 

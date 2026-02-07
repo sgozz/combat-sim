@@ -30,7 +30,19 @@ const getGridSystem = (gridType: GridType): GridSystem => {
   return gridType === 'square' ? squareGrid8 : hexGrid
 }
 
-const getCellColor = (
+type CellStyle = {
+  color: string
+  emissive: string
+  emissiveIntensity: number
+  edgeColor: string
+  edgeOpacity: number
+  elevation: number
+}
+
+const DEFAULT_EDGE_COLOR = '#333340'
+const DEFAULT_EDGE_OPACITY = 0.4
+
+const getCellStyle = (
   q: number,
   r: number,
   playerPosition: GridPosition | null,
@@ -44,13 +56,22 @@ const getCellColor = (
   isHovered: boolean,
   reachableHex: ReachableHexInfo | undefined,
   gridSystem: GridSystem
-): string => {
+): CellStyle => {
+  const base: CellStyle = {
+    color: isAlternate ? '#1a1a1a' : '#222228',
+    emissive: '#000000',
+    emissiveIntensity: 0,
+    edgeColor: DEFAULT_EDGE_COLOR,
+    edgeOpacity: DEFAULT_EDGE_OPACITY,
+    elevation: -0.05,
+  }
+
   if (moveTargetPosition && moveTargetPosition.x === q && moveTargetPosition.z === r) {
-    return '#00ff00'
+    return { ...base, color: '#1a3a1a', emissive: '#00ff00', emissiveIntensity: 0.6, edgeColor: '#00ff00', edgeOpacity: 0.9, elevation: 0 }
   }
   
   if (selectedTargetPosition && selectedTargetPosition.x === q && selectedTargetPosition.z === r) {
-    return '#ffcc00'
+    return { ...base, color: '#3a3a1a', emissive: '#ffcc00', emissiveIntensity: 0.5, edgeColor: '#ffcc00', edgeOpacity: 0.9, elevation: 0 }
   }
   
   const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
@@ -60,10 +81,11 @@ const getCellColor = (
       const to: GridCoord = { q, r }
       const distance = gridSystem.distance(from, to)
       if (distance <= attackRange) {
-        return isHovered ? '#cc4444' : '#aa2222'
+        const intensity = isHovered ? 0.5 : 0.3
+        return { ...base, color: isHovered ? '#3a1515' : '#2a1010', emissive: '#ff2222', emissiveIntensity: intensity, edgeColor: '#ff4444', edgeOpacity: 0.8, elevation: isHovered ? 0.02 : 0 }
       }
     }
-    return isHovered ? '#882222' : '#661111'
+    return { ...base, color: isHovered ? '#2a1515' : '#1a0a0a', emissive: '#661111', emissiveIntensity: 0.15, edgeColor: '#882222', edgeOpacity: 0.6 }
   }
   
   if (playerPosition) {
@@ -72,98 +94,118 @@ const getCellColor = (
     const distance = gridSystem.distance(from, to)
     
     if (distance === 0) {
-       return isAlternate ? '#1a1a1a' : '#252525'
+      return { ...base, color: isAlternate ? '#1a1a2a' : '#222235', emissive: '#4466ff', emissiveIntensity: 0.15, edgeColor: '#4466ff', edgeOpacity: 0.6 }
     }
 
     if (isPlayerTurn && reachableHex) {
       const cost = reachableHex.cost
       if (cost <= 2) {
-        return isHovered ? '#66ff66' : '#2a5a2a'
+        const intensity = isHovered ? 0.4 : 0.2
+        return { ...base, color: isHovered ? '#1a3a1a' : '#152a15', emissive: '#22cc44', emissiveIntensity: intensity, edgeColor: '#44ff44', edgeOpacity: 0.7, elevation: isHovered ? 0.02 : -0.03 }
       } else if (cost <= 4) {
-        return isHovered ? '#ffdd44' : '#5a4a1a'
+        const intensity = isHovered ? 0.35 : 0.15
+        return { ...base, color: isHovered ? '#3a3a1a' : '#2a2510', emissive: '#ccaa22', emissiveIntensity: intensity, edgeColor: '#ffdd44', edgeOpacity: 0.6, elevation: isHovered ? 0.02 : -0.03 }
       } else {
-        return isHovered ? '#ff8844' : '#5a2a1a'
+        const intensity = isHovered ? 0.3 : 0.1
+        return { ...base, color: isHovered ? '#3a2a1a' : '#2a1510', emissive: '#cc6622', emissiveIntensity: intensity, edgeColor: '#ff8844', edgeOpacity: 0.5, elevation: isHovered ? 0.02 : -0.03 }
       }
     }
   }
 
   if (isHovered) {
-    return '#444444'
+    return { ...base, color: '#2a2a30', edgeColor: '#555566', edgeOpacity: 0.7, elevation: 0.01 }
   }
 
   if (arcType === 'front') {
-    return isAlternate ? '#1a2a1a' : '#253525'
+    return { ...base, color: isAlternate ? '#1a2a1a' : '#202d20', edgeColor: '#2a4a2a', edgeOpacity: 0.5 }
   } else if (arcType === 'side') {
-    return isAlternate ? '#2a2a1a' : '#353525'
+    return { ...base, color: isAlternate ? '#2a2a1a' : '#2d2d20', edgeColor: '#4a4a2a', edgeOpacity: 0.5 }
   } else if (arcType === 'rear') {
-    return isAlternate ? '#2a1a1a' : '#352525'
+    return { ...base, color: isAlternate ? '#2a1a1a' : '#2d2020', edgeColor: '#4a2a2a', edgeOpacity: 0.5 }
   }
   
-  return isAlternate ? '#1a1a1a' : '#252525'
+  return base
 }
 
-const HexTile = ({ q, r, color, isInteractive, onClick, onHover, onUnhover, gridSystem }: { 
+type TileProps = {
   q: number
   r: number
-  color: string
+  style: CellStyle
   isInteractive: boolean
   onClick: () => void
   onHover: () => void
   onUnhover: () => void
   gridSystem: GridSystem
-}) => {
+}
+
+const HexTile = ({ q, r, style, isInteractive, onClick, onHover, onUnhover, gridSystem }: TileProps) => {
   const worldPos = gridSystem.coordToWorld({ q, r })
   return (
-    <mesh 
-      position={[worldPos.x, -0.05, worldPos.z]} 
-      onClick={(e) => { e.stopPropagation(); onClick() }}
-      onPointerOver={(e) => { 
-        e.stopPropagation()
-        if (isInteractive) document.body.style.cursor = 'pointer'
-        onHover() 
-      }}
-      onPointerOut={(e) => { 
-        e.stopPropagation()
-        document.body.style.cursor = 'default'
-        onUnhover() 
-      }}
-    >
-      <cylinderGeometry args={[gridSystem.size, gridSystem.size, 0.1, 6]} />
-      <meshStandardMaterial color={color} />
-    </mesh>
+    <group position={[worldPos.x, style.elevation, worldPos.z]}>
+      <mesh 
+        receiveShadow
+        onClick={(e) => { e.stopPropagation(); onClick() }}
+        onPointerOver={(e) => { 
+          e.stopPropagation()
+          if (isInteractive) document.body.style.cursor = 'pointer'
+          onHover() 
+        }}
+        onPointerOut={(e) => { 
+          e.stopPropagation()
+          document.body.style.cursor = 'default'
+          onUnhover() 
+        }}
+      >
+        <cylinderGeometry args={[gridSystem.size, gridSystem.size, 0.1, 6]} />
+        <meshStandardMaterial
+          color={style.color}
+          emissive={style.emissive}
+          emissiveIntensity={style.emissiveIntensity}
+          roughness={0.85}
+          metalness={0.1}
+        />
+      </mesh>
+      <mesh position={[0, 0.051, 0]}>
+        <cylinderGeometry args={[gridSystem.size * 0.98, gridSystem.size * 0.98, 0.005, 6]} />
+        <meshBasicMaterial color={style.edgeColor} transparent opacity={style.edgeOpacity} wireframe />
+      </mesh>
+    </group>
   )
 }
 
-const SquareTile = ({ q, r, color, isInteractive, onClick, onHover, onUnhover, gridSystem }: { 
-  q: number
-  r: number
-  color: string
-  isInteractive: boolean
-  onClick: () => void
-  onHover: () => void
-  onUnhover: () => void
-  gridSystem: GridSystem
-}) => {
+const SquareTile = ({ q, r, style, isInteractive, onClick, onHover, onUnhover, gridSystem }: TileProps) => {
   const worldPos = gridSystem.coordToWorld({ q, r })
   const tileSize = gridSystem.size * 0.95
   return (
-    <mesh 
-      position={[worldPos.x, -0.05, worldPos.z]} 
-      onClick={(e) => { e.stopPropagation(); onClick() }}
-      onPointerOver={(e) => { 
-        e.stopPropagation()
-        if (isInteractive) document.body.style.cursor = 'pointer'
-        onHover() 
-      }}
-      onPointerOut={(e) => { 
-        e.stopPropagation()
-        document.body.style.cursor = 'default'
-        onUnhover() 
-      }}
-    >
-      <boxGeometry args={[tileSize, 0.1, tileSize]} />
-      <meshStandardMaterial color={color} />
-    </mesh>
+    <group position={[worldPos.x, style.elevation, worldPos.z]}>
+      <mesh 
+        receiveShadow
+        onClick={(e) => { e.stopPropagation(); onClick() }}
+        onPointerOver={(e) => { 
+          e.stopPropagation()
+          if (isInteractive) document.body.style.cursor = 'pointer'
+          onHover() 
+        }}
+        onPointerOut={(e) => { 
+          e.stopPropagation()
+          document.body.style.cursor = 'default'
+          onUnhover() 
+        }}
+      >
+        <boxGeometry args={[tileSize, 0.1, tileSize]} />
+        <meshStandardMaterial
+          color={style.color}
+          emissive={style.emissive}
+          emissiveIntensity={style.emissiveIntensity}
+          roughness={0.85}
+          metalness={0.1}
+        />
+      </mesh>
+      <mesh position={[0, 0.051, 0]}>
+        <boxGeometry args={[tileSize * 0.98, 0.005, tileSize * 0.98]} />
+        <meshBasicMaterial color={style.edgeColor} transparent opacity={style.edgeOpacity} wireframe />
+      </mesh>
+    </group>
   )
 }
 
@@ -266,7 +308,7 @@ export const BattleGrid = ({
           arcType = 'rear'
         }
         
-        const color = getCellColor(
+        const style = getCellStyle(
           q, r, playerPosition, attackRange, isPlayerTurn, enemyPositions, 
           selectedTargetPosition, moveTargetPosition, arcType, isAlternate, 
           isHovered, reachableHex, gridSystem
@@ -279,7 +321,7 @@ export const BattleGrid = ({
             key={`${q},${r}`}
             q={q}
             r={r}
-            color={color}
+            style={style}
             isInteractive={isInteractive}
             onClick={() => onHexClick(q, r)}
             onHover={() => setHoveredCell({ q, r })}

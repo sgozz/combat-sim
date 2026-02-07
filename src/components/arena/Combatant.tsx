@@ -57,6 +57,8 @@ function HumanModel({ emissive, isPlayer, animationState }: { emissive: string; 
 
     clone.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
+        child.castShadow = true
+        child.receiveShadow = true
         const material = child.material.clone()
         if (material instanceof THREE.MeshStandardMaterial) {
           material.color.multiplyScalar(isPlayer ? 1.2 : 0.9)
