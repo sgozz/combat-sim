@@ -5,6 +5,7 @@ export type BetterSqliteDatabase = Database.Database;
 export type ConnectionState = {
   sessionToken?: string;
   userId?: string;
+  ip?: string;
 };
 
 export type UserRow = {

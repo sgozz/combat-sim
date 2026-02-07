@@ -8,6 +8,9 @@ import { assertRulesetId } from "../../shared/rulesets/defaults";
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data.sqlite");
 
+const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const MAX_SESSIONS_PER_USER = 5;
+
 const generateShortCode = (): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -23,7 +26,7 @@ export const initializeDatabase = (): BetterSqliteDatabase => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
+      username TEXT UNIQUE NOT NULL COLLATE NOCASE,
       is_bot INTEGER DEFAULT 0,
       default_character_id TEXT,
       created_at INTEGER DEFAULT (strftime('%s', 'now'))
@@ -124,7 +127,7 @@ export type Session = {
 
 export const findUserByUsername = (username: string): User | null => {
   const row = state.db.prepare(
-    "SELECT id, username, is_bot, preferred_ruleset_id FROM users WHERE username = ?"
+    "SELECT id, username, is_bot, preferred_ruleset_id FROM users WHERE username = ? COLLATE NOCASE"
   ).get(username) as UserRow | undefined;
   if (!row) return null;
   return { id: row.id, username: row.username, isBot: row.is_bot === 1, preferredRulesetId: row.preferred_ruleset_id as RulesetId };
@@ -151,10 +154,33 @@ export const findSessionByToken = (token: string): Session | null => {
     "SELECT token, user_id, created_at, last_seen_at FROM sessions WHERE token = ?"
   ).get(token) as SessionRow | undefined;
   if (!row) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  const lastSeen = row.last_seen_at ?? row.created_at;
+  if (now - lastSeen > SESSION_TTL_SECONDS) {
+    state.db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+    return null;
+  }
+
   return { token: row.token, userId: row.user_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at };
 };
 
+const enforceMaxSessions = (userId: string): void => {
+  const result = state.db.prepare(
+    "SELECT COUNT(*) as count FROM sessions WHERE user_id = ?"
+  ).get(userId) as { count: number };
+
+  if (result.count >= MAX_SESSIONS_PER_USER) {
+    state.db.prepare(
+      `DELETE FROM sessions WHERE user_id = ? AND token NOT IN (
+        SELECT token FROM sessions WHERE user_id = ? ORDER BY last_seen_at DESC, rowid DESC LIMIT ?
+      )`
+    ).run(userId, userId, MAX_SESSIONS_PER_USER - 1);
+  }
+};
+
 export const createSession = (userId: string): Session => {
+  enforceMaxSessions(userId);
   const token = randomUUID();
   const now = Math.floor(Date.now() / 1000);
   state.db.prepare(
@@ -166,6 +192,14 @@ export const createSession = (userId: string): Session => {
 export const updateSessionLastSeen = (token: string): void => {
   const now = Math.floor(Date.now() / 1000);
   state.db.prepare("UPDATE sessions SET last_seen_at = ? WHERE token = ?").run(now, token);
+};
+
+export const cleanupExpiredSessions = (): number => {
+  const cutoff = Math.floor(Date.now() / 1000) - SESSION_TTL_SECONDS;
+  const result = state.db.prepare(
+    "DELETE FROM sessions WHERE COALESCE(last_seen_at, created_at) < ?"
+  ).run(cutoff);
+  return result.changes;
 };
 
 export const loadCharacterById = (characterId: string): CharacterSheet | null => {
