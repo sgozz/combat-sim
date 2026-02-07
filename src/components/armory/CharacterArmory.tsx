@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { CharacterSheet } from '../../../shared/types'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
@@ -166,6 +166,22 @@ const CharacterCard = ({
   onDelete,
   onSync,
 }: CharacterCardProps) => {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        closeMenu()
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
+  }, [menuOpen, closeMenu])
+
   return (
     <div className="armory-character-card">
       <div className="armory-card-header">
@@ -253,7 +269,7 @@ const CharacterCard = ({
             e.stopPropagation()
             onDuplicate()
           }}
-          className="armory-btn-action"
+          className="armory-btn-action armory-btn-action--secondary"
         >
           Duplicate
         </button>
@@ -262,10 +278,59 @@ const CharacterCard = ({
             e.stopPropagation()
             onDelete()
           }}
-          className={`armory-btn-action btn-delete ${isDeleteConfirm ? 'confirm' : ''}`}
+          className={`armory-btn-action btn-delete armory-btn-action--secondary ${isDeleteConfirm ? 'confirm' : ''}`}
         >
           {isDeleteConfirm ? 'Confirm?' : 'Delete'}
         </button>
+
+        <div className="armory-card-overflow" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpen(!menuOpen)
+            }}
+            className="armory-btn-action armory-btn-overflow"
+            aria-label="More actions"
+          >
+            ⋯
+          </button>
+          {menuOpen && (
+            <div className="armory-overflow-menu">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDuplicate()
+                  closeMenu()
+                }}
+                className="armory-overflow-item"
+              >
+                Duplicate
+              </button>
+              {isPF2Character(character) && character.pathbuilderId && onSync && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSync()
+                    closeMenu()
+                  }}
+                  className={`armory-overflow-item ${isSyncConfirm ? 'confirm' : ''}`}
+                >
+                  {isSyncConfirm ? 'Confirm Sync?' : 'Sync from Pathbuilder'}
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete()
+                  if (isDeleteConfirm) closeMenu()
+                }}
+                className={`armory-overflow-item armory-overflow-item--danger ${isDeleteConfirm ? 'confirm' : ''}`}
+              >
+                {isDeleteConfirm ? 'Confirm Delete?' : 'Delete'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
