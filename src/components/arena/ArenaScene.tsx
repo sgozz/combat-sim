@@ -184,6 +184,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         moveTargetPosition={moveTarget}
         facingArcs={facingArcs}
         reachableHexes={reachableHexes}
+        mapDefinition={mapDefinition}
         onHexClick={(q: number, r: number) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {
