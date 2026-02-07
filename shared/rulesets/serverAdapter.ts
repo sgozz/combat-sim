@@ -225,7 +225,7 @@ export type ServerRulesetAdapter = {
     posture: Posture
   ) => TurnMovementState;
   /** Calculates reachable hexes for the current movement state. */
-  calculateReachableHexesInfo: (state: TurnMovementState, occupiedHexes: HexCoord[]) => ReachableHexInfo[];
+  calculateReachableHexesInfo: (state: TurnMovementState, occupiedHexes: HexCoord[], mapDefinition?: import('../map/types').MapDefinition) => ReachableHexInfo[];
   /** Converts grid coordinates to hex coordinates. */
   gridToHex: (pos: { x: number; z: number }) => HexCoord;
   /** Converts hex coordinates to grid coordinates. */

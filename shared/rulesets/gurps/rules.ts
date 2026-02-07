@@ -1332,7 +1332,8 @@ export const initializeTurnMovement = (
 
 export const calculateReachableHexesInfo = (
   state: TurnMovementState,
-  occupiedHexes: HexCoord[]
+  occupiedHexes: HexCoord[],
+  mapDefinition?: import('../../map/types').MapDefinition
 ): ReachableHexInfo[] => {
   const reachable = getReachableHexes(
     state.currentPosition,
@@ -1344,6 +1345,10 @@ export const calculateReachableHexesInfo = (
   
   const result: ReachableHexInfo[] = [];
   reachable.forEach((hex) => {
+    if (mapDefinition) {
+      const cell = mapDefinition.cells.find(c => c.q === hex.position.q && c.r === hex.position.r);
+      if (cell?.terrain.includes('blocked')) return;
+    }
     result.push({
       q: hex.position.q,
       r: hex.position.r,

@@ -7,3 +7,4 @@ export type {
   MapDefinition,
 } from './types';
 export { generateMap } from './generator';
+export { isBlocked, isDifficultTerrain, hasCover, getMovementCost, getTerrainAt } from './terrain';
