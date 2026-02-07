@@ -52,12 +52,12 @@ Fix all 11 defects to make PF2 mode fully playable with correct rules and good U
 - Passing lint (`npm run lint`)
 
 ### Definition of Done
-- [ ] `npx vitest run` → all tests pass (0 failures)
-- [ ] `npm run lint` → no errors
-- [ ] Full PF2 match playable: login → create character → combat → victory screen
-- [ ] AC correctly includes armor bonus
-- [ ] Strike works on adjacent combatants after Stride
-- [ ] Combatants spawn on separate tiles
+- [x] `npx vitest run` → all tests pass (0 failures)
+- [x] `npm run lint` → no errors
+- [x] Full PF2 match playable: login → create character → combat → victory screen
+- [x] AC correctly includes armor bonus
+- [x] Strike works on adjacent combatants after Stride
+- [x] Combatants spawn on separate tiles
 
 ### Must Have
 - All 11 fixes implemented and tested
@@ -896,15 +896,15 @@ npm run test:e2e                  # Expected: PF2 full session test passes
 ```
 
 ### Final Checklist
-- [ ] AC correctly calculated with armor (not always 10)
-- [ ] Strike works on adjacent combatants after Stride
-- [ ] Combatants spawn on separate tiles
-- [ ] Dashboard stats update after match completion
-- [ ] Step action is functional
-- [ ] WebSocket reconnects after logout
-- [ ] TurnStepper updates during combat
-- [ ] Tutorial mentions correct grid type per ruleset
-- [ ] Victory screen appears at match end
-- [ ] Long names handled in all UI components
-- [ ] All existing tests still pass (no regressions)
-- [ ] Full e2e Playwright test passes
+- [x] AC correctly calculated with armor (not always 10)
+- [x] Strike works on adjacent combatants after Stride
+- [x] Combatants spawn on separate tiles
+- [x] Dashboard stats update after match completion
+- [x] Step action is functional
+- [x] WebSocket reconnects after logout
+- [x] TurnStepper updates during combat
+- [x] Tutorial mentions correct grid type per ruleset
+- [x] Victory screen appears at match end
+- [x] Long names handled in all UI components
+- [x] All existing tests still pass (no regressions)
+- [x] Full e2e Playwright test passes
