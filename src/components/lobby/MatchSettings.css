@@ -246,6 +246,64 @@
   margin: var(--space-xs) 0;
 }
 
+/* --- Invite Section (visible on all, primary on mobile) --- */
+
+.match-settings-invite-divider,
+.match-settings-invite-section {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .match-settings-invite-divider,
+  .match-settings-invite-section {
+    display: flex;
+  }
+
+  .match-settings-invite-divider {
+    display: block;
+  }
+}
+
+.match-settings-invite-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.match-settings-invite-code {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--accent-primary);
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.match-settings-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  min-height: 44px;
+  background-color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  color: var(--bg-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.match-settings-share-btn:hover {
+  background-color: var(--accent-primary-hover);
+}
+
 /* --- Mobile --- */
 
 @media (max-width: 768px) {

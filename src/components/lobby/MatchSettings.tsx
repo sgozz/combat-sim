@@ -7,6 +7,9 @@ type MatchSettingsProps = {
   isCreator: boolean
   onUpdateBotCount: (count: number) => void
   onToggleVisibility: () => void
+  onShareInvite: () => void
+  onCopyCode: () => void
+  codeCopied: boolean
 }
 
 const BotIcon = () => (
@@ -29,11 +32,23 @@ const EyeIcon = () => (
 const MAX_BOTS = 4
 const MIN_BOTS = 0
 
+const ShareIcon = () => (
+  <svg className="match-settings-label-icon" viewBox="0 0 16 16" fill="none">
+    <circle cx="12" cy="3" r="2" stroke="currentColor" strokeWidth="1.5"/>
+    <circle cx="4" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
+    <circle cx="12" cy="13" r="2" stroke="currentColor" strokeWidth="1.5"/>
+    <path d="M5.7 7L10.3 4M5.7 9L10.3 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+)
+
 export const MatchSettings = ({
   match,
   isCreator,
   onUpdateBotCount,
   onToggleVisibility,
+  onShareInvite,
+  onCopyCode,
+  codeCopied,
 }: MatchSettingsProps) => {
   const [botCount, setBotCount] = useState(0)
 
@@ -115,7 +130,29 @@ export const MatchSettings = ({
         )}
       </section>
 
+      <div className="match-settings-divider match-settings-invite-divider" />
 
+      <section className="match-settings-section match-settings-invite-section">
+        <label className="match-settings-label">
+          <ShareIcon />
+          Invite
+        </label>
+        <div className="match-settings-invite-row">
+          <code className="match-settings-invite-code">{match.code}</code>
+          {typeof navigator.share === 'function' ? (
+            <button className="match-settings-share-btn" onClick={onShareInvite}>
+              Share
+            </button>
+          ) : (
+            <button
+              className={`match-settings-copy-btn${codeCopied ? ' match-settings-copy-btn--copied' : ''}`}
+              onClick={onCopyCode}
+            >
+              {codeCopied ? 'Copied!' : 'Copy Link'}
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   )
 }

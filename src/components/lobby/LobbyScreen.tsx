@@ -79,6 +79,16 @@ export const LobbyScreen = ({
     })
   }, [match])
 
+  const handleShareInvite = useCallback(() => {
+    if (!match) return
+    const inviteUrl = `${window.location.origin}?join=${match.code}`
+    if (navigator.share) {
+      navigator.share({ title: match.name, text: 'Join my match!', url: inviteUrl }).catch(() => {/* cancelled */})
+    } else {
+      handleCopyCode()
+    }
+  }, [match, handleCopyCode])
+
   const handleBack = useCallback(() => {
     if (!match) return
     sendMessage({ type: 'leave_match', matchId: match.id })
@@ -222,6 +232,9 @@ export const LobbyScreen = ({
             isCreator={isCreator ?? false}
             onUpdateBotCount={handleUpdateBotCount}
             onToggleVisibility={handleToggleVisibility}
+            onShareInvite={handleShareInvite}
+            onCopyCode={handleCopyCode}
+            codeCopied={codeCopied}
           />
         </aside>
       </main>
@@ -238,7 +251,7 @@ export const LobbyScreen = ({
                 <path d="M10.5 11.5L14 8L10.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              Leave Match
+              <span className="lobby-leave-text">Leave Match</span>
             </button>
           </div>
 

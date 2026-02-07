@@ -489,23 +489,11 @@
   .lobby-header {
     padding: var(--space-sm) var(--space-md);
     gap: var(--space-sm);
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-
-  .lobby-back-btn {
-    order: 1;
-  }
-
-  .lobby-header-center {
-    order: 2;
-    flex-basis: 100%;
   }
 
   .lobby-match-name {
     font-size: var(--text-lg);
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
   }
 
   .lobby-player-count {
@@ -534,60 +522,43 @@
   }
 
   .lobby-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
     padding: var(--space-sm) var(--space-md);
   }
 
   .lobby-footer-inner {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: var(--space-sm);
   }
 
-  .lobby-footer-left {
-    order: 3;
-  }
-
   .lobby-footer-center {
-    order: 1;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
+    display: none;
   }
 
-  .lobby-footer-right {
-    order: 2;
-  }
-
-  .lobby-invite-section {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .lobby-invite-code {
-    width: 100%;
-    text-align: center;
-    overflow-wrap: anywhere;
-    letter-spacing: 0.06em;
-  }
-
-  .lobby-copy-btn {
-    width: 100%;
-    justify-content: center;
+  .lobby-footer-left {
+    flex-shrink: 0;
   }
 
   .lobby-leave-btn {
-    width: 100%;
+    padding: var(--space-sm);
+    min-width: 44px;
     justify-content: center;
+  }
+
+  .lobby-leave-text {
+    display: none;
+  }
+
+  .lobby-footer-right {
+    flex: 1;
   }
 
   .lobby-start-btn {
     width: 100%;
     justify-content: center;
-  }
-
-  .lobby-invite-label {
-    display: none;
   }
 
   .lobby-dialog {

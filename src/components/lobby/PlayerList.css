@@ -251,35 +251,32 @@
 
 @media (max-width: 768px) {
   .player-list-items {
-    flex-direction: row;
-    overflow-x: auto;
     gap: var(--space-xs);
-    padding-bottom: var(--space-xs);
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
   }
 
   .player-list-item {
-    min-width: 140px;
-    flex-shrink: 0;
-    flex-direction: column;
-    text-align: center;
-    padding: var(--space-sm);
-    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    gap: var(--space-sm);
   }
 
-  .player-list-info {
-    align-items: center;
-  }
-
-  .player-list-name {
+  .player-list-avatar {
+    width: 28px;
+    height: 28px;
     font-size: var(--text-xs);
-    justify-content: center;
+  }
+
+  .player-list-connection-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .player-list-status {
+    display: none;
   }
 
   .player-list-ready-btn {
-    width: 100%;
-    text-align: center;
+    padding: var(--space-xs) var(--space-sm);
+    min-height: 32px;
   }
 
   .player-list-summary {

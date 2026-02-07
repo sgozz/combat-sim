@@ -1,8 +1,13 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import { CharacterPicker } from '../armory/CharacterPicker'
 import './CharacterPreview.css'
+
+const useIsMobile = () => {
+  const [isMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
+  return isMobile
+}
 
 type CharacterPreviewProps = {
   characters: CharacterSheet[]
@@ -231,6 +236,16 @@ const PF2Stats = ({ character }: { character: CharacterSheet }) => {
   )
 }
 
+const getCharacterSummary = (character: CharacterSheet): string => {
+  if (isGurpsCharacter(character)) {
+    return `HP ${character.derived.hitPoints} · Move ${character.derived.basicMove} · ${character.pointsTotal} pts`
+  }
+  if (isPF2Character(character)) {
+    return `${character.class} ${character.level} · HP ${character.derived.hitPoints} · AC ${character.derived.armorClass}`
+  }
+  return ''
+}
+
 export const CharacterPreview = ({
   characters,
   selectedCharacterId,
@@ -240,8 +255,12 @@ export const CharacterPreview = ({
   onNavigateToArmory,
 }: CharacterPreviewProps) => {
   const [showPicker, setShowPicker] = useState(!selectedCharacterId)
+  const [statsExpanded, setStatsExpanded] = useState(false)
+  const isMobile = useIsMobile()
 
   void currentUserId
+
+  const toggleStats = useCallback(() => setStatsExpanded(prev => !prev), [])
 
   const selectedCharacter = characters.find(c => c.id === selectedCharacterId) ?? null
 
@@ -278,6 +297,7 @@ export const CharacterPreview = ({
   }
 
   const rulesetLabel = rulesetId === 'gurps' ? 'GURPS' : 'PF2'
+  const showStats = !isMobile || statsExpanded
 
   return (
     <div className="character-preview">
@@ -288,6 +308,20 @@ export const CharacterPreview = ({
             {rulesetLabel}
           </span>
         </div>
+        {isMobile && (
+          <button
+            className="character-preview-summary-toggle"
+            onClick={toggleStats}
+            type="button"
+          >
+            <span className="character-preview-summary-text">
+              {getCharacterSummary(selectedCharacter)}
+            </span>
+            <span className={`character-preview-chevron ${statsExpanded ? 'character-preview-chevron--up' : ''}`}>
+              ▾
+            </span>
+          </button>
+        )}
         <div className="character-preview-actions">
           <button
             className="character-preview-btn-change"
@@ -306,10 +340,12 @@ export const CharacterPreview = ({
         </div>
       </header>
 
-      <div className="character-preview-stats">
-        {isGurpsCharacter(selectedCharacter) && <GurpsStats character={selectedCharacter} />}
-        {isPF2Character(selectedCharacter) && <PF2Stats character={selectedCharacter} />}
-      </div>
+      {showStats && (
+        <div className="character-preview-stats">
+          {isGurpsCharacter(selectedCharacter) && <GurpsStats character={selectedCharacter} />}
+          {isPF2Character(selectedCharacter) && <PF2Stats character={selectedCharacter} />}
+        </div>
+      )}
     </div>
   )
 }
