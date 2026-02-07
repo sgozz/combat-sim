@@ -80,7 +80,7 @@ export const handleMoveStep = async (
   };
   
   const newReachableHexes = newTurnMovement.phase === 'moving'
-    ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes)
+    ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes, match.mapDefinition)
     : [];
   
   const updatedCombatants = match.combatants.map((c) =>
@@ -167,7 +167,7 @@ export const handleRotate = async (
   };
   
   const newReachableHexes = newTurnMovement.phase === 'moving'
-    ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes)
+    ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes, match.mapDefinition)
     : [];
   
   const updatedCombatants = match.combatants.map((c) =>
@@ -218,7 +218,7 @@ export const handleUndoMovement = async (
     .map(c => adapter.gridToHex(c.position));
   
   const newReachableHexes = resetTurnMovement.phase === 'moving'
-    ? adapter.calculateReachableHexesInfo(resetTurnMovement, occupiedHexes)
+    ? adapter.calculateReachableHexesInfo(resetTurnMovement, occupiedHexes, match.mapDefinition)
     : [];
   
   const updatedCombatants = match.combatants.map((c) =>

@@ -8,6 +8,7 @@ import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
 import { isPF2Character } from "../../../../shared/rulesets/characterSheet";
 import { getAoOReactors, executeAoOStrike } from "./reaction";
+import { isBlocked } from "../../../../shared/map/terrain";
 
 export const handlePF2RequestMove = async (
   socket: WebSocket,
@@ -52,12 +53,20 @@ export const handlePF2RequestMove = async (
     reachable = new Map();
     adjacent
       .filter(pos => !occupiedSquares.some(occ => occ.q === pos.q && occ.r === pos.r))
+      .filter(pos => !isBlocked(match.mapDefinition, pos.q, pos.r))
       .forEach(pos => {
         const key = `${pos.q},${pos.r}`;
         reachable.set(key, { position: pos, cost: 5 });
       });
   } else {
     reachable = getReachableSquares(startPos, speed, occupiedSquares);
+    if (match.mapDefinition) {
+      for (const [key, cell] of reachable) {
+        if (isBlocked(match.mapDefinition, cell.position.q, cell.position.r)) {
+          reachable.delete(key);
+        }
+      }
+    }
   }
 
   const reachableHexes: ReachableHexInfo[] = [];
@@ -107,7 +116,7 @@ export const handlePF2Stride = async (
   const reachable = getReachableSquares(startPos, speed, occupiedSquares);
   const destKey = `${payload.to.q},${payload.to.r}`;
 
-  if (!reachable.has(destKey)) {
+  if (!reachable.has(destKey) || isBlocked(match.mapDefinition, payload.to.q, payload.to.r)) {
     sendMessage(socket, { type: "error", message: "Destination not reachable." });
     return;
   }
