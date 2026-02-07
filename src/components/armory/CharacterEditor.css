@@ -221,6 +221,7 @@
   color: var(--accent-primary);
   border-bottom-color: var(--accent-primary);
   font-weight: var(--font-semibold);
+  background: rgba(100, 108, 255, 0.06);
 }
 
 .editor-content {
@@ -684,6 +685,8 @@
     order: 3;
     flex-basis: 100%;
     font-size: var(--text-lg);
+    border-color: var(--border-subtle);
+    background: var(--bg-surface);
   }
 
   .editor-header-actions {

@@ -358,6 +358,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.armory-card-stat--extra {
+  display: none;
+}
+
 /* ─── Card Actions ─── */
 
 .armory-card-actions {
@@ -450,6 +454,14 @@
   overflow: hidden;
 }
 
+.armory-overflow-menu--flip {
+  bottom: auto;
+  top: 100%;
+  margin-bottom: 0;
+  margin-top: var(--space-xs);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
 .armory-overflow-item {
   display: block;
   width: 100%;
@@ -491,14 +503,14 @@
   position: fixed;
   bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
   right: var(--space-lg);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  height: 48px;
+  padding: 0 var(--space-lg) 0 var(--space-md);
+  border-radius: 24px;
   background: var(--accent-primary);
   color: white;
   border: none;
-  font-size: 1.75rem;
-  font-weight: var(--font-bold);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
   line-height: 1;
   cursor: pointer;
   z-index: 100;
@@ -506,6 +518,19 @@
   transition: all var(--transition-normal);
   align-items: center;
   justify-content: center;
+  gap: var(--space-xs);
+  font-family: var(--font-sans);
+}
+
+.armory-fab-icon {
+  font-size: 1.5rem;
+  font-weight: var(--font-bold);
+  line-height: 1;
+}
+
+.armory-fab-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
 }
 
 .armory-fab:hover {
@@ -566,6 +591,10 @@
 
   .armory-btn-action--secondary {
     display: none;
+  }
+
+  .armory-card-stat--extra {
+    display: flex;
   }
 
   .armory-card-overflow {

@@ -28,7 +28,7 @@ export const StatsBar = ({ myMatches, currentUserId }: StatsBarProps) => {
   }
 
   return (
-    <div className="stats-bar">
+    <div className={`stats-bar${totalMatches === 0 ? ' stats-bar--empty' : ''}`}>
       <div className="stat-card">
         <div className="stat-label">Total Matches</div>
         <div className="stat-value">{totalMatches > 0 ? totalMatches : '--'}</div>

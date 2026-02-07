@@ -102,7 +102,7 @@ export const Dashboard = ({
               className="dashboard-btn-header dashboard-btn-armory"
               title="Armory"
             >
-              <span className="dashboard-btn-icon" aria-hidden="true">⚔</span>
+              <svg className="dashboard-btn-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>
               <span className="dashboard-btn-label">Armory</span>
             </button>
             <button
@@ -110,7 +110,7 @@ export const Dashboard = ({
               className="dashboard-btn-header dashboard-btn-logout"
               title="Logout"
             >
-              <span className="dashboard-btn-icon" aria-hidden="true">⏻</span>
+              <svg className="dashboard-btn-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               <span className="dashboard-btn-label">Logout</span>
             </button>
           </div>
