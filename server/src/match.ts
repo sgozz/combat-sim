@@ -54,10 +54,7 @@ export const createMatchState = async (
      const r = spawnRow;
      const facing = isBot ? 3 : 0;
 
-     const randomShift = Math.random() < 0.5 ? 0 : 1;
-     const finalQ = q + randomShift;
-     const finalR = r + (Math.random() < 0.5 ? 0 : 1);
-     const position = { x: finalQ, y: 0, z: finalR };
+     const position = { x: q, y: 0, z: r };
      
      const factory = getRulesetServerFactory(assertRulesetId(rulesetId));
      return factory.createCombatant(character, player?.id ?? character.id, position, facing);

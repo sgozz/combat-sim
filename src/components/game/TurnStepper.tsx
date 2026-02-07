@@ -1,6 +1,8 @@
 type TurnStepperProps = {
   isMyTurn: boolean
   currentManeuver: string | null
+  rulesetId: 'gurps' | 'pf2'
+  actionsRemaining: number
 }
 
 const MANEUVER_LABELS: Record<string, string> = {
@@ -18,7 +20,7 @@ const MANEUVER_LABELS: Record<string, string> = {
    'pf2_step': 'Step',
 }
 
-export const TurnStepper = ({ isMyTurn, currentManeuver }: TurnStepperProps) => {
+export const TurnStepper = ({ isMyTurn, currentManeuver, rulesetId, actionsRemaining }: TurnStepperProps) => {
   if (!isMyTurn) {
     return (
       <div className="turn-stepper compact waiting">
@@ -28,6 +30,22 @@ export const TurnStepper = ({ isMyTurn, currentManeuver }: TurnStepperProps) => 
     )
   }
 
+  // PF2 mode: Show action count
+  if (rulesetId === 'pf2') {
+    const actionText = actionsRemaining === 1 ? '1 action remaining' : 
+                       actionsRemaining === 0 ? 'No actions remaining' :
+                       `${actionsRemaining} actions remaining`
+    
+    return (
+      <div className="turn-stepper compact phase-plan">
+        <span className="stepper-dot active"></span>
+        <span className="phase-label">YOUR TURN:</span>
+        <span>{actionText}</span>
+      </div>
+    )
+  }
+
+  // GURPS mode: Show maneuver workflow
   if (!currentManeuver) {
     return (
       <div className="turn-stepper compact phase-plan">

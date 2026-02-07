@@ -29,7 +29,7 @@ const GURPS_TUTORIAL_STEPS: TutorialStep[] = [
 const PF2_TUTORIAL_STEPS: TutorialStep[] = [
   {
     title: "Welcome to Pathfinder 2e Combat!",
-    description: "This simulator uses the Pathfinder 2e rules. You'll control a character on a hex grid using the 3-action economy system.",
+    description: "This simulator uses the Pathfinder 2e rules. You'll control a character on a square grid using the 3-action economy system.",
   },
   {
     title: "Three Actions Per Turn",

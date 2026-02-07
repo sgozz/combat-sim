@@ -86,10 +86,8 @@ export const useAuth = ({
 
    const logout = useCallback(() => {
      localStorage.removeItem(SESSION_TOKEN_KEY)
-     socket?.close()
      setUser(null)
-     setConnectionState('disconnected')
-   }, [socket])
+   }, [])
 
    const setPreferredRuleset = useCallback((rulesetId: RulesetId) => {
      if (!socket || socket.readyState !== WebSocket.OPEN) return

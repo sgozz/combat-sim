@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { ArenaScene } from '../arena/ArenaScene'
 import { TurnStepper } from './TurnStepper'
+import { MatchEndOverlay } from './MatchEndOverlay'
 
 import { getRulesetComponents } from '../rulesets'
 
@@ -14,7 +15,7 @@ import { CombatToast } from './CombatToast'
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
-import { isGurpsCombatant } from '../../../shared/rulesets'
+import { isGurpsCombatant, isPF2Combatant } from '../../../shared/rulesets'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -65,6 +66,7 @@ export const GameScreen = ({
   void matchId
    const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
    const currentManeuver = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.maneuver : null
+   const actionsRemaining = (currentCombatant && isPF2Combatant(currentCombatant)) ? currentCombatant.actionsRemaining : 0
 
   const pendingDefense = matchState?.pendingDefense
   const isDefending = pendingDefense?.defenderId === player?.id
@@ -165,6 +167,8 @@ export const GameScreen = ({
           <TurnStepper
             isMyTurn={isPlayerTurn}
             currentManeuver={currentManeuver}
+            rulesetId={matchState.rulesetId}
+            actionsRemaining={actionsRemaining}
           />
         )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
@@ -284,6 +288,13 @@ export const GameScreen = ({
             onLeaveLobby={onLeaveLobby}
           />
         )}
+
+        <MatchEndOverlay
+          matchStatus={matchState?.status ?? 'waiting'}
+          winnerName={matchState?.winnerId ? matchState.players.find(p => p.id === matchState.winnerId)?.name : undefined}
+          currentPlayerName={player?.name}
+          onReturnToDashboard={onLeaveLobby}
+        />
     </div>
   )
 }
