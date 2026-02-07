@@ -67,8 +67,9 @@
 
 .dashboard-btn-icon {
   display: none;
-  font-size: var(--text-base);
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .dashboard-btn-logout:hover {
@@ -290,7 +291,7 @@
   }
 
   .dashboard-btn-icon {
-    display: inline;
+    display: inline-block;
   }
 
   .dashboard-btn-label {
@@ -338,6 +339,11 @@
 }
 
 @media (max-width: 480px) {
+  .dashboard-title {
+    font-size: var(--text-base);
+    white-space: nowrap;
+  }
+
   .dashboard-header-actions {
     gap: var(--space-xs);
   }

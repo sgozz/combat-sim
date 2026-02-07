@@ -263,10 +263,32 @@
 }
 
 @media (max-width: 768px) {
+  .cmd-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
   .cmd-dialog {
     padding: var(--space-xl);
+    padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom));
     max-width: 100%;
-    margin: var(--space-md);
+    max-height: 90dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin: 0;
+    animation: cmd-slide-up-mobile 0.25s ease-out;
+  }
+
+  @keyframes cmd-slide-up-mobile {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .cmd-title {

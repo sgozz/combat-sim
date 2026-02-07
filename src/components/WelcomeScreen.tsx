@@ -98,6 +98,15 @@ export const WelcomeScreen = ({ onComplete, authError, connectionState }: Welcom
             {connectionState === 'connecting' && 'Connecting...'}
             {connectionState === 'disconnected' && 'Offline'}
           </span>
+          {connectionState === 'disconnected' && (
+            <button
+              type="button"
+              className="connection-retry-btn"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="welcome-form">

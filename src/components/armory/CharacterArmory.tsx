@@ -147,7 +147,8 @@ export const CharacterArmory = ({
         className="armory-fab"
         aria-label="New Character"
       >
-        +
+        <span className="armory-fab-icon">+</span>
+        <span className="armory-fab-label">New</span>
       </button>
     </div>
   )
@@ -175,9 +176,21 @@ const CharacterCard = ({
   onSync,
 }: CharacterCardProps) => {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuFlip, setMenuFlip] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  const toggleMenu = useCallback(() => {
+    setMenuOpen(prev => {
+      if (!prev && menuRef.current) {
+        const rect = menuRef.current.getBoundingClientRect()
+        // If less than 200px above the button, flip menu below
+        setMenuFlip(rect.top < 200)
+      }
+      return !prev
+    })
+  }, [])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -230,6 +243,14 @@ const CharacterCard = ({
               <span className="armory-stat-label">HT</span>
               <span className="armory-stat-value">{character.attributes.health}</span>
             </div>
+            <div className="armory-card-stat armory-card-stat--extra">
+              <span className="armory-stat-label">Equip</span>
+              <span className="armory-stat-value">{character.equipment.length}</span>
+            </div>
+            <div className="armory-card-stat armory-card-stat--extra">
+              <span className="armory-stat-label">Skills</span>
+              <span className="armory-stat-value">{character.skills.length}</span>
+            </div>
           </>
         )}
         {isPF2Character(character) && (
@@ -245,6 +266,14 @@ const CharacterCard = ({
             <div className="armory-card-stat">
               <span className="armory-stat-label">Class</span>
               <span className="armory-stat-value">{character.class || 'N/A'}</span>
+            </div>
+            <div className="armory-card-stat armory-card-stat--extra">
+              <span className="armory-stat-label">AC</span>
+              <span className="armory-stat-value">{character.derived.armorClass}</span>
+            </div>
+            <div className="armory-card-stat armory-card-stat--extra">
+              <span className="armory-stat-label">Weapons</span>
+              <span className="armory-stat-value">{character.weapons.length}</span>
             </div>
           </>
         )}
@@ -295,7 +324,7 @@ const CharacterCard = ({
           <button
             onClick={(e) => {
               e.stopPropagation()
-              setMenuOpen(!menuOpen)
+              toggleMenu()
             }}
             className="armory-btn-action armory-btn-overflow"
             aria-label="More actions"
@@ -303,7 +332,7 @@ const CharacterCard = ({
             ⋯
           </button>
           {menuOpen && (
-            <div className="armory-overflow-menu">
+            <div className={`armory-overflow-menu${menuFlip ? ' armory-overflow-menu--flip' : ''}`}>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
