@@ -32,3 +32,32 @@
 
 **Status**: BLOCKED - Needs more investigation time than available
 **Priority**: HIGH - Affects core gameplay
+
+## [2026-02-07 22:08] Task 2: Strike Range Bug - Further Investigation
+
+**Status**: Unable to reproduce in unit tests
+
+**Investigation Results**:
+1. ✅ Stride handler correctly updates position: `{x: payload.to.q, y: c.position.y, z: payload.to.r}` (line 197)
+2. ✅ Attack handler correctly calculates distance using `calculateGridDistance` (line 119)
+3. ✅ `calculateGridDistance` correctly maps `{x,z}` → `{q,r}` (helpers.ts:61-62)
+4. ✅ All existing attack tests pass (36/36)
+5. ✅ All existing stride tests pass
+
+**Hypothesis**: This may be a **client-side race condition** or **UI state issue**, not a server bug.
+
+**Possible Client-Side Causes**:
+- Client allows Strike click before receiving `match_state` update from Stride
+- Client-side combatant position not updated before Strike action sent
+- Reachable hexes calculation on client uses stale position
+
+**Recommendation**: 
+- Add client-side guard: disable Strike button until match_state update received after Stride
+- OR: Add integration test with actual WebSocket message flow (not unit test with mocks)
+- OR: Use Playwright to reproduce the exact user flow and capture the bug
+
+**Next Steps**:
+1. Check client-side action handling in `useGameActions.ts`
+2. Check if Strike button is enabled before match_state update
+3. Add Playwright test that reproduces: Stride → immediate Strike click → verify no error
+

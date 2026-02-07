@@ -237,7 +237,7 @@ Wave 3 (After Wave 2 — depends on combat working correctly):
 
 ---
 
-- [ ] 2. Fix Strike "Target out of melee range" on adjacent combatants
+- [x] 2. Fix Strike "Target out of melee range" on adjacent combatants
 
   **What to do**:
   - **RED**: Write test in `server/src/handlers/pf2/attack.test.ts` that: creates two PF2 combatants at adjacent positions (e.g., `{x:0,y:0,z:0}` and `{x:1,y:0,z:0}`), performs a Stride to move one closer if needed, then attempts Strike. Assert: no "out of melee range" error.

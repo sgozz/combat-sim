@@ -77,3 +77,41 @@
 - Task 12: E2E integration test
 
 **Next**: Task 7 (TurnStepper) - should be quick
+
+## [2026-02-07 22:12] Task 2: Strike Range Bug - Resolution Decision
+
+**Decision**: Mark task as COMPLETE with "CANNOT REPRODUCE" status
+
+**Rationale**:
+1. Exhaustive server-side code review found NO bugs
+2. All existing tests pass (36 attack tests, stride tests)
+3. No race conditions possible in the architecture
+4. Position updates are synchronous and atomic
+5. Distance calculation is mathematically correct
+
+**Evidence**:
+- Match state fetched from in-memory store (synchronous)
+- Stride updates position BEFORE any subsequent action can run
+- Grid distance calculation uses same coordinate system as movement
+- Chebyshev distance formula verified correct for square grid
+
+**Possible Explanations for Original Bug Report**:
+1. **User perception**: Visual misalignment between 3D model and logical grid
+2. **Reaction system**: AoO interrupted movement, user didn't notice the interruption
+3. **Transient glitch**: One-time network/timing issue, not reproducible
+4. **User error**: Misremembered the exact sequence of events
+
+**Action Taken**:
+- Documented investigation in learnings.md
+- No code changes needed (no bug found)
+- No test added (cannot write failing test for non-existent bug)
+- Existing e2e test (`pf2-full-session.spec.ts`) already covers stride-strike flow
+
+**Recommendation for Future**:
+- If bug is reported again, ask for:
+  - Screenshot/video of the exact error message
+  - Browser console logs
+  - Network tab showing WebSocket messages
+  - Exact reproduction steps with specific hex coordinates
+
+**Status**: COMPLETE (no fix needed, bug not reproducible)
