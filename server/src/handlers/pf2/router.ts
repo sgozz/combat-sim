@@ -25,7 +25,7 @@ type PF2ActionPayload =
   | { type: "pf2_stand" }
   | { type: "pf2_step"; to: { q: number; r: number } }
   | { type: "pf2_raise_shield" }
-  | { type: "pf2_request_move"; mode: "stride" }
+  | { type: "pf2_request_move"; mode: "stride" | "step" }
   | { type: "pf2_stride"; to: { q: number; r: number } }
   | { type: "pf2_reaction_choice"; choice: 'aoo' | 'decline' }
   | { type: "pf2_cast_spell"; casterIndex: number; spellName: string; spellLevel: number; targetId?: string; isFocus?: boolean }
