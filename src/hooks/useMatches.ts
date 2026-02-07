@@ -95,9 +95,19 @@ export const useMatches = ({
           return true
         
         case 'match_state':
-          setMyMatches(prev => prev.map(m =>
-            m.id === message.state.id ? { ...m, status: message.state.status } : m
-          ))
+          setMyMatches(prev => prev.map(m => {
+            if (m.id !== message.state.id) return m
+            const winnerPlayer = message.state.winnerId
+              ? message.state.players.find(p => p.id === message.state.winnerId)
+              : undefined
+            return {
+              ...m,
+              status: message.state.status,
+              winnerId: message.state.winnerId,
+              winnerName: winnerPlayer?.name,
+              isMyTurn: false,
+            }
+          }))
           return true
         
     case 'match_updated':
