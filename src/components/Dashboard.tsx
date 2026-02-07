@@ -99,15 +99,19 @@ export const Dashboard = ({
             </button>
             <button
               onClick={() => navigate('/armory')}
-              className="dashboard-btn-header"
+              className="dashboard-btn-header dashboard-btn-armory"
+              title="Armory"
             >
-              Armory
+              <span className="dashboard-btn-icon">⚔</span>
+              <span className="dashboard-btn-label">Armory</span>
             </button>
             <button
               onClick={onLogout}
               className="dashboard-btn-header dashboard-btn-logout"
+              title="Logout"
             >
-              Logout
+              <span className="dashboard-btn-icon">⏻</span>
+              <span className="dashboard-btn-label">Logout</span>
             </button>
           </div>
         </div>
