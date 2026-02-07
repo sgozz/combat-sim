@@ -362,6 +362,12 @@ export const handleMessage = async (
         return;
       }
       
+      // Don't remove match_members for finished matches — needed for stats/history
+      if (matchRow.status === 'finished') {
+        sendMessage(socket, { type: "match_left", matchId: message.matchId });
+        return;
+      }
+      
       await removeMatchMember(message.matchId, user.id);
 
       // Check if lobby is now empty (no human players)
