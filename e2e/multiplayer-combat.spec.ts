@@ -1,7 +1,8 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
 function uniqueName(base: string): string {
-  return `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base}_${suffix}`.slice(0, 16)
 }
 
 async function setupPlayer(context: BrowserContext, nickname: string): Promise<Page> {
@@ -9,56 +10,78 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   
   await page.addInitScript(() => {
     localStorage.clear()
+    sessionStorage.clear()
   })
   
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  await page.waitForTimeout(500)
   
   const nameInput = page.getByPlaceholder('Enter username')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
   
-  // Select GURPS ruleset
   await page.getByRole('button', { name: /GURPS 4e/i }).click()
+  await page.waitForTimeout(300)
   
-  await page.getByRole('button', { name: /enter arena/i }).click()
-  await page.waitForURL('**/matches', { timeout: 10000 })
+  const enterBtn = page.getByRole('button', { name: /enter arena/i })
+  await expect(enterBtn).toBeEnabled({ timeout: 10000 })
+  await enterBtn.click()
+  
+  await page.waitForURL('/home', { timeout: 15000 })
   
   return page
 }
 
-async function createLobbyAndGetInviteCode(page: Page): Promise<string> {
+async function createMatchAndGetCode(page: Page): Promise<string> {
   await page.getByRole('button', { name: /new match/i }).click()
-  await page.waitForURL('**/game', { timeout: 10000 })
+  await page.waitForTimeout(500)
   
-  const inviteInput = page.locator('.setup-invite-input')
-  await expect(inviteInput).toBeVisible({ timeout: 5000 })
-  const inviteUrl = await inviteInput.inputValue()
-  const match = inviteUrl.match(/join=([A-Z0-9]+)/)
-  if (!match) throw new Error('Could not get invite code from: ' + inviteUrl)
+  const nameInput = page.locator('#cmd-match-name')
+  await expect(nameInput).toBeVisible({ timeout: 5000 })
+  await nameInput.clear()
+  await nameInput.fill('Combat Test')
+  
+  await page.locator('.cmd-btn-create').click()
+  await page.waitForURL(/\/lobby\/.*/, { timeout: 10000 })
+  
+  // Get invite code from lobby
+  const inviteCode = page.locator('.lobby-invite-code')
+  await expect(inviteCode).toBeVisible({ timeout: 5000 })
+  const codeText = await inviteCode.textContent() ?? ''
+  const match = codeText.match(/join=([A-Z0-9]+)/i)
+  if (!match) throw new Error('Could not extract invite code from: ' + codeText)
   
   return match[1]
 }
 
-async function setBotCount(page: Page, count: number): Promise<void> {
-  const botDisplay = page.locator('.bot-count-display')
-  if (!await botDisplay.isVisible({ timeout: 3000 }).catch(() => false)) return
+async function joinMatchByCode(page: Page, inviteCode: string): Promise<void> {
+  const joinBtn = page.getByRole('button', { name: /join by code/i })
+  await expect(joinBtn).toBeVisible({ timeout: 5000 })
+  await joinBtn.click()
+  await page.waitForTimeout(300)
   
-  const currentCount = await botDisplay.textContent()
-  const current = parseInt(currentCount || '1', 10)
+  const joinInput = page.locator('.dashboard-join-input')
+  await expect(joinInput).toBeVisible({ timeout: 3000 })
+  await joinInput.fill(inviteCode)
+  await page.locator('.dashboard-join-form').getByRole('button', { name: /join/i }).click()
   
-  const minusBtn = page.locator('.setup-bot-btn').filter({ hasText: '−' }).first()
-  const plusBtn = page.locator('.setup-bot-btn').filter({ hasText: '+' }).first()
+  await page.waitForURL(/\/lobby\/.*/, { timeout: 10000 })
+  await page.waitForTimeout(1000)
+}
+
+async function startMatchFromLobby(page: Page): Promise<void> {
+  const startBtn = page.locator('.lobby-start-btn')
+  await expect(startBtn).toBeEnabled({ timeout: 10000 })
+  await startBtn.click()
   
-  if (count < current) {
-    for (let i = 0; i < current - count; i++) {
-      if (await minusBtn.isEnabled()) await minusBtn.click()
-    }
-  } else if (count > current) {
-    for (let i = 0; i < count - current; i++) {
-      if (await plusBtn.isEnabled()) await plusBtn.click()
-    }
+  const confirmBtn = page.locator('.lobby-dialog-btn--confirm')
+  if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await confirmBtn.click()
   }
+  
+  await page.waitForURL(/\/game\/.*/, { timeout: 15000 })
+  await page.waitForTimeout(2000)
 }
 
 async function waitForMyTurn(page: Page, timeout = 15000): Promise<boolean> {
@@ -138,33 +161,21 @@ test.describe('Multiplayer Combat', () => {
     const context2 = await browser.newContext()
     
     try {
-      const player1 = await setupPlayer(context1, uniqueName('Alice'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
+      const player1 = await setupPlayer(context1, uniqueName('Ali'))
+      const inviteCode = await createMatchAndGetCode(player1)
       
-      await setBotCount(player1, 0)
+      const player2 = await setupPlayer(context2, uniqueName('Bob'))
+      await joinMatchByCode(player2, inviteCode)
       
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('domcontentloaded')
+      // Both players should see 2 players in the list
+      await expect(player1.locator('.player-list-item:not(.player-list-item--empty)')).toHaveCount(2, { timeout: 10000 })
+      await expect(player2.locator('.player-list-item:not(.player-list-item--empty)')).toHaveCount(2, { timeout: 10000 })
       
-      const nameInput = player2.getByPlaceholder('Enter username')
-      await expect(nameInput).toBeVisible({ timeout: 10000 })
-      await nameInput.fill(uniqueName('Bob'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
+      const p1Names = await player1.locator('.player-list-name').allTextContents()
+      const p2Names = await player2.locator('.player-list-name').allTextContents()
       
-      await player2.waitForURL('**/game', { timeout: 15000 })
-      await player2.waitForTimeout(1000)
-      
-      await expect(player2.locator('.setup-player-item')).toHaveCount(2, { timeout: 10000 })
-      
-      const p1Participants = await player1.locator('.setup-player-item').allTextContents()
-      const p2Participants = await player2.locator('.setup-player-item').allTextContents()
-      
-      expect(p1Participants.length).toBeGreaterThanOrEqual(2)
-      expect(p2Participants.length).toBeGreaterThanOrEqual(2)
-      expect(p1Participants.some(p => p.includes('(you)'))).toBe(true)
-      expect(p2Participants.some(p => p.includes('(you)'))).toBe(true)
+      expect(p1Names.length).toBeGreaterThanOrEqual(2)
+      expect(p2Names.length).toBeGreaterThanOrEqual(2)
       
     } finally {
       await context1.close()
@@ -177,21 +188,24 @@ test.describe('Multiplayer Combat', () => {
     const context2 = await browser.newContext()
     
     try {
-      const player1 = await setupPlayer(context1, uniqueName('Alice'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
-      await setBotCount(player1, 0)
+      const player1 = await setupPlayer(context1, uniqueName('Ali'))
+      const inviteCode = await createMatchAndGetCode(player1)
       
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('domcontentloaded')
-      await player2.getByPlaceholder('Enter username').fill(uniqueName('Bob'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
+      const player2 = await setupPlayer(context2, uniqueName('Bob'))
+      await joinMatchByCode(player2, inviteCode)
       
-      await player1.getByRole('button', { name: /start match/i }).click()
-      await player1.waitForTimeout(2000)
+      // Player2 needs to ready up (ready button only shows with 2+ players)
+      const readyBtn = player2.locator('.player-list-ready-btn')
+      if (await readyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await readyBtn.click()
+        await player2.waitForTimeout(500)
+      }
+      
+      // Player1 (creator) starts the match
+      await startMatchFromLobby(player1)
+      // Player2 should also transition to game
+      await player2.waitForURL(/\/game\/.*/, { timeout: 15000 })
+      await player2.waitForTimeout(2000)
       
       const p1Turn = await player1.locator('.turn-stepper').textContent().catch(() => '') ?? ''
       const p2Turn = await player2.locator('.turn-stepper').textContent().catch(() => '') ?? ''
@@ -236,21 +250,22 @@ test.describe('Multiplayer Combat', () => {
     const context2 = await browser.newContext()
     
     try {
-      const player1 = await setupPlayer(context1, uniqueName('Attacker'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
-      await setBotCount(player1, 0)
+      const player1 = await setupPlayer(context1, uniqueName('Atk'))
+      const inviteCode = await createMatchAndGetCode(player1)
       
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('domcontentloaded')
-      await player2.getByPlaceholder('Enter username').fill(uniqueName('Defender'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
+      const player2 = await setupPlayer(context2, uniqueName('Def'))
+      await joinMatchByCode(player2, inviteCode)
       
-      await player1.getByRole('button', { name: /start match/i }).click()
-      await player1.waitForTimeout(2000)
+      // Ready up player2
+      const readyBtn = player2.locator('.player-list-ready-btn')
+      if (await readyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await readyBtn.click()
+        await player2.waitForTimeout(500)
+      }
+      
+      await startMatchFromLobby(player1)
+      await player2.waitForURL(/\/game\/.*/, { timeout: 15000 })
+      await player2.waitForTimeout(2000)
       
       const p1IsActive = await waitForMyTurn(player1, 3000)
       const attacker = p1IsActive ? player1 : player2
@@ -284,33 +299,24 @@ test.describe('Multiplayer Combat', () => {
     }
   })
 
-
-
   test('player disconnecting from open lobby is removed', async ({ browser }) => {
     const context1 = await browser.newContext()
     const context2 = await browser.newContext()
     
     try {
       const player1 = await setupPlayer(context1, uniqueName('Host'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
-      await setBotCount(player1, 0)
+      const inviteCode = await createMatchAndGetCode(player1)
       
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('domcontentloaded')
-      await player2.getByPlaceholder('Enter username').fill(uniqueName('Joiner'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
+      const player2 = await setupPlayer(context2, uniqueName('Join'))
+      await joinMatchByCode(player2, inviteCode)
       
-      const participantsBefore = await player1.locator('.setup-player-item').count()
+      const participantsBefore = await player1.locator('.player-list-item:not(.player-list-item--empty)').count()
       expect(participantsBefore).toBe(2)
       
       await player2.close()
       await player1.waitForTimeout(2000)
       
-      const participantsAfter = await player1.locator('.setup-player-item').count()
+      const participantsAfter = await player1.locator('.player-list-item:not(.player-list-item--empty)').count()
       expect(participantsAfter).toBe(1)
       
     } finally {
@@ -324,21 +330,22 @@ test.describe('Multiplayer Combat', () => {
     const context2 = await browser.newContext()
     
     try {
-      const player1 = await setupPlayer(context1, uniqueName('Player1'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
-      await setBotCount(player1, 0)
+      const player1 = await setupPlayer(context1, uniqueName('P1'))
+      const inviteCode = await createMatchAndGetCode(player1)
       
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('domcontentloaded')
-      await player2.getByPlaceholder('Enter username').fill(uniqueName('Player2'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
+      const player2 = await setupPlayer(context2, uniqueName('P2'))
+      await joinMatchByCode(player2, inviteCode)
       
-      await player1.getByRole('button', { name: /start match/i }).click()
-      await player1.waitForTimeout(2000)
+      // Ready up player2
+      const readyBtn = player2.locator('.player-list-ready-btn')
+      if (await readyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await readyBtn.click()
+        await player2.waitForTimeout(500)
+      }
+      
+      await startMatchFromLobby(player1)
+      await player2.waitForURL(/\/game\/.*/, { timeout: 15000 })
+      await player2.waitForTimeout(2000)
       
       const p1IsActive = await waitForMyTurn(player1, 3000)
       const activePlayer = p1IsActive ? player1 : player2
@@ -362,21 +369,22 @@ test.describe('Defense UI', () => {
     const context2 = await browser.newContext()
     
     try {
-      const player1 = await setupPlayer(context1, uniqueName('Attacker'))
-      const inviteCode = await createLobbyAndGetInviteCode(player1)
-      await setBotCount(player1, 0)
+      const player1 = await setupPlayer(context1, uniqueName('Atk'))
+      const inviteCode = await createMatchAndGetCode(player1)
       
-      const player2 = await context2.newPage()
-      await player2.addInitScript(() => localStorage.clear())
-      await player2.goto(`/?join=${inviteCode}`)
-      await player2.waitForLoadState('domcontentloaded')
-      await player2.getByPlaceholder('Enter username').fill(uniqueName('Defender'))
-      await player2.getByRole('button', { name: /enter arena/i }).click()
-      await player2.waitForURL('**/game', { timeout: 10000 })
-      await player2.waitForTimeout(1000)
+      const player2 = await setupPlayer(context2, uniqueName('Def'))
+      await joinMatchByCode(player2, inviteCode)
       
-      await player1.getByRole('button', { name: /start match/i }).click()
-      await player1.waitForTimeout(2000)
+      // Ready up player2
+      const readyBtn = player2.locator('.player-list-ready-btn')
+      if (await readyBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await readyBtn.click()
+        await player2.waitForTimeout(500)
+      }
+      
+      await startMatchFromLobby(player1)
+      await player2.waitForURL(/\/game\/.*/, { timeout: 15000 })
+      await player2.waitForTimeout(2000)
       
       const p1IsActive = await waitForMyTurn(player1, 3000)
       const attacker = p1IsActive ? player1 : player2
@@ -391,7 +399,7 @@ test.describe('Defense UI', () => {
         const defenseModalVisible = await waitForDefenseModal(defender, 5000)
         
         if (defenseModalVisible) {
-          const dodgeCard = defender.locator('.defense-card.dodge, button').filter({ hasText: /dodge/i }).first()
+          const dodgeCard = defender.locator('.defense-card, .defense-btn, button').filter({ hasText: /dodge/i }).first()
           
           await expect(dodgeCard).toBeVisible()
           

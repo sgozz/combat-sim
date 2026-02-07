@@ -11,21 +11,19 @@ import { test, expect, type Page, type BrowserContext } from '@playwright/test'
  */
 
 function uniqueName(base: string): string {
-  return `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base}_${suffix}`.slice(0, 16)
 }
 
 async function setupPlayer(context: BrowserContext, nickname: string): Promise<Page> {
   const page = await context.newPage()
   
-  await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
-  
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.clear()
     sessionStorage.clear()
   })
   
-  await page.reload()
+  await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(500)
   
@@ -33,37 +31,51 @@ async function setupPlayer(context: BrowserContext, nickname: string): Promise<P
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
   
-  // Select GURPS ruleset
   await page.getByRole('button', { name: /GURPS 4e/i }).click()
+  await page.waitForTimeout(300)
   
-  await page.getByRole('button', { name: /enter arena/i }).click()
-  await page.waitForTimeout(2000)
+  const enterBtn = page.getByRole('button', { name: /enter arena/i })
+  await expect(enterBtn).toBeEnabled({ timeout: 10000 })
+  await enterBtn.click()
   
-  const quickMatchVisible = await page.getByRole('button', { name: /new match/i }).isVisible().catch(() => false)
-  
-  if (!quickMatchVisible) {
-    await page.reload()
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000)
-  }
-  
-  await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
+  await page.waitForURL('/home', { timeout: 15000 })
   
   return page
 }
 
-/**
- * Helper: Start a new match and wait for combat UI
- */
 async function startQuickMatch(player: Page): Promise<void> {
   await player.getByRole('button', { name: /new match/i }).click()
-  await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
+  await player.waitForTimeout(500)
   
-  await player.getByRole('button', { name: /start match/i }).click()
+  const nameInput = player.locator('#cmd-match-name')
+  await expect(nameInput).toBeVisible({ timeout: 5000 })
+  await nameInput.clear()
+  await nameInput.fill('Feature Test')
+  
+  await player.locator('.cmd-btn-create').click()
+  await player.waitForURL(/\/lobby\/.*/, { timeout: 10000 })
+  
+  // Add a bot (need >= 2 combatants)
+  const addBotBtn = player.locator('.match-settings-bot-btn').filter({ hasText: '+' })
+  await expect(addBotBtn).toBeVisible({ timeout: 5000 })
+  await addBotBtn.click()
+  await player.waitForTimeout(500)
+  
+  // Start match
+  const startBtn = player.locator('.lobby-start-btn')
+  await expect(startBtn).toBeEnabled({ timeout: 5000 })
+  await startBtn.click()
+  
+  // Confirm start
+  const confirmBtn = player.locator('.lobby-dialog-btn--confirm')
+  if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await confirmBtn.click()
+  }
+  
+  await player.waitForURL(/\/game\/.*/, { timeout: 15000 })
   await player.waitForTimeout(2000)
   
-  // Wait for maneuver grid to appear (indicates match started)
-  await expect(player.locator('.maneuver-grid, .maneuver-btn').first()).toBeVisible({ timeout: 10000 })
+  await expect(player.locator('.maneuver-btn').first()).toBeVisible({ timeout: 10000 })
 }
 
 /**

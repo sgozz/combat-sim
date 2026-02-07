@@ -3,52 +3,77 @@ import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 const MOBILE_VIEWPORT = { width: 390, height: 844 }
 
 function uniqueName(base: string): string {
-  return `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base}_${suffix}`.slice(0, 16)
 }
 
 async function setupPlayer(context: BrowserContext, nickname: string): Promise<Page> {
   const page = await context.newPage()
   
   await page.addInitScript(() => {
-    localStorage.removeItem('tcs.nickname')
+    localStorage.clear()
+    sessionStorage.clear()
   })
   
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  await page.waitForTimeout(500)
   
   const nameInput = page.getByPlaceholder('Enter username')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
   
-  // Select GURPS ruleset
   await page.getByRole('button', { name: /GURPS 4e/i }).click()
+  await page.waitForTimeout(300)
   
-  await page.getByRole('button', { name: /enter arena/i }).click()
-  await page.waitForTimeout(2000)
+  const enterBtn = page.getByRole('button', { name: /enter arena/i })
+  await expect(enterBtn).toBeEnabled({ timeout: 10000 })
+  await enterBtn.click()
   
-  const quickMatchVisible = await page.getByRole('button', { name: /new match/i }).isVisible().catch(() => false)
-  
-  if (!quickMatchVisible) {
-    await page.reload()
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000)
-  }
-  
-  await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
+  await page.waitForURL('/home', { timeout: 15000 })
   
   return page
+}
+
+async function createMatchAndStart(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /new match/i }).click()
+  await page.waitForTimeout(500)
+  
+  const nameInput = page.locator('#cmd-match-name')
+  await expect(nameInput).toBeVisible({ timeout: 5000 })
+  await nameInput.clear()
+  await nameInput.fill('Combat Test')
+  
+  await page.locator('.cmd-btn-create').click()
+  await page.waitForURL(/\/lobby\/.*/, { timeout: 10000 })
+  
+  // Add a bot (need >= 2 combatants)
+  const addBotBtn = page.locator('.match-settings-bot-btn').filter({ hasText: '+' })
+  await expect(addBotBtn).toBeVisible({ timeout: 5000 })
+  await addBotBtn.click()
+  await page.waitForTimeout(500)
+  
+  // Start match
+  const startBtn = page.locator('.lobby-start-btn')
+  await expect(startBtn).toBeEnabled({ timeout: 5000 })
+  await startBtn.click()
+  
+  // Confirm start
+  const confirmBtn = page.locator('.lobby-dialog-btn--confirm')
+  if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await confirmBtn.click()
+  }
+  
+  await page.waitForURL(/\/game\/.*/, { timeout: 15000 })
+  await page.waitForTimeout(2000)
 }
 
 test.describe('Single Player Combat Flow', () => {
   test('Move and Attack allows attack after movement', async ({ browser }) => {
     const context = await browser.newContext()
-    const player = await setupPlayer(context, uniqueName('MoveAttacker'))
+    const player = await setupPlayer(context, uniqueName('MoveAtk'))
     
-    await player.getByRole('button', { name: /new match/i }).click()
-    await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
-    
-    await player.getByRole('button', { name: /start match/i }).click()
-    await player.waitForTimeout(2000)
+    await createMatchAndStart(player)
     
     // Select Move & Attack maneuver (key 5)
     const moveAttackBtn = player.locator('.maneuver-btn').filter({ hasText: /Move.*Attack|Rush/i }).first()
@@ -95,35 +120,12 @@ test.describe('Single Player Combat Flow', () => {
 
   test('player can start match and see combat UI', async ({ browser }) => {
     const context = await browser.newContext()
-    const player = await setupPlayer(context, uniqueName('Warrior'))
+    const player = await setupPlayer(context, uniqueName('War'))
     
-    const quickMatchBtn = player.getByRole('button', { name: /new match/i })
-    await expect(quickMatchBtn).toBeVisible({ timeout: 5000 })
-    await quickMatchBtn.click()
-    
-    await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
-    
-    const editBtn = player.getByRole('button', { name: /edit character/i })
-    await expect(editBtn).toBeVisible({ timeout: 5000 })
-    await editBtn.click()
-    
-    await player.waitForTimeout(500)
-    const nameInput = player.locator('.char-input')
-    await expect(nameInput).toBeVisible({ timeout: 3000 })
-    await nameInput.clear()
-    await nameInput.fill('Champion')
-    
-    await player.getByRole('button', { name: /save/i }).click()
-    await player.waitForTimeout(500)
-    
-    const startBtn = player.getByRole('button', { name: /start match/i })
-    await expect(startBtn).toBeVisible({ timeout: 5000 })
-    await startBtn.click()
-    
-    await player.waitForTimeout(2000)
+    await createMatchAndStart(player)
     
     const maneuverBtnVisible = await player.locator('.maneuver-btn').first().isVisible().catch(() => false)
-    const panelVisible = await player.locator('.panel-right').isVisible().catch(() => false)
+    const panelVisible = await player.locator('.panel').first().isVisible().catch(() => false)
     
     expect(maneuverBtnVisible || panelVisible).toBeTruthy()
     
@@ -146,13 +148,9 @@ test.describe('Single Player Combat Flow', () => {
 
   test('player can use keyboard shortcuts', async ({ browser }) => {
     const context = await browser.newContext()
-    const player = await setupPlayer(context, uniqueName('KeyUser'))
+    const player = await setupPlayer(context, uniqueName('Key'))
     
-    await player.getByRole('button', { name: /new match/i }).click()
-    await expect(player.getByRole('button', { name: /start match/i })).toBeVisible({ timeout: 10000 })
-    
-    await player.getByRole('button', { name: /start match/i }).click()
-    await player.waitForTimeout(2000)
+    await createMatchAndStart(player)
     
     const maneuverBtnVisible = await player.locator('.maneuver-btn').first().isVisible().catch(() => false)
     
@@ -171,7 +169,8 @@ test.describe('Single Player Combat Flow', () => {
 test.describe('UI Elements', () => {
   test('welcome screen shows and accepts nickname', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
+      localStorage.clear()
+      sessionStorage.clear()
     })
     
     await page.goto('/')
@@ -185,16 +184,20 @@ test.describe('UI Elements', () => {
     
     await nameInput.fill('TestPlayer')
     
+    await page.getByRole('button', { name: /GURPS 4e/i }).click()
+    await page.waitForTimeout(300)
+    
     const enterBtn = page.getByRole('button', { name: /enter arena/i })
-    await expect(enterBtn).toBeVisible()
+    await expect(enterBtn).toBeEnabled({ timeout: 5000 })
     await enterBtn.click()
     
-    await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('tutorial can be opened from welcome screen', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
+      localStorage.clear()
+      sessionStorage.clear()
     })
     
     await page.goto('/')
@@ -208,47 +211,33 @@ test.describe('UI Elements', () => {
     await expect(page.getByText(/welcome to tactical|getting started|basics/i)).toBeVisible({ timeout: 3000 })
   })
 
-  test('lobby browser shows after login', async ({ page }) => {
+  test('dashboard shows after login', async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
+      localStorage.clear()
+      sessionStorage.clear()
     })
     
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     
     await page.getByPlaceholder('Enter username').fill('LobbyTester')
-    await page.getByRole('button', { name: /enter arena/i }).click()
+    await page.getByRole('button', { name: /GURPS 4e/i }).click()
+    await page.waitForTimeout(300)
     
-    await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByRole('button', { name: /refresh/i })).toBeVisible({ timeout: 5000 })
+    const enterBtn = page.getByRole('button', { name: /enter arena/i })
+    await expect(enterBtn).toBeEnabled({ timeout: 10000 })
+    await enterBtn.click()
+    
+    await expect(page.getByRole('button', { name: /new match/i })).toBeVisible({ timeout: 15000 })
   })
 })
 
 test.describe('Mobile UI', () => {
   test('mobile can start match and see action bar with HP', async ({ browser }) => {
     const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
-    const page = await context.newPage()
+    const page = await setupPlayer(context, uniqueName('MobWar'))
     
-    await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
-    })
-    
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    
-    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileWarrior'))
-    await page.getByRole('button', { name: /enter arena/i }).click()
-    await page.waitForTimeout(2000)
-    
-    const quickMatchBtn = page.getByRole('button', { name: /new match/i })
-    await expect(quickMatchBtn).toBeVisible({ timeout: 10000 })
-    await quickMatchBtn.click()
-    await page.waitForTimeout(1000)
-    
-    const startBtn = page.getByRole('button', { name: /start match/i })
-    await expect(startBtn).toBeVisible({ timeout: 5000 })
-    await startBtn.click()
-    await page.waitForTimeout(2000)
+    await createMatchAndStart(page)
     
     const actionBar = page.locator('.action-bar')
     await expect(actionBar).toBeVisible({ timeout: 10000 })
@@ -266,24 +255,9 @@ test.describe('Mobile UI', () => {
 
   test('mobile maneuver popup opens and closes', async ({ browser }) => {
     const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
-    const page = await context.newPage()
+    const page = await setupPlayer(context, uniqueName('MobMan'))
     
-    await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
-    })
-    
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    
-    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileManeuver'))
-    await page.getByRole('button', { name: /enter arena/i }).click()
-    await page.waitForTimeout(2000)
-    
-    await page.getByRole('button', { name: /new match/i }).click()
-    await page.waitForTimeout(1000)
-    
-    await page.getByRole('button', { name: /start match/i }).click()
-    await page.waitForTimeout(2000)
+    await createMatchAndStart(page)
     
     const actionBar = page.locator('.action-bar')
     await expect(actionBar).toBeVisible({ timeout: 10000 })
@@ -313,24 +287,9 @@ test.describe('Mobile UI', () => {
 
   test('mobile shows attack button after selecting target', async ({ browser }) => {
     const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
-    const page = await context.newPage()
+    const page = await setupPlayer(context, uniqueName('MobAtk'))
     
-    await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
-    })
-    
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    
-    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileAttacker'))
-    await page.getByRole('button', { name: /enter arena/i }).click()
-    await page.waitForTimeout(2000)
-    
-    await page.getByRole('button', { name: /new match/i }).click()
-    await page.waitForTimeout(1000)
-    
-    await page.getByRole('button', { name: /start match/i }).click()
-    await page.waitForTimeout(2000)
+    await createMatchAndStart(page)
     
     const actionBar = page.locator('.action-bar')
     await expect(actionBar).toBeVisible({ timeout: 10000 })
@@ -373,24 +332,9 @@ test.describe('Mobile UI', () => {
 
   test('mobile initiative tracker is compact', async ({ browser }) => {
     const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
-    const page = await context.newPage()
+    const page = await setupPlayer(context, uniqueName('MobInit'))
     
-    await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
-    })
-    
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    
-    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileInit'))
-    await page.getByRole('button', { name: /enter arena/i }).click()
-    await page.waitForTimeout(2000)
-    
-    await page.getByRole('button', { name: /new match/i }).click()
-    await page.waitForTimeout(1000)
-    
-    await page.getByRole('button', { name: /start match/i }).click()
-    await page.waitForTimeout(2000)
+    await createMatchAndStart(page)
     
     const initiativeTracker = page.locator('.initiative-tracker')
     if (await initiativeTracker.isVisible().catch(() => false)) {
@@ -404,24 +348,9 @@ test.describe('Mobile UI', () => {
 
   test('mobile camera controls are hidden', async ({ browser }) => {
     const context = await browser.newContext({ viewport: MOBILE_VIEWPORT })
-    const page = await context.newPage()
+    const page = await setupPlayer(context, uniqueName('MobCam'))
     
-    await page.addInitScript(() => {
-      localStorage.removeItem('tcs.nickname')
-    })
-    
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    
-    await page.getByPlaceholder('Enter username').fill(uniqueName('MobileCam'))
-    await page.getByRole('button', { name: /enter arena/i }).click()
-    await page.waitForTimeout(2000)
-    
-    await page.getByRole('button', { name: /new match/i }).click()
-    await page.waitForTimeout(1000)
-    
-    await page.getByRole('button', { name: /start match/i }).click()
-    await page.waitForTimeout(2000)
+    await createMatchAndStart(page)
     
     const cameraControls = page.locator('.camera-controls-compact')
     const cameraHidden = !(await cameraControls.isVisible().catch(() => false))
