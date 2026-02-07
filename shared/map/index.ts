@@ -6,3 +6,4 @@ export type {
   PropDefinition,
   MapDefinition,
 } from './types';
+export { generateMap } from './generator';
