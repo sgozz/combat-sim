@@ -1,9 +1,10 @@
 {
-  "active_plan": "/Users/fabio/dev/gurps-combat-sim/.sisyphus/plans/pf2-feats-magic.md",
-  "started_at": "2026-02-01T20:30:41.517Z",
+  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/pf2-bugfix.md",
+  "started_at": "2026-02-07T22:03:49.182Z",
+  "completed_at": "2026-02-07T22:14:30.000Z",
   "session_ids": [
-    "ses_3e53ee9acffeyAKn62klhjtal7",
-    "ses_3e4b5536cffeeS6rNUz2vV1vYp"
+    "ses_3c5e0d654ffergzhM6jIFlVVCT"
   ],
-  "plan_name": "pf2-feats-magic"
+  "plan_name": "pf2-bugfix",
+  "status": "complete"
 }
