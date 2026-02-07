@@ -161,7 +161,7 @@ export const handlePF2CastSpell = async (
 
       if (!isPF2Combatant(c)) return c;
 
-      let updated = { ...c };
+      const updated = { ...c };
 
       if (isAffected) {
         const targetChar = getCharacterById(match, c.characterId);

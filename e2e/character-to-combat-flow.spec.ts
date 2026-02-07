@@ -1,10 +1,13 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
 
+type RulesetId = 'gurps' | 'pf2'
+
 function uniqueName(base: string): string {
-  return `${base}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base}_${suffix}`.slice(0, 16)
 }
 
-async function login(context: BrowserContext, nickname: string): Promise<Page> {
+async function login(context: BrowserContext, nickname: string, ruleset: RulesetId = 'gurps'): Promise<Page> {
   const page = await context.newPage()
   await page.addInitScript(() => {
     localStorage.clear()
@@ -13,17 +16,15 @@ async function login(context: BrowserContext, nickname: string): Promise<Page> {
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(500)
-  
-  const nameInput = page.getByPlaceholder(/enter.*name/i)
+
+  const nameInput = page.getByPlaceholder('Enter username')
   await expect(nameInput).toBeVisible({ timeout: 10000 })
   await nameInput.fill(nickname)
-  
-  // Select GURPS ruleset
-  const gurpsBtn = page.getByRole('button', { name: /GURPS 4e/i })
-  await expect(gurpsBtn).toBeVisible({ timeout: 5000 })
-  await gurpsBtn.click()
+
+  const rulesetLabel = ruleset === 'gurps' ? /GURPS 4e/i : /Pathfinder 2e/i
+  await page.getByRole('button', { name: rulesetLabel }).click()
   await page.waitForTimeout(300)
-  
+
   const enterBtn = page.getByRole('button', { name: /enter arena/i })
   await expect(enterBtn).toBeEnabled({ timeout: 5000 })
   await enterBtn.click()
@@ -34,37 +35,22 @@ async function login(context: BrowserContext, nickname: string): Promise<Page> {
 async function navigateToArmory(page: Page): Promise<void> {
   await page.getByRole('button', { name: /armory/i }).click()
   await page.waitForURL('/armory', { timeout: 10000 })
-  await expect(page.locator('.character-armory')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('.armory-btn-new')).toBeVisible({ timeout: 10000 })
 }
 
-async function createCharacter(page: Page, name: string, ruleset: 'gurps' | 'pf2'): Promise<void> {
+async function createCharacter(page: Page, name: string): Promise<void> {
   await navigateToArmory(page)
 
-  const newCharBtn = page.locator('.armory-btn-new')
-  await expect(newCharBtn).toBeVisible({ timeout: 10000 })
-  await newCharBtn.click()
-  await page.waitForTimeout(300)
-
-  const menuOption = ruleset === 'gurps'
-    ? page.locator('.armory-new-char-menu').getByText(/gurps/i)
-    : page.locator('.armory-new-char-menu').getByText(/pathfinder/i)
-
-  const hasMenu = await menuOption.isVisible().catch(() => false)
-  if (hasMenu) {
-    await menuOption.click()
-  } else {
-    await page.goto(`/armory/new?ruleset=${ruleset}`)
-  }
-
+  await page.locator('.armory-btn-new').click()
   await page.waitForURL(/\/armory\/(new|[a-zA-Z0-9-]+)/, { timeout: 10000 })
 
-  const nameInput = page.locator('input.editor-name-input, input[name="name"]').first()
+  const nameInput = page.locator('input.editor-name-input')
   await expect(nameInput).toBeVisible({ timeout: 5000 })
   await nameInput.clear()
   await nameInput.fill(name)
   await page.waitForTimeout(300)
 
-  await page.getByRole('button', { name: /save/i }).first().click()
+  await page.locator('.editor-btn-save').click()
   await page.waitForURL('/armory', { timeout: 10000 })
 
   await expect(page.locator('.armory-character-card').filter({ hasText: name })).toBeVisible({ timeout: 5000 })
@@ -78,7 +64,7 @@ async function navigateToHome(page: Page): Promise<void> {
   }
 }
 
-async function createMatch(page: Page, matchName: string, rulesetId: 'gurps' | 'pf2'): Promise<void> {
+async function createMatch(page: Page, matchName: string): Promise<void> {
   await navigateToHome(page)
 
   await page.getByRole('button', { name: /new match/i }).click()
@@ -89,10 +75,7 @@ async function createMatch(page: Page, matchName: string, rulesetId: 'gurps' | '
   await nameInput.clear()
   await nameInput.fill(matchName)
 
-  const rulesetLabel = rulesetId === 'gurps' ? 'GURPS 4e' : 'Pathfinder 2e'
-  await page.getByRole('button', { name: rulesetLabel }).click()
-
-  await page.getByRole('button', { name: /create match/i }).click()
+  await page.locator('.cmd-btn-create').click()
   await page.waitForURL(/\/lobby\/.*/, { timeout: 10000 })
 }
 
@@ -100,51 +83,88 @@ test.describe('Character to Combat Flow', () => {
 
   test('GURPS: create character, save, select in lobby', async ({ browser }) => {
     const context = await browser.newContext()
-    const page = await login(context, uniqueName('GPlayer'))
-    const charName = uniqueName('Warrior')
+    const name = uniqueName('GP')
+    const page = await login(context, name, 'gurps')
+    const charName = uniqueName('War')
 
-    await createCharacter(page, charName, 'gurps')
-    await createMatch(page, uniqueName('GMatch'), 'gurps')
+    await createCharacter(page, charName)
+    await createMatch(page, uniqueName('GM'))
 
     await page.waitForTimeout(1000)
-    const charCard = page.locator('.character-picker-card').filter({ hasText: charName })
-    await expect(charCard).toBeVisible({ timeout: 10000 })
-    await charCard.click()
-    await page.waitForTimeout(500)
 
-    await expect(charCard).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 })
+    const previewName = page.locator('.character-preview-name')
+    const alreadySelected = await previewName.filter({ hasText: charName }).isVisible().catch(() => false)
+
+    if (!alreadySelected) {
+      const charCard = page.locator('.character-picker-card').filter({ hasText: charName })
+      await expect(charCard).toBeVisible({ timeout: 10000 })
+      await charCard.click()
+      await page.waitForTimeout(500)
+    }
+
+    await expect(previewName).toContainText(charName, { timeout: 5000 })
 
     await context.close()
   })
 
   test('PF2: create character, save, select in lobby', async ({ browser }) => {
     const context = await browser.newContext()
-    const page = await login(context, uniqueName('PPlayer'))
-    const charName = uniqueName('Fighter')
+    const name = uniqueName('PP')
+    const page = await login(context, name, 'pf2')
+    const charName = uniqueName('Ftr')
 
-    await createCharacter(page, charName, 'pf2')
-    await createMatch(page, uniqueName('PMatch'), 'pf2')
+    await createCharacter(page, charName)
+    await createMatch(page, uniqueName('PM'))
 
     await page.waitForTimeout(1000)
-    const charCard = page.locator('.character-picker-card').filter({ hasText: charName })
-    await expect(charCard).toBeVisible({ timeout: 10000 })
-    await charCard.click()
-    await page.waitForTimeout(500)
 
-    await expect(charCard).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 })
+    const previewName = page.locator('.character-preview-name')
+    const alreadySelected = await previewName.filter({ hasText: charName }).isVisible().catch(() => false)
+
+    if (!alreadySelected) {
+      const charCard = page.locator('.character-picker-card').filter({ hasText: charName })
+      await expect(charCard).toBeVisible({ timeout: 10000 })
+      await charCard.click()
+      await page.waitForTimeout(500)
+    }
+
+    await expect(previewName).toContainText(charName, { timeout: 5000 })
 
     await context.close()
   })
 
   test('lobby filters characters by match ruleset', async ({ browser }) => {
     const context = await browser.newContext()
-    const page = await login(context, uniqueName('Multi'))
+    const name = uniqueName('Mul')
+    const page = await login(context, name, 'gurps')
 
-    await createCharacter(page, 'GurpsHero', 'gurps')
-    await createCharacter(page, 'PF2Hero', 'pf2')
+    await createCharacter(page, 'GurpsHero')
 
-    // GURPS match should only show GURPS character
-    await createMatch(page, uniqueName('GM'), 'gurps')
+    // Switch to PF2 to create a PF2 character
+    await navigateToHome(page)
+    const rulesetBadge = page.locator('.dashboard-ruleset-badge')
+    await rulesetBadge.click()
+    await page.waitForTimeout(300)
+    const switchConfirm = page.locator('.dashboard-dialog-btn--confirm')
+    if (await switchConfirm.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await switchConfirm.click()
+      await page.waitForTimeout(1000)
+    }
+
+    await createCharacter(page, 'PF2Hero')
+
+    // Switch back to GURPS
+    await navigateToHome(page)
+    await rulesetBadge.click()
+    await page.waitForTimeout(300)
+    const switchBack = page.locator('.dashboard-dialog-btn--confirm')
+    if (await switchBack.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await switchBack.click()
+      await page.waitForTimeout(1000)
+    }
+
+    // Create GURPS match — should only show GURPS character
+    await createMatch(page, uniqueName('GM'))
     await page.waitForTimeout(1000)
 
     const gurpsCard = page.locator('.character-picker-card').filter({ hasText: 'GurpsHero' })

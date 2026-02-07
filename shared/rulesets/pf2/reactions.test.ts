@@ -33,7 +33,6 @@ vi.mock('../../../server/src/bot', () => ({
 
 const mockRollCheck = vi.fn();
 const mockRollDamage = vi.fn();
-const mockHandleReactiveShieldReaction = vi.fn();
 
 vi.mock('../../rulesets/serverAdapter', () => ({
   getServerAdapter: () => ({
@@ -443,20 +442,6 @@ describe('Shield Block', () => {
   });
 
   it('reduces damage by shield hardness', () => {
-    const match = createMatch({
-      combatants: [
-        createPF2Combatant({
-          playerId: 'player1',
-          characterId: 'char1',
-          shieldRaised: true,
-          shieldHP: 20,
-        }) as PF2CombatantState,
-      ],
-    });
-
-    const combatant = match.combatants[0] as PF2CombatantState;
-    const character = mockGetCharacterById(match, combatant.characterId) as PF2CharacterSheet;
-
     const shieldHardness = 5;
     const incomingDamage = 10;
     const reducedDamage = Math.max(0, incomingDamage - shieldHardness);
@@ -499,7 +484,6 @@ describe('Shield Block', () => {
     });
 
     const combatant = match.combatants[0] as PF2CombatantState;
-    const character = mockGetCharacterById(match, combatant.characterId) as PF2CharacterSheet;
 
     const canShieldBlock = combatant.shieldRaised && combatant.reactionAvailable;
     expect(canShieldBlock).toBe(false);

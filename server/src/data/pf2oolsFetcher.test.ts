@@ -4,7 +4,6 @@ import { fetchPf2oolsData } from './pf2oolsFetcher';
 import path from 'path';
 
 const CACHE_DIR = 'data/cache';
-const TEST_CACHE_DIR = 'data/cache-test';
 
 describe('fetchPf2oolsData', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
