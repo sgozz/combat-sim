@@ -19,7 +19,7 @@ SERVER_PID=$!
 sleep 2
 
 echo "Starting client on http://localhost:5173..."
-npm run dev &
+npm run dev -- --host 0.0.0.0 &
 CLIENT_PID=$!
 
 echo ""

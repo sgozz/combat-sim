@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    allowedHosts: ['codevm', 'codevm.fritz.box'],
+  },
   // @ts-expect-error vitest config extends vite config
   test: {
     globals: true,
