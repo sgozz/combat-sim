@@ -17,6 +17,11 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.lobby-card:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
 .lobby-card-open,
 .lobby-card-waiting {
   border-left-color: var(--accent-success);
@@ -109,6 +114,14 @@
   align-items: center;
 }
 
+.lobby-card-action-label {
+  color: var(--accent-success);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  font-family: var(--font-sans);
+  flex: 1;
+}
+
 .lobby-card-join {
   background: var(--accent-success);
   color: white;
@@ -125,7 +138,6 @@
 
 .lobby-card-join:hover {
   background: #16a34a;
-  transform: translateX(4px);
 }
 
 .lobby-card-rejoin {
@@ -197,7 +209,7 @@
   background: #535bf2;
 }
 
-.lobby-card-join.pulse {
+.lobby-card-action-label.pulse {
   animation: pulse-green 1.5s ease-in-out infinite;
 }
 
@@ -237,7 +249,6 @@
     flex-direction: column;
   }
 
-  .lobby-card-join,
   .lobby-card-rejoin,
   .lobby-card-result,
   .lobby-card-spectate {
@@ -246,7 +257,6 @@
     padding: var(--space-sm) var(--space-md);
   }
 
-  .lobby-card-join:hover,
   .lobby-card-rejoin:hover,
   .lobby-card-result:hover {
     transform: none;

@@ -36,7 +36,13 @@ export const MatchCard = ({ match, currentUserId, onSelect }: MatchCardProps) =>
   const amIConnected = myPlayer?.isConnected ?? false
 
   return (
-    <div className={`lobby-card lobby-card-${match.status}${match.isMyTurn ? ' my-turn' : ''}`}>
+    <div
+      className={`lobby-card lobby-card-${match.status}${match.isMyTurn ? ' my-turn' : ''}`}
+      onClick={() => onSelect(match.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(match.id) }}
+    >
       <div className="lobby-card-header">
         <div className="lobby-card-title">
           <span className="lobby-card-dot">{getStatusDot()}</span>
@@ -53,12 +59,9 @@ export const MatchCard = ({ match, currentUserId, onSelect }: MatchCardProps) =>
       </div>
 
       <div className="lobby-card-actions">
-        <button 
-          className={`lobby-card-join${match.isMyTurn ? ' pulse' : ''}`} 
-          onClick={() => onSelect(match.id)}
-        >
+        <span className={`lobby-card-action-label${match.isMyTurn ? ' pulse' : ''}`}>
           {getActionText()} →
-        </button>
+        </span>
         {!amIConnected && match.status !== 'finished' && (
           <span className="lobby-card-reconnect-hint">Reconnect required</span>
         )}
