@@ -92,8 +92,9 @@ export type PF2CharacterSheet = {
    spells: PF2SpellInfo | null;
    spellcasters: SpellCaster[];
    isFavorite?: boolean;
-   
-   // Pathbuilder sync metadata
+    modelId?: string;
+    
+    // Pathbuilder sync metadata
    pathbuilderId?: string;
    lastSyncedAt?: number;
 };

@@ -7,6 +7,7 @@ type PF2TemplateInput = {
   level: number;
   classHP: number;
   abilities: Abilities;
+  modelId?: string;
   skills: { name: string; ability: keyof Abilities; level: number }[];
   equipment: {
     name: string;
@@ -67,6 +68,7 @@ const createPF2Template = (input: PF2TemplateInput): Omit<PF2CharacterSheet, 'id
   feats: input.advantages.map(a => ({ id: uuid(), name: a.name, type: 'class', level: 1, description: a.description })),
   spells: null,
   spellcasters: [],
+  modelId: input.modelId,
 });
 
 export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id'>> = {
@@ -75,6 +77,7 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
      level: 1,
      classHP: 10,
      abilities: { strength: 18, dexterity: 14, constitution: 14, intelligence: 10, wisdom: 12, charisma: 10 },
+     modelId: 'warrior',
      skills: [
        { name: 'Athletics', ability: 'strength', level: 7 },
        { name: 'Intimidation', ability: 'charisma', level: 5 },
@@ -95,6 +98,7 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
      level: 1,
      classHP: 8,
      abilities: { strength: 12, dexterity: 18, constitution: 12, intelligence: 14, wisdom: 10, charisma: 14 },
+     modelId: 'rogue',
      skills: [
        { name: 'Stealth', ability: 'dexterity', level: 7 },
        { name: 'Thievery', ability: 'dexterity', level: 7 },
@@ -116,6 +120,7 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
      level: 1,
      classHP: 8,
      abilities: { strength: 14, dexterity: 10, constitution: 12, intelligence: 10, wisdom: 18, charisma: 14 },
+     modelId: 'cleric',
      skills: [
        { name: 'Religion', ability: 'intelligence', level: 7 },
        { name: 'Medicine', ability: 'wisdom', level: 7 },
@@ -137,6 +142,7 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
      level: 1,
      classHP: 6,
      abilities: { strength: 10, dexterity: 14, constitution: 12, intelligence: 18, wisdom: 12, charisma: 10 },
+     modelId: 'wizard',
      skills: [
        { name: 'Arcana', ability: 'intelligence', level: 7 },
        { name: 'Occultism', ability: 'intelligence', level: 5 },
@@ -156,6 +162,7 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
      level: 1,
      classHP: 12,
      abilities: { strength: 18, dexterity: 12, constitution: 16, intelligence: 10, wisdom: 12, charisma: 10 },
+     modelId: 'monk',
      skills: [
        { name: 'Athletics', ability: 'strength', level: 7 },
        { name: 'Survival', ability: 'wisdom', level: 5 },
@@ -177,6 +184,7 @@ export const PF2_CHARACTER_TEMPLATES: Record<string, Omit<PF2CharacterSheet, 'id
      level: 1,
      classHP: 10,
      abilities: { strength: 12, dexterity: 18, constitution: 12, intelligence: 10, wisdom: 16, charisma: 10 },
+     modelId: 'monk',
      skills: [
        { name: 'Acrobatics', ability: 'dexterity', level: 7 },
        { name: 'Athletics', ability: 'strength', level: 5 },
