@@ -4506,3 +4506,48 @@
   font-weight: 600;
   color: #fff;
 }
+
+@media (max-width: 768px) {
+  .modal-overlay,
+  .defense-modal-overlay {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+  }
+
+  .defense-modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+  }
+
+  .pending-action-modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    width: calc(100% - var(--space-md) * 2);
+    margin: 0 var(--space-md);
+  }
+
+  .pause-modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    width: calc(100% - var(--space-md) * 2);
+    padding: 1.5rem;
+  }
+
+  .pending-action-buttons {
+    flex-direction: column;
+  }
+
+  .pending-action-buttons button {
+    min-height: 44px;
+  }
+}
