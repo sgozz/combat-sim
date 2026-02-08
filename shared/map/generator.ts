@@ -317,14 +317,29 @@ export function generateMap(
     ? generateDungeon(rng, width, height)
     : generateWilderness(rng, width, height);
 
+  // Center the map around (0,0) so it aligns with the BattleGrid origin
+  const offsetQ = Math.floor(width / 2);
+  const offsetR = Math.floor(height / 2);
+
+  const centeredCells = result.cells.map(cell => ({
+    ...cell,
+    q: cell.q - offsetQ,
+    r: cell.r - offsetR,
+  }));
+
+  const centeredSpawnZones = result.spawnZones.map(zone => ({
+    ...zone,
+    cells: zone.cells.map(c => ({ q: c.q - offsetQ, r: c.r - offsetR })),
+  }));
+
   return {
     id: `${biome}-${options.seed}`,
     biome,
     seed: options.seed,
     width,
     height,
-    cells: result.cells,
-    spawnZones: result.spawnZones,
+    cells: centeredCells,
+    spawnZones: centeredSpawnZones,
     props: result.props,
   };
 }

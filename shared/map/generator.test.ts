@@ -16,6 +16,7 @@ function getWalkableCells(map: MapDefinition): TerrainCell[] {
 
 function floodFill(map: MapDefinition, startQ: number, startR: number): Set<string> {
   const visited = new Set<string>();
+  const allCoords = new Set(map.cells.map(c => `${c.q},${c.r}`));
   const blocked = new Set(
     map.cells.filter(c => c.terrain.includes('blocked')).map(c => `${c.q},${c.r}`)
   );
@@ -26,7 +27,7 @@ function floodFill(map: MapDefinition, startQ: number, startR: number): Set<stri
     const [q, r] = queue.shift()!;
     const k = key(q, r);
     if (visited.has(k) || blocked.has(k)) continue;
-    if (q < 0 || q >= map.width || r < 0 || r >= map.height) continue;
+    if (!allCoords.has(k)) continue;
     visited.add(k);
 
     queue.push([q + 1, r], [q - 1, r], [q, r + 1], [q, r - 1]);
@@ -122,10 +123,12 @@ describe('Map Generator', () => {
 
     it('has open center area', () => {
       const map = generateMap('wilderness', { seed: 42, gridType: 'hex' });
-      const centerMinQ = Math.floor(map.width * 0.3);
-      const centerMaxQ = Math.floor(map.width * 0.7);
-      const centerMinR = Math.floor(map.height * 0.3);
-      const centerMaxR = Math.floor(map.height * 0.7);
+      const halfW = Math.floor(map.width / 2);
+      const halfH = Math.floor(map.height / 2);
+      const centerMinQ = -halfW + Math.floor(map.width * 0.3);
+      const centerMaxQ = -halfW + Math.floor(map.width * 0.7);
+      const centerMinR = -halfH + Math.floor(map.height * 0.3);
+      const centerMaxR = -halfH + Math.floor(map.height * 0.7);
 
       const centerCells = map.cells.filter(
         c => c.q >= centerMinQ && c.q <= centerMaxQ && c.r >= centerMinR && c.r <= centerMaxR
@@ -137,8 +140,14 @@ describe('Map Generator', () => {
 
     it('has tree line around perimeter', () => {
       const map = generateMap('wilderness', { seed: 42, gridType: 'hex' });
+      const halfW = Math.floor(map.width / 2);
+      const halfH = Math.floor(map.height / 2);
+      const minQ = -halfW;
+      const maxQ = map.width - 1 - halfW;
+      const minR = -halfH;
+      const maxR = map.height - 1 - halfH;
       const edgeCells = map.cells.filter(
-        c => c.q === 0 || c.q === map.width - 1 || c.r === 0 || c.r === map.height - 1
+        c => c.q === minQ || c.q === maxQ || c.r === minR || c.r === maxR
       );
       const blockedEdge = edgeCells.filter(c => c.terrain.includes('blocked'));
       expect(blockedEdge.length).toBeGreaterThan(edgeCells.length * 0.5);
