@@ -62,7 +62,7 @@ export const handleMoveStep = async (
       sendMessage(socket, { type: "error", message: "Movement not supported for this ruleset." });
       return;
     }
-    const newState = adapter.executeMove(movementState, payload.to, occupiedHexes);
+    const newState = adapter.executeMove(movementState, payload.to, occupiedHexes, match.mapDefinition);
   
   if (!newState) {
     sendMessage(socket, { type: "error", message: "Troppo lontano." });
