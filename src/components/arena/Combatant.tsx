@@ -190,7 +190,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   const currentRot = useRef(targetRotation)
   const [animationState, setAnimationState] = useState<AnimationState>('idle')
   const wasMovingRef = useRef(false)
-  const combatAnimationRef = useRef<{ type: 'punch' | 'jump'; until: number } | null>(null)
+  const combatAnimationRef = useRef<{ type: AnimationKey; until: number } | null>(null)
   const processedEffectsRef = useRef<Set<string>>(new Set())
 
   // Waypoint-based movement: walk through path instead of straight line
@@ -229,9 +229,13 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
       processedEffectsRef.current.add(effect.id)
 
       if ((effect.type === 'damage' || effect.type === 'miss') && effect.attackerId === combatant.playerId) {
-        combatAnimationRef.current = { type: 'punch', until: Date.now() + 800 }
+        combatAnimationRef.current = { type: 'attack', until: Date.now() + 800 }
+      } else if (effect.type === 'damage' && effect.targetId === combatant.playerId) {
+        combatAnimationRef.current = { type: 'hit', until: Date.now() + 400 }
       } else if (effect.type === 'defend' && effect.targetId === combatant.playerId) {
-        combatAnimationRef.current = { type: 'jump', until: Date.now() + 800 }
+        combatAnimationRef.current = { type: 'dodge', until: Date.now() + 800 }
+      } else if (effect.type === 'grapple' && effect.attackerId === combatant.playerId) {
+        combatAnimationRef.current = { type: 'grapple', until: Date.now() + 800 }
       }
     }
   }, [visualEffects, combatant.playerId])
@@ -241,6 +245,12 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
 
     if (isDead) {
       if (animationState !== 'death') setAnimationState('death')
+      return
+    }
+
+    const isStunned = combatant.statusEffects.includes('stunned') || combatant.statusEffects.includes('unconscious')
+    if (isStunned) {
+      if (animationState !== 'crouch') setAnimationState('crouch')
       return
     }
 
