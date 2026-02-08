@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { generateUUID } from '../../../shared/utils/uuid'
 import { rulesets } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
+import { ModelPreview } from './ModelPreview'
 import { PathbuilderImport } from '../rulesets/pf2/PathbuilderImport'
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import type { GurpsCharacterSheet } from '../../../shared/rulesets/gurps/characterSheet'
@@ -188,6 +189,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
 
             <div className="editor-section-group" style={{ marginTop: 'var(--space-xl)' }}>
               <h3 className="editor-section-title">3D Model</h3>
+              <ModelPreview modelId={character.modelId} />
               <div className="editor-model-picker">
                 {MODEL_LIST.map((model) => (
                   <button
