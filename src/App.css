@@ -4477,6 +4477,7 @@
 }
 
 .pf2-spell-picker-desktop .action-bar-maneuvers {
+  display: flex;
   border-radius: 8px;
   max-height: 50vh;
 }
