@@ -13,4 +13,6 @@ export type BaseCombatantState = {
   currentHP: number;
   statusEffects: string[];
   usedReaction: boolean;
+  /** Path of grid positions for movement animation (cleared after each move). */
+  movementPath?: GridPosition[];
 };

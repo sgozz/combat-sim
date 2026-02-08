@@ -3,6 +3,8 @@ import { Text, Billboard } from '@react-three/drei'
 import type { GridSystem, GridCoord, GridType } from '../../../shared/grid'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { GridPosition, ReachableHexInfo } from '../../../shared/types'
+import type { MapDefinition } from '../../../shared/map/types'
+import { isBlocked, isDifficultTerrain, hasCover } from '../../../shared/map/terrain'
 
 type FacingArcs = {
   front: { q: number; r: number }[]
@@ -22,6 +24,7 @@ type BattleGridProps = {
   facingArcs: FacingArcs
   reachableHexes: ReachableHexInfo[]
   onHexClick: (q: number, r: number) => void
+  mapDefinition?: MapDefinition
 }
 
 type ArcType = 'front' | 'side' | 'rear' | 'none'
@@ -55,16 +58,22 @@ const getCellStyle = (
   isAlternate: boolean,
   isHovered: boolean,
   reachableHex: ReachableHexInfo | undefined,
-  gridSystem: GridSystem
+  gridSystem: GridSystem,
+  mapDef?: MapDefinition
 ): CellStyle => {
-  const base: CellStyle = {
-    color: isAlternate ? '#1a1a1a' : '#222228',
-    emissive: '#000000',
-    emissiveIntensity: 0,
-    edgeColor: DEFAULT_EDGE_COLOR,
-    edgeOpacity: DEFAULT_EDGE_OPACITY,
-    elevation: -0.05,
-  }
+  const blocked = isBlocked(mapDef, q, r)
+  const difficult = isDifficultTerrain(mapDef, q, r)
+  const cover = hasCover(mapDef, q, r)
+
+  const base: CellStyle = blocked
+    ? { color: '#0a0a0c', emissive: '#000000', emissiveIntensity: 0, edgeColor: '#1a1a22', edgeOpacity: 0.2, elevation: -0.08 }
+    : difficult
+      ? { color: isAlternate ? '#2a2210' : '#2d2515', emissive: '#664400', emissiveIntensity: 0.05, edgeColor: '#554422', edgeOpacity: 0.5, elevation: -0.05 }
+      : cover
+        ? { color: isAlternate ? '#1a1a2a' : '#1e1e30', emissive: '#224466', emissiveIntensity: 0.08, edgeColor: '#336688', edgeOpacity: 0.6, elevation: -0.03 }
+        : { color: isAlternate ? '#1a1a1a' : '#222228', emissive: '#000000', emissiveIntensity: 0, edgeColor: DEFAULT_EDGE_COLOR, edgeOpacity: DEFAULT_EDGE_OPACITY, elevation: -0.05 }
+
+  if (blocked) return base
 
   if (moveTargetPosition && moveTargetPosition.x === q && moveTargetPosition.z === r) {
     return { ...base, color: '#1a3a1a', emissive: '#00ff00', emissiveIntensity: 0.6, edgeColor: '#00ff00', edgeOpacity: 0.9, elevation: 0 }
@@ -220,7 +229,8 @@ export const BattleGrid = ({
   moveTargetPosition, 
   facingArcs, 
   reachableHexes, 
-  onHexClick 
+  onHexClick,
+  mapDefinition,
 }: BattleGridProps) => {
   const [hoveredCell, setHoveredCell] = useState<{q: number, r: number} | null>(null)
   const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
@@ -311,7 +321,7 @@ export const BattleGrid = ({
         const style = getCellStyle(
           q, r, playerPosition, attackRange, isPlayerTurn, enemyPositions, 
           selectedTargetPosition, moveTargetPosition, arcType, isAlternate, 
-          isHovered, reachableHex, gridSystem
+          isHovered, reachableHex, gridSystem, mapDefinition
         )
         const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
         const isReachable = reachableHex !== undefined

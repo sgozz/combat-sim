@@ -256,6 +256,10 @@ export const handleMessage = async (
       const { id } = await createMatch(message.name, message.maxPlayers, user.id, user.preferredRulesetId, message.isPublic ?? false);
       await addMatchMember(id, user.id, null);
       
+      if (message.scenarioBiome) {
+        state.matchBiomes.set(id, message.scenarioBiome);
+      }
+      
       state.readySets.set(id, new Set());
       
       const matchRow = await findMatchById(id);
@@ -362,6 +366,12 @@ export const handleMessage = async (
       const matchRow = await findMatchById(message.matchId);
       if (!matchRow) {
         sendMessage(socket, { type: "error", message: "Match not found." });
+        return;
+      }
+      
+      // Don't remove match_members for finished matches — needed for stats/history
+      if (matchRow.status === 'finished') {
+        sendMessage(socket, { type: "match_left", matchId: message.matchId });
         return;
       }
       
@@ -541,7 +551,7 @@ export const handleMessage = async (
         sendMessage(socket, { type: "error", message: "Need at least 2 players to start." });
         return;
       }
-      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, rulesetId);
+      const matchState = await createMatchState(message.matchId, matchRow.name, matchRow.code, matchRow.max_players, rulesetId, state.matchBiomes.get(message.matchId));
       state.matches.set(message.matchId, matchState);
       await updateMatchState(message.matchId, matchState);
       

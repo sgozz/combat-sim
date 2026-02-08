@@ -370,6 +370,7 @@ export const advanceTurn = (state: MatchState, random: () => number = Math.rando
         reactionAvailable: true,
         mapPenalty: 0,
         shieldRaised: false,
+        movementPath: undefined,
       };
       
       if (combatant.dying > 0) {
@@ -532,10 +533,12 @@ export const getReachableSquares = (
   startPos: SquarePosition,
   speed: number,
   occupiedSquares: SquarePosition[] = []
-): Map<string, { position: SquarePosition; cost: number }> => {
-  const results = new Map<string, { position: SquarePosition; cost: number }>();
+): Map<string, { position: SquarePosition; cost: number; path: SquarePosition[] }> => {
+  const results = new Map<string, { position: SquarePosition; cost: number; path: SquarePosition[] }>();
   const visited = new Set<string>();
-  const queue: { pos: SquarePosition; cost: number }[] = [{ pos: startPos, cost: 0 }];
+  const queue: { pos: SquarePosition; cost: number; path: SquarePosition[] }[] = [
+    { pos: startPos, cost: 0, path: [startPos] }
+  ];
   
   const coordKey = (p: SquarePosition) => `${p.q},${p.r}`;
   const isOccupied = (p: SquarePosition) => occupiedSquares.some(o => o.q === p.q && o.r === p.r);
@@ -551,7 +554,7 @@ export const getReachableSquares = (
     visited.add(key);
     
     if (current.cost > 0) {
-      results.set(key, { position: current.pos, cost: current.cost });
+      results.set(key, { position: current.pos, cost: current.cost, path: current.path });
     }
     
     if (current.cost >= maxSquares) continue;
@@ -559,7 +562,7 @@ export const getReachableSquares = (
     const neighbors = grid.neighbors(current.pos);
     for (const neighbor of neighbors) {
       if (isOccupied(neighbor)) continue;
-      queue.push({ pos: neighbor, cost: current.cost + 1 });
+      queue.push({ pos: neighbor, cost: current.cost + 1, path: [...current.path, neighbor] });
     }
   }
   
@@ -625,6 +628,7 @@ export type MovementState = {
   movePointsRemaining: number;
   freeRotationUsed: boolean;
   movedBackward: boolean;
+  path?: { q: number; r: number }[];
 };
 
 export const executeMove = (
@@ -635,18 +639,21 @@ export const executeMove = (
   const isOccupied = occupiedHexes.some(h => h.q === targetHex.q && h.r === targetHex.r);
   if (isOccupied) return null;
   
-  const dx = Math.abs(targetHex.q - state.position.q);
-  const dz = Math.abs(targetHex.r - state.position.r);
-  const chebyshevDistance = Math.max(dx, dz);
+  // Use BFS to find path (validates reachability properly)
+  const speed = state.movePointsRemaining * 5; // convert squares to feet for getReachableSquares
+  const reachable = getReachableSquares(state.position, speed, occupiedHexes);
+  const destKey = `${targetHex.q},${targetHex.r}`;
+  const result = reachable.get(destKey);
   
-  if (chebyshevDistance > state.movePointsRemaining) return null;
+  if (!result) return null;
   
   return {
     position: { ...targetHex },
     facing: state.facing,
-    movePointsRemaining: state.movePointsRemaining - chebyshevDistance,
+    movePointsRemaining: state.movePointsRemaining - result.cost,
     freeRotationUsed: state.freeRotationUsed,
     movedBackward: state.movedBackward,
+    path: result.path,
   };
 };
 

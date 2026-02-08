@@ -12,6 +12,8 @@ export type MovementState = {
   movePointsRemaining: number;
   freeRotationUsed: boolean;
   movedBackward: boolean;
+  /** The sequence of hex coords the combatant walked through (for animation). */
+  path?: HexCoord[];
 };
 
 export type PostureModifiers = {

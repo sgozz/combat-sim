@@ -1,6 +1,9 @@
 import type { CharacterSheet, MatchState, Player } from "../../shared/types";
 import { isPF2Character } from "../../shared/types";
 import type { CombatantState } from "../../shared/rulesets";
+import type { BiomeId } from "../../shared/map/types";
+import { generateMap } from "../../shared/map";
+import { getGridType } from "../../shared/rulesets";
 import { state } from "./state";
 import { getRulesetServerFactory } from "./rulesets";
 import { getMatchMembers, findUserById, loadCharacterById } from "./db";
@@ -11,7 +14,8 @@ export const createMatchState = async (
   name: string,
   code: string,
   maxPlayers: number,
-  rulesetId: MatchState['rulesetId']
+  rulesetId: MatchState['rulesetId'],
+  scenarioBiome?: BiomeId
 ): Promise<MatchState> => {
   const members = await getMatchMembers(matchId);
   
@@ -45,14 +49,33 @@ export const createMatchState = async (
     characters.push(character);
   }
 
+   const mapDefinition = scenarioBiome
+     ? generateMap(scenarioBiome, { seed: Date.now(), gridType: getGridType(rulesetId) })
+     : undefined;
+
    const combatants: CombatantState[] = characters.map((character, index) => {
      const player = players[index];
      const isBot = player?.isBot ?? false;
-     const spawnRow = Math.floor(index / 2);
-     const spawnOffset = index % 2 === 0 ? -1 : 1;
-     const q = isBot ? 6 + spawnOffset : -2 + spawnOffset;
-     const r = spawnRow;
-     const facing = isBot ? 3 : 0;
+
+     let q: number;
+     let r: number;
+     let facing: number;
+
+     if (mapDefinition) {
+       const team = isBot ? 'enemy' : 'player';
+       const zone = mapDefinition.spawnZones.find(z => z.team === team);
+       const teamIndex = players.filter((p, i) => i < index && (p?.isBot ?? false) === isBot).length;
+       const spawnCell = zone?.cells[teamIndex % (zone?.cells.length || 1)];
+       q = spawnCell?.q ?? (isBot ? 6 : -2);
+       r = spawnCell?.r ?? 0;
+       facing = isBot ? 3 : 0;
+     } else {
+       const spawnRow = Math.floor(index / 2);
+       const spawnOffset = index % 2 === 0 ? -1 : 1;
+       q = isBot ? 6 + spawnOffset : -2 + spawnOffset;
+       r = spawnRow;
+       facing = isBot ? 3 : 0;
+     }
 
      const position = { x: q, y: 0, z: r };
      
@@ -109,5 +132,6 @@ export const createMatchState = async (
     round: 1,
     log: ["Match started."],
     status: "active",
+    mapDefinition,
   };
 };

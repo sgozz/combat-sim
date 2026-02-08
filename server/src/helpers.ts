@@ -5,6 +5,8 @@ import type { GridSystem, GridCoord } from "../../shared/grid";
 import { hexGrid } from "../../shared/grid";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { assertRulesetId } from "../../shared/rulesets/defaults";
+import type { MapDefinition } from "../../shared/map/types";
+import { isBlocked, getMovementCost } from "../../shared/map/terrain";
 import { state } from "./state";
 import { getMatchMembers } from "./db";
 
@@ -156,7 +158,8 @@ export const computeGridMoveToward = (
   to: GridPosition,
   maxMove: number,
   gridSystem: GridSystem,
-  stopDistance: number = 1
+  stopDistance: number = 1,
+  mapDefinition?: MapDefinition
 ): GridPosition => {
   let current = { ...from };
   let remaining = maxMove;
@@ -165,7 +168,8 @@ export const computeGridMoveToward = (
     const currentDist = calculateGridDistance(current, to, gridSystem);
     if (currentDist <= stopDistance) break;
 
-    const neighbors = getGridNeighbors(current.x, current.z, gridSystem);
+    const neighbors = getGridNeighbors(current.x, current.z, gridSystem)
+      .filter(n => !isBlocked(mapDefinition, n.x, n.z));
     let bestNeighbor = current;
     let bestDist = currentDist;
 
@@ -179,8 +183,12 @@ export const computeGridMoveToward = (
 
     if (bestDist >= currentDist) break;
     if (bestDist < stopDistance) break;
+
+    const moveCost = getMovementCost(mapDefinition, bestNeighbor.x, bestNeighbor.z);
+    if (remaining < moveCost) break;
+
     current = bestNeighbor;
-    remaining--;
+    remaining -= moveCost;
   }
 
   return current;
@@ -190,9 +198,10 @@ export const computeHexMoveToward = (
   from: GridPosition,
   to: GridPosition,
   maxMove: number,
-  stopDistance: number = 1
+  stopDistance: number = 1,
+  mapDefinition?: MapDefinition
 ): GridPosition => {
-  return computeGridMoveToward(from, to, maxMove, hexGrid, stopDistance);
+  return computeGridMoveToward(from, to, maxMove, hexGrid, stopDistance, mapDefinition);
 };
 
 export const checkVictory = (match: MatchState): MatchState => {

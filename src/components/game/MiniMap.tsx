@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { GridType } from '../../../shared/grid'
 import type { MatchState } from '../../../shared/types'
 import { getGridType } from '../../../shared/rulesets'
+import { isBlocked, isDifficultTerrain, hasCover } from '../../../shared/map/terrain'
 
 type MiniMapProps = {
   matchState: MatchState | null
@@ -92,12 +93,21 @@ export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
             const points = gridType === 'hex' 
               ? getHexPoints(x, y, CELL_SIZE)
               : getSquarePoints(x, y, CELL_SIZE)
+            const mapDef = matchState?.mapDefinition
+            const blocked = isBlocked(mapDef, q, r)
+            const difficult = isDifficultTerrain(mapDef, q, r)
+            const cover = hasCover(mapDef, q, r)
+            const fill = blocked ? 'rgba(20, 20, 30, 0.9)' 
+              : difficult ? 'rgba(100, 80, 20, 0.3)' 
+              : cover ? 'rgba(40, 80, 120, 0.3)' 
+              : 'none'
+            const stroke = blocked ? 'rgba(40, 40, 60, 0.5)' : 'rgba(255, 255, 255, 0.1)'
             return (
               <polygon
                 key={`${q},${r}`}
                 points={points}
-                fill="none"
-                stroke="rgba(255, 255, 255, 0.1)"
+                fill={fill}
+                stroke={stroke}
                 strokeWidth="0.5"
               />
             )

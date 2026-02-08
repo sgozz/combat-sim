@@ -8,6 +8,7 @@ import { updateMatchState } from "../../db";
 import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
 import { isPF2Character } from "../../../../shared/rulesets/characterSheet";
 import { getAoOReactors, executeAoOStrike } from "./reaction";
+import { isBlocked } from "../../../../shared/map/terrain";
 
 export const handlePF2RequestMove = async (
   socket: WebSocket,
@@ -52,12 +53,20 @@ export const handlePF2RequestMove = async (
     reachable = new Map();
     adjacent
       .filter(pos => !occupiedSquares.some(occ => occ.q === pos.q && occ.r === pos.r))
+      .filter(pos => !isBlocked(match.mapDefinition, pos.q, pos.r))
       .forEach(pos => {
         const key = `${pos.q},${pos.r}`;
         reachable.set(key, { position: pos, cost: 5 });
       });
   } else {
     reachable = getReachableSquares(startPos, speed, occupiedSquares);
+    if (match.mapDefinition) {
+      for (const [key, cell] of reachable) {
+        if (isBlocked(match.mapDefinition, cell.position.q, cell.position.r)) {
+          reachable.delete(key);
+        }
+      }
+    }
   }
 
   const reachableHexes: ReachableHexInfo[] = [];
@@ -106,11 +115,16 @@ export const handlePF2Stride = async (
 
   const reachable = getReachableSquares(startPos, speed, occupiedSquares);
   const destKey = `${payload.to.q},${payload.to.r}`;
+  const destResult = reachable.get(destKey);
 
-  if (!reachable.has(destKey)) {
+  if (!destResult || isBlocked(match.mapDefinition, payload.to.q, payload.to.r)) {
     sendMessage(socket, { type: "error", message: "Destination not reachable." });
     return;
   }
+  
+  const movementPath = destResult.path
+    ? destResult.path.map((p: { q: number; r: number }) => ({ x: p.q, y: 0, z: p.r }))
+    : [{ x: startPos.q, y: 0, z: startPos.r }, { x: payload.to.q, y: 0, z: payload.to.r }];
 
   const reactors = getAoOReactors(match, actorCombatant);
 
@@ -147,7 +161,7 @@ export const handlePF2Stride = async (
 
       const movedCombatants = updatedMatch.combatants.map(c =>
         c.playerId === player.id
-          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r } }
+          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r }, movementPath }
           : c
       );
 
@@ -195,6 +209,7 @@ export const handlePF2Stride = async (
           ...c,
           ...(isPF2Combatant(c) ? { actionsRemaining: c.actionsRemaining - 1 } : {}),
           position: { x: payload.to.q, y: c.position.y, z: payload.to.r },
+          movementPath,
         }
       : c
   );

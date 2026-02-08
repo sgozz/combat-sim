@@ -81,13 +81,13 @@ Add a server-authoritative map/scenario system with 3D environment rendering, pr
 - Modified combat resolution — cover bonus applied
 
 ### Definition of Done
-- [ ] `npx vitest run` — all tests pass including new terrain/generator tests
-- [ ] `npm run build` — production build succeeds
-- [ ] Match with map=dungeon: walls block movement, rooms are connected
-- [ ] Match with map=wilderness: trees/rocks are placed, some provide cover
-- [ ] Match without map: works exactly as before (empty grid)
-- [ ] Bot combatants pathfind around blocked terrain
-- [ ] Lobby shows scenario selector; selected biome generates a map
+- [x] `npx vitest run` — all tests pass including new terrain/generator tests
+- [x] `npm run build` — production build succeeds
+- [x] Match with map=dungeon: walls block movement, rooms are connected
+- [x] Match with map=wilderness: trees/rocks are placed, some provide cover
+- [x] Match without map: works exactly as before (empty grid)
+- [x] Bot combatants pathfind around blocked terrain
+- [x] Lobby shows scenario selector; selected biome generates a map
 
 ### Must Have
 - Terrain properties per grid cell: `blocked`, `difficult`, `cover`
@@ -185,7 +185,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ## TODOs
 
-- [ ] 1. Define Shared Map Types (MapDefinition, TerrainCell, BiomeId)
+- [x] 1. Define Shared Map Types (MapDefinition, TerrainCell, BiomeId)
 
   **What to do**:
   - Create `shared/map/types.ts` with:
@@ -289,7 +289,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 2. Procedural Map Generator (Dungeon + Wilderness Biomes)
+- [x] 2. Procedural Map Generator (Dungeon + Wilderness Biomes)
 
   **What to do**:
   - Create `shared/map/generator.ts` with:
@@ -399,7 +399,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 3. Download and Organize Quaternius GLB Assets
+- [x] 3. Download and Organize Quaternius GLB Assets
 
   **What to do**:
   - Visit quaternius.com and download relevant asset packs:
@@ -506,7 +506,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 4. Lobby Scenario Selector UI Component
+- [x] 4. Lobby Scenario Selector UI Component
 
   **What to do**:
   - Create `src/components/lobby/ScenarioSelector.tsx`:
@@ -585,7 +585,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 5. Terrain Query Helpers + Movement Integration
+- [x] 5. Terrain Query Helpers + Movement Integration
 
   **What to do**:
   - Create `shared/map/terrain.ts` with pure helper functions:
@@ -697,7 +697,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 6. 3D Environment Props Renderer (EnvironmentProps Component)
+- [x] 6. 3D Environment Props Renderer (EnvironmentProps Component)
 
   **What to do**:
   - Create `src/components/arena/EnvironmentProps.tsx`:
@@ -794,7 +794,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 7. Server Integration — Match Creation with Maps
+- [x] 7. Server Integration — Match Creation with Maps
 
   **What to do**:
   - Modify `server/src/handlers.ts` — handle `scenarioBiome` in `create_match` message:
@@ -894,7 +894,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 8. BattleGrid + MiniMap Terrain Visualization
+- [x] 8. BattleGrid + MiniMap Terrain Visualization
 
   **What to do**:
   - Modify `src/components/arena/BattleGrid.tsx`:
@@ -985,7 +985,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 9. Combat Cover Integration
+- [x] 9. Combat Cover Integration
 
   **What to do**:
   - Modify combat resolution to apply cover bonus:
@@ -1077,7 +1077,7 @@ Wave 4 (After Wave 3 — Polish):
 
 ---
 
-- [ ] 10. End-to-End Integration + Bot AI Terrain Awareness
+- [x] 10. End-to-End Integration + Bot AI Terrain Awareness
 
   **What to do**:
   - **Bot AI terrain awareness**:

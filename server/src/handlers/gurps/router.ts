@@ -128,7 +128,7 @@ export const handleGurpsAction = async (
       .filter((c) => c.playerId !== player.id)
       .map((c) => adapter.gridToHex(c.position));
 
-    const reachableHexes = turnMovement.phase === "moving" ? adapter.calculateReachableHexesInfo(turnMovement, occupiedHexes) : [];
+    const reachableHexes = turnMovement.phase === "moving" ? adapter.calculateReachableHexesInfo(turnMovement, occupiedHexes, match.mapDefinition) : [];
 
     const updated: MatchState = {
       ...match,

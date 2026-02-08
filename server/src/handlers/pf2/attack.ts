@@ -28,6 +28,7 @@ import {
 } from "../../../../shared/rulesets/pf2/conditions";
 import { hasFeat } from "../../../../shared/rulesets/pf2/feats";
 import { getReachableSquares, gridToHex } from "../../../../shared/rulesets/pf2/rules";
+import { hasCover, hasLineOfSight } from "../../../../shared/map/terrain";
 
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;
@@ -135,6 +136,11 @@ export const handlePF2AttackAction = async (
       rangePenalty = Math.floor((distance - 1) / increment) * -2;
     }
 
+    if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+      sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+      return;
+    }
+
      const isFinesse = weapon.traits.includes('finesse');
     const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
     const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -150,11 +156,15 @@ export const handlePF2AttackAction = async (
 
     const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
     const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-    const effectiveAC = targetAC + conditionACMod + shieldBonus;
+    const coverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+    const effectiveAC = targetAC + conditionACMod + shieldBonus + coverBonus;
 
     const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
    
     let logEntry = `${attackerCharacter.name} attacks ${targetCharacter.name} with ${weapon.name}`;
+    if (coverBonus > 0) {
+      logEntry += ` (target has cover +${coverBonus} AC)`;
+    }
     if (mapPenalty < 0) {
       logEntry += ` (MAP ${mapPenalty})`;
     }
@@ -369,6 +379,11 @@ export const handlePF2PowerAttack = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -384,7 +399,8 @@ export const handlePF2PowerAttack = async (
 
   const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
   const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-  const effectiveAC = targetAC + conditionACMod + shieldBonus;
+  const paCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+  const effectiveAC = targetAC + conditionACMod + shieldBonus + paCoverBonus;
 
   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
   
@@ -643,6 +659,11 @@ export const handlePF2SuddenCharge = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -658,7 +679,8 @@ export const handlePF2SuddenCharge = async (
 
   const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
   const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-  const effectiveAC = targetAC + conditionACMod + shieldBonus;
+  const scCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+  const effectiveAC = targetAC + conditionACMod + shieldBonus + scCoverBonus;
 
   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
   
@@ -877,6 +899,11 @@ export const handlePF2CombatGrab = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -892,7 +919,8 @@ export const handlePF2CombatGrab = async (
 
   const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
   const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-  const effectiveAC = targetAC + conditionACMod + shieldBonus;
+  const cgCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+  const effectiveAC = targetAC + conditionACMod + shieldBonus + cgCoverBonus;
 
   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
   
@@ -1126,6 +1154,11 @@ export const handlePF2Knockdown = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -1141,7 +1174,8 @@ export const handlePF2Knockdown = async (
 
   const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
   const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-  const effectiveAC = targetAC + conditionACMod + shieldBonus;
+  const kdCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+  const effectiveAC = targetAC + conditionACMod + shieldBonus + kdCoverBonus;
 
   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
   
@@ -1376,6 +1410,11 @@ export const handlePF2IntimidatingStrike = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -1391,7 +1430,8 @@ export const handlePF2IntimidatingStrike = async (
 
   const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
   const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-  const effectiveAC = targetAC + conditionACMod + shieldBonus;
+  const isCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+  const effectiveAC = targetAC + conditionACMod + shieldBonus + isCoverBonus;
 
   const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
   

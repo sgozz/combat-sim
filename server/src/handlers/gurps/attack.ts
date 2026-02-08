@@ -34,6 +34,7 @@ import { clearDefenseTimeout } from "../../timers";
 import { formatRoll, applyDamageToTarget } from "../shared/damage";
 import { handlePF2AttackAction } from "../pf2/attack";
 import { quickContest, getDefenseOptions, checkWaitTriggers } from "../../../../shared/rulesets/gurps/rules";
+import { hasCover, hasLineOfSight } from "../../../../shared/map/terrain";
 import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
 import { executeWaitInterrupt } from "./wait-interrupt";
 import type { GurpsCombatantState } from "../../../../shared/rulesets/gurps/types";
@@ -218,7 +219,9 @@ export const resolveDefenseChoice = async (
   
   const { defenseLabel, finalDefenseValue, canRetreat, parryWeaponName } = defenseResolution;
   
-  const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
+  const defenderPos = defenderCombatant.position;
+  const coverBonus = hasCover(match.mapDefinition, defenderPos.x, defenderPos.z) ? 2 : 0;
+  const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue + coverBonus);
   
   if (defenseRoll.defended) {
     let retreatHex: { x: number; y: number; z: number } | null = null;
@@ -412,6 +415,11 @@ export const handleAttackAction = async (
     sendMessage(socket, { type: "error", message: `Target out of melee range (reach ${max}).` });
     return;
   }
+
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
   
   const closeCombatMods = adapter.getCloseCombatAttackModifiers!(weapon ?? { id: '', name: 'Fist', type: 'melee', reach: 'C' }, distance);
   if (!closeCombatMods.canAttack) {
@@ -470,6 +478,10 @@ export const handleAttackAction = async (
   
   if (targetCombatant.statusEffects.includes('defending')) {
     defenseDescription += defenseDescription === "normal" ? "defensive (+1)" : " + defensive (+1)";
+  }
+
+  if (hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z)) {
+    defenseDescription += defenseDescription === "normal" ? "cover (+2)" : " + cover (+2)";
   }
 
   // Check for wait triggers before attack
@@ -667,7 +679,8 @@ export const handleAttackAction = async (
     
     const { defenseLabel, finalDefenseValue, canRetreat, retreatHex, parryWeaponName: botParryWeaponName } = botDefense;
     
-const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue);
+    const botCoverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+const defenseRoll = adapter.resolveDefenseRoll!(finalDefenseValue + botCoverBonus);
     
     if (defenseRoll.defended) {
       const retreatStr = canRetreat ? ' (with retreat)' : '';

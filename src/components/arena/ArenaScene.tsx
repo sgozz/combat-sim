@@ -3,11 +3,13 @@ import { BattleGrid } from './BattleGrid'
 import { Combatant } from './Combatant'
 import { MoveMarker } from './MoveMarker'
 import { CombatEffects } from './CombatEffects'
+import { EnvironmentProps } from './EnvironmentProps'
 import { CameraControls, type CameraMode } from './CameraControls'
 import { getHexInDirection } from '../../utils/hex'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
 import type { CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets'
+import type { MapDefinition } from '../../../shared/map/types'
 import { isPF2Character, isGurpsCharacter } from '../../../shared/rulesets/characterSheet'
 import { getGridType, getServerAdapter } from '../../../shared/rulesets'
 import { useMemo, useState, useEffect } from 'react'
@@ -24,6 +26,7 @@ type ArenaSceneProps = {
   visualEffects: (VisualEffect & { id: string })[]
   cameraMode: CameraMode
   rulesetId: RulesetId
+  mapDefinition?: MapDefinition
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
 }
@@ -61,7 +64,7 @@ const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: 
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, mapDefinition, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   
   useEffect(() => {
@@ -181,6 +184,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         moveTargetPosition={moveTarget}
         facingArcs={facingArcs}
         reachableHexes={reachableHexes}
+        mapDefinition={mapDefinition}
         onHexClick={(q: number, r: number) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {
@@ -190,6 +194,8 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
           }
         }}
       />
+
+      <EnvironmentProps mapDefinition={mapDefinition} gridType={getGridType(rulesetId)} />
       
        {combatants.map((combatant) => (
          <Combatant

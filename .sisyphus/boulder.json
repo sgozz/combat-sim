@@ -1,8 +1,8 @@
 {
-  "active_plan": "/home/fabio/.local/share/opencode/worktree/5ba295377a69310acb1f373a58eed37531b948e0/eager-lemur/.sisyphus/plans/mobile-ux-gurps-fixes.md",
-  "started_at": "2026-02-08T09:03:33.434Z",
-  "session_ids": [
-    "ses_3c5aee0beffeB9u3dNFhLn7Azb"
-  ],
-  "plan_name": "mobile-ux-gurps-fixes"
+  "active_plan": null,
+  "completed_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/scenario-system.md",
+  "started_at": "2026-02-07T22:32:34.444Z",
+  "completed_at": "2026-02-08T23:10:00.000Z",
+  "plan_name": "scenario-system",
+  "status": "complete"
 }

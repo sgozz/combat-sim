@@ -178,11 +178,15 @@ function AppRoutes() {
 
   const handleLeaveMatch = useCallback(() => {
     if (activeMatchId) {
-      sendMessage({ type: 'leave_match', matchId: activeMatchId })
+      const isFinished = matchState?.status === 'finished'
+        || myMatches.find(m => m.id === activeMatchId)?.status === 'finished'
+      if (!isFinished) {
+        sendMessage({ type: 'leave_match', matchId: activeMatchId })
+      }
     }
     setActiveMatchId(null)
     setTimeout(() => navigate('/matches'), 0)
-  }, [sendMessage, activeMatchId, navigate, setActiveMatchId])
+  }, [sendMessage, activeMatchId, matchState, myMatches, navigate, setActiveMatchId])
 
   const handleLogout = useCallback(() => {
     logout()

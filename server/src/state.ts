@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import type { CharacterSheet, MatchState, User } from "../../shared/types";
+import type { BiomeId } from "../../shared/map/types";
 import type { BetterSqliteDatabase, ConnectionState } from "./types";
 
 class ServerState {
@@ -13,6 +14,7 @@ class ServerState {
   pendingDisconnections = new Map<string, NodeJS.Timeout>();
   botCount = 1;
   readySets = new Map<string, Set<string>>();
+  matchBiomes = new Map<string, BiomeId>();
   db!: BetterSqliteDatabase;
 
   setDb(db: BetterSqliteDatabase) {
