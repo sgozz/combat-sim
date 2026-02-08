@@ -780,28 +780,35 @@ export const handleMessage = async (
       const user = requireUser(socket);
       if (!user) return;
       
-      // Verify the user owns this character
-      const char = state.db.prepare(`
-        SELECT owner_id, pathbuilder_id FROM characters 
-        WHERE id = ? AND ruleset_id = 'pf2'
-      `).get(message.characterId) as { owner_id: string; pathbuilder_id: string | null } | undefined;
+      // Verify the user owns this character (pathbuilderId and rulesetId are in data_json, not columns)
+      const charRow = state.db.prepare(`
+        SELECT owner_id, data_json FROM characters 
+        WHERE id = ?
+      `).get(message.characterId) as { owner_id: string; data_json: string } | undefined;
       
-      if (!char) {
+      if (!charRow) {
         sendMessage(socket, { type: "error", message: "Character not found" });
         return;
       }
       
-      if (char.owner_id !== user.id) {
+      if (charRow.owner_id !== user.id) {
         sendMessage(socket, { type: "error", message: "You do not own this character" });
         return;
       }
       
-      if (!char.pathbuilder_id) {
+      const charData = JSON.parse(charRow.data_json) as { rulesetId?: string; pathbuilderId?: string };
+      
+      if (charData.rulesetId !== 'pf2') {
+        sendMessage(socket, { type: "error", message: "Character is not a PF2 character" });
+        return;
+      }
+      
+      if (!charData.pathbuilderId) {
         sendMessage(socket, { type: "error", message: "Character was not imported from Pathbuilder" });
         return;
       }
       
-      if (char.pathbuilder_id !== message.pathbuilderId) {
+      if (charData.pathbuilderId !== message.pathbuilderId) {
         sendMessage(socket, { type: "error", message: "Pathbuilder ID mismatch" });
         return;
       }

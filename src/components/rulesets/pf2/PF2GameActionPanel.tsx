@@ -30,8 +30,21 @@ export const PF2GameActionPanel = ({
 
   const handleSpellSelect = useCallback((spellName: string, castLevel: number) => {
     const spellDef = getSpell(spellName)
-    if (!spellDef) return
 
+    // Unknown spells: send generic cast (with target if selected)
+    if (!spellDef) {
+      onAction('pf2_cast_spell', {
+        type: 'pf2_cast_spell',
+        casterIndex: 0,
+        spellName,
+        spellLevel: castLevel,
+        targetId: selectedTargetId ?? undefined
+      })
+      setShowSpellPicker(false)
+      return
+    }
+
+    // Known spells: use full automation
     if (spellDef.targetType === 'single' && !selectedTargetId) {
       alert('Please select a target first')
       return
