@@ -341,6 +341,23 @@
   text-decoration: line-through;
 }
 
+.init-card.tappable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(100, 108, 255, 0.2);
+}
+
+.init-card.tappable:active {
+  transform: scale(0.95);
+  background: #3a3a4a;
+}
+
+.init-card.selected-target {
+  opacity: 1;
+  border-color: #f44;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+  background: #3a2a2a;
+}
+
 .init-icon {
   font-size: 0.9rem;
 }
@@ -2577,6 +2594,7 @@
     transform: none;
     padding: 0 0.5rem;
     align-items: center;
+    z-index: 200;
   }
 
   .combat-toast {
