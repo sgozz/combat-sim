@@ -7,8 +7,8 @@ import type { CharacterSheet, VisualEffect } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import { isGurpsCombatant } from '../../../shared/rulesets'
-import { getModelEntry, MODEL_LIST } from '../../data/modelRegistry'
-import type { AnimationKey } from '../../data/modelRegistry'
+import { getModelEntry, getAllPreloadPaths } from '../../data/modelRegistry'
+import type { AnimationKey, ModelEntry } from '../../data/modelRegistry'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -40,8 +40,8 @@ const STATUS_ICONS: Record<string, string> = {
   close_combat: '⚔️',
 }
 
-for (const entry of MODEL_LIST) {
-  useGLTF.preload(entry.path)
+for (const path of getAllPreloadPaths()) {
+  useGLTF.preload(path)
 }
 
 const INDICATOR_DISTANCE = 0.7
@@ -55,75 +55,187 @@ type CombatantModelProps = {
   animationState: AnimationState
 }
 
-function CombatantModel({ modelId, emissive, isPlayer, animationState }: CombatantModelProps) {
-  const model = getModelEntry(modelId)
+function applyTeamMaterials(obj: THREE.Object3D, isPlayer: boolean, emissive: string) {
+  obj.traverse((child) => {
+    if (child instanceof THREE.Mesh && child.material) {
+      child.castShadow = true
+      child.receiveShadow = true
+      const material = child.material.clone()
+      if (material instanceof THREE.MeshStandardMaterial) {
+        material.color.multiplyScalar(isPlayer ? 1.2 : 0.9)
+        if (isPlayer) {
+          material.emissive.setHex(0x2244ff)
+          material.emissiveIntensity = 0.15
+        } else {
+          material.emissive.setHex(0xff2222)
+          material.emissiveIntensity = 0.15
+        }
+        if (emissive !== '#000000') {
+          material.emissive.setHex(0xffff00)
+          material.emissiveIntensity = 0.4
+        }
+      }
+      child.material = material
+    }
+  })
+}
+
+function setupAnimations(
+  mixer: THREE.AnimationMixer,
+  clips: THREE.AnimationClip[],
+): Record<string, THREE.AnimationAction> {
+  const actions: Record<string, THREE.AnimationAction> = {}
+  clips.forEach(clip => {
+    actions[clip.name] = mixer.clipAction(clip)
+  })
+  return actions
+}
+
+function playAnimation(
+  actionsRef: React.MutableRefObject<Record<string, THREE.AnimationAction>>,
+  clipName: string,
+  isDeath: boolean,
+) {
+  const action = actionsRef.current[clipName]
+  if (action) {
+    Object.values(actionsRef.current).forEach(a => a?.fadeOut(0.2))
+    action.reset().fadeIn(0.2)
+    if (isDeath) {
+      action.setLoop(THREE.LoopOnce, 1)
+      action.clampWhenFinished = true
+    }
+    action.play()
+  }
+}
+
+function findBoneByName(root: THREE.Object3D, name: string): THREE.Bone | null {
+  let found: THREE.Bone | null = null
+  root.traverse((child) => {
+    if (child instanceof THREE.Bone && child.name === name) {
+      found = child
+    }
+  })
+  return found
+}
+
+function SimpleModel({ model, isPlayer, emissive, animationState }: {
+  model: ModelEntry
+  isPlayer: boolean
+  emissive: string
+  animationState: AnimationState
+}) {
   const { scene, animations } = useGLTF(model.path)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
 
   const clonedScene = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
-
-    clone.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.material) {
-        child.castShadow = true
-        child.receiveShadow = true
-        const material = child.material.clone()
-        if (material instanceof THREE.MeshStandardMaterial) {
-          material.color.multiplyScalar(isPlayer ? 1.2 : 0.9)
-          if (isPlayer) {
-            material.emissive.setHex(0x2244ff)
-            material.emissiveIntensity = 0.15
-          } else {
-            material.emissive.setHex(0xff2222)
-            material.emissiveIntensity = 0.15
-          }
-          if (emissive !== '#000000') {
-            material.emissive.setHex(0xffff00)
-            material.emissiveIntensity = 0.4
-          }
-        }
-        child.material = material
-      }
-    })
-
+    applyTeamMaterials(clone, isPlayer, emissive)
     return clone
   }, [scene, isPlayer, emissive])
 
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(clonedScene)
     mixerRef.current = mixer
-    actionsRef.current = {}
-    animations.forEach(clip => {
-      actionsRef.current[clip.name] = mixer.clipAction(clip)
-    })
-
-    return () => {
-      mixer.stopAllAction()
-    }
+    actionsRef.current = setupAnimations(mixer, animations)
+    return () => { mixer.stopAllAction() }
   }, [clonedScene, animations])
 
-  useFrame((_, delta) => {
-    mixerRef.current?.update(delta)
-  })
+  useFrame((_, delta) => { mixerRef.current?.update(delta) })
 
   useEffect(() => {
-    const clipName = model.animations[animationState]
-    const action = actionsRef.current[clipName]
-    if (action) {
-      Object.values(actionsRef.current).forEach(a => a?.fadeOut(0.2))
-      action.reset().fadeIn(0.2)
-      if (animationState === 'death') {
-        action.setLoop(THREE.LoopOnce, 1)
-        action.clampWhenFinished = true
-      }
-      action.play()
-    }
+    playAnimation(actionsRef, model.animations[animationState], animationState === 'death')
   }, [animationState, clonedScene, model.animations])
+
+  return <primitive object={clonedScene} scale={model.scale} />
+}
+
+function CompositeModelView({ model, isPlayer, emissive, animationState }: {
+  model: ModelEntry
+  isPlayer: boolean
+  emissive: string
+  animationState: AnimationState
+}) {
+  const composite = model.composite!
+  const bodyGltf = useGLTF(composite.body)
+  const animGltf = useGLTF(composite.animationSrc)
+  const outfitGltf = useGLTF(composite.outfit ?? composite.body)
+  const weaponGltf = useGLTF(composite.weapon ?? composite.body)
+  const hasOutfit = !!composite.outfit
+  const hasWeapon = !!composite.weapon
+
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
+  const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
+
+  const assembledGroup = useMemo(() => {
+    const group = new THREE.Group()
+
+    const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
+    applyTeamMaterials(bodyClone, isPlayer, emissive)
+    group.add(bodyClone)
+
+    if (hasOutfit) {
+      const outfitClone = SkeletonUtils.clone(outfitGltf.scene)
+      applyTeamMaterials(outfitClone, isPlayer, emissive)
+
+      let bodySkeleton: THREE.Skeleton | null = null
+      bodyClone.traverse((child) => {
+        if (child instanceof THREE.SkinnedMesh && child.skeleton) {
+          bodySkeleton = child.skeleton
+        }
+      })
+
+      if (bodySkeleton) {
+        const skel = bodySkeleton as THREE.Skeleton
+        outfitClone.traverse((child) => {
+          if (child instanceof THREE.SkinnedMesh) {
+            child.skeleton = skel
+            child.bind(skel)
+          }
+        })
+      }
+
+      group.add(outfitClone)
+    }
+
+    if (hasWeapon) {
+      const weaponClone = weaponGltf.scene.clone(true)
+      weaponClone.scale.setScalar(0.01)
+      const handBone = findBoneByName(bodyClone, 'hand_r')
+      if (handBone) {
+        handBone.add(weaponClone)
+      }
+    }
+
+    return group
+  }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon, isPlayer, emissive])
+
+  useEffect(() => {
+    const mixer = new THREE.AnimationMixer(assembledGroup)
+    mixerRef.current = mixer
+    actionsRef.current = setupAnimations(mixer, animGltf.animations)
+    return () => { mixer.stopAllAction() }
+  }, [assembledGroup, animGltf.animations])
+
+  useFrame((_, delta) => { mixerRef.current?.update(delta) })
+
+  useEffect(() => {
+    playAnimation(actionsRef, model.animations[animationState], animationState === 'death')
+  }, [animationState, assembledGroup, model.animations])
+
+  return <primitive object={assembledGroup} scale={model.scale} />
+}
+
+function CombatantModel({ modelId, emissive, isPlayer, animationState }: CombatantModelProps) {
+  const model = getModelEntry(modelId)
 
   return (
     <group rotation={[0, model.rotationOffset, 0]}>
-      <primitive object={clonedScene} scale={model.scale} />
+      {model.composite ? (
+        <CompositeModelView model={model} isPlayer={isPlayer} emissive={emissive} animationState={animationState} />
+      ) : (
+        <SimpleModel model={model} isPlayer={isPlayer} emissive={emissive} animationState={animationState} />
+      )}
       <mesh 
         position={[
           INDICATOR_DISTANCE * Math.cos(INDICATOR_LATERAL_OFFSET), 

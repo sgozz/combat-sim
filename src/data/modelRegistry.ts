@@ -4,6 +4,13 @@ export type AnimationLibrary = 'classic' | 'quaternius'
 
 export type WeaponType = 'sword' | 'dagger' | 'staff' | 'bow' | 'unarmed' | 'spell'
 
+export type CompositeModel = {
+  body: string
+  outfit?: string
+  weapon?: string
+  animationSrc: string
+}
+
 export type ModelEntry = {
   id: string
   label: string
@@ -13,30 +20,34 @@ export type ModelEntry = {
   animations: Record<AnimationKey, string>
   library: AnimationLibrary
   weaponType: WeaponType
+  composite?: CompositeModel
 }
 
 const RPG_SCALE = 0.32
 const RPG_ROTATION = Math.PI / 2
 
+const UAL1 = '/models/quaternius/UAL1_Standard.glb'
+const BODY_M = '/models/quaternius/characters/Superhero_Male.glb'
+const BODY_F = '/models/quaternius/characters/Superhero_Female.glb'
+const OUTFIT_RANGER_M = '/models/quaternius/outfits/Male_Ranger.glb'
+const OUTFIT_PEASANT_M = '/models/quaternius/outfits/Male_Peasant.glb'
+const OUTFIT_RANGER_F = '/models/quaternius/outfits/Female_Ranger.glb'
+const OUTFIT_PEASANT_F = '/models/quaternius/outfits/Female_Peasant.glb'
+const WEAPON_SWORD = '/models/quaternius/weapons/Sword_Bronze.glb'
+const WEAPON_AXE = '/models/quaternius/weapons/Axe_Bronze.glb'
+const WEAPON_TORCH = '/models/quaternius/weapons/Torch_Metal.glb'
+
+const UAL1_ANIMS: Record<AnimationKey, string> = {
+  idle: 'Idle_Loop',
+  walk: 'Walk_Loop',
+  run: 'Sprint_Loop',
+  death: 'Death01',
+  jump: 'Roll',
+  punch: 'Sword_Attack',
+  working: 'Sword_Idle',
+}
+
 export const MODEL_REGISTRY: Record<string, ModelEntry> = {
-  human: {
-    id: 'human',
-    label: 'Soldier (Classic)',
-    path: '/models/human.glb',
-    scale: 0.342,
-    rotationOffset: Math.PI / 2,
-    animations: {
-      idle: 'Human Armature|Idle',
-      walk: 'Human Armature|Walk',
-      run: 'Human Armature|Run',
-      death: 'Human Armature|Death',
-      jump: 'Human Armature|Jump',
-      punch: 'Human Armature|Punch',
-      working: 'Human Armature|Working',
-    },
-    library: 'classic',
-    weaponType: 'unarmed',
-  },
   warrior: {
     id: 'warrior',
     label: 'Warrior (Classic)',
@@ -145,47 +156,100 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     library: 'classic',
     weaponType: 'unarmed',
   },
-  quaternius_standard: {
-    id: 'quaternius_standard',
-    label: 'Quaternius (Standard)',
-    path: '/models/quaternius/UAL2_Standard.glb',
+  quaternius_ual1: {
+    id: 'quaternius_ual1',
+    label: 'Mannequin (Quaternius)',
+    path: UAL1,
     scale: 1.0,
     rotationOffset: 0,
-    animations: {
-      idle: 'Idle',
-      walk: 'Walk',
-      run: 'Run',
-      death: 'Death',
-      jump: 'Jump',
-      punch: 'Punch_Combo_1',
-      working: 'Idle_Combat',
-    },
+    animations: { ...UAL1_ANIMS },
     library: 'quaternius',
-    weaponType: 'unarmed',
+    weaponType: 'sword',
   },
-  quaternius_mannequin: {
-    id: 'quaternius_mannequin',
-    label: 'Quaternius (Mannequin)',
-    path: '/models/quaternius/Mannequin_F.glb',
+  quaternius_ranger_m: {
+    id: 'quaternius_ranger_m',
+    label: 'Ranger M (Quaternius)',
+    path: UAL1,
     scale: 1.0,
     rotationOffset: 0,
-    animations: {
-      idle: 'Idle',
-      walk: 'Walk',
-      run: 'Run',
-      death: 'Death',
-      jump: 'Jump',
-      punch: 'Attack',
-      working: 'Idle_Pose',
+    animations: { ...UAL1_ANIMS },
+    library: 'quaternius',
+    weaponType: 'sword',
+    composite: {
+      body: BODY_M,
+      outfit: OUTFIT_RANGER_M,
+      weapon: WEAPON_SWORD,
+      animationSrc: UAL1,
     },
+  },
+  quaternius_peasant_m: {
+    id: 'quaternius_peasant_m',
+    label: 'Peasant M (Quaternius)',
+    path: UAL1,
+    scale: 1.0,
+    rotationOffset: 0,
+    animations: { ...UAL1_ANIMS },
     library: 'quaternius',
     weaponType: 'unarmed',
+    composite: {
+      body: BODY_M,
+      outfit: OUTFIT_PEASANT_M,
+      weapon: WEAPON_AXE,
+      animationSrc: UAL1,
+    },
+  },
+  quaternius_ranger_f: {
+    id: 'quaternius_ranger_f',
+    label: 'Ranger F (Quaternius)',
+    path: UAL1,
+    scale: 1.0,
+    rotationOffset: 0,
+    animations: { ...UAL1_ANIMS },
+    library: 'quaternius',
+    weaponType: 'sword',
+    composite: {
+      body: BODY_F,
+      outfit: OUTFIT_RANGER_F,
+      weapon: WEAPON_SWORD,
+      animationSrc: UAL1,
+    },
+  },
+  quaternius_peasant_f: {
+    id: 'quaternius_peasant_f',
+    label: 'Peasant F (Quaternius)',
+    path: UAL1,
+    scale: 1.0,
+    rotationOffset: 0,
+    animations: { ...UAL1_ANIMS },
+    library: 'quaternius',
+    weaponType: 'unarmed',
+    composite: {
+      body: BODY_F,
+      outfit: OUTFIT_PEASANT_F,
+      weapon: WEAPON_TORCH,
+      animationSrc: UAL1,
+    },
   },
 }
 
 export const DEFAULT_MODEL_ID = 'warrior'
 
 export const MODEL_LIST = Object.values(MODEL_REGISTRY)
+
+/** Collect every unique GLB path that needs preloading */
+export function getAllPreloadPaths(): string[] {
+  const paths = new Set<string>()
+  for (const entry of MODEL_LIST) {
+    paths.add(entry.path)
+    if (entry.composite) {
+      paths.add(entry.composite.body)
+      if (entry.composite.outfit) paths.add(entry.composite.outfit)
+      if (entry.composite.weapon) paths.add(entry.composite.weapon)
+      paths.add(entry.composite.animationSrc)
+    }
+  }
+  return [...paths]
+}
 
 export function getModelEntry(modelId: string | undefined): ModelEntry {
   return MODEL_REGISTRY[modelId ?? DEFAULT_MODEL_ID] ?? MODEL_REGISTRY[DEFAULT_MODEL_ID]

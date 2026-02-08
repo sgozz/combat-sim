@@ -109,8 +109,8 @@ const startServer = async () => {
     });
   });
 
-  server.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server listening on http://0.0.0.0:${PORT}`);
   });
 
   const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
