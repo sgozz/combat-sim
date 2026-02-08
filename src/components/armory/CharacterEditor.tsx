@@ -12,7 +12,7 @@ import type { Skill, Equipment, DamageType, Reach, EquipmentType, Advantage, Dis
 import type { PF2Skill, Proficiency, PF2DamageType, PF2WeaponTrait } from '../../../shared/rulesets/pf2/types'
 import type { Abilities } from '../../../shared/rulesets/pf2/types'
 import type { PF2Feat } from '../../../shared/rulesets/pf2/characterSheet'
-import { MODEL_LIST, DEFAULT_MODEL_ID } from '../../data/modelRegistry'
+import { DEFAULT_MODEL_ID, getClassicModels, getQuaterniusModels } from '../../data/modelRegistry'
 import './CharacterEditor.css'
 
 type Tab = 'attributes' | 'skills' | 'equipment' | 'traits'
@@ -188,15 +188,31 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
 
             <div className="editor-section-group" style={{ marginTop: 'var(--space-xl)' }}>
               <h3 className="editor-section-title">3D Model</h3>
+
+              <h4 className="editor-section-subtitle">Classic (Fantasy)</h4>
               <div className="editor-model-picker">
-                {MODEL_LIST.map((model) => (
+                {getClassicModels().map((model) => (
                   <button
                     key={model.id}
                     type="button"
                     className={`editor-model-option${(character.modelId ?? DEFAULT_MODEL_ID) === model.id ? ' active' : ''}`}
                     onClick={() => setCharacter({ ...character, modelId: model.id })}
                   >
-                    <span className="editor-model-label">{model.label}</span>
+                    <span className="editor-model-label">{model.label.replace(' (Classic)', '')}</span>
+                  </button>
+                ))}
+              </div>
+
+              <h4 className="editor-section-subtitle" style={{ marginTop: 'var(--space-md)' }}>Realistic (Quaternius)</h4>
+              <div className="editor-model-picker">
+                {getQuaterniusModels().map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    className={`editor-model-option${(character.modelId ?? DEFAULT_MODEL_ID) === model.id ? ' active' : ''}`}
+                    onClick={() => setCharacter({ ...character, modelId: model.id })}
+                  >
+                    <span className="editor-model-label">{model.label.replace(' (Realistic)', '')}</span>
                   </button>
                 ))}
               </div>
