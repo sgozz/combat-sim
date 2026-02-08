@@ -1,4 +1,5 @@
-import { useMemo, useEffect, useRef, useState, useCallback, Suspense } from 'react'
+import { Component, useMemo, useEffect, useRef, useState, useCallback, Suspense } from 'react'
+import type { ReactNode, ErrorInfo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import type { RootState } from '@react-three/fiber'
 import { useGLTF, OrbitControls, Stage } from '@react-three/drei'
@@ -9,16 +10,6 @@ import type { ModelEntry } from '../../data/modelRegistry'
 
 type ModelPreviewProps = {
   modelId?: string
-}
-
-function findBoneByName(root: THREE.Object3D, name: string): THREE.Bone | null {
-  let found: THREE.Bone | null = null
-  root.traverse((child) => {
-    if (child instanceof THREE.Bone && child.name === name) {
-      found = child
-    }
-  })
-  return found
 }
 
 function prepareCloneMaterials(obj: THREE.Object3D) {
@@ -55,58 +46,17 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
   const composite = model.composite!
   const bodyGltf = useGLTF(composite.body)
   const animGltf = useGLTF(composite.animationSrc)
-  const outfitGltf = useGLTF(composite.outfit ?? composite.body)
-  const weaponGltf = useGLTF(composite.weapon ?? composite.body)
-  const hasOutfit = !!composite.outfit
-  const hasWeapon = !!composite.weapon
 
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
 
-  const assembledGroup = useMemo(() => {
-    const group = new THREE.Group()
-
-    const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
-    prepareCloneMaterials(bodyClone)
-    group.add(bodyClone)
-
-    if (hasOutfit) {
-      const outfitClone = SkeletonUtils.clone(outfitGltf.scene)
-      prepareCloneMaterials(outfitClone)
-
-      let bodySkeleton: THREE.Skeleton | null = null
-      bodyClone.traverse((child) => {
-        if (child instanceof THREE.SkinnedMesh && child.skeleton) {
-          bodySkeleton = child.skeleton
-        }
-      })
-
-      if (bodySkeleton) {
-        const skel = bodySkeleton as THREE.Skeleton
-        outfitClone.traverse((child) => {
-          if (child instanceof THREE.SkinnedMesh) {
-            child.skeleton = skel
-            child.bind(skel)
-          }
-        })
-      }
-
-      group.add(outfitClone)
-    }
-
-    if (hasWeapon) {
-      const weaponClone = weaponGltf.scene.clone(true)
-      weaponClone.scale.setScalar(0.01)
-      const handBone = findBoneByName(bodyClone, 'hand_r')
-      if (handBone) {
-        handBone.add(weaponClone)
-      }
-    }
-
-    return group
-  }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon])
+  const bodyClone = useMemo(() => {
+    const clone = SkeletonUtils.clone(bodyGltf.scene)
+    prepareCloneMaterials(clone)
+    return clone
+  }, [bodyGltf.scene])
 
   useEffect(() => {
-    const mixer = new THREE.AnimationMixer(assembledGroup)
+    const mixer = new THREE.AnimationMixer(bodyClone)
     mixerRef.current = mixer
 
     const idleClipName = model.animations.idle
@@ -116,13 +66,13 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
     }
 
     return () => { mixer.stopAllAction() }
-  }, [assembledGroup, animGltf.animations, model.animations])
+  }, [bodyClone, animGltf.animations, model.animations])
 
   useFrame((_, delta) => { mixerRef.current?.update(delta) })
 
   return (
     <primitive
-      object={assembledGroup}
+      object={bodyClone}
       scale={model.scale}
       rotation={[0, model.rotationOffset, 0]}
     />
@@ -157,6 +107,36 @@ function RendererCleanup() {
   return null
 }
 
+type ErrorBoundaryProps = { fallback: ReactNode; children: ReactNode }
+type ErrorBoundaryState = { hasError: boolean }
+
+class PreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn('ModelPreview crashed:', error, info)
+  }
+
+  render() {
+    if (this.state.hasError) return this.props.fallback
+    return this.props.children
+  }
+}
+
+const PreviewFallback = () => (
+  <div style={{
+    width: '100%', height: '300px', background: '#1a1a1a', borderRadius: '8px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#666', fontSize: '0.9rem', marginBottom: '1rem',
+  }}>
+    3D preview unavailable
+  </div>
+)
+
 export const ModelPreview = ({ modelId }: ModelPreviewProps) => {
   const [canvasKey, setCanvasKey] = useState(() => Date.now())
 
@@ -169,16 +149,18 @@ export const ModelPreview = ({ modelId }: ModelPreviewProps) => {
   }, [])
 
   return (
-    <div className="model-preview-container" style={{ width: '100%', height: '300px', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
-      <Canvas key={canvasKey} shadows dpr={[1, 2]} camera={{ fov: 50 }} onCreated={handleCreated}>
-        <Suspense fallback={null}>
-          <RendererCleanup />
-          <Stage environment="city" intensity={0.6}>
-            <PreviewModel modelId={modelId} />
-          </Stage>
-          <OrbitControls autoRotate autoRotateSpeed={4} enableZoom={false} makeDefault />
-        </Suspense>
-      </Canvas>
-    </div>
+    <PreviewErrorBoundary fallback={<PreviewFallback />}>
+      <div className="model-preview-container" style={{ width: '100%', height: '300px', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
+        <Canvas key={canvasKey} shadows dpr={[1, 2]} camera={{ fov: 50 }} onCreated={handleCreated}>
+          <Suspense fallback={null}>
+            <RendererCleanup />
+            <Stage environment="city" intensity={0.6}>
+              <PreviewModel modelId={modelId} />
+            </Stage>
+            <OrbitControls autoRotate autoRotateSpeed={4} enableZoom={false} makeDefault />
+          </Suspense>
+        </Canvas>
+      </div>
+    </PreviewErrorBoundary>
   )
 }
