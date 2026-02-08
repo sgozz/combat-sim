@@ -1,5 +1,5 @@
-import { useRef, useMemo, Suspense } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { useMemo, Suspense } from 'react'
+import { Canvas } from '@react-three/fiber'
 import { useGLTF, OrbitControls, Stage } from '@react-three/drei'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
