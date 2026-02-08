@@ -187,6 +187,7 @@ export const GameScreen = ({
               visualEffects={visualEffects}
               cameraMode="free"
               rulesetId={matchState?.rulesetId ?? 'gurps'}
+              mapDefinition={matchState?.mapDefinition}
               onGridClick={onGridClick}
               onCombatantClick={onCombatantClick}
             />
