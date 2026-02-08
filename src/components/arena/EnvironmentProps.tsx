@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { MapDefinition } from '../../../shared/map/types'
@@ -84,7 +84,7 @@ const PropGroupRenderer = ({ group }: { group: PropGroup }) => {
     return mat ?? new THREE.MeshStandardMaterial({ color: '#666' })
   }, [scene])
 
-  useMemo(() => {
+  useEffect(() => {
     if (!meshRef.current) return
     const mesh = meshRef.current
     const dummy = new THREE.Object3D()
