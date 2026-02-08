@@ -14,6 +14,16 @@ import type { CharacterSheet, GridPosition } from '../shared/types'
 import './App.css'
 import './components/action-bar/styles.css'
 
+function ConnectionBanner({ state }: { state: 'disconnected' | 'connecting' | 'connected' }) {
+  if (state === 'connected') return null
+  return (
+    <div className={`connection-banner connection-banner--${state}`}>
+      <span className="connection-banner-dot" />
+      {state === 'connecting' ? 'Reconnecting…' : 'Disconnected — actions won\'t work'}
+    </div>
+  )
+}
+
 function AppRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -203,6 +213,8 @@ function AppRoutes() {
   const isPlayerTurn = !!matchState && !spectatingMatchId && matchState.activeTurnPlayerId === user?.id
 
   return (
+    <>
+    <ConnectionBanner state={connectionState} />
     <Routes>
       <Route path="/" element={
         user ? (
@@ -308,6 +320,7 @@ function AppRoutes() {
       
        <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
     </Routes>
+    </>
   )
 }
 

@@ -25,18 +25,22 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
     return { available: slot.total - slot.used, total: slot.total };
   };
 
-  // Check if spell can be cast
+  // Check if spell can be cast (supports both known and unknown spells)
   const canCastSpell = (spellName: string, level: number) => {
+    // Cantrips (level 0) don't consume slots
+    if (level > 0) {
+      const slots = getAvailableSlots(level);
+      if (slots.available <= 0) return false;
+    }
+
     const spell = SPELL_DATABASE[spellName];
-    if (!spell) return false;
-
-    const slots = getAvailableSlots(level);
-    if (slots.available <= 0) return false;
-
-    if (spell.castActions > actionsRemaining) return false;
+    const castActions = spell?.castActions ?? 2; // Default 2 actions for unknown spells
+    if (castActions > actionsRemaining) return false;
 
     return true;
   };
+
+  const isKnownSpell = (spellName: string) => !!SPELL_DATABASE[spellName];
 
   // Get heighten options for a spell
   const getHeightenOptions = (spellName: string) => {
@@ -59,7 +63,13 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
 
   const handleSpellClick = (spellName: string, baseLevel: number) => {
     const spell = SPELL_DATABASE[spellName];
-    if (!spell) return;
+    
+    if (!spell) {
+      // Unknown spell — cast generically at shown level
+      onSelectSpell(spellName, baseLevel);
+      onClose();
+      return;
+    }
 
     if (spell.heighten) {
       // Show heighten options
@@ -138,12 +148,13 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
                   </div>
                   {spells.map(spellName => {
                     const spell = SPELL_DATABASE[spellName];
+                    const known = isKnownSpell(spellName);
                     const canCast = canCastSpell(spellName, level);
                     
                     return (
                       <button
                         key={spellName}
-                        className="pf2-spell-btn"
+                        className={`pf2-spell-btn${!known ? ' pf2-spell-manual' : ''}`}
                         onClick={() => handleSpellClick(spellName, level)}
                         disabled={!canCast}
                       >
@@ -153,6 +164,7 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
                         <span className="pf2-spell-name">
                           {spellName}
                           {spell?.heighten && <span className="pf2-spell-heighten">↑</span>}
+                          {!known && <span className="pf2-spell-manual-label">manual</span>}
                         </span>
                       </button>
                     );

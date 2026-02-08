@@ -112,8 +112,57 @@ export const handlePF2CastSpell = async (
   const spellDC = calculateSpellDC(caster, pf2Char.abilities, pf2Char.level);
 
   const spellDef = getSpell(payload.spellName);
+
   if (!spellDef) {
-    sendMessage(socket, { type: "error", message: `Spell "${payload.spellName}" not found in database.` });
+    let logEntry = `${pf2Char.name} casts ${payload.spellName}`;
+    if (castResult.isCantrip) {
+      logEntry += ` (cantrip)`;
+    } else if (castResult.isFocus) {
+      logEntry += ` (focus)`;
+    } else {
+      logEntry += ` (level ${payload.spellLevel})`;
+    }
+    logEntry += ` [resolve effects manually]`;
+
+    const updatedCombatants = match.combatants.map(c => {
+      if (c.playerId !== player.id) return c;
+      if (!isPF2Combatant(c)) return c;
+
+      const updated = { ...c, actionsRemaining: c.actionsRemaining - 2 };
+
+      if (castResult.isFocus) {
+        updated.focusPointsUsed = c.focusPointsUsed + 1;
+      } else if (!castResult.isCantrip) {
+        const existingSlot = c.spellSlotUsage.find(
+          s => s.casterIndex === payload.casterIndex && s.level === payload.spellLevel
+        );
+        if (existingSlot) {
+          updated.spellSlotUsage = c.spellSlotUsage.map(s =>
+            s.casterIndex === payload.casterIndex && s.level === payload.spellLevel
+              ? { ...s, used: s.used + 1 }
+              : s
+          );
+        } else {
+          updated.spellSlotUsage = [...c.spellSlotUsage, {
+            casterIndex: payload.casterIndex,
+            level: payload.spellLevel,
+            used: 1,
+          }];
+        }
+      }
+
+      return updated;
+    });
+
+    const finalState: MatchState = {
+      ...match,
+      combatants: updatedCombatants,
+      log: [...match.log, logEntry],
+    };
+
+    state.matches.set(matchId, finalState);
+    await updateMatchState(matchId, finalState);
+    sendToMatch(matchId, { type: "match_state", state: finalState });
     return;
   }
 

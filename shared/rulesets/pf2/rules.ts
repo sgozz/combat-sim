@@ -362,15 +362,16 @@ export const advanceTurn = (state: MatchState, random: () => number = Math.rando
   const logEntries: string[] = [];
   
   const updatedCombatants = state.combatants.map(c => {
-    if (c.playerId === nextPlayerId && isPF2Combatant(c)) {
+    if (!isPF2Combatant(c)) return { ...c, movementPath: undefined };
+    const baseUpdate = { ...c, movementPath: undefined };
+    if (c.playerId === nextPlayerId) {
       let combatant = {
-        ...c,
+        ...baseUpdate,
         attacksRemaining: 3,
         actionsRemaining: 3,
         reactionAvailable: true,
         mapPenalty: 0,
         shieldRaised: false,
-        movementPath: undefined,
       };
       
       if (combatant.dying > 0) {
@@ -418,7 +419,7 @@ export const advanceTurn = (state: MatchState, random: () => number = Math.rando
       
       return combatant;
     }
-    return c;
+    return baseUpdate;
   });
   
   return {

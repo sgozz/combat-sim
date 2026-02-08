@@ -179,8 +179,8 @@ const mapFeats = (feats: PathbuilderFeatTuple[]): PF2Feat[] => {
 };
 
 const mapSpells = (build: PathbuilderBuild): PF2SpellInfo | null => {
-  const focusEntries = Object.entries(build.focus);
-  if (focusEntries.length === 0 && build.spellCasters.length === 0) {
+  const focusEntries = Object.entries(build.focus ?? {});
+  if (focusEntries.length === 0 && (build.spellCasters ?? []).length === 0) {
     return null;
   }
 
