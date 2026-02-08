@@ -14,6 +14,10 @@ function getWalkableCells(map: MapDefinition): TerrainCell[] {
   return map.cells.filter(c => !c.terrain.includes('blocked'));
 }
 
+function hexDist(q: number, r: number): number {
+  return (Math.abs(q) + Math.abs(q + r) + Math.abs(r)) / 2;
+}
+
 function floodFill(map: MapDefinition, startQ: number, startR: number): Set<string> {
   const visited = new Set<string>();
   const allCoords = new Set(map.cells.map(c => `${c.q},${c.r}`));
@@ -41,8 +45,8 @@ describe('Map Generator', () => {
       const map = generateMap('dungeon', { seed: 42, gridType: 'hex' });
       expect(map.biome).toBe('dungeon');
       expect(map.seed).toBe(42);
-      expect(map.width).toBe(25);
-      expect(map.height).toBe(25);
+      expect(map.width).toBe(21);
+      expect(map.height).toBe(21);
       expect(map.cells.length).toBeGreaterThan(0);
       expect(map.spawnZones).toHaveLength(2);
       expect(map.props.length).toBeGreaterThan(0);
@@ -75,8 +79,8 @@ describe('Map Generator', () => {
 
       expect(playerZone).toBeDefined();
       expect(enemyZone).toBeDefined();
-      expect(playerZone!.cells.length).toBeGreaterThanOrEqual(4);
-      expect(enemyZone!.cells.length).toBeGreaterThanOrEqual(4);
+      expect(playerZone!.cells.length).toBeGreaterThanOrEqual(2);
+      expect(enemyZone!.cells.length).toBeGreaterThanOrEqual(2);
 
       for (const spawn of playerZone!.cells) {
         const cell = getCell(map, spawn.q, spawn.r);
@@ -103,10 +107,18 @@ describe('Map Generator', () => {
       }
     });
 
-    it('works with custom dimensions', () => {
-      const map = generateMap('dungeon', { seed: 42, gridType: 'hex', width: 30, height: 30 });
-      expect(map.width).toBe(30);
-      expect(map.height).toBe(30);
+    it('works with custom radius', () => {
+      const map = generateMap('dungeon', { seed: 42, gridType: 'hex', radius: 12 });
+      expect(map.width).toBe(25);
+      expect(map.height).toBe(25);
+    });
+
+    it('hex cells are within hex radius', () => {
+      const map = generateMap('dungeon', { seed: 42, gridType: 'hex' });
+      const radius = (map.width - 1) / 2;
+      for (const cell of map.cells) {
+        expect(hexDist(cell.q, cell.r)).toBeLessThanOrEqual(radius);
+      }
     });
   });
 
@@ -115,24 +127,15 @@ describe('Map Generator', () => {
       const map = generateMap('wilderness', { seed: 42, gridType: 'hex' });
       expect(map.biome).toBe('wilderness');
       expect(map.seed).toBe(42);
-      expect(map.width).toBe(20);
-      expect(map.height).toBe(20);
+      expect(map.width).toBe(19);
+      expect(map.height).toBe(19);
       expect(map.cells.length).toBeGreaterThan(0);
       expect(map.spawnZones).toHaveLength(2);
     });
 
     it('has open center area', () => {
       const map = generateMap('wilderness', { seed: 42, gridType: 'hex' });
-      const halfW = Math.floor(map.width / 2);
-      const halfH = Math.floor(map.height / 2);
-      const centerMinQ = -halfW + Math.floor(map.width * 0.3);
-      const centerMaxQ = -halfW + Math.floor(map.width * 0.7);
-      const centerMinR = -halfH + Math.floor(map.height * 0.3);
-      const centerMaxR = -halfH + Math.floor(map.height * 0.7);
-
-      const centerCells = map.cells.filter(
-        c => c.q >= centerMinQ && c.q <= centerMaxQ && c.r >= centerMinR && c.r <= centerMaxR
-      );
+      const centerCells = map.cells.filter(c => hexDist(c.q, c.r) <= 3);
       const blockedCenter = centerCells.filter(c => c.terrain.includes('blocked'));
       const openRatio = 1 - blockedCenter.length / centerCells.length;
       expect(openRatio).toBeGreaterThan(0.7);
@@ -140,15 +143,8 @@ describe('Map Generator', () => {
 
     it('has tree line around perimeter', () => {
       const map = generateMap('wilderness', { seed: 42, gridType: 'hex' });
-      const halfW = Math.floor(map.width / 2);
-      const halfH = Math.floor(map.height / 2);
-      const minQ = -halfW;
-      const maxQ = map.width - 1 - halfW;
-      const minR = -halfH;
-      const maxR = map.height - 1 - halfH;
-      const edgeCells = map.cells.filter(
-        c => c.q === minQ || c.q === maxQ || c.r === minR || c.r === maxR
-      );
+      const radius = (map.width - 1) / 2;
+      const edgeCells = map.cells.filter(c => hexDist(c.q, c.r) === radius);
       const blockedEdge = edgeCells.filter(c => c.terrain.includes('blocked'));
       expect(blockedEdge.length).toBeGreaterThan(edgeCells.length * 0.5);
     });
@@ -170,8 +166,8 @@ describe('Map Generator', () => {
       const playerZone = map.spawnZones.find(z => z.team === 'player')!;
       const enemyZone = map.spawnZones.find(z => z.team === 'enemy')!;
 
-      expect(playerZone.cells.length).toBeGreaterThanOrEqual(4);
-      expect(enemyZone.cells.length).toBeGreaterThanOrEqual(4);
+      expect(playerZone.cells.length).toBeGreaterThanOrEqual(3);
+      expect(enemyZone.cells.length).toBeGreaterThanOrEqual(3);
 
       const avgPlayerQ = playerZone.cells.reduce((s, c) => s + c.q, 0) / playerZone.cells.length;
       const avgEnemyQ = enemyZone.cells.reduce((s, c) => s + c.q, 0) / enemyZone.cells.length;

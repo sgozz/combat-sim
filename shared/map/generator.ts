@@ -1,7 +1,6 @@
 import type { BiomeId, MapDefinition, TerrainCell, SpawnZone, PropDefinition } from './types';
 import type { GridType } from '../grid/types';
 
-// Seeded PRNG — mulberry32 algorithm
 function mulberry32(seed: number): () => number {
   let s = seed | 0;
   return () => {
@@ -12,16 +11,11 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-type Rect = { x: number; y: number; w: number; h: number };
-
 type GeneratorOptions = {
   seed: number;
   gridType: GridType;
-  width?: number;
-  height?: number;
+  radius?: number;
 };
-
-// ─── Helpers ───────────────────────────────────────────
 
 function coordKey(q: number, r: number): string {
   return `${q},${r}`;
@@ -31,125 +25,146 @@ function randInt(rng: () => number, min: number, max: number): number {
   return Math.floor(rng() * (max - min + 1)) + min;
 }
 
-function rectsOverlap(a: Rect, b: Rect, padding = 1): boolean {
-  return !(
-    a.x + a.w + padding <= b.x ||
-    b.x + b.w + padding <= a.x ||
-    a.y + a.h + padding <= b.y ||
-    b.y + b.h + padding <= a.y
-  );
+function hexDistance(q1: number, r1: number, q2: number, r2: number): number {
+  return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+}
+
+function getAllCells(radius: number, gridType: GridType): { q: number; r: number }[] {
+  const cells: { q: number; r: number }[] = [];
+  if (gridType === 'hex') {
+    for (let q = -radius; q <= radius; q++) {
+      for (let r = -radius; r <= radius; r++) {
+        if (hexDistance(0, 0, q, r) <= radius) {
+          cells.push({ q, r });
+        }
+      }
+    }
+  } else {
+    for (let q = -radius; q <= radius; q++) {
+      for (let r = -radius; r <= radius; r++) {
+        cells.push({ q, r });
+      }
+    }
+  }
+  return cells;
+}
+
+function isEdgeCell(q: number, r: number, radius: number, gridType: GridType): boolean {
+  if (gridType === 'hex') {
+    return hexDistance(0, 0, q, r) === radius;
+  }
+  return Math.abs(q) === radius || Math.abs(r) === radius;
+}
+
+function isNearEdgeCell(q: number, r: number, radius: number, gridType: GridType): boolean {
+  if (gridType === 'hex') {
+    const d = hexDistance(0, 0, q, r);
+    return d === radius - 1;
+  }
+  return Math.abs(q) === radius - 1 || Math.abs(r) === radius - 1;
+}
+
+function distFromCenter(q: number, r: number, gridType: GridType): number {
+  if (gridType === 'hex') return hexDistance(0, 0, q, r);
+  return Math.max(Math.abs(q), Math.abs(r));
 }
 
 // ─── Dungeon Generator ────────────────────────────────
 
-function generateDungeon(rng: () => number, width: number, height: number): {
-  cells: TerrainCell[];
-  spawnZones: SpawnZone[];
-  props: PropDefinition[];
-} {
+type HexRoom = { cq: number; cr: number; roomRadius: number };
+
+function roomsOverlap(a: HexRoom, b: HexRoom, padding: number, gridType: GridType): boolean {
+  const d = gridType === 'hex'
+    ? hexDistance(a.cq, a.cr, b.cq, b.cr)
+    : Math.max(Math.abs(a.cq - b.cq), Math.abs(a.cr - b.cr));
+  return d < a.roomRadius + b.roomRadius + padding;
+}
+
+function generateDungeon(
+  rng: () => number, radius: number, gridType: GridType
+): { cells: TerrainCell[]; spawnZones: SpawnZone[]; props: PropDefinition[] } {
   const cellMap = new Map<string, TerrainCell>();
 
-  // Initialize all cells as blocked (walls)
-  for (let q = 0; q < width; q++) {
-    for (let r = 0; r < height; r++) {
-      cellMap.set(coordKey(q, r), {
-        q, r,
-        terrain: ['blocked'],
-        propId: 'wall',
-      });
-    }
+  for (const { q, r } of getAllCells(radius, gridType)) {
+    cellMap.set(coordKey(q, r), { q, r, terrain: ['blocked'], propId: 'wall' });
   }
 
-  // Place rooms
   const numRooms = randInt(rng, 3, 6);
-  const rooms: Rect[] = [];
+  const rooms: HexRoom[] = [];
   let attempts = 0;
+  const innerRadius = radius - 2;
 
-  while (rooms.length < numRooms && attempts < 200) {
+  while (rooms.length < numRooms && attempts < 300) {
     attempts++;
-    const w = randInt(rng, 3, 6);
-    const h = randInt(rng, 3, 6);
-    const x = randInt(rng, 1, width - w - 1);
-    const y = randInt(rng, 1, height - h - 1);
-    const room: Rect = { x, y, w, h };
+    const roomRadius = randInt(rng, 2, 3);
+    const cq = randInt(rng, -innerRadius + roomRadius, innerRadius - roomRadius);
+    const cr = randInt(rng, -innerRadius + roomRadius, innerRadius - roomRadius);
+    if (distFromCenter(cq, cr, gridType) + roomRadius > innerRadius) continue;
 
-    if (rooms.some(r => rectsOverlap(r, room, 2))) continue;
+    const room: HexRoom = { cq, cr, roomRadius };
+    if (rooms.some(r => roomsOverlap(r, room, 2, gridType))) continue;
     rooms.push(room);
 
-    // Carve room interior
-    for (let rq = x; rq < x + w; rq++) {
-      for (let rr = y; rr < y + h; rr++) {
-        cellMap.set(coordKey(rq, rr), { q: rq, r: rr, terrain: [] });
+    for (const { q, r } of getAllCells(radius, gridType)) {
+      if (distFromCenter(q - cq, r - cr, gridType) <= roomRadius) {
+        cellMap.set(coordKey(q, r), { q, r, terrain: [] });
       }
     }
   }
 
-  // Connect rooms with L-shaped corridors
   for (let i = 0; i < rooms.length - 1; i++) {
     const a = rooms[i];
     const b = rooms[i + 1];
-    const ax = Math.floor(a.x + a.w / 2);
-    const ay = Math.floor(a.y + a.h / 2);
-    const bx = Math.floor(b.x + b.w / 2);
-    const by = Math.floor(b.y + b.h / 2);
-
-    // Horizontal then vertical
-    const startX = Math.min(ax, bx);
-    const endX = Math.max(ax, bx);
-    for (let q = startX; q <= endX; q++) {
-      const key = coordKey(q, ay);
+    let cq = a.cq;
+    let cr = a.cr;
+    while (cq !== b.cq || cr !== b.cr) {
+      if (cq !== b.cq) cq += cq < b.cq ? 1 : -1;
+      else cr += cr < b.cr ? 1 : -1;
+      const key = coordKey(cq, cr);
       if (cellMap.get(key)?.terrain.includes('blocked')) {
-        cellMap.set(key, { q, r: ay, terrain: [] });
-      }
-    }
-
-    const startY = Math.min(ay, by);
-    const endY = Math.max(ay, by);
-    for (let r = startY; r <= endY; r++) {
-      const key = coordKey(bx, r);
-      if (cellMap.get(key)?.terrain.includes('blocked')) {
-        cellMap.set(key, { q: bx, r, terrain: [] });
+        cellMap.set(key, { q: cq, r: cr, terrain: [] });
       }
     }
   }
 
-  // Add cover props inside rooms (pillars, crates)
   for (const room of rooms) {
-    if (room.w >= 4 && room.h >= 4 && rng() < 0.7) {
-      const propQ = randInt(rng, room.x + 1, room.x + room.w - 2);
-      const propR = randInt(rng, room.y + 1, room.y + room.h - 2);
-      const key = coordKey(propQ, propR);
-      const propId = rng() < 0.5 ? 'pillar' : 'crate';
-      cellMap.set(key, { q: propQ, r: propR, terrain: ['cover'], propId });
+    if (room.roomRadius >= 2 && rng() < 0.7) {
+      const pq = room.cq + randInt(rng, -1, 1);
+      const pr = room.cr + randInt(rng, -1, 1);
+      if (pq !== room.cq || pr !== room.cr) {
+        const key = coordKey(pq, pr);
+        if (cellMap.has(key)) {
+          const propId = rng() < 0.5 ? 'pillar' : 'crate';
+          cellMap.set(key, { q: pq, r: pr, terrain: ['cover'], propId });
+        }
+      }
     }
   }
 
-  // Add difficult terrain in some corridors
   for (const [key, cell] of cellMap) {
     if (cell.terrain.length === 0 && !cell.propId && rng() < 0.05) {
       cellMap.set(key, { ...cell, terrain: ['difficult'] });
     }
   }
 
-  // Generate spawn zones from first and last rooms
   const firstRoom = rooms[0];
   const lastRoom = rooms[rooms.length - 1];
-
   const playerSpawns: { q: number; r: number }[] = [];
   const enemySpawns: { q: number; r: number }[] = [];
 
   if (firstRoom && lastRoom) {
-    for (let q = firstRoom.x; q < firstRoom.x + firstRoom.w && playerSpawns.length < 4; q++) {
-      for (let r = firstRoom.y; r < firstRoom.y + firstRoom.h && playerSpawns.length < 4; r++) {
+    for (const { q, r } of getAllCells(radius, gridType)) {
+      if (playerSpawns.length >= 4) break;
+      if (distFromCenter(q - firstRoom.cq, r - firstRoom.cr, gridType) <= 1) {
         const cell = cellMap.get(coordKey(q, r));
         if (cell && !cell.terrain.includes('blocked') && !cell.terrain.includes('cover')) {
           playerSpawns.push({ q, r });
         }
       }
     }
-
-    for (let q = lastRoom.x; q < lastRoom.x + lastRoom.w && enemySpawns.length < 4; q++) {
-      for (let r = lastRoom.y; r < lastRoom.y + lastRoom.h && enemySpawns.length < 4; r++) {
+    for (const { q, r } of getAllCells(radius, gridType)) {
+      if (enemySpawns.length >= 4) break;
+      if (distFromCenter(q - lastRoom.cq, r - lastRoom.cr, gridType) <= 1) {
         const cell = cellMap.get(coordKey(q, r));
         if (cell && !cell.terrain.includes('blocked') && !cell.terrain.includes('cover')) {
           enemySpawns.push({ q, r });
@@ -158,17 +173,10 @@ function generateDungeon(rng: () => number, width: number, height: number): {
     }
   }
 
-  const spawnZones: SpawnZone[] = [
-    { team: 'player', cells: playerSpawns },
-    { team: 'enemy', cells: enemySpawns },
-  ];
-
-  // Collect unique props
   const propIds = new Set<string>();
   for (const cell of cellMap.values()) {
     if (cell.propId) propIds.add(cell.propId);
   }
-
   const props: PropDefinition[] = [];
   for (const id of propIds) {
     props.push({ id, model: `${id}.glb` });
@@ -176,121 +184,88 @@ function generateDungeon(rng: () => number, width: number, height: number): {
 
   return {
     cells: Array.from(cellMap.values()),
-    spawnZones,
+    spawnZones: [
+      { team: 'player', cells: playerSpawns },
+      { team: 'enemy', cells: enemySpawns },
+    ],
     props,
   };
 }
 
 // ─── Wilderness Generator ─────────────────────────────
 
-function generateWilderness(rng: () => number, width: number, height: number): {
-  cells: TerrainCell[];
-  spawnZones: SpawnZone[];
-  props: PropDefinition[];
-} {
+function generateWilderness(
+  rng: () => number, radius: number, gridType: GridType
+): { cells: TerrainCell[]; spawnZones: SpawnZone[]; props: PropDefinition[] } {
   const cellMap = new Map<string, TerrainCell>();
+  const allCells = getAllCells(radius, gridType);
 
-  // Initialize all cells as open
-  for (let q = 0; q < width; q++) {
-    for (let r = 0; r < height; r++) {
-      cellMap.set(coordKey(q, r), { q, r, terrain: [] });
+  for (const { q, r } of allCells) {
+    cellMap.set(coordKey(q, r), { q, r, terrain: [] });
+  }
+
+  for (const { q, r } of allCells) {
+    const edge = isEdgeCell(q, r, radius, gridType);
+    const nearEdge = isNearEdgeCell(q, r, radius, gridType);
+
+    if (edge && rng() < 0.8) {
+      const treeId = rng() < 0.5 ? 'tree_01' : 'tree_02';
+      cellMap.set(coordKey(q, r), {
+        q, r, terrain: ['blocked'], propId: treeId,
+        propRotation: rng() * Math.PI * 2,
+      });
+    } else if (nearEdge && rng() < 0.3) {
+      const treeId = rng() < 0.5 ? 'tree_01' : 'tree_02';
+      cellMap.set(coordKey(q, r), {
+        q, r, terrain: ['blocked'], propId: treeId,
+        propRotation: rng() * Math.PI * 2,
+      });
     }
   }
 
-  // Add tree line around perimeter
-  for (let q = 0; q < width; q++) {
-    for (let r = 0; r < height; r++) {
-      const isEdge = q === 0 || q === width - 1 || r === 0 || r === height - 1;
-      const isNearEdge = q === 1 || q === width - 2 || r === 1 || r === height - 2;
+  const innerThreshold = radius * 0.3;
+  for (const { q, r } of allCells) {
+    const d = distFromCenter(q, r, gridType);
+    if (d <= 1 || d >= radius - 1) continue;
+    const cell = cellMap.get(coordKey(q, r));
+    if (!cell || cell.terrain.includes('blocked')) continue;
 
-      if (isEdge && rng() < 0.8) {
-        const treeId = rng() < 0.5 ? 'tree_01' : 'tree_02';
-        cellMap.set(coordKey(q, r), {
-          q, r,
-          terrain: ['blocked'],
-          propId: treeId,
-          propRotation: rng() * Math.PI * 2,
-        });
-      } else if (isNearEdge && rng() < 0.3) {
-        const treeId = rng() < 0.5 ? 'tree_01' : 'tree_02';
-        cellMap.set(coordKey(q, r), {
-          q, r,
-          terrain: ['blocked'],
-          propId: treeId,
-          propRotation: rng() * Math.PI * 2,
-        });
-      }
+    const isCenter = d < innerThreshold;
+    if (!isCenter && rng() < 0.04) {
+      const rockId = rng() < 0.5 ? 'rock_01' : 'rock_02';
+      cellMap.set(coordKey(q, r), {
+        q, r, terrain: ['cover'], propId: rockId,
+        propRotation: rng() * Math.PI * 2,
+      });
+    } else if (rng() < 0.06) {
+      cellMap.set(coordKey(q, r), {
+        q, r, terrain: ['difficult'], propId: 'bush',
+        propRotation: rng() * Math.PI * 2,
+      });
     }
   }
 
-  // Scatter rocks in the field (not in center 40%)
-  const centerMinQ = Math.floor(width * 0.3);
-  const centerMaxQ = Math.floor(width * 0.7);
-  const centerMinR = Math.floor(height * 0.3);
-  const centerMaxR = Math.floor(height * 0.7);
-
-  for (let q = 2; q < width - 2; q++) {
-    for (let r = 2; r < height - 2; r++) {
-      const isCenter = q >= centerMinQ && q <= centerMaxQ && r >= centerMinR && r <= centerMaxR;
-      const cell = cellMap.get(coordKey(q, r));
-      if (!cell || cell.terrain.includes('blocked')) continue;
-
-      if (!isCenter && rng() < 0.04) {
-        const rockId = rng() < 0.5 ? 'rock_01' : 'rock_02';
-        cellMap.set(coordKey(q, r), {
-          q, r,
-          terrain: ['cover'],
-          propId: rockId,
-          propRotation: rng() * Math.PI * 2,
-        });
-      } else if (rng() < 0.06) {
-        cellMap.set(coordKey(q, r), {
-          q, r,
-          terrain: ['difficult'],
-          propId: 'bush',
-          propRotation: rng() * Math.PI * 2,
-        });
-      }
-    }
-  }
-
-  // Spawn zones: player on left side, enemy on right side
   const playerSpawns: { q: number; r: number }[] = [];
   const enemySpawns: { q: number; r: number }[] = [];
+  const spawnBand = Math.floor(radius * 0.6);
 
-  const midR = Math.floor(height / 2);
-  for (let offset = -2; offset <= 2; offset++) {
-    const r = midR + offset;
-    if (r < 2 || r >= height - 2) continue;
+  for (const { q, r } of allCells) {
+    if (playerSpawns.length >= 6 && enemySpawns.length >= 6) break;
+    const cell = cellMap.get(coordKey(q, r));
+    if (!cell || cell.terrain.includes('blocked')) continue;
 
-    // Player spawns on left
-    for (let q = 2; q < 5 && playerSpawns.length < 6; q++) {
-      const cell = cellMap.get(coordKey(q, r));
-      if (cell && !cell.terrain.includes('blocked')) {
-        playerSpawns.push({ q, r });
-      }
+    if (q <= -spawnBand && Math.abs(r) <= 2 && playerSpawns.length < 6) {
+      playerSpawns.push({ q, r });
     }
-
-    // Enemy spawns on right
-    for (let q = width - 5; q < width - 2 && enemySpawns.length < 6; q++) {
-      const cell = cellMap.get(coordKey(q, r));
-      if (cell && !cell.terrain.includes('blocked')) {
-        enemySpawns.push({ q, r });
-      }
+    if (q >= spawnBand && Math.abs(r) <= 2 && enemySpawns.length < 6) {
+      enemySpawns.push({ q, r });
     }
   }
 
-  const spawnZones: SpawnZone[] = [
-    { team: 'player', cells: playerSpawns },
-    { team: 'enemy', cells: enemySpawns },
-  ];
-
-  // Collect unique props
   const propIds = new Set<string>();
   for (const cell of cellMap.values()) {
     if (cell.propId) propIds.add(cell.propId);
   }
-
   const props: PropDefinition[] = [];
   for (const id of propIds) {
     props.push({ id, model: `${id}.glb` });
@@ -298,7 +273,10 @@ function generateWilderness(rng: () => number, width: number, height: number): {
 
   return {
     cells: Array.from(cellMap.values()),
-    spawnZones,
+    spawnZones: [
+      { team: 'player', cells: playerSpawns },
+      { team: 'enemy', cells: enemySpawns },
+    ],
     props,
   };
 }
@@ -310,36 +288,21 @@ export function generateMap(
   options: GeneratorOptions,
 ): MapDefinition {
   const rng = mulberry32(options.seed);
-  const width = options.width ?? (biome === 'dungeon' ? 25 : 20);
-  const height = options.height ?? (biome === 'dungeon' ? 25 : 20);
+  const radius = options.radius ?? (biome === 'dungeon' ? 10 : 9);
 
   const result = biome === 'dungeon'
-    ? generateDungeon(rng, width, height)
-    : generateWilderness(rng, width, height);
+    ? generateDungeon(rng, radius, options.gridType)
+    : generateWilderness(rng, radius, options.gridType);
 
-  // Center the map around (0,0) so it aligns with the BattleGrid origin
-  const offsetQ = Math.floor(width / 2);
-  const offsetR = Math.floor(height / 2);
-
-  const centeredCells = result.cells.map(cell => ({
-    ...cell,
-    q: cell.q - offsetQ,
-    r: cell.r - offsetR,
-  }));
-
-  const centeredSpawnZones = result.spawnZones.map(zone => ({
-    ...zone,
-    cells: zone.cells.map(c => ({ q: c.q - offsetQ, r: c.r - offsetR })),
-  }));
-
+  const diameter = radius * 2 + 1;
   return {
     id: `${biome}-${options.seed}`,
     biome,
     seed: options.seed,
-    width,
-    height,
-    cells: centeredCells,
-    spawnZones: centeredSpawnZones,
+    width: diameter,
+    height: diameter,
+    cells: result.cells,
+    spawnZones: result.spawnZones,
     props: result.props,
   };
 }
