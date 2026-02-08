@@ -15,7 +15,6 @@ export type ModelEntry = {
   id: string
   label: string
   path: string
-  scale: number
   rotationOffset: number
   animations: Record<AnimationKey, string>
   library: AnimationLibrary
@@ -23,7 +22,6 @@ export type ModelEntry = {
   composite?: CompositeModel
 }
 
-const RPG_SCALE = 0.32
 const RPG_ROTATION = Math.PI / 2
 
 const UAL1 = '/models/quaternius/UAL1_Standard.glb'
@@ -52,7 +50,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'warrior',
     label: 'Warrior (Classic)',
     path: '/models/warrior.glb',
-    scale: RPG_SCALE,
     rotationOffset: RPG_ROTATION,
     animations: {
       idle: 'Idle',
@@ -70,7 +67,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'rogue',
     label: 'Rogue (Classic)',
     path: '/models/rogue.glb',
-    scale: RPG_SCALE,
     rotationOffset: RPG_ROTATION,
     animations: {
       idle: 'Idle',
@@ -88,7 +84,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'wizard',
     label: 'Wizard (Classic)',
     path: '/models/wizard.glb',
-    scale: RPG_SCALE,
     rotationOffset: RPG_ROTATION,
     animations: {
       idle: 'Idle',
@@ -106,7 +101,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'cleric',
     label: 'Cleric (Classic)',
     path: '/models/cleric.glb',
-    scale: RPG_SCALE,
     rotationOffset: RPG_ROTATION,
     animations: {
       idle: 'Idle',
@@ -124,7 +118,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'ranger',
     label: 'Ranger (Classic)',
     path: '/models/ranger.glb',
-    scale: RPG_SCALE,
     rotationOffset: RPG_ROTATION,
     animations: {
       idle: 'Idle',
@@ -142,7 +135,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'monk',
     label: 'Monk (Classic)',
     path: '/models/monk.glb',
-    scale: RPG_SCALE,
     rotationOffset: RPG_ROTATION,
     animations: {
       idle: 'Idle',
@@ -160,7 +152,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'quaternius_ual1',
     label: 'Mannequin (Quaternius)',
     path: UAL1,
-    scale: 1.0,
     rotationOffset: 0,
     animations: { ...UAL1_ANIMS },
     library: 'quaternius',
@@ -170,7 +161,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'quaternius_ranger_m',
     label: 'Ranger M (Quaternius)',
     path: UAL1,
-    scale: 1.0,
     rotationOffset: 0,
     animations: { ...UAL1_ANIMS },
     library: 'quaternius',
@@ -186,7 +176,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'quaternius_peasant_m',
     label: 'Peasant M (Quaternius)',
     path: UAL1,
-    scale: 1.0,
     rotationOffset: 0,
     animations: { ...UAL1_ANIMS },
     library: 'quaternius',
@@ -202,7 +191,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'quaternius_ranger_f',
     label: 'Ranger F (Quaternius)',
     path: UAL1,
-    scale: 1.0,
     rotationOffset: 0,
     animations: { ...UAL1_ANIMS },
     library: 'quaternius',
@@ -218,7 +206,6 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     id: 'quaternius_peasant_f',
     label: 'Peasant F (Quaternius)',
     path: UAL1,
-    scale: 1.0,
     rotationOffset: 0,
     animations: { ...UAL1_ANIMS },
     library: 'quaternius',

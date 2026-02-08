@@ -44,6 +44,17 @@ for (const path of getAllPreloadPaths()) {
   useGLTF.preload(path)
 }
 
+/** Target character height in world units */
+const TARGET_HEIGHT = 1.8
+
+/** Compute a uniform scale factor so the object's bounding-box height equals TARGET_HEIGHT */
+function computeNormalizedScale(obj: THREE.Object3D): number {
+  const box = new THREE.Box3().setFromObject(obj)
+  const height = box.max.y - box.min.y
+  if (height <= 0) return 1
+  return TARGET_HEIGHT / height
+}
+
 const INDICATOR_DISTANCE = 0.7
 const INDICATOR_HEIGHT = 0.05
 const INDICATOR_LATERAL_OFFSET = Math.PI / 2
@@ -128,10 +139,10 @@ function SimpleModel({ model, isPlayer, emissive, animationState }: {
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
 
-  const clonedScene = useMemo(() => {
+  const { clonedScene, normalizedScale } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
     applyTeamMaterials(clone, isPlayer, emissive)
-    return clone
+    return { clonedScene: clone, normalizedScale: computeNormalizedScale(clone) }
   }, [scene, isPlayer, emissive])
 
   useEffect(() => {
@@ -147,7 +158,7 @@ function SimpleModel({ model, isPlayer, emissive, animationState }: {
     playAnimation(actionsRef, model.animations[animationState], animationState === 'death')
   }, [animationState, clonedScene, model.animations])
 
-  return <primitive object={clonedScene} scale={model.scale} />
+  return <primitive object={clonedScene} scale={normalizedScale} />
 }
 
 function CompositeModelView({ model, isPlayer, emissive, animationState }: {
@@ -171,7 +182,6 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
     const group = new THREE.Group()
 
     const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
-    applyTeamMaterials(bodyClone, isPlayer, emissive)
     group.add(bodyClone)
 
     if (hasOutfit) {
@@ -182,6 +192,7 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
       bodyClone.traverse((child) => {
         if (child instanceof THREE.SkinnedMesh && child.skeleton) {
           bodySkeleton = child.skeleton
+          child.visible = false
         }
       })
 
@@ -196,6 +207,8 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
       }
 
       group.add(outfitClone)
+    } else {
+      applyTeamMaterials(bodyClone, isPlayer, emissive)
     }
 
     if (hasWeapon) {
@@ -210,6 +223,8 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
     return group
   }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon, isPlayer, emissive])
 
+  const normalizedScale = useMemo(() => computeNormalizedScale(assembledGroup), [assembledGroup])
+
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(assembledGroup)
     mixerRef.current = mixer
@@ -223,7 +238,7 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
     playAnimation(actionsRef, model.animations[animationState], animationState === 'death')
   }, [animationState, assembledGroup, model.animations])
 
-  return <primitive object={assembledGroup} scale={model.scale} />
+  return <primitive object={assembledGroup} scale={normalizedScale} />
 }
 
 function CombatantModel({ modelId, emissive, isPlayer, animationState }: CombatantModelProps) {

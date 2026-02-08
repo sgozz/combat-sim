@@ -6,6 +6,15 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { getModelEntry } from '../../data/modelRegistry'
 import type { ModelEntry } from '../../data/modelRegistry'
 
+const TARGET_HEIGHT = 1.8
+
+function computeNormalizedScale(obj: THREE.Object3D): number {
+  const box = new THREE.Box3().setFromObject(obj)
+  const height = box.max.y - box.min.y
+  if (height <= 0) return 1
+  return TARGET_HEIGHT / height
+}
+
 type ModelPreviewProps = {
   modelId?: string
 }
@@ -35,16 +44,16 @@ function prepareCloneMaterials(obj: THREE.Object3D) {
 const SimplePreviewModel = ({ model }: { model: ModelEntry }) => {
   const { scene } = useGLTF(model.path)
 
-  const clonedScene = useMemo(() => {
+  const { clonedScene, normalizedScale } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
     prepareCloneMaterials(clone)
-    return clone
+    return { clonedScene: clone, normalizedScale: computeNormalizedScale(clone) }
   }, [scene])
 
   return (
     <primitive
       object={clonedScene}
-      scale={model.scale}
+      scale={normalizedScale}
       rotation={[0, model.rotationOffset, 0]}
     />
   )
@@ -65,7 +74,6 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
     const group = new THREE.Group()
 
     const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
-    prepareCloneMaterials(bodyClone)
     group.add(bodyClone)
 
     if (hasOutfit) {
@@ -76,6 +84,7 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
       bodyClone.traverse((child) => {
         if (child instanceof THREE.SkinnedMesh && child.skeleton) {
           bodySkeleton = child.skeleton
+          child.visible = false
         }
       })
 
@@ -90,6 +99,8 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
       }
 
       group.add(outfitClone)
+    } else {
+      prepareCloneMaterials(bodyClone)
     }
 
     if (hasWeapon) {
@@ -103,6 +114,8 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
 
     return group
   }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon])
+
+  const normalizedScale = useMemo(() => computeNormalizedScale(assembledGroup), [assembledGroup])
 
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(assembledGroup)
@@ -122,7 +135,7 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
   return (
     <primitive
       object={assembledGroup}
-      scale={model.scale}
+      scale={normalizedScale}
       rotation={[0, model.rotationOffset, 0]}
     />
   )
