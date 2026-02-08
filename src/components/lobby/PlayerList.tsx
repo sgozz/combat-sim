@@ -30,7 +30,7 @@ export const PlayerList = ({ match, currentUserId, onToggleReady, isSyncing }: P
       {isSyncing && (
         <div className="player-list-syncing">
           <span className="player-list-syncing-spinner" />
-          <span className="player-list-syncing-text">Sincronizzazione...</span>
+          <span className="player-list-syncing-text">Syncing...</span>
         </div>
       )}
 
