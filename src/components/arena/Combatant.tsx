@@ -119,17 +119,7 @@ function playAnimation(
   }
 }
 
-function findBoneByName(root: THREE.Object3D, name: string): THREE.Bone | null {
-  let found: THREE.Bone | null = null
-  root.traverse((child) => {
-    if (child instanceof THREE.Bone && child.name === name) {
-      found = child
-    }
-  })
-  return found
-}
-
-function SimpleModel({ model, isPlayer, emissive, animationState }: {
+function CombatantModelView({ model, isPlayer, emissive, animationState }: {
   model: ModelEntry
   isPlayer: boolean
   emissive: string
@@ -161,96 +151,12 @@ function SimpleModel({ model, isPlayer, emissive, animationState }: {
   return <primitive object={clonedScene} scale={normalizedScale} />
 }
 
-function CompositeModelView({ model, isPlayer, emissive, animationState }: {
-  model: ModelEntry
-  isPlayer: boolean
-  emissive: string
-  animationState: AnimationState
-}) {
-  const composite = model.composite!
-  const bodyGltf = useGLTF(composite.body)
-  const animGltf = useGLTF(composite.animationSrc)
-  const outfitGltf = useGLTF(composite.outfit ?? composite.body)
-  const weaponGltf = useGLTF(composite.weapon ?? composite.body)
-  const hasOutfit = !!composite.outfit
-  const hasWeapon = !!composite.weapon
-
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
-  const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
-
-  const { assembledGroup, normalizedScale } = useMemo(() => {
-    const group = new THREE.Group()
-
-    const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
-    group.add(bodyClone)
-
-    const scale = computeNormalizedScale(bodyClone)
-
-    if (hasOutfit) {
-      const outfitClone = SkeletonUtils.clone(outfitGltf.scene)
-      applyTeamMaterials(outfitClone, isPlayer, emissive)
-
-      let bodySkeleton: THREE.Skeleton | null = null
-      bodyClone.traverse((child) => {
-        if (child instanceof THREE.SkinnedMesh && child.skeleton) {
-          bodySkeleton = child.skeleton
-          child.visible = false
-        }
-      })
-
-      if (bodySkeleton) {
-        const skel = bodySkeleton as THREE.Skeleton
-        outfitClone.traverse((child) => {
-          if (child instanceof THREE.SkinnedMesh) {
-            child.skeleton = skel
-            child.bind(skel)
-          }
-        })
-      }
-
-      group.add(outfitClone)
-    } else {
-      applyTeamMaterials(bodyClone, isPlayer, emissive)
-    }
-
-    if (hasWeapon) {
-      const weaponClone = weaponGltf.scene.clone(true)
-      weaponClone.scale.setScalar(0.01)
-      const handBone = findBoneByName(bodyClone, 'hand_r')
-      if (handBone) {
-        handBone.add(weaponClone)
-      }
-    }
-
-    return { assembledGroup: group, normalizedScale: scale }
-  }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon, isPlayer, emissive])
-
-  useEffect(() => {
-    const mixer = new THREE.AnimationMixer(assembledGroup)
-    mixerRef.current = mixer
-    actionsRef.current = setupAnimations(mixer, animGltf.animations)
-    return () => { mixer.stopAllAction() }
-  }, [assembledGroup, animGltf.animations])
-
-  useFrame((_, delta) => { mixerRef.current?.update(delta) })
-
-  useEffect(() => {
-    playAnimation(actionsRef, model.animations[animationState], animationState === 'death')
-  }, [animationState, assembledGroup, model.animations])
-
-  return <primitive object={assembledGroup} scale={normalizedScale} />
-}
-
 function CombatantModel({ modelId, emissive, isPlayer, animationState }: CombatantModelProps) {
   const model = getModelEntry(modelId)
 
   return (
     <group rotation={[0, model.rotationOffset, 0]}>
-      {model.composite ? (
-        <CompositeModelView model={model} isPlayer={isPlayer} emissive={emissive} animationState={animationState} />
-      ) : (
-        <SimpleModel model={model} isPlayer={isPlayer} emissive={emissive} animationState={animationState} />
-      )}
+      <CombatantModelView model={model} isPlayer={isPlayer} emissive={emissive} animationState={animationState} />
       <mesh 
         position={[
           INDICATOR_DISTANCE * Math.cos(INDICATOR_LATERAL_OFFSET), 
