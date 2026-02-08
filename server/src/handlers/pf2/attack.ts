@@ -28,7 +28,7 @@ import {
 } from "../../../../shared/rulesets/pf2/conditions";
 import { hasFeat } from "../../../../shared/rulesets/pf2/feats";
 import { getReachableSquares, gridToHex } from "../../../../shared/rulesets/pf2/rules";
-import { hasCover } from "../../../../shared/map/terrain";
+import { hasCover, hasLineOfSight } from "../../../../shared/map/terrain";
 
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;
@@ -134,6 +134,11 @@ export const handlePF2AttackAction = async (
       }
 
       rangePenalty = Math.floor((distance - 1) / increment) * -2;
+    }
+
+    if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+      sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+      return;
     }
 
      const isFinesse = weapon.traits.includes('finesse');
@@ -372,6 +377,11 @@ export const handlePF2PowerAttack = async (
     }
 
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
+  }
+
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
   }
 
   const isFinesse = weapon.traits.includes('finesse');
@@ -649,6 +659,11 @@ export const handlePF2SuddenCharge = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -882,6 +897,11 @@ export const handlePF2CombatGrab = async (
     }
 
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
+  }
+
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
   }
 
   const isFinesse = weapon.traits.includes('finesse');
@@ -1134,6 +1154,11 @@ export const handlePF2Knockdown = async (
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
   }
 
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
+  }
+
   const isFinesse = weapon.traits.includes('finesse');
   const strMod = adapter.pf2!.getAbilityModifier(abilities.strength);
   const dexMod = adapter.pf2!.getAbilityModifier(abilities.dexterity);
@@ -1383,6 +1408,11 @@ export const handlePF2IntimidatingStrike = async (
     }
 
     rangePenalty = Math.floor((distance - 1) / increment) * -2;
+  }
+
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
+    return;
   }
 
   const isFinesse = weapon.traits.includes('finesse');

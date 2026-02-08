@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isBlocked, isDifficultTerrain, hasCover, getMovementCost, getTerrainAt } from './terrain';
+import { isBlocked, isDifficultTerrain, hasCover, getMovementCost, getTerrainAt, hasLineOfSight } from './terrain';
 import type { MapDefinition } from './types';
 
 const createTestMap = (): MapDefinition => ({
@@ -120,6 +120,67 @@ describe('Terrain Helpers', () => {
     it('returns 1 for non-existent cell in map', () => {
       const map = createTestMap();
       expect(getMovementCost(map, 99, 99)).toBe(1);
+    });
+  });
+
+  describe('hasLineOfSight', () => {
+    const createLoSMap = (): MapDefinition => ({
+      id: 'los-test',
+      biome: 'dungeon',
+      seed: 1,
+      width: 10,
+      height: 10,
+      cells: [
+        { q: 0, r: 0, terrain: [] },
+        { q: 1, r: 0, terrain: [] },
+        { q: 2, r: 0, terrain: ['blocked'], propId: 'wall' },
+        { q: 3, r: 0, terrain: [] },
+        { q: 4, r: 0, terrain: [] },
+        { q: 0, r: 1, terrain: [] },
+        { q: 1, r: 1, terrain: [] },
+        { q: 2, r: 1, terrain: [] },
+        { q: 3, r: 1, terrain: [] },
+        { q: 0, r: 2, terrain: ['blocked'], propId: 'wall' },
+        { q: 1, r: 2, terrain: ['blocked'], propId: 'wall' },
+        { q: 2, r: 2, terrain: ['blocked'], propId: 'wall' },
+        { q: 3, r: 2, terrain: [] },
+      ],
+      spawnZones: [],
+      props: [{ id: 'wall', model: 'wall.glb' }],
+    });
+
+    it('returns true when no map (backward compat)', () => {
+      expect(hasLineOfSight(undefined, 0, 0, 5, 5)).toBe(true);
+    });
+
+    it('returns true for adjacent cells', () => {
+      const map = createLoSMap();
+      expect(hasLineOfSight(map, 0, 0, 1, 0)).toBe(true);
+    });
+
+    it('returns true when path is clear', () => {
+      const map = createLoSMap();
+      expect(hasLineOfSight(map, 0, 1, 3, 1)).toBe(true);
+    });
+
+    it('returns false when wall blocks horizontal path', () => {
+      const map = createLoSMap();
+      expect(hasLineOfSight(map, 0, 0, 4, 0)).toBe(false);
+    });
+
+    it('returns false when wall blocks vertical path', () => {
+      const map = createLoSMap();
+      expect(hasLineOfSight(map, 0, 0, 0, 3)).toBe(false);
+    });
+
+    it('returns true for same cell', () => {
+      const map = createLoSMap();
+      expect(hasLineOfSight(map, 0, 0, 0, 0)).toBe(true);
+    });
+
+    it('does not count start or end cell as blocking', () => {
+      const map = createLoSMap();
+      expect(hasLineOfSight(map, 2, 0, 3, 0)).toBe(true);
     });
   });
 });

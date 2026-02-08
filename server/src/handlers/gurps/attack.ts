@@ -34,7 +34,7 @@ import { clearDefenseTimeout } from "../../timers";
 import { formatRoll, applyDamageToTarget } from "../shared/damage";
 import { handlePF2AttackAction } from "../pf2/attack";
 import { quickContest, getDefenseOptions, checkWaitTriggers } from "../../../../shared/rulesets/gurps/rules";
-import { hasCover } from "../../../../shared/map/terrain";
+import { hasCover, hasLineOfSight } from "../../../../shared/map/terrain";
 import { isGurpsCharacter } from "../../../../shared/rulesets/characterSheet";
 import { executeWaitInterrupt } from "./wait-interrupt";
 import type { GurpsCombatantState } from "../../../../shared/rulesets/gurps/types";
@@ -413,6 +413,11 @@ export const handleAttackAction = async (
   if (!isRanged && !adapter.canAttackAtDistance!(weaponReach, distance)) {
     const { max } = adapter.parseReach!(weaponReach);
     sendMessage(socket, { type: "error", message: `Target out of melee range (reach ${max}).` });
+    return;
+  }
+
+  if (isRanged && !hasLineOfSight(match.mapDefinition, actorCombatant.position.x, actorCombatant.position.z, targetCombatant.position.x, targetCombatant.position.z)) {
+    sendMessage(socket, { type: "error", message: "No line of sight — attack blocked by wall." });
     return;
   }
   
