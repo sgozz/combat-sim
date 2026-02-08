@@ -178,11 +178,13 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const actionsRef = useRef<Record<string, THREE.AnimationAction>>({})
 
-  const assembledGroup = useMemo(() => {
+  const { assembledGroup, normalizedScale } = useMemo(() => {
     const group = new THREE.Group()
 
     const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
     group.add(bodyClone)
+
+    const scale = computeNormalizedScale(bodyClone)
 
     if (hasOutfit) {
       const outfitClone = SkeletonUtils.clone(outfitGltf.scene)
@@ -220,10 +222,8 @@ function CompositeModelView({ model, isPlayer, emissive, animationState }: {
       }
     }
 
-    return group
+    return { assembledGroup: group, normalizedScale: scale }
   }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon, isPlayer, emissive])
-
-  const normalizedScale = useMemo(() => computeNormalizedScale(assembledGroup), [assembledGroup])
 
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(assembledGroup)

@@ -70,11 +70,13 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
 
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
 
-  const assembledGroup = useMemo(() => {
+  const { assembledGroup, normalizedScale } = useMemo(() => {
     const group = new THREE.Group()
 
     const bodyClone = SkeletonUtils.clone(bodyGltf.scene)
     group.add(bodyClone)
+
+    const scale = computeNormalizedScale(bodyClone)
 
     if (hasOutfit) {
       const outfitClone = SkeletonUtils.clone(outfitGltf.scene)
@@ -112,10 +114,8 @@ const CompositePreviewModel = ({ model }: { model: ModelEntry }) => {
       }
     }
 
-    return group
+    return { assembledGroup: group, normalizedScale: scale }
   }, [bodyGltf.scene, outfitGltf.scene, weaponGltf.scene, hasOutfit, hasWeapon])
-
-  const normalizedScale = useMemo(() => computeNormalizedScale(assembledGroup), [assembledGroup])
 
   useEffect(() => {
     const mixer = new THREE.AnimationMixer(assembledGroup)
