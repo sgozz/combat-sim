@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type { ManeuverType, HitLocation, AOAVariant, AODVariant, WaitTrigger } from '../../../../shared/rulesets/gurps/types'
 import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
 import { WaitTriggerPicker } from './WaitTriggerPicker'
@@ -16,6 +16,7 @@ export const GurpsActionBar = ({
   isMyTurn, 
   currentManeuver, 
   selectedTargetId,
+  logs,
   onAction,
   onDefend,
   onLeaveLobby,
@@ -25,11 +26,21 @@ export const GurpsActionBar = ({
   const [showAOAVariants, setShowAOAVariants] = useState(false)
   const [showAODVariants, setShowAODVariants] = useState(false)
   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
+  const [showCombatLog, setShowCombatLog] = useState(false)
   const [retreat, setRetreat] = useState(false)
   const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
   const [hitLocation, setHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
   const [rapidStrike, setRapidStrike] = useState(false)
+  const [maneuverTooltip, setManeuverTooltip] = useState<{ label: string; desc: string } | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
 
   const closeAllPanels = useCallback(() => {
     setShowManeuvers(false)
@@ -37,6 +48,7 @@ export const GurpsActionBar = ({
     setShowAOAVariants(false)
     setShowAODVariants(false)
     setShowWaitPicker(false)
+    setShowCombatLog(false)
   }, [])
 
   useEffect(() => {
@@ -89,6 +101,10 @@ export const GurpsActionBar = ({
   const currentHP = playerCombatant.currentHP
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
   const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
+  const maxFP = playerCharacter.derived.fatiguePoints
+  const currentFP = playerCombatant.currentFP
+  const fpPercent = maxFP > 0 ? Math.max(0, (currentFP / maxFP) * 100) : 0
+  const fpColor = fpPercent > 50 ? '#4af' : fpPercent > 25 ? '#ff0' : '#f44'
   const adapter = rulesets.gurps.ui
   const inCloseCombat = !!playerCombatant.inCloseCombatWith
   const availableManeuvers = inCloseCombat 
@@ -432,7 +448,10 @@ export const GurpsActionBar = ({
             <button
               key={m.type}
               className={`action-bar-maneuver-btn ${currentManeuver === m.type ? 'active' : ''}`}
+              title={`${m.label}: ${m.desc}`}
               onClick={() => {
+                clearLongPress()
+                setManeuverTooltip(null)
                 if (m.type === 'all_out_attack') {
                   setShowManeuvers(false)
                   setShowAOAVariants(true)
@@ -448,11 +467,31 @@ export const GurpsActionBar = ({
                   setShowManeuvers(false)
                 }
               }}
+              onTouchStart={() => {
+                clearLongPress()
+                longPressTimerRef.current = setTimeout(() => {
+                  setManeuverTooltip({ label: m.label, desc: m.desc })
+                }, 500)
+              }}
+              onTouchEnd={() => {
+                clearLongPress()
+              }}
+              onTouchCancel={() => {
+                clearLongPress()
+              }}
             >
               <span className="action-bar-icon">{m.icon}</span>
               <span className="action-bar-label">{m.shortLabel}</span>
             </button>
           ))}
+        </div>
+      )}
+      {maneuverTooltip && (
+        <div className="maneuver-tooltip-overlay" onClick={() => setManeuverTooltip(null)}>
+          <div className="maneuver-tooltip-card">
+            <div className="maneuver-tooltip-title">{maneuverTooltip.label}</div>
+            <div className="maneuver-tooltip-desc">{maneuverTooltip.desc}</div>
+          </div>
         </div>
       )}
       <div className="action-bar">
@@ -477,6 +516,15 @@ export const GurpsActionBar = ({
               />
             </div>
             <span className="char-btn-hp-text">{currentHP}/{maxHP}</span>
+          </div>
+          <div className="char-btn-hp">
+            <div className="char-btn-hp-bar">
+              <div 
+                className="char-btn-hp-fill" 
+                style={{ width: `${fpPercent}%`, background: fpColor }}
+              />
+            </div>
+            <span className="char-btn-hp-text" style={{ color: '#4af' }}>FP {currentFP}/{maxFP}</span>
           </div>
         </button>
         
@@ -602,7 +650,41 @@ export const GurpsActionBar = ({
           </button>
         )}
 
+        <button
+          className={`action-bar-btn ${showCombatLog ? 'active' : ''}`}
+          onClick={() => {
+            if (!showCombatLog) {
+              closeAllPanels()
+            }
+            setShowCombatLog(!showCombatLog)
+          }}
+        >
+          <span className="action-bar-icon">📜</span>
+          <span className="action-bar-label">Log</span>
+        </button>
+
       </div>
+
+      {showCombatLog && (
+        <>
+          <div className="action-bar-backdrop" onClick={() => setShowCombatLog(false)} />
+          <div className="action-bar-combat-log">
+            <div className="action-bar-combat-log-header">
+              <span>Combat Log</span>
+              <button className="action-bar-combat-log-close" onClick={() => setShowCombatLog(false)}>✕</button>
+            </div>
+            <div className="action-bar-combat-log-entries">
+              {(logs ?? []).length === 0 ? (
+                <div className="action-bar-combat-log-empty">No log entries yet.</div>
+              ) : (
+                [...(logs ?? [])].reverse().slice(0, 30).map((entry, i) => (
+                  <div key={i} className="action-bar-combat-log-entry">{entry}</div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }

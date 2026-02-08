@@ -11,15 +11,18 @@ export const PF2ActionBar = ({
   character: playerCharacter,
   isMyTurn, 
   selectedTargetId,
+  logs,
   onAction,
   onLeaveLobby,
 }: ActionBarProps) => {
    const [showCharacterSheet, setShowCharacterSheet] = useState(false)
    const [showSpellPicker, setShowSpellPicker] = useState(false)
+   const [showCombatLog, setShowCombatLog] = useState(false)
    
    const closeAllPanels = useCallback(() => {
      setShowCharacterSheet(false)
      setShowSpellPicker(false)
+     setShowCombatLog(false)
    }, [])
 
    if (!isPF2Character(playerCharacter) || !isPF2Combatant(playerCombatant)) {
@@ -382,7 +385,40 @@ export const PF2ActionBar = ({
             </button>
           </div>
         )}
+        <button
+          className={`action-bar-btn ${showCombatLog ? 'active' : ''}`}
+          onClick={() => {
+            if (!showCombatLog) {
+              closeAllPanels()
+            }
+            setShowCombatLog(!showCombatLog)
+          }}
+        >
+          <span className="action-bar-icon">📜</span>
+          <span className="action-bar-label">Log</span>
+        </button>
       </div>
+
+      {showCombatLog && (
+        <>
+          <div className="action-bar-backdrop" onClick={() => setShowCombatLog(false)} />
+          <div className="action-bar-combat-log">
+            <div className="action-bar-combat-log-header">
+              <span>Combat Log</span>
+              <button className="action-bar-combat-log-close" onClick={() => setShowCombatLog(false)}>✕</button>
+            </div>
+            <div className="action-bar-combat-log-entries">
+              {(logs ?? []).length === 0 ? (
+                <div className="action-bar-combat-log-empty">No log entries yet.</div>
+              ) : (
+                [...(logs ?? [])].reverse().slice(0, 30).map((entry, i) => (
+                  <div key={i} className="action-bar-combat-log-entry">{entry}</div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }

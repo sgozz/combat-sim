@@ -49,6 +49,7 @@ export type ActionBarProps = {
   isMyTurn: boolean
   currentManeuver: ManeuverType | null
   selectedTargetId: string | null
+  logs?: string[]
   onAction: (action: string, payload?: CombatActionPayload) => void
   onDefend: (choice: DefenseChoice) => void
   onLeaveLobby: () => void
