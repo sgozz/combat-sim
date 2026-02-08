@@ -14,7 +14,7 @@ import { CombatToast } from './CombatToast'
 
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 
-import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
+import type { MatchState, Player, GridPosition, VisualEffect, PendingAction, AreaSpellTargeting } from '../../../shared/types'
 import { isGurpsCombatant, isPF2Combatant } from '../../../shared/rulesets'
 
 type GameScreenProps = {
@@ -69,6 +69,8 @@ export const GameScreen = ({
   const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
   const prevActiveTurnRef = useRef<string | null>(null)
 
+  const [areaSpellTargeting, setAreaSpellTargeting] = useState<AreaSpellTargeting>(null)
+
   useEffect(() => {
     const activeTurnId = matchState?.activeTurnPlayerId ?? null
     if (activeTurnId && activeTurnId !== prevActiveTurnRef.current) {
@@ -92,6 +94,19 @@ export const GameScreen = ({
   const handleDefenseChoice = useCallback((choice: { type: string; retreat: boolean; dodgeAndDrop: boolean }) => {
     onAction('defend', { type: 'defend', defenseType: choice.type, retreat: choice.retreat, dodgeAndDrop: choice.dodgeAndDrop })
   }, [onAction])
+
+  const handleAreaSpellHexSelect = useCallback((hexQ: number, hexR: number) => {
+    if (!areaSpellTargeting) return
+
+    onAction('pf2_cast_spell', {
+      type: 'pf2_cast_spell',
+      casterIndex: areaSpellTargeting.casterIndex,
+      spellName: areaSpellTargeting.spellName,
+      spellLevel: areaSpellTargeting.spellLevel,
+      targetHex: { q: hexQ, r: hexR }
+    })
+    setAreaSpellTargeting(null)
+  }, [areaSpellTargeting, onAction])
 
   const inMovementPhase = matchState?.turnMovement?.phase === 'moving'
   
@@ -195,22 +210,24 @@ export const GameScreen = ({
         
         <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
           <color attach="background" args={['#111']} />
-            <ArenaScene
-              combatants={matchState?.combatants ?? []}
-             characters={matchState?.characters ?? []}
-             playerId={player?.id ?? null}
-             activeTurnPlayerId={matchState?.activeTurnPlayerId ?? null}
-             moveTarget={moveTarget}
-             selectedTargetId={selectedTargetId}
-             isPlayerTurn={isPlayerTurn}
-              reachableHexes={matchState?.reachableHexes ?? []}
-              visualEffects={visualEffects}
-              cameraMode={cameraMode}
-              rulesetId={matchState?.rulesetId ?? 'gurps'}
-              mapDefinition={matchState?.mapDefinition}
-              onGridClick={onGridClick}
-              onCombatantClick={onCombatantClick}
-            />
+             <ArenaScene
+               combatants={matchState?.combatants ?? []}
+              characters={matchState?.characters ?? []}
+              playerId={player?.id ?? null}
+              activeTurnPlayerId={matchState?.activeTurnPlayerId ?? null}
+              moveTarget={moveTarget}
+              selectedTargetId={selectedTargetId}
+              isPlayerTurn={isPlayerTurn}
+               reachableHexes={matchState?.reachableHexes ?? []}
+               visualEffects={visualEffects}
+               cameraMode={cameraMode}
+               rulesetId={matchState?.rulesetId ?? 'gurps'}
+               mapDefinition={matchState?.mapDefinition}
+               onGridClick={onGridClick}
+               onCombatantClick={onCombatantClick}
+               areaSpellTargeting={areaSpellTargeting}
+               onAreaSpellHexSelect={handleAreaSpellHexSelect}
+             />
           <EffectComposer>
             <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.9} intensity={0.4} />
             <Vignette eskil={false} offset={0.1} darkness={0.8} />
@@ -230,6 +247,8 @@ export const GameScreen = ({
             isMyTurn={isPlayerTurn}
             onAction={onAction}
             onLeaveLobby={onLeaveLobby}
+            areaSpellTargeting={areaSpellTargeting}
+            setAreaSpellTargeting={setAreaSpellTargeting}
           />
        ) : (
          <aside className="panel panel-right">
@@ -295,21 +314,23 @@ export const GameScreen = ({
         </div>
       )}
 
-        {canRenderPanels && (
-           <ActionBar
-              matchState={matchState}
-              player={player}
-              combatant={currentCombatant}
-             character={playerCharacter}
-             isMyTurn={isPlayerTurn}
-             currentManeuver={currentManeuver}
-             selectedTargetId={selectedTargetId}
-             logs={logs}
-             onAction={onAction}
-             onDefend={handleDefenseChoice}
-             onLeaveLobby={onLeaveLobby}
-           />
-        )}
+         {canRenderPanels && (
+            <ActionBar
+               matchState={matchState}
+               player={player}
+               combatant={currentCombatant}
+              character={playerCharacter}
+              isMyTurn={isPlayerTurn}
+              currentManeuver={currentManeuver}
+              selectedTargetId={selectedTargetId}
+              logs={logs}
+              onAction={onAction}
+              onDefend={handleDefenseChoice}
+              onLeaveLobby={onLeaveLobby}
+              areaSpellTargeting={areaSpellTargeting}
+              setAreaSpellTargeting={setAreaSpellTargeting}
+            />
+         )}
 
         <MatchEndOverlay
           matchStatus={matchState?.status ?? 'waiting'}
