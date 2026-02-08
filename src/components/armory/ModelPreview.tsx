@@ -1,5 +1,6 @@
-import { useMemo, useEffect, useRef, Suspense } from 'react'
+import { useMemo, useEffect, useRef, useState, useCallback, Suspense } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
+import type { RootState } from '@react-three/fiber'
 import { useGLTF, OrbitControls, Stage } from '@react-three/drei'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
@@ -142,11 +143,36 @@ const PreviewModel = ({ modelId }: { modelId?: string }) => {
   )
 }
 
+function RendererCleanup() {
+  const glRef = useRef<THREE.WebGLRenderer | null>(null)
+
+  useEffect(() => {
+    return () => { glRef.current?.dispose() }
+  }, [])
+
+  useFrame((rootState) => {
+    if (!glRef.current) glRef.current = rootState.gl
+  })
+
+  return null
+}
+
 export const ModelPreview = ({ modelId }: ModelPreviewProps) => {
+  const [canvasKey, setCanvasKey] = useState(() => Date.now())
+
+  const handleCreated = useCallback((state: RootState) => {
+    const canvas = state.gl.domElement
+    canvas.addEventListener('webglcontextlost', (e: Event) => {
+      e.preventDefault()
+      setCanvasKey(Date.now())
+    })
+  }, [])
+
   return (
     <div className="model-preview-container" style={{ width: '100%', height: '300px', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
-      <Canvas shadows dpr={[1, 2]} camera={{ fov: 50 }}>
+      <Canvas key={canvasKey} shadows dpr={[1, 2]} camera={{ fov: 50 }} onCreated={handleCreated}>
         <Suspense fallback={null}>
+          <RendererCleanup />
           <Stage environment="city" intensity={0.6}>
             <PreviewModel modelId={modelId} />
           </Stage>
