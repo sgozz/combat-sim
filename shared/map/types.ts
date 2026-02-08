@@ -1,4 +1,4 @@
-export type BiomeId = 'dungeon' | 'wilderness';
+export type BiomeId = 'dungeon' | 'wilderness' | 'desert' | 'graveyard';
 
 export type TerrainProperty = 'blocked' | 'difficult' | 'cover';
 

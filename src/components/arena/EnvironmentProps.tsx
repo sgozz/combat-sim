@@ -18,6 +18,39 @@ type PropGroup = {
   instances: { position: [number, number, number]; rotation: number }[]
 }
 
+const KNOWN_ASSET_IDS = new Set([
+  'wall', 'wall_corner', 'floor', 'pillar', 'crate', 'barrel', 'door',
+  'tree_01', 'tree_02', 'rock_01', 'rock_02', 'bush', 'grass'
+])
+
+const FALLBACK_CONFIG: Record<string, { color: string; geometry: 'box' | 'cylinder' | 'sphere' | 'cone'; dims: [number, number, number] }> = {
+  barrel_damaged: { color: '#8B4513', geometry: 'cylinder', dims: [0.3, 0.3, 0.8] },
+  table: { color: '#5D4037', geometry: 'box', dims: [1.2, 0.1, 0.8] },
+  chair: { color: '#5D4037', geometry: 'box', dims: [0.4, 0.5, 0.4] },
+  bookshelf: { color: '#3E2723', geometry: 'box', dims: [0.8, 1.5, 0.3] },
+  torch_wall: { color: '#FFD700', geometry: 'cone', dims: [0.1, 0.3, 8] },
+  brazier: { color: '#333', geometry: 'cylinder', dims: [0.4, 0.3, 8] },
+  banner: { color: '#880000', geometry: 'box', dims: [0.6, 1.2, 0.05] },
+  
+  trunk: { color: '#5D4037', geometry: 'cylinder', dims: [0.2, 1.5, 8] },
+  stump: { color: '#5D4037', geometry: 'cylinder', dims: [0.3, 0.3, 8] },
+  mushroom_red: { color: '#FF0000', geometry: 'sphere', dims: [0.2, 16, 16] },
+  flower_purple: { color: '#9C27B0', geometry: 'sphere', dims: [0.15, 8, 8] },
+  
+  cactus_tall: { color: '#2E7D32', geometry: 'cylinder', dims: [0.2, 1.8, 8] },
+  cactus_short: { color: '#4CAF50', geometry: 'cylinder', dims: [0.25, 0.8, 8] },
+  rock_sand: { color: '#D2B48C', geometry: 'sphere', dims: [0.6, 4, 2] },
+  bones: { color: '#EEEEEE', geometry: 'box', dims: [0.4, 0.1, 0.4] },
+  dead_bush: { color: '#8D6E63', geometry: 'sphere', dims: [0.4, 4, 4] },
+  
+  gravestone_1: { color: '#757575', geometry: 'box', dims: [0.4, 0.6, 0.1] },
+  gravestone_2: { color: '#616161', geometry: 'box', dims: [0.4, 0.5, 0.1] },
+  tomb: { color: '#424242', geometry: 'box', dims: [0.8, 0.5, 1.2] },
+  tree_dead: { color: '#3E2723', geometry: 'cylinder', dims: [0.3, 2.5, 6] },
+  fence_iron: { color: '#212121', geometry: 'box', dims: [1.0, 0.8, 0.05] },
+  lantern: { color: '#FFD700', geometry: 'box', dims: [0.2, 0.3, 0.2] },
+}
+
 export const EnvironmentProps = ({ mapDefinition, gridType }: EnvironmentPropsProps) => {
   if (!mapDefinition) return null
 
@@ -54,13 +87,17 @@ export const EnvironmentProps = ({ mapDefinition, gridType }: EnvironmentPropsPr
   return (
     <group>
       {propGroups.map((group) => (
-        <PropGroupRenderer key={group.propId} group={group} />
+        KNOWN_ASSET_IDS.has(group.propId) ? (
+          <GLTFPropRenderer key={group.propId} group={group} />
+        ) : (
+          <FallbackPropRenderer key={group.propId} group={group} />
+        )
       ))}
     </group>
   )
 }
 
-const PropGroupRenderer = ({ group }: { group: PropGroup }) => {
+const GLTFPropRenderer = ({ group }: { group: PropGroup }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null)
   const { scene } = useGLTF(group.path)
 
@@ -99,6 +136,65 @@ const PropGroupRenderer = ({ group }: { group: PropGroup }) => {
     }
     mesh.instanceMatrix.needsUpdate = true
   }, [group])
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, material, group.instances.length]}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
+const FallbackPropRenderer = ({ group }: { group: PropGroup }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null)
+  const config = FALLBACK_CONFIG[group.propId] ?? { color: '#FF00FF', geometry: 'box', dims: [0.5, 0.5, 0.5] }
+
+  const geometry = useMemo(() => {
+    switch (config.geometry) {
+      case 'cylinder': return new THREE.CylinderGeometry(config.dims[0], config.dims[0], config.dims[1], config.dims[2] || 8)
+      case 'sphere': return new THREE.SphereGeometry(config.dims[0], config.dims[1] || 8, config.dims[2] || 8)
+      case 'cone': return new THREE.ConeGeometry(config.dims[0], config.dims[1], config.dims[2] || 8)
+      case 'box':
+      default: return new THREE.BoxGeometry(config.dims[0], config.dims[1], config.dims[2])
+    }
+  }, [config])
+
+  const material = useMemo(() => {
+    return new THREE.MeshStandardMaterial({ 
+      color: config.color,
+      roughness: 0.8,
+      metalness: 0.1
+    })
+  }, [config])
+
+  useEffect(() => {
+    if (!meshRef.current) return
+    const mesh = meshRef.current
+    const dummy = new THREE.Object3D()
+
+    // Adjust pivot to bottom for most shapes
+    const yOffset = config.geometry === 'box' ? config.dims[1] / 2 
+                  : config.geometry === 'cylinder' || config.geometry === 'cone' ? config.dims[1] / 2
+                  : config.dims[0]; // sphere
+
+    for (let i = 0; i < group.instances.length; i++) {
+      const inst = group.instances[i]
+      dummy.position.set(inst.position[0], inst.position[1] + yOffset, inst.position[2])
+      dummy.rotation.set(0, inst.rotation, 0)
+      
+      if (group.propId === 'trunk' || group.propId === 'bones') {
+         dummy.rotation.x = Math.PI / 2
+         dummy.position.y = 0.1
+      }
+
+      dummy.scale.setScalar(group.scale)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+    }
+    mesh.instanceMatrix.needsUpdate = true
+  }, [group, config])
 
   return (
     <instancedMesh
