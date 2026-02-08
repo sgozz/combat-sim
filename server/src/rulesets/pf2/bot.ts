@@ -17,6 +17,7 @@ import {
   calculateFacing,
 } from "../../helpers";
 import { isPF2Character } from "../../../../shared/rulesets/characterSheet";
+import { isBlocked } from "../../../../shared/map/terrain";
 
 const asPF2Character = (match: MatchState, characterId: string): PF2CharacterSheet | undefined => {
   const char = getCharacterById(match, characterId);
@@ -89,7 +90,9 @@ export const decidePF2BotAction = (
     botCombatant.position,
     nearest.position,
     maxSquares,
-    gridSystem
+    gridSystem,
+    1,
+    match.mapDefinition
   );
 
   if (newPosition.x === botCombatant.position.x && newPosition.z === botCombatant.position.z) {
@@ -226,6 +229,9 @@ export const executeBotStride = (
   to: { q: number; r: number },
   activePlayer: { id: string; name: string }
 ): MatchState => {
+  if (isBlocked(currentMatch.mapDefinition, to.q, to.r)) {
+    return currentMatch;
+  }
   const newPosition = { x: to.q, y: botCombatant.position.y, z: to.r };
   const newFacing = calculateFacing(botCombatant.position, newPosition);
 

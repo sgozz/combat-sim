@@ -173,7 +173,7 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
     const maxMove = botCharacter && isPF2Character(botCharacter)
       ? Math.floor((botCharacter.derived.speed ?? 25) / 5)
       : (botCharacter?.derived.basicMove ?? 5);
-    const newPosition = computeGridMoveToward(botCombatant.position, target.position, maxMove, gridSystem);
+    const newPosition = computeGridMoveToward(botCombatant.position, target.position, maxMove, gridSystem, 1, currentMatch.mapDefinition);
     const newFacing = calculateFacing(botCombatant.position, newPosition);
 
     const updatedCombatants = currentMatch.combatants.map((combatant) =>
