@@ -15,6 +15,8 @@ import type {
   WaitTriggerCondition,
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo, Id } from '../../types';
+import type { MapDefinition } from '../../map/types';
+import { isBlocked } from '../../map/terrain';
 import type { GurpsCharacterSheet } from './characterSheet';
 import type { GurpsCombatantState } from './types';
 import { isGurpsCombatant } from '../guards';
@@ -1106,7 +1108,8 @@ export const getReachableHexes = (
   startFacing: number,
   basicMove: number,
   freeRotationUsed: boolean = false,
-  occupiedHexes: HexPosition[] = []
+  occupiedHexes: HexPosition[] = [],
+  mapDef?: MapDefinition
 ): Map<string, ReachableHex> => {
   const results = new Map<string, ReachableHex>();
   const visited = new Map<string, number>();
@@ -1168,6 +1171,7 @@ export const getReachableHexes = (
       const neighbor = getHexNeighbor(current.position, dir);
       
       if (isOccupied(neighbor)) continue;
+      if (isBlocked(mapDef, neighbor.q, neighbor.r)) continue;
       
       const { cost: moveCost, isBackward } = getMovementCostToAdjacent(
         current.position,
@@ -1202,9 +1206,10 @@ export const calculateMovementCost = (
   fromFacing: number,
   basicMove: number,
   freeRotationUsed: boolean = false,
-  occupiedHexes: HexPosition[] = []
+  occupiedHexes: HexPosition[] = [],
+  mapDef?: MapDefinition
 ): MovementCost | null => {
-  const reachable = getReachableHexes(from, fromFacing, basicMove, freeRotationUsed, occupiedHexes);
+  const reachable = getReachableHexes(from, fromFacing, basicMove, freeRotationUsed, occupiedHexes, mapDef);
   const key = `${to.q},${to.r}`;
   
   const result = reachable.get(key);
@@ -1234,7 +1239,8 @@ export const canMoveTo = (
 export const executeMove = (
   state: MovementState,
   to: HexPosition,
-  occupiedHexes: HexPosition[] = []
+  occupiedHexes: HexPosition[] = [],
+  mapDef?: MapDefinition
 ): MovementState | null => {
   const cost = calculateMovementCost(
     state.position,
@@ -1242,7 +1248,8 @@ export const executeMove = (
     state.facing,
     state.movePointsRemaining,
     state.freeRotationUsed,
-    occupiedHexes
+    occupiedHexes,
+    mapDef
   );
   
   if (!cost || cost.total > state.movePointsRemaining) return null;
@@ -1252,7 +1259,8 @@ export const executeMove = (
     state.facing,
     state.movePointsRemaining,
     state.freeRotationUsed,
-    occupiedHexes
+    occupiedHexes,
+    mapDef
   );
   const result = reachable.get(`${to.q},${to.r}`);
   if (!result) return null;
@@ -1335,22 +1343,19 @@ export const initializeTurnMovement = (
 export const calculateReachableHexesInfo = (
   state: TurnMovementState,
   occupiedHexes: HexCoord[],
-  mapDefinition?: import('../../map/types').MapDefinition
+  mapDefinition?: MapDefinition
 ): ReachableHexInfo[] => {
   const reachable = getReachableHexes(
     state.currentPosition,
     state.currentFacing,
     state.movePointsRemaining,
     state.freeRotationUsed,
-    occupiedHexes
+    occupiedHexes,
+    mapDefinition
   );
   
   const result: ReachableHexInfo[] = [];
   reachable.forEach((hex) => {
-    if (mapDefinition) {
-      const cell = mapDefinition.cells.find(c => c.q === hex.position.q && c.r === hex.position.r);
-      if (cell?.terrain.includes('blocked')) return;
-    }
     result.push({
       q: hex.position.q,
       r: hex.position.r,
