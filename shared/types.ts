@@ -61,6 +61,14 @@ export type ReachableHexInfo = {
   finalFacing: number;
 };
 
+export type AreaSpellTargeting = {
+  spellName: string;
+  spellLevel: number;
+  areaShape: 'burst';
+  areaRadius: number;
+  casterIndex: number;
+} | null;
+
 export type MatchStatus = "waiting" | "active" | "paused" | "finished";
 
 export type MatchState = {

@@ -8,18 +8,20 @@ import { rulesets, isGurpsPendingDefense, isGurpsCombatant } from '../../../../s
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 import type { ActionBarProps } from '../types'
 
-export const GurpsActionBar = ({ 
+export const GurpsActionBar = ({
   matchState,
   player,
   combatant: playerCombatant,
   character: playerCharacter,
-  isMyTurn, 
-  currentManeuver, 
+  isMyTurn,
+  currentManeuver,
   selectedTargetId,
   logs,
   onAction,
   onDefend,
   onLeaveLobby,
+  areaSpellTargeting: _areaSpellTargeting,
+  setAreaSpellTargeting: _setAreaSpellTargeting,
 }: ActionBarProps) => {
   const [showManeuvers, setShowManeuvers] = useState(false)
   const [showWaitPicker, setShowWaitPicker] = useState(false)

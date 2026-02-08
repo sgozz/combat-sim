@@ -1,7 +1,8 @@
 import type { 
   CharacterSheet, 
   MatchState, 
-  Player, 
+  Player,
+  AreaSpellTargeting,
 } from '../../../shared/types'
 import type {
   ManeuverType,
@@ -39,6 +40,8 @@ export type GameActionPanelProps = {
   isMyTurn: boolean
   onAction: (action: string, payload?: CombatActionPayload) => void
   onLeaveLobby: () => void
+  areaSpellTargeting: AreaSpellTargeting
+  setAreaSpellTargeting: (targeting: AreaSpellTargeting) => void
 }
 
 export type ActionBarProps = {
@@ -53,6 +56,8 @@ export type ActionBarProps = {
   onAction: (action: string, payload?: CombatActionPayload) => void
   onDefend: (choice: DefenseChoice) => void
   onLeaveLobby: () => void
+  areaSpellTargeting: AreaSpellTargeting
+  setAreaSpellTargeting: (targeting: AreaSpellTargeting) => void
 }
 
 export type DefenseModalProps = {

@@ -5,19 +5,21 @@ import { isPF2Combatant } from '../../../../shared/rulesets'
 import { SpellPicker } from './SpellPicker'
 import { getSpell } from '../../../../shared/rulesets/pf2/spellData'
 
-export const PF2ActionBar = ({ 
+export const PF2ActionBar = ({
   matchState,
   combatant: playerCombatant,
   character: playerCharacter,
-  isMyTurn, 
+  isMyTurn,
   selectedTargetId,
   logs,
   onAction,
   onLeaveLobby,
+  areaSpellTargeting,
+  setAreaSpellTargeting,
 }: ActionBarProps) => {
-   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
-   const [showSpellPicker, setShowSpellPicker] = useState(false)
-   const [showCombatLog, setShowCombatLog] = useState(false)
+  const [showCharacterSheet, setShowCharacterSheet] = useState(false)
+  const [showSpellPicker, setShowSpellPicker] = useState(false)
+  const [showCombatLog, setShowCombatLog] = useState(false)
    
    const closeAllPanels = useCallback(() => {
      setShowCharacterSheet(false)
@@ -70,31 +72,17 @@ export const PF2ActionBar = ({
       return
     }
 
-    // For area spells, prompt for hex selection
     if (spellDef.targetType === 'area') {
-      const hexInput = prompt('Enter target hex coordinates (format: q,r)\nExample: 5,5')
-      if (!hexInput) return
-      
-      const parts = hexInput.split(',').map(s => s.trim())
-      if (parts.length !== 2) {
-        alert('Invalid format. Use: q,r (e.g., 5,5)')
+      if (!spellDef.areaShape || !spellDef.areaRadius) {
+        alert('Spell area configuration error')
         return
       }
-      
-      const q = parseInt(parts[0], 10)
-      const r = parseInt(parts[1], 10)
-      
-      if (isNaN(q) || isNaN(r)) {
-        alert('Invalid coordinates. Both q and r must be numbers.')
-        return
-      }
-
-      onAction('pf2_cast_spell', {
-        type: 'pf2_cast_spell',
-        casterIndex: 0,
+      setAreaSpellTargeting({
         spellName,
         spellLevel: castLevel,
-        targetHex: { q, r }
+        areaShape: spellDef.areaShape,
+        areaRadius: spellDef.areaRadius,
+        casterIndex: 0
       })
       setShowSpellPicker(false)
       return
@@ -211,7 +199,44 @@ export const PF2ActionBar = ({
         </div>
       )}
       
-      <div className="action-bar">
+      <div className="action-bar" style={{ position: 'relative' }}>
+        {areaSpellTargeting && (
+          <div style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: '0.5rem',
+            background: '#4a3020',
+            border: '1px solid #ff6600',
+            borderRadius: '4px',
+            padding: '0.5rem 1rem',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            zIndex: 100
+          }}>
+            <div style={{ color: '#ffaa66', fontWeight: 'bold' }}>
+              Casting {areaSpellTargeting.spellName}
+            </div>
+            <div style={{ color: '#cc8855', fontSize: '0.85rem' }}>
+              Tap hex to target
+            </div>
+            <button
+              onClick={() => setAreaSpellTargeting(null)}
+              style={{
+                marginTop: '0.25rem',
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.8rem',
+                background: '#553333',
+                border: '1px solid #ff4444',
+                color: '#ff8888',
+                borderRadius: '3px'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         <button 
           className={`action-bar-btn char-btn ${showCharacterSheet ? 'active' : ''}`}
           onClick={() => setShowCharacterSheet(!showCharacterSheet)}
