@@ -19,8 +19,16 @@ type PropGroup = {
 }
 
 const KNOWN_ASSET_IDS = new Set([
+  // dungeon
   'wall', 'wall_corner', 'floor', 'pillar', 'crate', 'barrel', 'door',
-  'tree_01', 'tree_02', 'rock_01', 'rock_02', 'bush', 'grass'
+  'barrel_damaged', 'table', 'chair', 'bookshelf', 'torch_wall', 'brazier', 'banner',
+  // wilderness
+  'tree_01', 'tree_02', 'rock_01', 'rock_02', 'bush', 'grass',
+  'trunk', 'stump', 'mushroom_red', 'flower_purple',
+  // desert
+  'cactus_tall', 'cactus_short', 'rock_sand', 'bones', 'dead_bush',
+  // graveyard
+  'gravestone_1', 'gravestone_2', 'tomb', 'tree_dead', 'fence_iron', 'lantern',
 ])
 
 const FALLBACK_CONFIG: Record<string, { color: string; geometry: 'box' | 'cylinder' | 'sphere' | 'cone'; dims: [number, number, number] }> = {
