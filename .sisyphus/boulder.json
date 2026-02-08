@@ -1,10 +1,8 @@
 {
-  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/pf2-bugfix.md",
-  "started_at": "2026-02-07T22:03:49.182Z",
-  "completed_at": "2026-02-07T22:14:30.000Z",
+  "active_plan": "/home/fabio/.local/share/opencode/worktree/5ba295377a69310acb1f373a58eed37531b948e0/eager-lemur/.sisyphus/plans/mobile-ux-gurps-fixes.md",
+  "started_at": "2026-02-08T09:03:33.434Z",
   "session_ids": [
-    "ses_3c5e0d654ffergzhM6jIFlVVCT"
+    "ses_3c5aee0beffeB9u3dNFhLn7Azb"
   ],
-  "plan_name": "pf2-bugfix",
-  "status": "complete"
+  "plan_name": "mobile-ux-gurps-fixes"
 }
