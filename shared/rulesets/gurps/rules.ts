@@ -176,6 +176,7 @@ export type MovementState = {
   movePointsRemaining: number;
   freeRotationUsed: boolean;
   movedBackward: boolean;
+  path?: HexPosition[];
 };
 
 export type MovementCost = {
@@ -771,7 +772,7 @@ export const advanceTurn = (state: MatchState): MatchState => {
       if (!isGurpsCombatant(c)) return c;
       if (c.playerId === nextPlayerId) {
         const cleanedEffects = c.statusEffects.filter(e => e !== 'defending' && e !== 'has_stepped' && e !== 'lost_balance' && e !== 'stunned');
-        return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null };
+         return { ...c, maneuver: null, aoaVariant: null, aodVariant: null, statusEffects: cleanedEffects, usedReaction: false, shockPenalty: 0, attacksRemaining: 1, retreatedThisTurn: false, defensesThisTurn: 0, parryWeaponsUsedThisTurn: [], waitTrigger: null, movementPath: undefined };
       }
       if (c.playerId === state.activeTurnPlayerId) {
         const didAttack = c.maneuver === 'attack' || c.maneuver === 'all_out_attack' || c.maneuver === 'move_and_attack';
@@ -1262,6 +1263,7 @@ export const executeMove = (
     movePointsRemaining: state.movePointsRemaining - cost.total,
     freeRotationUsed: true,
     movedBackward: state.movedBackward || cost.isBackward,
+    path: result.path,
   };
 };
 

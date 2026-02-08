@@ -115,11 +115,16 @@ export const handlePF2Stride = async (
 
   const reachable = getReachableSquares(startPos, speed, occupiedSquares);
   const destKey = `${payload.to.q},${payload.to.r}`;
+  const destResult = reachable.get(destKey);
 
-  if (!reachable.has(destKey) || isBlocked(match.mapDefinition, payload.to.q, payload.to.r)) {
+  if (!destResult || isBlocked(match.mapDefinition, payload.to.q, payload.to.r)) {
     sendMessage(socket, { type: "error", message: "Destination not reachable." });
     return;
   }
+  
+  const movementPath = destResult.path
+    ? destResult.path.map((p: { q: number; r: number }) => ({ x: p.q, y: 0, z: p.r }))
+    : [{ x: startPos.q, y: 0, z: startPos.r }, { x: payload.to.q, y: 0, z: payload.to.r }];
 
   const reactors = getAoOReactors(match, actorCombatant);
 
@@ -156,7 +161,7 @@ export const handlePF2Stride = async (
 
       const movedCombatants = updatedMatch.combatants.map(c =>
         c.playerId === player.id
-          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r } }
+          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r }, movementPath }
           : c
       );
 
@@ -204,6 +209,7 @@ export const handlePF2Stride = async (
           ...c,
           ...(isPF2Combatant(c) ? { actionsRemaining: c.actionsRemaining - 1 } : {}),
           position: { x: payload.to.q, y: c.position.y, z: payload.to.r },
+          movementPath,
         }
       : c
   );

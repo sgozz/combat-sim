@@ -160,6 +160,10 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   const combatAnimationRef = useRef<{ type: 'punch' | 'jump'; until: number } | null>(null)
   const processedEffectsRef = useRef<Set<string>>(new Set())
 
+  // Waypoint-based movement: walk through path instead of straight line
+  const waypointsRef = useRef<{ x: number; z: number }[]>([])
+  const waypointIndexRef = useRef(0)
+
   const basicMove = useMemo(() => {
     if (!character) return 5
     if (isGurpsCharacter(character)) {
@@ -172,6 +176,19 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   }, [character])
   
   const isDead = combatant.currentHP <= 0
+
+  // When movementPath changes, convert to world-coordinate waypoints
+  useEffect(() => {
+    if (combatant.movementPath && combatant.movementPath.length > 1) {
+      // Skip first waypoint (it's the start position where we already are)
+      const waypoints = combatant.movementPath.slice(1).map(p => {
+        const wp = gridSystem.coordToWorld({ q: p.x, r: p.z })
+        return { x: wp.x, z: wp.z }
+      })
+      waypointsRef.current = waypoints
+      waypointIndexRef.current = 0
+    }
+  }, [combatant.movementPath, gridSystem])
 
   useEffect(() => {
     for (const effect of visualEffects) {
@@ -202,23 +219,63 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
       combatAnimationRef.current = null
     }
 
+    // Determine move target: current waypoint or final destination
+    const waypoints = waypointsRef.current
+    const wpIdx = waypointIndexRef.current
+    let moveTargetX: number
+    let moveTargetZ: number
+
+    if (waypoints.length > 0 && wpIdx < waypoints.length) {
+      // Follow waypoints
+      moveTargetX = waypoints[wpIdx].x
+      moveTargetZ = waypoints[wpIdx].z
+    } else {
+      // No waypoints (or all consumed) — go directly to final position
+      moveTargetX = targetX
+      moveTargetZ = targetZ
+    }
+
     const distanceToTarget = Math.sqrt(
-      Math.pow(targetX - currentPos.current.x, 2) + 
-      Math.pow(targetZ - currentPos.current.z, 2)
+      Math.pow(moveTargetX - currentPos.current.x, 2) + 
+      Math.pow(moveTargetZ - currentPos.current.z, 2)
     )
 
     let newState: AnimationState
     let moveSpeed: number
 
+    // Total remaining distance (through all waypoints) for walk/run decision
+    let totalRemaining = distanceToTarget
+    if (waypoints.length > 0 && wpIdx < waypoints.length) {
+      for (let i = wpIdx; i < waypoints.length - 1; i++) {
+        totalRemaining += Math.sqrt(
+          Math.pow(waypoints[i + 1].x - waypoints[i].x, 2) +
+          Math.pow(waypoints[i + 1].z - waypoints[i].z, 2)
+        )
+      }
+      // Add distance from last waypoint to final target
+      const last = waypoints[waypoints.length - 1]
+      totalRemaining += Math.sqrt(
+        Math.pow(targetX - last.x, 2) + Math.pow(targetZ - last.z, 2)
+      )
+    }
+
     if (distanceToTarget < IDLE_THRESHOLD) {
-      newState = 'idle'
-      moveSpeed = 0
-      wasMovingRef.current = false
-    } else if (!wasMovingRef.current || distanceToTarget < RUN_TO_WALK_DISTANCE) {
+      // Reached current waypoint — advance to next
+      if (waypoints.length > 0 && wpIdx < waypoints.length) {
+        waypointIndexRef.current = wpIdx + 1
+        // Don't go idle yet, we have more waypoints (or final target)
+        newState = animationState === 'idle' ? 'walk' : animationState
+        moveSpeed = newState === 'run' ? basicMove : basicMove * WALK_SPEED_MULTIPLIER
+      } else {
+        newState = 'idle'
+        moveSpeed = 0
+        wasMovingRef.current = false
+      }
+    } else if (!wasMovingRef.current || totalRemaining < RUN_TO_WALK_DISTANCE) {
       newState = 'walk'
       moveSpeed = basicMove * WALK_SPEED_MULTIPLIER
       wasMovingRef.current = true
-    } else if (distanceToTarget > WALK_TO_RUN_DISTANCE) {
+    } else if (totalRemaining > WALK_TO_RUN_DISTANCE) {
       newState = 'run'
       moveSpeed = basicMove
     } else {
@@ -231,8 +288,8 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
     if (moveSpeed > 0 && distanceToTarget > IDLE_THRESHOLD) {
       const moveDistance = moveSpeed * delta
       const ratio = Math.min(moveDistance / distanceToTarget, 1)
-      currentPos.current.x += (targetX - currentPos.current.x) * ratio
-      currentPos.current.z += (targetZ - currentPos.current.z) * ratio
+      currentPos.current.x += (moveTargetX - currentPos.current.x) * ratio
+      currentPos.current.z += (moveTargetZ - currentPos.current.z) * ratio
     }
 
     let rotDiff = targetRotation - currentRot.current

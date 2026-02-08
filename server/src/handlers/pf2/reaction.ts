@@ -3,6 +3,7 @@ import type { MatchState, Player, PendingReaction } from "../../../../shared/typ
 import type { CombatantState } from "../../../../shared/rulesets";
 import { isPF2Combatant } from "../../../../shared/rulesets";
 import { isPF2Character } from "../../../../shared/rulesets/characterSheet";
+import { getReachableSquares } from "../../../../shared/rulesets/pf2/rules";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -357,12 +358,24 @@ const resumeStrideAfterReaction = async (
   }
 
   const to = originalPayload.to;
+  const startPos = { q: triggerCombatant.position.x, r: triggerCombatant.position.z };
+  const occupiedSquares = match.combatants
+    .filter(c => c.playerId !== pending.triggerId)
+    .map(c => ({ q: c.position.x, r: c.position.z }));
+  const character = match.characters.find(ch => ch.id === triggerCombatant.characterId);
+  const speed = (character && isPF2Character(character)) ? character.derived.speed : 25;
+  const reachable = getReachableSquares(startPos, speed, occupiedSquares);
+  const destResult = reachable.get(`${to.q},${to.r}`);
+  const movementPath = destResult
+    ? destResult.path.map((p: { q: number; r: number }) => ({ x: p.q, y: 0, z: p.r }))
+    : undefined;
 
   const updatedCombatants = match.combatants.map(c =>
     c.playerId === pending.triggerId
       ? {
           ...c,
           position: { x: to.q, y: c.position.y, z: to.r },
+          movementPath,
         }
       : c
   );

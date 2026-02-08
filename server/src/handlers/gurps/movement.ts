@@ -83,9 +83,13 @@ export const handleMoveStep = async (
     ? adapter.calculateReachableHexesInfo(newTurnMovement, occupiedHexes, match.mapDefinition)
     : [];
   
+  const movementPath = newState.path
+    ? newState.path.map(p => adapter.hexToGrid(p))
+    : undefined;
+  
   const updatedCombatants = match.combatants.map((c) =>
     c.playerId === player.id
-      ? { ...c, position: adapter.hexToGrid(newState.position), facing: newState.facing }
+      ? { ...c, position: adapter.hexToGrid(newState.position), facing: newState.facing, movementPath }
       : c
   );
   
@@ -226,7 +230,8 @@ export const handleUndoMovement = async (
       ? { 
           ...c, 
           position: adapter.hexToGrid(match.turnMovement!.startPosition),
-          facing: match.turnMovement!.startFacing 
+          facing: match.turnMovement!.startFacing,
+          movementPath: undefined,
         }
       : c
   );
@@ -269,7 +274,7 @@ export const handleConfirmMovement = async (
    
    const updatedCombatants = match.combatants.map((c) =>
      c.playerId === player.id
-       ? { ...c, statusEffects: [...c.statusEffects, 'has_stepped'] }
+       ? { ...c, statusEffects: [...c.statusEffects, 'has_stepped'], movementPath: undefined }
        : c
    );
    
@@ -319,7 +324,8 @@ export const handleSkipMovement = async (
         ? { 
             ...c, 
             position: adapter.hexToGrid(match.turnMovement!.startPosition),
-            facing: match.turnMovement!.startFacing 
+            facing: match.turnMovement!.startFacing,
+            movementPath: undefined,
           }
         : c
     );

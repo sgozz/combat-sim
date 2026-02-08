@@ -168,6 +168,7 @@ export type MovementState = {
   movePointsRemaining: number;
   freeRotationUsed: boolean;
   movedBackward: boolean;
+  path?: HexCoord[];
 };
 
 export type MoveRequest = {
