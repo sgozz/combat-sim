@@ -92,7 +92,7 @@ function AppRoutes() {
       if (match) {
         if (match.status === 'waiting') {
           navigate(`/lobby/${activeMatchId}`, { replace: true })
-        } else if (match.status === 'active' || match.status === 'paused') {
+        } else if (match.status === 'active' || match.status === 'paused' || match.status === 'finished') {
           navigate(`/game/${activeMatchId}`, { replace: true })
         }
       }
