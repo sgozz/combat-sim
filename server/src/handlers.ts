@@ -116,6 +116,9 @@ export const handleMessage = async (
         }
         recordRegisterAttempt(ip);
         user = await createUser(trimmedUsername, false, message.preferredRulesetId ?? 'gurps');
+      } else if (message.preferredRulesetId && message.preferredRulesetId !== user.preferredRulesetId) {
+        state.db.prepare("UPDATE users SET preferred_ruleset_id = ? WHERE id = ?").run(message.preferredRulesetId, user.id);
+        user.preferredRulesetId = message.preferredRulesetId;
       }
       
       state.users.set(user.id, user);

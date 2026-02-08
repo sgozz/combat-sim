@@ -147,7 +147,9 @@ export const LobbyScreen = ({
 
   const handleNavigateToArmory = useCallback(() => {
     if (match) {
-      navigate(`/armory/new?ruleset=${match.rulesetId}`)
+      const params = new URLSearchParams({ ruleset: match.rulesetId, returnTo: `/lobby/${match.id}` })
+      if (user?.username) params.set('defaultName', user.username)
+      navigate(`/armory/new?${params.toString()}`)
     } else {
       navigate('/armory')
     }

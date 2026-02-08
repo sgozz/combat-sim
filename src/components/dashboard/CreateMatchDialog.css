@@ -301,4 +301,15 @@
     padding: var(--space-sm) var(--space-md);
     font-size: var(--text-sm);
   }
+
+  .cmd-actions {
+    position: sticky;
+    bottom: calc(-1 * var(--space-xl));
+    background: var(--bg-surface);
+    margin: 0 calc(-1 * var(--space-xl));
+    padding: var(--space-md) var(--space-xl);
+    padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-subtle);
+    z-index: 1;
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react'
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
@@ -64,6 +64,21 @@ export const GameScreen = ({
 }: GameScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   void matchId
+
+  // Auto-center camera on turn change
+  const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
+  const prevActiveTurnRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const activeTurnId = matchState?.activeTurnPlayerId ?? null
+    if (activeTurnId && activeTurnId !== prevActiveTurnRef.current) {
+      prevActiveTurnRef.current = activeTurnId
+      setCameraMode('follow')
+      const timer = setTimeout(() => setCameraMode('free'), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [matchState?.activeTurnPlayerId])
+
    const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
    const currentManeuver = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.maneuver : null
    const actionsRemaining = (currentCombatant && isPF2Combatant(currentCombatant)) ? currentCombatant.actionsRemaining : 0
@@ -154,7 +169,12 @@ export const GameScreen = ({
             </button>
           </div>
           
-          <InitiativeTracker matchState={matchState} />
+          <InitiativeTracker 
+            matchState={matchState} 
+            currentPlayerId={player?.id}
+            selectedTargetId={selectedTargetId}
+            onCombatantClick={onCombatantClick}
+          />
         </header>
 
         <CombatToast 
@@ -185,7 +205,7 @@ export const GameScreen = ({
              isPlayerTurn={isPlayerTurn}
               reachableHexes={matchState?.reachableHexes ?? []}
               visualEffects={visualEffects}
-              cameraMode="free"
+              cameraMode={cameraMode}
               rulesetId={matchState?.rulesetId ?? 'gurps'}
               mapDefinition={matchState?.mapDefinition}
               onGridClick={onGridClick}
@@ -277,17 +297,18 @@ export const GameScreen = ({
 
         {canRenderPanels && (
            <ActionBar
-             matchState={matchState}
-             player={player}
-             combatant={currentCombatant}
-            character={playerCharacter}
-            isMyTurn={isPlayerTurn}
-            currentManeuver={currentManeuver}
-            selectedTargetId={selectedTargetId}
-            onAction={onAction}
-            onDefend={handleDefenseChoice}
-            onLeaveLobby={onLeaveLobby}
-          />
+              matchState={matchState}
+              player={player}
+              combatant={currentCombatant}
+             character={playerCharacter}
+             isMyTurn={isPlayerTurn}
+             currentManeuver={currentManeuver}
+             selectedTargetId={selectedTargetId}
+             logs={logs}
+             onAction={onAction}
+             onDefend={handleDefenseChoice}
+             onLeaveLobby={onLeaveLobby}
+           />
         )}
 
         <MatchEndOverlay

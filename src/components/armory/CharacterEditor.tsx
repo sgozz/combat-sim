@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { generateUUID } from '../../../shared/utils/uuid'
 import { rulesets } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
@@ -26,6 +26,9 @@ type CharacterEditorProps = {
 export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetId = 'gurps' }: CharacterEditorProps) => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const returnTo = searchParams.get('returnTo')
+  const defaultName = searchParams.get('defaultName')
   const isNew = !id || id === 'new'
 
   const [activeTab, setActiveTab] = useState<Tab>('attributes')
@@ -37,7 +40,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
     if (isNew) {
       const bundle = rulesets[preferredRulesetId]
       if (bundle) {
-        const newChar = bundle.ruleset.createCharacter('New Character')
+        const newChar = bundle.ruleset.createCharacter(defaultName || 'New Character')
         queueMicrotask(() => setCharacter(newChar))
       }
     } else {
@@ -49,7 +52,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
         navigate('/armory')
       }
     }
-  }, [id, isNew, characters, navigate, preferredRulesetId])
+  }, [id, isNew, characters, navigate, preferredRulesetId, defaultName])
 
   if (!character) {
     return (
@@ -62,11 +65,11 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
   const handleSave = () => {
     setIsSaving(true)
     onSaveCharacter(character)
-    navigate('/armory')
+    navigate(returnTo || '/armory')
   }
 
   const handleCancel = () => {
-    navigate('/armory')
+    navigate(returnTo || '/armory')
   }
 
   const updateName = (name: string) => {
