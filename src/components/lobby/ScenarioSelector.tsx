@@ -27,6 +27,18 @@ const SCENARIOS: ScenarioOption[] = [
     icon: '🌲',
     description: 'Open field with trees, rocks, and bushes',
   },
+  {
+    id: 'desert',
+    name: 'Desert',
+    icon: '🏜️',
+    description: 'Arid wasteland with cacti, rocks, and bones',
+  },
+  {
+    id: 'graveyard',
+    name: 'Graveyard',
+    icon: '🪦',
+    description: 'Haunted grounds with tombs, gravestones, and dead trees',
+  },
 ]
 
 type ScenarioSelectorProps = {
