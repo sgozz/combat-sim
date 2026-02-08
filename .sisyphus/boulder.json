@@ -1,10 +1,8 @@
 {
-  "active_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/pf2-bugfix.md",
-  "started_at": "2026-02-07T22:03:49.182Z",
-  "completed_at": "2026-02-07T22:14:30.000Z",
-  "session_ids": [
-    "ses_3c5e0d654ffergzhM6jIFlVVCT"
-  ],
-  "plan_name": "pf2-bugfix",
+  "active_plan": null,
+  "completed_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/scenario-system.md",
+  "started_at": "2026-02-07T22:32:34.444Z",
+  "completed_at": "2026-02-08T23:10:00.000Z",
+  "plan_name": "scenario-system",
   "status": "complete"
 }
