@@ -20,6 +20,11 @@
   display: none;
 }
 
+/* PF2 Spell Picker - hidden on desktop */
+.pf2-spell-picker-mobile {
+  display: none;
+}
+
 /* Mobile Action Bar - Screens < 768px */
 @media (max-width: 768px) {
   :root {
@@ -326,6 +331,151 @@
 
   .action-bar-maneuver-btn:active {
     transform: scale(0.95);
+  }
+
+  .pf2-spell-picker-mobile {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: calc(var(--action-bar-offset) + 0.5rem);
+    left: 0.5rem;
+    right: 0.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: rgba(15, 15, 15, 0.98);
+    border: 1px solid #555;
+    border-radius: 12px;
+    padding: 0.75rem;
+    gap: 0.25rem;
+    z-index: 199;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.2s ease-out;
+    box-sizing: border-box;
+  }
+
+  .pf2-spell-picker-mobile .pf2-spell-level-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #aaa;
+    padding: 0.5rem 0.25rem 0.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 0.25rem;
+  }
+
+  .pf2-spell-picker-mobile .pf2-spell-level-header:first-of-type {
+    padding-top: 0;
+  }
+
+  .pf2-spell-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #ccc;
+    cursor: pointer;
+    min-height: 44px;
+    text-align: left;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+    font-size: 0.9rem;
+  }
+
+  .pf2-spell-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .pf2-spell-btn:not(:disabled):active {
+    transform: scale(0.98);
+    background: #3a3a4a;
+  }
+
+  .pf2-spell-btn .pf2-spell-actions {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    min-width: 2rem;
+    text-align: center;
+  }
+
+  .pf2-spell-btn .pf2-spell-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pf2-spell-btn .pf2-spell-heighten {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-left: 0.25rem;
+  }
+
+  .pf2-spell-btn.pf2-spell-manual {
+    border-left: 3px solid rgba(255, 165, 0, 0.5);
+  }
+  .pf2-spell-btn.pf2-spell-manual:not(:disabled) {
+    opacity: 0.85;
+  }
+  .pf2-spell-btn .pf2-spell-manual-label {
+    font-size: 0.75rem;
+    color: orange;
+    margin-left: 0.25rem;
+  }
+
+  .pf2-spell-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 0.5rem;
+  }
+
+  .pf2-spell-picker-header .pf2-spell-picker-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ddd;
+  }
+
+  .pf2-spell-picker-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    padding: 4px 12px;
+    cursor: pointer;
+    color: white;
+    font-size: 0.9rem;
+    touch-action: manipulation;
+  }
+
+  .pf2-spell-heighten-back {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+    font-size: 0.85rem;
+    text-align: left;
+    touch-action: manipulation;
+  }
+
+  .pf2-spell-heighten-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ddd;
+    margin-bottom: 0.5rem;
+    padding: 0 0.25rem;
   }
 
   /* Config Slot Popup */

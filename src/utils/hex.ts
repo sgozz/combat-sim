@@ -52,19 +52,3 @@ export const getHexInDirection = (q: number, r: number, direction: number): { q:
   const d = directions[(direction % 6 + 6) % 6];
   return { q: q + d.q, r: r + d.r };
 }
-
-export const getBurstHexes = (centerQ: number, centerR: number, radius: number): { q: number; r: number }[] => {
-  const hexes: { q: number; r: number }[] = [];
-  
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = -radius; r <= radius; r++) {
-      if (Math.abs(q + r) > radius) continue;
-      const dist = hexDistance(centerQ, centerR, centerQ + q, centerR + r);
-      if (dist <= radius) {
-        hexes.push({ q: centerQ + q, r: centerR + r });
-      }
-    }
-  }
-  
-  return hexes;
-}

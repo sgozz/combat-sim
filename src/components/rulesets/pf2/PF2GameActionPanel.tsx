@@ -7,20 +7,18 @@ import { SpellPicker } from './SpellPicker'
 import { getSpell } from '../../../../shared/rulesets/pf2/spellData'
 import type { GameActionPanelProps } from '../types'
 
-export const PF2GameActionPanel = ({
-  matchState,
+export const PF2GameActionPanel = ({ 
+  matchState, 
   combatant,
   character,
-  logs,
+  logs, 
   selectedTargetId,
   isMyTurn,
   onAction,
   onLeaveLobby,
-  areaSpellTargeting,
-  setAreaSpellTargeting,
 }: GameActionPanelProps) => {
-  const [collapsed, setCollapsed] = useState(false)
-  const [showSpellPicker, setShowSpellPicker] = useState(false)
+   const [collapsed, setCollapsed] = useState(false)
+   const [showSpellPicker, setShowSpellPicker] = useState(false)
   
   const selectedTarget = matchState.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
@@ -53,16 +51,29 @@ export const PF2GameActionPanel = ({
     }
 
     if (spellDef.targetType === 'area') {
-      if (!spellDef.areaShape || !spellDef.areaRadius) {
-        alert('Spell area configuration error')
+      const hexInput = prompt('Enter target hex coordinates (format: q,r)\nExample: 5,5')
+      if (!hexInput) return
+      
+      const parts = hexInput.split(',').map(s => s.trim())
+      if (parts.length !== 2) {
+        alert('Invalid format. Use: q,r (e.g., 5,5)')
         return
       }
-      setAreaSpellTargeting({
+      
+      const q = parseInt(parts[0], 10)
+      const r = parseInt(parts[1], 10)
+      
+      if (isNaN(q) || isNaN(r)) {
+        alert('Invalid coordinates. Both q and r must be numbers.')
+        return
+      }
+
+      onAction('pf2_cast_spell', {
+        type: 'pf2_cast_spell',
+        casterIndex: 0,
         spellName,
         spellLevel: castLevel,
-        areaShape: spellDef.areaShape,
-        areaRadius: spellDef.areaRadius,
-        casterIndex: 0
+        targetHex: { q, r }
       })
       setShowSpellPicker(false)
       return
@@ -76,7 +87,7 @@ export const PF2GameActionPanel = ({
       targetId: selectedTargetId ?? undefined
     })
     setShowSpellPicker(false)
-  }, [selectedTargetId, onAction, setAreaSpellTargeting])
+  }, [selectedTargetId, onAction])
 
   const renderContent = () => {
     if (matchState.status === 'finished') {
@@ -111,38 +122,6 @@ export const PF2GameActionPanel = ({
     
     return (
       <div className="pf2-action-panel">
-        {areaSpellTargeting && (
-          <div style={{
-            background: '#4a3020',
-            border: '1px solid #ff6600',
-            borderRadius: '4px',
-            padding: '0.5rem',
-            marginBottom: '0.5rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ color: '#ffaa66', fontWeight: 'bold' }}>
-              Casting {areaSpellTargeting.spellName}
-            </div>
-            <div style={{ color: '#cc8855', fontSize: '0.85rem' }}>
-              Hover and click to target • {areaSpellTargeting.areaRadius * 5} ft {areaSpellTargeting.areaShape}
-            </div>
-            <button
-              onClick={() => setAreaSpellTargeting(null)}
-              style={{
-                marginTop: '0.25rem',
-                padding: '0.25rem 0.5rem',
-                fontSize: '0.8rem',
-                background: '#553333',
-                border: '1px solid #ff4444',
-                color: '#ff8888',
-                borderRadius: '3px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
         <div className="pf2-action-header">
           <div className="pf2-actions-remaining">
             {Array.from({ length: 3 }, (_, i) => (

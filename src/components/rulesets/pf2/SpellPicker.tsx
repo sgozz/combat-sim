@@ -87,33 +87,12 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
   };
 
   return (
-    <div className="action-bar-maneuvers" style={{ 
-      flexDirection: 'column', 
-      height: 'auto', 
-      maxHeight: '70vh', 
-      overflowY: 'auto', 
-      alignItems: 'stretch',
-      padding: '8px'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '8px',
-        padding: '8px',
-        borderBottom: '1px solid rgba(255,255,255,0.2)'
-      }}>
-        <div className="variant-header">{spellcaster.name} - {spellcaster.tradition}</div>
+    <div className="pf2-spell-picker-mobile">
+      <div className="pf2-spell-picker-header">
+        <div className="pf2-spell-picker-title">{spellcaster.name} - {spellcaster.tradition}</div>
         <button 
           onClick={onClose}
-          style={{ 
-            background: 'rgba(255,255,255,0.1)', 
-            border: '1px solid rgba(255,255,255,0.3)',
-            borderRadius: '4px',
-            padding: '4px 12px',
-            cursor: 'pointer',
-            color: 'white'
-          }}
+          className="pf2-spell-picker-close"
         >
           ✕
         </button>
@@ -124,20 +103,11 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
         <div>
           <button
             onClick={() => setSelectedSpell(null)}
-            style={{
-              width: '100%',
-              marginBottom: '8px',
-              padding: '8px',
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              color: 'white'
-            }}
+            className="pf2-spell-heighten-back"
           >
             ← Back to spell list
           </button>
-          <div className="variant-header" style={{ marginBottom: '8px' }}>
+          <div className="pf2-spell-heighten-title">
             Cast {selectedSpell} at level:
           </div>
           {getHeightenOptions(selectedSpell).map(level => {
@@ -148,18 +118,12 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
             return (
               <button
                 key={level}
-                className="action-bar-maneuver-btn"
+                className="pf2-spell-btn"
                 onClick={() => handleHeightenSelect(selectedSpell, level)}
                 disabled={!canCastSpell(selectedSpell, level)}
-                style={{
-                  opacity: canCastSpell(selectedSpell, level) ? 1 : 0.5,
-                  cursor: canCastSpell(selectedSpell, level) ? 'pointer' : 'not-allowed',
-                  marginBottom: '4px',
-                  minHeight: '44px'
-                }}
               >
-                <span className="action-bar-icon">✨</span>
-                <span className="action-bar-label">
+                <span className="pf2-spell-actions">✨</span>
+                <span className="pf2-spell-name">
                   Level {level} ({slots.available}/{slots.total} slots)
                   {heightenedDamage && <div style={{ fontSize: '0.8em', opacity: 0.8 }}>{heightenedDamage}</div>}
                 </span>
@@ -178,8 +142,8 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
               const levelLabel = level === 0 ? 'Cantrips (∞)' : `Level ${level} (${slots.available}/${slots.total})`;
 
               return (
-                <div key={level} style={{ marginBottom: '12px' }}>
-                  <div className="variant-header" style={{ marginBottom: '4px' }}>
+                <div key={level}>
+                  <div className="pf2-spell-level-header">
                     {levelLabel}
                   </div>
                   {spells.map(spellName => {
@@ -190,24 +154,17 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
                     return (
                       <button
                         key={spellName}
-                        className="action-bar-maneuver-btn"
+                        className={`pf2-spell-btn${!known ? ' pf2-spell-manual' : ''}`}
                         onClick={() => handleSpellClick(spellName, level)}
                         disabled={!canCast}
-                        style={{
-                          opacity: canCast ? (known ? 1 : 0.85) : 0.5,
-                          cursor: canCast ? 'pointer' : 'not-allowed',
-                          marginBottom: '4px',
-                          minHeight: '44px',
-                          borderLeft: known ? undefined : '3px solid rgba(255, 165, 0, 0.5)',
-                        }}
                       >
-                        <span className="action-bar-icon">
-                          {spell?.castActions === 1 ? '⚡' : '⚡⚡'}
+                        <span className="pf2-spell-actions">
+                          {spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
                         </span>
-                        <span className="action-bar-label">
+                        <span className="pf2-spell-name">
                           {spellName}
-                          {spell?.heighten && <span style={{ marginLeft: '4px', fontSize: '0.8em' }}>↑</span>}
-                          {!known && <span style={{ marginLeft: '4px', fontSize: '0.75em', color: 'orange' }}>manual</span>}
+                          {spell?.heighten && <span className="pf2-spell-heighten">↑</span>}
+                          {!known && <span className="pf2-spell-manual-label">manual</span>}
                         </span>
                       </button>
                     );

@@ -290,13 +290,6 @@
   margin: 0 0 var(--space-md) 0;
 }
 
-.editor-section-subtitle {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-  margin: 0 0 var(--space-sm) 0;
-}
-
 .editor-attr-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

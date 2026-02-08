@@ -7,7 +7,7 @@ import { EnvironmentProps } from './EnvironmentProps'
 import { CameraControls, type CameraMode } from './CameraControls'
 import { getHexInDirection } from '../../utils/hex'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
-import type { CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId, AreaSpellTargeting } from '../../../shared/types'
+import type { CharacterSheet, GridPosition, VisualEffect, ReachableHexInfo, RulesetId } from '../../../shared/types'
 import type { CombatantState } from '../../../shared/rulesets'
 import type { MapDefinition } from '../../../shared/map/types'
 import { isPF2Character, isGurpsCharacter } from '../../../shared/rulesets/characterSheet'
@@ -29,8 +29,6 @@ type ArenaSceneProps = {
   mapDefinition?: MapDefinition
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
-  areaSpellTargeting: AreaSpellTargeting
-  onAreaSpellHexSelect: (hexQ: number, hexR: number) => void
 }
 
 const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: RulesetId }) => {
@@ -66,7 +64,7 @@ const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: 
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, mapDefinition, onGridClick, onCombatantClick, areaSpellTargeting, onAreaSpellHexSelect }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, mapDefinition, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   
   useEffect(() => {
@@ -187,12 +185,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         facingArcs={facingArcs}
         reachableHexes={reachableHexes}
         mapDefinition={mapDefinition}
-        areaSpellTargeting={areaSpellTargeting}
         onHexClick={(q: number, r: number) => {
-          if (areaSpellTargeting) {
-            onAreaSpellHexSelect(q, r)
-            return
-          }
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {
             onCombatantClick(enemyAtHex.playerId)

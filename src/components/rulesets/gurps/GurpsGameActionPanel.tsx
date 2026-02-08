@@ -13,19 +13,17 @@ import { rulesets } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 import { isGurpsCombatant } from '../../../../shared/rulesets'
 
-export const GurpsGameActionPanel = ({
-  matchState,
+export const GurpsGameActionPanel = ({ 
+  matchState, 
   player,
   combatant: activeCombatant,
   character: activeCharacter,
-  logs,
+  logs, 
   selectedTargetId,
   currentManeuver,
   isMyTurn,
   onAction,
   onLeaveLobby,
-  areaSpellTargeting: _areaSpellTargeting,
-  setAreaSpellTargeting: _setAreaSpellTargeting,
 }: GameActionPanelProps) => {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedHitLocation, setSelectedHitLocation] = useState<HitLocation>('torso')

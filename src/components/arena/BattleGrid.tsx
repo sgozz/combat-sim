@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import { Text, Billboard } from '@react-three/drei'
 import type { GridSystem, GridCoord, GridType } from '../../../shared/grid'
 import { hexGrid, squareGrid8 } from '../../../shared/grid'
-import type { GridPosition, ReachableHexInfo, AreaSpellTargeting } from '../../../shared/types'
-import { getBurstHexes } from '../../utils/hex'
+import type { GridPosition, ReachableHexInfo } from '../../../shared/types'
 import type { MapDefinition } from '../../../shared/map/types'
 import { isBlocked, isDifficultTerrain, hasCover } from '../../../shared/map/terrain'
 
@@ -26,7 +25,6 @@ type BattleGridProps = {
   reachableHexes: ReachableHexInfo[]
   onHexClick: (q: number, r: number) => void
   mapDefinition?: MapDefinition
-  areaSpellTargeting: AreaSpellTargeting
 }
 
 type ArcType = 'front' | 'side' | 'rear' | 'none'
@@ -61,9 +59,7 @@ const getCellStyle = (
   isHovered: boolean,
   reachableHex: ReachableHexInfo | undefined,
   gridSystem: GridSystem,
-  mapDef?: MapDefinition,
-  isInAreaEffect?: boolean,
-  isAreaCenter?: boolean
+  mapDef?: MapDefinition
 ): CellStyle => {
   const blocked = isBlocked(mapDef, q, r)
   const difficult = isDifficultTerrain(mapDef, q, r)
@@ -78,14 +74,6 @@ const getCellStyle = (
         : { color: isAlternate ? '#1a1a1a' : '#222228', emissive: '#000000', emissiveIntensity: 0, edgeColor: DEFAULT_EDGE_COLOR, edgeOpacity: DEFAULT_EDGE_OPACITY, elevation: -0.05 }
 
   if (blocked) return base
-
-  if (isAreaCenter) {
-    return { ...base, color: '#ff6600', emissive: '#ff6600', emissiveIntensity: 0.8, edgeColor: '#ffaa00', edgeOpacity: 1, elevation: 0.05 }
-  }
-
-  if (isInAreaEffect) {
-    return { ...base, color: '#3a1515', emissive: '#ff4444', emissiveIntensity: 0.5, edgeColor: '#ff6666', edgeOpacity: 0.9, elevation: 0.02 }
-  }
 
   if (moveTargetPosition && moveTargetPosition.x === q && moveTargetPosition.z === r) {
     return { ...base, color: '#1a3a1a', emissive: '#00ff00', emissiveIntensity: 0.6, edgeColor: '#00ff00', edgeOpacity: 0.9, elevation: 0 }
@@ -230,31 +218,22 @@ const SquareTile = ({ q, r, style, isInteractive, onClick, onHover, onUnhover, g
   )
 }
 
-export const BattleGrid = ({
-  gridType,
-  radius,
-  playerPosition,
-  attackRange,
-  isPlayerTurn,
-  enemyPositions,
-  selectedTargetPosition,
-  moveTargetPosition,
-  facingArcs,
-  reachableHexes,
+export const BattleGrid = ({ 
+  gridType, 
+  radius, 
+  playerPosition, 
+  attackRange, 
+  isPlayerTurn, 
+  enemyPositions, 
+  selectedTargetPosition, 
+  moveTargetPosition, 
+  facingArcs, 
+  reachableHexes, 
   onHexClick,
   mapDefinition,
-  areaSpellTargeting,
 }: BattleGridProps) => {
-  const [hoveredCell, setHoveredCell] = useState<{ q: number; r: number } | null>(null)
+  const [hoveredCell, setHoveredCell] = useState<{q: number, r: number} | null>(null)
   const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
-
-  const areaEffectHexes = useMemo(() => {
-    if (!areaSpellTargeting || !hoveredCell || gridType !== 'hex') return []
-    if (areaSpellTargeting.areaShape === 'burst') {
-      return getBurstHexes(hoveredCell.q, hoveredCell.r, areaSpellTargeting.areaRadius)
-    }
-    return []
-  }, [areaSpellTargeting, hoveredCell, gridType])
 
   const reachableMap = useMemo(() => {
     const map = new Map<string, ReachableHexInfo>()
@@ -285,27 +264,18 @@ export const BattleGrid = ({
 
   const hoverInfo = useMemo(() => {
     if (!hoveredCell || !isPlayerTurn) return null
-
-    const worldPos = gridSystem.coordToWorld(hoveredCell)
-
-    if (areaSpellTargeting) {
-      return {
-        displayText: `Cast ${areaSpellTargeting.spellName} (click to confirm)`,
-        color: '#ff6600',
-        position: [worldPos.x, 0.5, worldPos.z] as [number, number, number]
-      }
-    }
-
+    
     const isEnemy = enemyPositions.some(pos => pos.x === hoveredCell.q && pos.z === hoveredCell.r)
-
+    const worldPos = gridSystem.coordToWorld(hoveredCell)
+    
     if (isEnemy) {
-      return {
-        displayText: 'Click to target',
-        color: '#ffcc00',
-        position: [worldPos.x, 0.5, worldPos.z] as [number, number, number]
+      return { 
+        displayText: 'Click to target', 
+        color: '#ffcc00', 
+        position: [worldPos.x, 0.5, worldPos.z] as [number, number, number] 
       }
     }
-
+    
     if (!playerPosition) return null
     const reachable = reachableMap.get(`${hoveredCell.q},${hoveredCell.r}`)
     const from: GridCoord = { q: playerPosition.x, r: playerPosition.z }
@@ -313,9 +283,9 @@ export const BattleGrid = ({
     const dist = gridSystem.distance(from, to)
     const color = reachable ? '#44ff44' : '#ff4444'
     const displayText = reachable ? `${reachable.cost}` : `${dist}`
-
+    
     return { displayText, color, position: [worldPos.x, 0.5, worldPos.z] as [number, number, number] }
-  }, [hoveredCell, playerPosition, isPlayerTurn, reachableMap, enemyPositions, gridSystem, areaSpellTargeting])
+  }, [hoveredCell, playerPosition, isPlayerTurn, reachableMap, enemyPositions, gridSystem])
 
   const TileComponent = gridType === 'hex' ? HexTile : SquareTile
 
@@ -338,7 +308,7 @@ export const BattleGrid = ({
         const isAlternate = (q + r) % 2 === 0
         const isHovered = hoveredCell?.q === q && hoveredCell?.r === r
         const reachableHex = reachableMap.get(`${q},${r}`)
-
+        
         let arcType: ArcType = 'none'
         if (facingArcs.front.some(h => h.q === q && h.r === r)) {
           arcType = 'front'
@@ -347,19 +317,15 @@ export const BattleGrid = ({
         } else if (facingArcs.rear.some(h => h.q === q && h.r === r)) {
           arcType = 'rear'
         }
-
-        const isInAreaEffect = areaSpellTargeting && areaEffectHexes.some(h => h.q === q && h.r === r)
-        const isAreaCenter = areaSpellTargeting && hoveredCell?.q === q && hoveredCell?.r === r
-
+        
         const style = getCellStyle(
-          q, r, playerPosition, attackRange, isPlayerTurn, enemyPositions,
-          selectedTargetPosition, moveTargetPosition, arcType, isAlternate,
-          isHovered, reachableHex, gridSystem, mapDefinition,
-          isInAreaEffect, isAreaCenter
+          q, r, playerPosition, attackRange, isPlayerTurn, enemyPositions, 
+          selectedTargetPosition, moveTargetPosition, arcType, isAlternate, 
+          isHovered, reachableHex, gridSystem, mapDefinition
         )
         const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
         const isReachable = reachableHex !== undefined
-        const isInteractive = isPlayerTurn && (areaSpellTargeting || isEnemy || isReachable)
+        const isInteractive = isPlayerTurn && (isEnemy || isReachable)
         return (
           <TileComponent
             key={`${q},${r}`}
