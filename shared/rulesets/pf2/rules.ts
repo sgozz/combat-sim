@@ -12,8 +12,6 @@ import type {
   SpellSlotUsage,
 } from './types';
 import type { MatchState, HexCoord, TurnMovementState, ReachableHexInfo } from '../../types';
-import type { MapDefinition } from '../../map/types';
-import { isBlocked } from '../../map/terrain';
 import { isPF2Combatant } from '../guards';
 
 export type D20RollResult = {
@@ -364,15 +362,16 @@ export const advanceTurn = (state: MatchState, random: () => number = Math.rando
   const logEntries: string[] = [];
   
   const updatedCombatants = state.combatants.map(c => {
-    if (c.playerId === nextPlayerId && isPF2Combatant(c)) {
+    if (!isPF2Combatant(c)) return { ...c, movementPath: undefined };
+    const baseUpdate = { ...c, movementPath: undefined };
+    if (c.playerId === nextPlayerId) {
       let combatant = {
-        ...c,
+        ...baseUpdate,
         attacksRemaining: 3,
         actionsRemaining: 3,
         reactionAvailable: true,
         mapPenalty: 0,
         shieldRaised: false,
-        movementPath: undefined,
       };
       
       if (combatant.dying > 0) {
@@ -420,7 +419,7 @@ export const advanceTurn = (state: MatchState, random: () => number = Math.rando
       
       return combatant;
     }
-    return c;
+    return baseUpdate;
   });
   
   return {
@@ -534,8 +533,7 @@ export const squareDistance = (a: SquarePosition, b: SquarePosition): number => 
 export const getReachableSquares = (
   startPos: SquarePosition,
   speed: number,
-  occupiedSquares: SquarePosition[] = [],
-  mapDef?: MapDefinition
+  occupiedSquares: SquarePosition[] = []
 ): Map<string, { position: SquarePosition; cost: number; path: SquarePosition[] }> => {
   const results = new Map<string, { position: SquarePosition; cost: number; path: SquarePosition[] }>();
   const visited = new Set<string>();
@@ -565,7 +563,6 @@ export const getReachableSquares = (
     const neighbors = grid.neighbors(current.pos);
     for (const neighbor of neighbors) {
       if (isOccupied(neighbor)) continue;
-      if (isBlocked(mapDef, neighbor.q, neighbor.r)) continue;
       queue.push({ pos: neighbor, cost: current.cost + 1, path: [...current.path, neighbor] });
     }
   }
@@ -593,13 +590,17 @@ export const initializeTurnMovement = (
 export const calculateReachableHexesInfo = (
   state: TurnMovementState,
   occupiedSquares: HexCoord[],
-  mapDefinition?: MapDefinition
+  mapDefinition?: import('../../map/types').MapDefinition
 ): ReachableHexInfo[] => {
   const speed = state.movePointsRemaining * 5;
-  const reachable = getReachableSquares(state.currentPosition, speed, occupiedSquares, mapDefinition);
+  const reachable = getReachableSquares(state.currentPosition, speed, occupiedSquares);
   
   const result: ReachableHexInfo[] = [];
   reachable.forEach((cell) => {
+    if (mapDefinition) {
+      const terrainCell = mapDefinition.cells.find(c => c.q === cell.position.q && c.r === cell.position.r);
+      if (terrainCell?.terrain.includes('blocked')) return;
+    }
     result.push({
       q: cell.position.q,
       r: cell.position.r,
@@ -634,14 +635,14 @@ export type MovementState = {
 export const executeMove = (
   state: MovementState,
   targetHex: HexCoord,
-  occupiedHexes: HexCoord[],
-  mapDef?: MapDefinition
+  occupiedHexes: HexCoord[]
 ): MovementState | null => {
   const isOccupied = occupiedHexes.some(h => h.q === targetHex.q && h.r === targetHex.r);
   if (isOccupied) return null;
   
-  const speed = state.movePointsRemaining * 5;
-  const reachable = getReachableSquares(state.position, speed, occupiedHexes, mapDef);
+  // Use BFS to find path (validates reachability properly)
+  const speed = state.movePointsRemaining * 5; // convert squares to feet for getReachableSquares
+  const reachable = getReachableSquares(state.position, speed, occupiedHexes);
   const destKey = `${targetHex.q},${targetHex.r}`;
   const result = reachable.get(destKey);
   

@@ -233,7 +233,7 @@ export type ServerRulesetAdapter = {
   /** Converts hex coordinates to grid coordinates. */
   hexToGrid: (hex: HexCoord) => { x: number; y: number; z: number };
   /** Executes a move to a target hex. */
-  executeMove?: (state: MovementState, targetHex: HexCoord, occupiedHexes: HexCoord[], mapDef?: import('../map/types').MapDefinition) => MovementState | null;
+  executeMove?: (state: MovementState, targetHex: HexCoord, occupiedHexes: HexCoord[]) => MovementState | null;
   /** Executes a rotation to a new facing. */
   executeRotation?: (state: MovementState, newFacing: number) => MovementState | null;
   /** Calculates derived stats from base attributes. */
