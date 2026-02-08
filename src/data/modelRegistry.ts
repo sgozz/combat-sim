@@ -143,7 +143,7 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
 
 }
 
-export const DEFAULT_MODEL_ID = 'warrior'
+export const DEFAULT_MODEL_ID = 'quaternius_ual1'
 
 export const MODEL_LIST = Object.values(MODEL_REGISTRY)
 
