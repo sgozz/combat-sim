@@ -1,8 +1,14 @@
 {
   "active_plan": null,
-  "completed_plan": "/home/fabio/dev/combat-sim/.sisyphus/plans/scenario-system.md",
-  "started_at": "2026-02-07T22:32:34.444Z",
-  "completed_at": "2026-02-08T23:10:00.000Z",
-  "plan_name": "scenario-system",
-  "status": "complete"
+  "started_at": "2026-02-09T21:15:00.000Z",
+  "completed_at": "2026-02-09T21:42:00.000Z",
+  "session_ids": [
+    "ses_3bbda628bffe7PvDczpY947Epd"
+  ],
+  "plan_name": "pf2-reaction-integration",
+  "status": "completed",
+  "completed_plans": [
+    "pf2-weapon-switching",
+    "pf2-reaction-integration"
+  ]
 }
