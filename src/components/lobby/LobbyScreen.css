@@ -512,13 +512,12 @@
   }
 
   .lobby-panel-body {
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     overflow-y: visible;
   }
 
   .lobby-panel-preview {
-    order: 0;
-    min-height: 220px;
+    order: -1;
   }
 
   .lobby-footer {
