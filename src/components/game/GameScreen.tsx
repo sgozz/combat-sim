@@ -13,6 +13,7 @@ import { MiniMap } from './MiniMap'
 import { CombatToast } from './CombatToast'
 
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
+import { PF2ReactionModal } from '../rulesets/pf2/PF2ReactionModal'
 
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
 import { isGurpsCombatant, isPF2Combatant } from '../../../shared/rulesets'
@@ -261,6 +262,15 @@ export const GameScreen = ({
            />
          ) : null;
        })()}
+
+       {matchState?.pendingReaction && player && matchState.rulesetId === 'pf2' && (
+         <PF2ReactionModal
+           pendingReaction={matchState.pendingReaction}
+           matchState={matchState}
+           player={player}
+           onAction={onAction}
+         />
+       )}
 
       {pendingAction?.type === 'exit_close_combat_request' && pendingAction.targetId === player?.id && (
         <div className="modal-overlay">
