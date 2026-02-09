@@ -4,8 +4,10 @@ import { CombatLog } from '../../game/CombatLog'
 import { isPF2Combatant } from '../../../../shared/rulesets'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { SpellPicker } from './SpellPicker'
+import { PF2ReadyPanel } from './PF2ReadyPanel'
 import { getSpell } from '../../../../shared/rulesets/pf2/spellData'
 import type { GameActionPanelProps } from '../types'
+import type { EquipmentSlot } from '../../../../shared/rulesets/gurps/types'
 
 export const PF2GameActionPanel = ({ 
   matchState, 
@@ -19,6 +21,7 @@ export const PF2GameActionPanel = ({
 }: GameActionPanelProps) => {
    const [collapsed, setCollapsed] = useState(false)
    const [showSpellPicker, setShowSpellPicker] = useState(false)
+   const [showReadyPanel, setShowReadyPanel] = useState(false)
   
   const selectedTarget = matchState.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
@@ -299,12 +302,29 @@ export const PF2GameActionPanel = ({
             </button>
           </Tooltip>
 
+          <Tooltip content="Interact: Draw or sheathe a weapon (1 action)" position="top">
+            <button 
+              className={`pf2-action-btn interact ${showReadyPanel ? 'active' : ''}`}
+              disabled={actionsRemaining < 1}
+              onClick={() => {
+                setShowSpellPicker(false)
+                setShowReadyPanel(!showReadyPanel)
+              }}
+            >
+              <span className="pf2-action-icon">⚔️</span>
+              <span className="pf2-action-label">Interact</span>
+            </button>
+          </Tooltip>
+
           {hasSpells && pf2Character && (
             <Tooltip content="Cast a spell from your spellbook. Most spells cost 2 actions." position="top">
               <button 
                 className={`pf2-action-btn cast-spell ${showSpellPicker ? 'active' : ''}`}
                 disabled={actionsRemaining < 2}
-                onClick={() => setShowSpellPicker(!showSpellPicker)}
+                onClick={() => {
+                  setShowReadyPanel(false)
+                  setShowSpellPicker(!showSpellPicker)
+                }}
               >
                 <span className="pf2-action-icon">✨</span>
                 <span className="pf2-action-label">Cast Spell</span>
@@ -312,6 +332,22 @@ export const PF2GameActionPanel = ({
             </Tooltip>
           )}
         </div>
+
+        {showReadyPanel && isPF2Combatant(combatant) && pf2Character && (
+          <div className="pf2-ready-panel-desktop">
+            <PF2ReadyPanel
+              equipped={combatant.equipped}
+              weapons={pf2Character.weapons}
+              onInteract={(action: 'draw' | 'sheathe', itemId: string, targetSlot?: EquipmentSlot) => {
+                onAction('pf2_interact', { type: 'pf2_interact', action, itemId, targetSlot })
+                setShowReadyPanel(false)
+              }}
+              onClose={() => setShowReadyPanel(false)}
+              actionsRemaining={actionsRemaining}
+              isMyTurn={isMyTurn}
+            />
+          </div>
+        )}
 
         {showSpellPicker && hasSpells && pf2Character && (
           <div className="pf2-spell-picker-desktop">

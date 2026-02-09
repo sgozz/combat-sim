@@ -3,7 +3,9 @@ import type { ActionBarProps } from '../types'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { isPF2Combatant } from '../../../../shared/rulesets'
 import { SpellPicker } from './SpellPicker'
+import { PF2ReadyPanel } from './PF2ReadyPanel'
 import { getSpell } from '../../../../shared/rulesets/pf2/spellData'
+import type { EquipmentSlot } from '../../../../shared/rulesets/gurps/types'
 
 export const PF2ActionBar = ({ 
   matchState,
@@ -17,11 +19,13 @@ export const PF2ActionBar = ({
 }: ActionBarProps) => {
    const [showCharacterSheet, setShowCharacterSheet] = useState(false)
    const [showSpellPicker, setShowSpellPicker] = useState(false)
+   const [showReadyPanel, setShowReadyPanel] = useState(false)
    const [showCombatLog, setShowCombatLog] = useState(false)
    
    const closeAllPanels = useCallback(() => {
      setShowCharacterSheet(false)
      setShowSpellPicker(false)
+     setShowReadyPanel(false)
      setShowCombatLog(false)
    }, [])
 
@@ -112,7 +116,7 @@ export const PF2ActionBar = ({
 
   return (
     <>
-      {(showCharacterSheet || showSpellPicker) && (
+      {(showCharacterSheet || showSpellPicker || showReadyPanel) && (
         <div 
           className="action-bar-backdrop" 
           onClick={closeAllPanels}
@@ -125,6 +129,20 @@ export const PF2ActionBar = ({
           onSelectSpell={handleSpellSelect}
           onClose={() => setShowSpellPicker(false)}
           actionsRemaining={actionsRemaining}
+        />
+      )}
+
+      {showReadyPanel && (
+        <PF2ReadyPanel
+          equipped={playerCombatant.equipped}
+          weapons={playerCharacter.weapons}
+          onInteract={(action: 'draw' | 'sheathe', itemId: string, targetSlot?: EquipmentSlot) => {
+            onAction('pf2_interact', { type: 'pf2_interact', action, itemId, targetSlot })
+            setShowReadyPanel(false)
+          }}
+          onClose={() => setShowReadyPanel(false)}
+          actionsRemaining={actionsRemaining}
+          isMyTurn={isMyTurn}
         />
       )}
 
@@ -340,6 +358,18 @@ export const PF2ActionBar = ({
             >
               <span className="action-bar-icon">😱</span>
               <span className="action-bar-label">Scare</span>
+            </button>
+            <button
+              className="action-bar-btn"
+              disabled={actionsRemaining < 1}
+              onClick={() => {
+                closeAllPanels()
+                setShowReadyPanel(true)
+              }}
+              title="Interact: Draw or sheathe a weapon (1 action)"
+            >
+              <span className="action-bar-icon">⚔️</span>
+              <span className="action-bar-label">Interact</span>
             </button>
             {hasSpells && (
               <button
