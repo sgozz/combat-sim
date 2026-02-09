@@ -19,7 +19,8 @@ import {
 import { advanceTurn } from "./rulesetHelpers";
 import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { getRulesetServerFactory } from "./rulesets";
-import { decidePF2BotAction, executeBotStrike, executeBotStride } from "./rulesets/pf2/bot";
+import { decidePF2BotAction, executeBotStrike, executeBotStride, executeBotInteract } from "./rulesets/pf2/bot";
+import { executeAoOStrike, resumeStrideAfterReaction } from "./handlers/pf2/reaction";
 
 
 
@@ -82,6 +83,27 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
     const currentMatch = state.matches.get(matchId);
     if (!currentMatch || currentMatch.status !== "active") return;
 
+    if (currentMatch.pendingReaction) {
+      const pending = currentMatch.pendingReaction;
+      const reactorPlayer = currentMatch.players.find(p => p.id === pending.reactorId);
+      if (reactorPlayer?.isBot) {
+        const reactor = currentMatch.combatants.find(c => c.playerId === pending.reactorId);
+        const trigger = currentMatch.combatants.find(c => c.playerId === pending.triggerId);
+        if (reactor && trigger) {
+          let updated = executeAoOStrike(currentMatch, matchId, reactor, trigger);
+          updated = { ...updated, pendingReaction: undefined };
+          updated = await resumeStrideAfterReaction(matchId, updated, pending);
+          updated = checkVictory(updated);
+          state.matches.set(matchId, updated);
+          await updateMatchState(matchId, updated);
+          await sendToMatch(matchId, { type: "match_state", state: updated });
+          scheduleBotTurn(matchId, updated);
+        }
+        return;
+      }
+      return;
+    }
+
     const botCombatant = getCombatantByPlayerId(currentMatch, activePlayer.id);
     if (!botCombatant || botCombatant.currentHP <= 0) {
       const updated = advanceTurn({
@@ -126,6 +148,8 @@ export const scheduleBotTurn = (matchId: string, match: MatchState) => {
           match = executeBotStrike(matchId, match, currentBot, action.targetId, activePlayer);
         } else if (action.type === 'stride') {
           match = executeBotStride(match, currentBot, action.to, activePlayer);
+        } else if (action.type === 'interact') {
+          match = executeBotInteract(match, currentBot, action, activePlayer);
         } else {
           break;
         }

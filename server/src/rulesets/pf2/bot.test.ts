@@ -102,7 +102,7 @@ const createPF2Combatant = (overrides: Partial<PF2CombatantState> = {}): PF2Comb
   doomed: 0,
   spellSlotUsage: [],
   focusPointsUsed: 0,
-  equipped: [],
+  equipped: [{ equipmentId: 'longsword', slot: 'right_hand', ready: true }],
   ...overrides,
 });
 

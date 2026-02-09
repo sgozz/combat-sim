@@ -27,6 +27,7 @@ const asPF2Character = (match: MatchState, characterId: string): PF2CharacterShe
 export type PF2BotAction =
   | { type: 'strike'; targetId: string }
   | { type: 'stride'; to: { q: number; r: number } }
+  | { type: 'interact'; action: 'draw'; itemId: string; targetSlot: 'right_hand' | 'left_hand' }
   | { type: 'end_turn' };
 
 export const decidePF2BotAction = (
@@ -43,7 +44,18 @@ export const decidePF2BotAction = (
   if (enemies.length === 0) return null;
 
   const character = _character ?? asPF2Character(match, botCombatant.characterId);
-  const weapon = character?.weapons[0];
+
+  const equippedWeapon = botCombatant.equipped?.find(e => e.ready && (e.slot === 'right_hand' || e.slot === 'left_hand'));
+  const weapon = equippedWeapon
+    ? character?.weapons.find(w => w.id === equippedWeapon.equipmentId) ?? character?.weapons[0]
+    : character?.weapons[0];
+
+  if (character && character.weapons.length > 0 && !equippedWeapon) {
+    const rightOccupied = botCombatant.equipped?.some(e => e.slot === 'right_hand' && e.ready);
+    const targetSlot = rightOccupied ? 'left_hand' as const : 'right_hand' as const;
+    return { type: 'interact', action: 'draw', itemId: character.weapons[0].id, targetSlot };
+  }
+
   const isRanged = weapon?.range !== undefined || weapon?.traits?.includes('thrown');
   const weaponRange = weapon?.range ?? 0;
   const rangeIncrement = weapon?.rangeIncrement ?? (weaponRange / 6);
@@ -102,6 +114,41 @@ export const decidePF2BotAction = (
   return { type: 'stride', to: { q: newPosition.x, r: newPosition.z } };
 };
 
+export const executeBotInteract = (
+  currentMatch: MatchState,
+  botCombatant: PF2CombatantState,
+  action: { action: 'draw'; itemId: string; targetSlot: 'right_hand' | 'left_hand' },
+  activePlayer: { id: string; name: string }
+): MatchState => {
+  const character = asPF2Character(currentMatch, botCombatant.characterId);
+  if (!character) return currentMatch;
+
+  const weapon = character.weapons.find(w => w.id === action.itemId);
+  const weaponName = weapon?.name ?? 'weapon';
+
+  const newEquipped = [
+    ...botCombatant.equipped,
+    { equipmentId: action.itemId, slot: action.targetSlot, ready: true },
+  ];
+
+  const updatedCombatants = currentMatch.combatants.map(c => {
+    if (c.playerId === activePlayer.id && isPF2Combatant(c)) {
+      return {
+        ...c,
+        equipped: newEquipped,
+        actionsRemaining: c.actionsRemaining - 1,
+      };
+    }
+    return c;
+  });
+
+  return {
+    ...currentMatch,
+    combatants: updatedCombatants,
+    log: [...currentMatch.log, `${activePlayer.name} draws ${weaponName}.`],
+  };
+};
+
 export const executeBotStrike = (
   matchId: string,
   currentMatch: MatchState,
@@ -121,7 +168,10 @@ export const executeBotStrike = (
     return currentMatch;
   }
 
-  const weapon = attackerCharacter.weapons[0];
+  const equippedWeapon = botCombatant.equipped?.find(e => e.ready && (e.slot === 'right_hand' || e.slot === 'left_hand'));
+  const weapon = equippedWeapon
+    ? attackerCharacter.weapons.find(w => w.id === equippedWeapon.equipmentId) ?? attackerCharacter.weapons[0]
+    : attackerCharacter.weapons[0];
   const weaponName = weapon?.name ?? 'Fist';
   const weaponDamage = weapon?.damage ?? '1d4';
   const pf2DamageType: string = weapon?.damageType ?? 'bludgeoning';
