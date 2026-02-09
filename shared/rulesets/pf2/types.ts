@@ -212,7 +212,8 @@ export type PF2CombatActionPayload =
   | { type: 'pf2_disarm'; targetId: string }
   | { type: 'pf2_feint'; targetId: string }
   | { type: 'pf2_demoralize'; targetId: string }
-  | { type: 'pf2_cast_spell'; casterIndex: number; spellName: string; spellLevel: number; targetId?: string; targetHex?: { q: number; r: number } };
+  | { type: 'pf2_cast_spell'; casterIndex: number; spellName: string; spellLevel: number; targetId?: string; targetHex?: { q: number; r: number } }
+  | { type: 'pf2_interact'; action: 'draw' | 'sheathe'; itemId: string; targetSlot?: string };
 
 // --- Spell Casting Types ---
 

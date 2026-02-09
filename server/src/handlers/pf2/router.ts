@@ -8,6 +8,7 @@ import { handlePF2RequestMove, handlePF2Stride } from "./stride";
 import { handlePF2ReactionChoice } from "./reaction";
 import { handlePF2CastSpell } from "./spell";
 import { handlePF2Grapple, handlePF2Trip, handlePF2Disarm, handlePF2Feint, handlePF2Demoralize } from "./skill-actions";
+import { handlePF2Interact } from "./interact";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
@@ -34,6 +35,7 @@ type PF2ActionPayload =
   | { type: "pf2_disarm"; targetId: string }
   | { type: "pf2_feint"; targetId: string }
   | { type: "pf2_demoralize"; targetId: string }
+  | { type: "pf2_interact"; action: 'draw' | 'sheathe'; itemId: string; targetSlot?: string }
   | { type: "end_turn" }
   | { type: "surrender" };
 
@@ -102,6 +104,9 @@ export const handlePF2Action = async (
 
     case "pf2_demoralize":
       return handlePF2Demoralize(socket, matchId, match, player, actorCombatant, payload);
+
+    case "pf2_interact":
+      return handlePF2Interact(socket, matchId, match, player, actorCombatant, payload);
 
     case "end_turn": {
       const updated = advanceTurn({
