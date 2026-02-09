@@ -7,6 +7,7 @@ import { isPF2Character } from "../../../../shared/types";
 import type { PF2CharacterSheet, PF2CharacterWeapon } from "../../../../shared/rulesets/pf2/characterSheet";
 import type { CombatActionPayload } from "../../../../shared/rulesets";
 import { isPF2Combatant } from "../../../../shared/rulesets";
+import type { EquippedItem } from "../../../../shared/rulesets/gurps/types";
 import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { advanceTurn } from "../../rulesetHelpers";
 import { state } from "../../state";
@@ -29,19 +30,40 @@ import {
 import { hasFeat } from "../../../../shared/rulesets/pf2/feats";
 import { getReachableSquares, gridToHex } from "../../../../shared/rulesets/pf2/rules";
 import { hasCover, hasLineOfSight } from "../../../../shared/map/terrain";
+import { handleShieldBlockReaction, handleReactiveShieldReaction } from "./reaction";
 
 type DegreeOfSuccess = 'critical_success' | 'success' | 'failure' | 'critical_failure';
 type PF2DamageType = string;
 
-const getWeaponInfo = (character: PF2CharacterSheet): { name: string; damage: string; damageType: PF2DamageType; traits: string[]; range?: number; rangeIncrement?: number } => {
+const UNARMED_WEAPON = {
+  name: 'Fist',
+  damage: '1d4',
+  damageType: 'bludgeoning' as PF2DamageType,
+  traits: ['agile', 'finesse', 'unarmed'],
+};
+
+const getWeaponInfo = (character: PF2CharacterSheet, equipped?: EquippedItem[]): { name: string; damage: string; damageType: PF2DamageType; traits: string[]; range?: number; rangeIncrement?: number } => {
+  if (equipped && equipped.length > 0) {
+    const handWeapon = equipped.find(e => e.ready && (e.slot === 'right_hand' || e.slot === 'left_hand'));
+    if (handWeapon) {
+      const weapon = character.weapons.find(w => w.id === handWeapon.equipmentId);
+      if (weapon) {
+        return {
+          name: weapon.name,
+          damage: weapon.damage,
+          damageType: weapon.damageType,
+          traits: weapon.traits,
+          range: weapon.range,
+          rangeIncrement: weapon.rangeIncrement,
+        };
+      }
+    }
+    return UNARMED_WEAPON;
+  }
+
   const weapon: PF2CharacterWeapon | undefined = character.weapons[0];
   if (!weapon) {
-    return {
-      name: 'Fist',
-      damage: '1d4',
-      damageType: 'bludgeoning',
-      traits: ['agile', 'finesse', 'unarmed'],
-    };
+    return UNARMED_WEAPON;
   }
   
   return {
@@ -111,7 +133,7 @@ export const handlePF2AttackAction = async (
      return;
    }
 
-    const weapon = getWeaponInfo(attackerCharacter);
+    const weapon = getWeaponInfo(attackerCharacter, actorCombatant.equipped);
     const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
     const abilities = attackerCharacter.abilities;
     const targetAC = calculateAC(targetCharacter);
@@ -155,8 +177,18 @@ export const handlePF2AttackAction = async (
     const totalAttackBonus = abilityMod + profBonus + mapPenalty + conditionAttackMod + rangePenalty;
 
     const conditionACMod = getConditionACModifier(targetCombatant, 'melee');
-    const shieldBonus = targetCombatant.shieldRaised ? 2 : 0;
-    const coverBonus = hasCover(match.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
+
+    let currentMatch = match;
+    let currentTargetCombatant = targetCombatant;
+
+    const reactiveShieldResult = handleReactiveShieldReaction(currentMatch, matchId, currentTargetCombatant);
+    if (reactiveShieldResult !== currentMatch) {
+      currentMatch = reactiveShieldResult;
+      currentTargetCombatant = currentMatch.combatants.find(c => c.playerId === targetCombatant.playerId) as typeof targetCombatant;
+    }
+
+    const shieldBonus = (currentTargetCombatant && isPF2Combatant(currentTargetCombatant) && currentTargetCombatant.shieldRaised) ? 2 : 0;
+    const coverBonus = hasCover(currentMatch.mapDefinition, targetCombatant.position.x, targetCombatant.position.z) ? 2 : 0;
     const effectiveAC = targetAC + conditionACMod + shieldBonus + coverBonus;
 
     const attackRoll = adapter.pf2!.rollCheck(totalAttackBonus, effectiveAC);
@@ -181,6 +213,13 @@ export const handlePF2AttackAction = async (
    if (attackRoll.degree === 'critical_success' || attackRoll.degree === 'success') {
      const damageRoll = adapter.pf2!.rollDamage(`${weapon.damage}+${strMod}`, weapon.damageType);
      damageDealt = attackRoll.degree === 'critical_success' ? damageRoll.total * 2 : damageRoll.total;
+
+    if (damageDealt > 0 && currentTargetCombatant) {
+      const shieldBlockResult = handleShieldBlockReaction(currentMatch, matchId, currentTargetCombatant, damageDealt);
+      currentMatch = shieldBlockResult.match;
+      damageDealt = shieldBlockResult.reducedDamage;
+    }
+
     logEntry += ` for ${damageDealt} ${weapon.damageType} damage`;
     if (attackRoll.degree === 'critical_success') {
       logEntry += ' (doubled)';
@@ -188,7 +227,7 @@ export const handlePF2AttackAction = async (
     logEntry += ` [${damageRoll.rolls.join('+')}${damageRoll.modifier >= 0 ? '+' : ''}${damageRoll.modifier}]`;
   }
 
-  const updatedCombatants = match.combatants.map(c => {
+  const updatedCombatants = currentMatch.combatants.map(c => {
     if (c.playerId === targetCombatant.playerId && damageDealt > 0) {
       const newHP = Math.max(0, c.currentHP - damageDealt);
       
@@ -354,7 +393,7 @@ export const handlePF2PowerAttack = async (
     return;
   }
 
-  const weapon = getWeaponInfo(attackerCharacter);
+  const weapon = getWeaponInfo(attackerCharacter, actorCombatant.equipped);
   const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
   const abilities = attackerCharacter.abilities;
   const targetAC = calculateAC(targetCharacter);
@@ -634,7 +673,7 @@ export const handlePF2SuddenCharge = async (
   const movedActorCombatant = movedCombatants.find(c => c.playerId === player.id);
   if (!movedActorCombatant || !isPF2Combatant(movedActorCombatant)) return;
 
-  const weapon = getWeaponInfo(attackerCharacter);
+  const weapon = getWeaponInfo(attackerCharacter, actorCombatant.equipped);
   const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
   const abilities = attackerCharacter.abilities;
   const targetAC = calculateAC(targetCharacter);
@@ -874,7 +913,7 @@ export const handlePF2CombatGrab = async (
     return;
   }
 
-  const weapon = getWeaponInfo(attackerCharacter);
+  const weapon = getWeaponInfo(attackerCharacter, actorCombatant.equipped);
   const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
   const abilities = attackerCharacter.abilities;
   const targetAC = calculateAC(targetCharacter);
@@ -1129,7 +1168,7 @@ export const handlePF2Knockdown = async (
     return;
   }
 
-  const weapon = getWeaponInfo(attackerCharacter);
+  const weapon = getWeaponInfo(attackerCharacter, actorCombatant.equipped);
   const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
   const abilities = attackerCharacter.abilities;
   const targetAC = calculateAC(targetCharacter);
@@ -1385,7 +1424,7 @@ export const handlePF2IntimidatingStrike = async (
     return;
   }
 
-  const weapon = getWeaponInfo(attackerCharacter);
+  const weapon = getWeaponInfo(attackerCharacter, actorCombatant.equipped);
   const isRanged = weapon.range !== undefined || weapon.traits.includes('thrown');
   const abilities = attackerCharacter.abilities;
   const targetAC = calculateAC(targetCharacter);

@@ -55,7 +55,10 @@ export const executeAoOStrike = (
   if (!reactorChar || !triggerChar) return match;
   if (!isPF2Character(reactorChar) || !isPF2Character(triggerChar)) return match;
 
-  const weapon = reactorChar.weapons[0];
+  const equippedWeapon = reactor.equipped?.find(e => e.ready && (e.slot === 'right_hand' || e.slot === 'left_hand'));
+  const weapon = equippedWeapon
+    ? reactorChar.weapons.find(w => w.id === equippedWeapon.equipmentId) ?? reactorChar.weapons[0]
+    : reactorChar.weapons[0];
   const weaponName = weapon?.name ?? 'Fist';
   const weaponDamage = weapon?.damage ?? '1d4';
   const weaponDamageType = weapon?.damageType ?? 'bludgeoning';
@@ -334,7 +337,7 @@ export const handleReactiveShieldReaction = (
   };
 };
 
-const resumeStrideAfterReaction = async (
+export const resumeStrideAfterReaction = async (
   matchId: string,
   match: MatchState,
   pending: PendingReaction,

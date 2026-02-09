@@ -769,8 +769,8 @@ describe('handlePF2CastSpell', () => {
     });
   });
 
-  describe('Error: spell not found', () => {
-    it('should return error when spell not in database', async () => {
+  describe('Manual spell (not in database)', () => {
+    it('should allow casting manual spells with [resolve effects manually] log', async () => {
       const wizardCaster = createWizardCaster();
       const actorChar = createPF2Character({
         id: 'char1',
@@ -799,11 +799,11 @@ describe('handlePF2CastSpell', () => {
         spellLevel: 1,
       });
 
-      expect(mockSendMessage).toHaveBeenCalledWith(socket, {
-        type: 'error',
-        message: 'Spell "Nonexistent Spell" not found in database.',
-      });
-      expect(mockUpdateMatchState).not.toHaveBeenCalled();
+      expect(mockUpdateMatchState).toHaveBeenCalled();
+      expect(mockSendToMatch).toHaveBeenCalled();
+      const finalState = mockSendToMatch.mock.calls[0][1].state;
+      expect(finalState.log).toContain('Wizard casts Nonexistent Spell (level 1) [resolve effects manually]');
+      expect(finalState.combatants[0].actionsRemaining).toBe(1);
     });
   });
 
