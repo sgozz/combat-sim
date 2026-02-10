@@ -728,7 +728,7 @@ describe('handlePF2CastSpell', () => {
 
       expect(mockSendMessage).toHaveBeenCalledWith(socket, {
         type: 'error',
-        message: 'Casting a spell requires 2 actions.',
+        message: 'Casting this spell requires 2 action(s).',
       });
       expect(mockUpdateMatchState).not.toHaveBeenCalled();
     });

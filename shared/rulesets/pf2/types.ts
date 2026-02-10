@@ -259,19 +259,31 @@ export type PF2PendingDefense = {
 
 // --- Spell Definition Types ---
 
+export type SpellAreaShape = 'burst' | 'cone' | 'line' | 'emanation';
+
+export type SpellTradition = 'arcane' | 'divine' | 'occult' | 'primal';
+
 export type SpellDefinition = {
   name: string;
   level: number;
-  tradition: string;
-  castActions: 1 | 2 | 3;
-  targetType: 'single' | 'area' | 'self';
+  traditions: SpellTradition[];
+  castActions: 1 | 2 | 3 | 'free' | 'reaction';
+  targetType: 'single' | 'area' | 'self' | 'attack';
   save?: 'fortitude' | 'reflex' | 'will';
   damageFormula?: string;
   damageType?: PF2DamageType;
   healFormula?: string;
   conditions?: ConditionValue[];
   duration?: string;
+  sustained?: boolean;
   heighten?: HeightenData;
-  areaShape?: 'burst';
+  areaShape?: SpellAreaShape;
+  areaSize?: number;
+  range?: string;
+  traits?: string[];
+  description?: string;
+  /** @deprecated Use traditions[] instead. Kept for backward compat during migration. */
+  tradition?: string;
+  /** @deprecated Use areaSize instead. Kept for backward compat during migration. */
   areaRadius?: number;
 };

@@ -90,8 +90,10 @@ export const handlePF2CastSpell = async (
     return;
   }
 
-  if (actorCombatant.actionsRemaining < 2) {
-    sendMessage(socket, { type: "error", message: "Casting a spell requires 2 actions." });
+  const spellDef = getSpell(payload.spellName);
+  const actionCost = typeof spellDef?.castActions === 'number' ? spellDef.castActions : 2;
+  if (actorCombatant.actionsRemaining < actionCost) {
+    sendMessage(socket, { type: "error", message: `Casting this spell requires ${actionCost} action(s).` });
     return;
   }
 
@@ -111,8 +113,6 @@ export const handlePF2CastSpell = async (
   const spellAttack = calculateSpellAttack(caster, pf2Char.abilities, pf2Char.level);
   const spellDC = calculateSpellDC(caster, pf2Char.abilities, pf2Char.level);
 
-  const spellDef = getSpell(payload.spellName);
-
   if (!spellDef) {
     let logEntry = `${pf2Char.name} casts ${payload.spellName}`;
     if (castResult.isCantrip) {
@@ -128,7 +128,7 @@ export const handlePF2CastSpell = async (
       if (c.playerId !== player.id) return c;
       if (!isPF2Combatant(c)) return c;
 
-      const updated = { ...c, actionsRemaining: c.actionsRemaining - 2 };
+      const updated = { ...c, actionsRemaining: c.actionsRemaining - actionCost };
 
       if (castResult.isFocus) {
         updated.focusPointsUsed = c.focusPointsUsed + 1;
@@ -176,9 +176,10 @@ export const handlePF2CastSpell = async (
   }
   logEntry += ` [spell attack +${spellAttack}, DC ${spellDC}]`;
 
-  if (spellDef.targetType === 'area' && payload.targetHex && spellDef.areaShape === 'burst' && spellDef.areaRadius !== undefined) {
+  const areaSize = spellDef.areaSize ?? spellDef.areaRadius;
+  if (spellDef.targetType === 'area' && payload.targetHex && spellDef.areaShape === 'burst' && areaSize !== undefined) {
     const centerHex = payload.targetHex;
-    const radius = spellDef.areaRadius;
+    const radius = areaSize;
 
     const affectedCombatants = match.combatants.filter(c => {
       if (!isPF2Combatant(c)) return false;
@@ -260,7 +261,7 @@ export const handlePF2CastSpell = async (
       }
 
       if (isCaster) {
-        updated.actionsRemaining = updated.actionsRemaining - 2;
+        updated.actionsRemaining = updated.actionsRemaining - actionCost;
 
         if (castResult.isFocus) {
           updated.focusPointsUsed += 1;
@@ -325,7 +326,8 @@ export const handlePF2CastSpell = async (
         : 'wisdom';
       const abilityMod = getAbilityModifier(pf2Char.abilities[abilityKey]);
 
-      const damageFormula = spellDef.damageFormula.replace('{mod}', String(abilityMod));
+      const heightenedFormula = getHeightenedDamage(spellDef, payload.spellLevel);
+      const damageFormula = heightenedFormula.replace('{mod}', String(abilityMod));
       const baseDamageRoll = rollDamage(damageFormula, spellDef.damageType!);
 
       const saveType = spellDef.save;
@@ -346,6 +348,35 @@ export const handlePF2CastSpell = async (
       } else {
         damageDealt = 0;
         logEntry += ` Critical Success! No damage`;
+      }
+    } else if (spellDef.damageFormula && spellDef.targetType === 'attack') {
+      const tradition = caster.tradition.toLowerCase();
+      const abilityKey = tradition === 'arcane' ? 'intelligence' 
+        : tradition === 'divine' ? 'wisdom'
+        : tradition === 'occult' ? 'charisma'
+        : 'wisdom';
+      const abilityMod = getAbilityModifier(pf2Char.abilities[abilityKey]);
+
+      const targetAC = targetCharacter.derived.armorClass;
+      const attackRoll = rollCheck(spellAttack, targetAC);
+
+      logEntry += ` spell attack [${attackRoll.roll}+${attackRoll.modifier}=${attackRoll.total} vs AC ${targetAC}]`;
+
+      const heightenedFormula = getHeightenedDamage(spellDef, payload.spellLevel);
+      const damageFormula = heightenedFormula.replace('{mod}', String(abilityMod));
+
+      if (attackRoll.degree === 'critical_success') {
+        const damageRoll = rollDamage(damageFormula, spellDef.damageType!);
+        damageDealt = damageRoll.total * 2;
+        logEntry += ` Critical Hit! ${damageDealt} ${spellDef.damageType} damage (doubled)`;
+      } else if (attackRoll.degree === 'success') {
+        const damageRoll = rollDamage(damageFormula, spellDef.damageType!);
+        damageDealt = damageRoll.total;
+        logEntry += ` Hit! ${damageDealt} ${spellDef.damageType} damage`;
+      } else if (attackRoll.degree === 'critical_failure') {
+        logEntry += ` Critical Miss!`;
+      } else {
+        logEntry += ` Miss!`;
       }
     } else if (spellDef.damageFormula && !spellDef.save) {
       const tradition = caster.tradition.toLowerCase();
@@ -423,7 +454,7 @@ export const handlePF2CastSpell = async (
     if (c.playerId !== player.id) return c;
     if (!isPF2Combatant(c)) return c;
 
-    const newActionsRemaining = c.actionsRemaining - 2;
+    const newActionsRemaining = c.actionsRemaining - actionCost;
 
     let newSlotUsage = [...c.spellSlotUsage];
     let newFocusUsed = c.focusPointsUsed;

@@ -44,7 +44,7 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
     }
     const spell = SPELL_DATABASE[spellName];
     const castActions = spell?.castActions ?? 2;
-    if (castActions > actionsRemaining) return false;
+    if (typeof castActions === 'number' && castActions > actionsRemaining) return false;
     return true;
   };
 
@@ -142,7 +142,7 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
                 disabled={!canCast}
               >
                 <span className="spell-card-actions">
-                  {spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
+                  {spell?.castActions === 'free' ? '🆓' : spell?.castActions === 'reaction' ? '↩️' : spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
                 </span>
                 <span className="spell-card-name">
                   {spellName}
