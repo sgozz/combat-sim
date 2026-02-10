@@ -96,6 +96,27 @@ function AppRoutes() {
     }
   }, [connectionState, user, navigate, location.pathname, activeMatchId, sendMessage, refreshMyMatches])
 
+  // When activeMatchId is set for an active/paused match but we have no matchState,
+  // send rejoin_match to the server to request it. This covers:
+  // - Clicking a match card in the Dashboard
+  // - Reconnecting after page reload (localStorage has the matchId)
+  // - Switching devices (server returns activeMatches in auth_ok)
+  const rejoinSentRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!activeMatchId || connectionState !== 'connected') {
+      rejoinSentRef.current = null
+      return
+    }
+    if (matchState?.id === activeMatchId) return
+    if (rejoinSentRef.current === activeMatchId) return
+
+    const match = myMatches.find(m => m.id === activeMatchId)
+    if (match && (match.status === 'active' || match.status === 'paused')) {
+      rejoinSentRef.current = activeMatchId
+      sendMessage({ type: 'rejoin_match', matchId: activeMatchId })
+    }
+  }, [activeMatchId, matchState, myMatches, connectionState, sendMessage])
+
   useEffect(() => {
     if (activeMatchId) {
       // Don't redirect away from armory (user may be creating a character mid-lobby)
@@ -130,6 +151,10 @@ function AppRoutes() {
   const handleSelectMatch = (matchId: string) => {
     setActiveMatchId(matchId)
   }
+
+  const handleDismissMatch = useCallback((matchId: string) => {
+    sendMessage({ type: 'leave_match', matchId })
+  }, [sendMessage])
 
   const handleGameAction = useCallback((_action: string, payload?: { type: string; [key: string]: unknown }) => {
     if (payload && activeMatchId) {
@@ -265,8 +290,9 @@ function AppRoutes() {
              onLogout={handleLogout}
              onCreateMatch={handleCreateMatch}
              onJoinByCode={handleJoinByCode}
-             onSelectMatch={handleSelectMatch}
-             setPreferredRuleset={setPreferredRuleset}
+              onSelectMatch={handleSelectMatch}
+              onDismissMatch={handleDismissMatch}
+              setPreferredRuleset={setPreferredRuleset}
            />
          ) : (
            <Navigate to="/" replace />

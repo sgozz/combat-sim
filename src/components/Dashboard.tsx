@@ -19,6 +19,7 @@ type DashboardProps = {
   onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean, scenarioBiome?: string) => void
   onJoinByCode: (code: string) => void
   onSelectMatch: (matchId: string) => void
+  onDismissMatch: (matchId: string) => void
   setPreferredRuleset: (rulesetId: RulesetId) => void
 }
 
@@ -30,6 +31,7 @@ export const Dashboard = ({
   onCreateMatch,
   onJoinByCode,
   onSelectMatch,
+  onDismissMatch,
   setPreferredRuleset,
 }: DashboardProps) => {
   const navigate = useNavigate()
@@ -253,6 +255,7 @@ export const Dashboard = ({
                       match={match}
                       currentUserId={user.id}
                       onSelect={onSelectMatch}
+                      onDismiss={onDismissMatch}
                     />
                   ))}
                 </div>

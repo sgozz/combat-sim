@@ -5,9 +5,10 @@ type MatchCardProps = {
   match: MatchSummary
   currentUserId: string
   onSelect: (matchId: string) => void
+  onDismiss?: (matchId: string) => void
 }
 
-export const MatchCard = ({ match, currentUserId, onSelect }: MatchCardProps) => {
+export const MatchCard = ({ match, currentUserId, onSelect, onDismiss }: MatchCardProps) => {
   const getStatusDot = () => {
     if (match.status === 'finished') return '🏁'
     if (match.status === 'paused') return '⏸️'
@@ -64,6 +65,15 @@ export const MatchCard = ({ match, currentUserId, onSelect }: MatchCardProps) =>
         </span>
         {!amIConnected && match.status !== 'finished' && (
           <span className="lobby-card-reconnect-hint">Reconnect required</span>
+        )}
+        {match.status === 'finished' && onDismiss && (
+          <button
+            className="lobby-card-dismiss"
+            onClick={(e) => { e.stopPropagation(); onDismiss(match.id) }}
+            title="Remove from list"
+          >
+            ✕
+          </button>
         )}
       </div>
     </div>

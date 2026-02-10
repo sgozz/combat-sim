@@ -230,6 +230,23 @@
   font-style: italic;
 }
 
+.lobby-card-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.lobby-card-dismiss:hover {
+  opacity: 1;
+  color: var(--accent-danger, #e55);
+}
+
 @media (max-width: 768px) {
   .lobby-card {
     padding: var(--space-md);
