@@ -103,80 +103,82 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
   };
 
   return (
-    <div className="spell-picker">
-      <div className="spell-picker-header">
-        <div className="spell-picker-title">{spellcaster.name} - {spellcaster.tradition}</div>
-        <button onClick={onClose} className="spell-picker-close">✕</button>
-      </div>
+    <div className="modal-overlay spell-modal-overlay" onClick={onClose}>
+      <div className="modal spell-modal" onClick={e => e.stopPropagation()}>
+        <div className="spell-modal-header">
+          <div className="spell-modal-title">{spellcaster.name} - {spellcaster.tradition}</div>
+          <button onClick={onClose} className="modal-close">✕</button>
+        </div>
 
-      <div className="spell-picker-tabs" role="tablist">
-        {levels.map(level => (
-          <button
-            key={level}
-            role="tab"
-            aria-selected={activeLevel === level}
-            className={`spell-picker-tab${activeLevel === level ? ' active' : ''}${isTabDepleted(level) ? ' depleted' : ''}`}
-            onClick={() => {
-              setActiveLevel(level);
-              setExpandedSpell(null);
-            }}
-          >
-            {getTabLabel(level)}
-          </button>
-        ))}
-      </div>
+        <div className="spell-modal-tabs" role="tablist">
+          {levels.map(level => (
+            <button
+              key={level}
+              role="tab"
+              aria-selected={activeLevel === level}
+              className={`spell-modal-tab${activeLevel === level ? ' active' : ''}${isTabDepleted(level) ? ' depleted' : ''}`}
+              onClick={() => {
+                setActiveLevel(level);
+                setExpandedSpell(null);
+              }}
+            >
+              {getTabLabel(level)}
+            </button>
+          ))}
+        </div>
 
-      <div className="spell-picker-grid" role="tabpanel">
-        {activeSpells.map(spellName => {
-          const spell = SPELL_DATABASE[spellName];
-          const known = isKnownSpell(spellName);
-          const canCast = canCastSpell(spellName, activeLevel);
-          const isExpanded = expandedSpell === spellName;
-          const heightenOptions = spell?.heighten ? getHeightenOptions(spellName) : [];
+        <div className="spell-modal-body" role="tabpanel">
+          {activeSpells.map(spellName => {
+            const spell = SPELL_DATABASE[spellName];
+            const known = isKnownSpell(spellName);
+            const canCast = canCastSpell(spellName, activeLevel);
+            const isExpanded = expandedSpell === spellName;
+            const heightenOptions = spell?.heighten ? getHeightenOptions(spellName) : [];
 
-          return (
-            <div key={spellName} className={`spell-card-wrapper${isExpanded ? ' expanded' : ''}`}>
-              <button
-                className={`spell-card${!known ? ' spell-card-manual' : ''}${isExpanded ? ' spell-card-active' : ''}`}
-                onClick={() => handleSpellClick(spellName, activeLevel)}
-                disabled={!canCast}
-              >
-                <span className="spell-card-actions">
-                  {spell?.castActions === 'free' ? '🆓' : spell?.castActions === 'reaction' ? '↩️' : spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
-                </span>
-                <span className="spell-card-name">
-                  {spellName}
-                </span>
-                {spell?.heighten && <span className="spell-card-heighten">↑</span>}
-                {!known && <span className="spell-card-manual-label">manual</span>}
-              </button>
+            return (
+              <div key={spellName} className={`spell-item${isExpanded ? ' expanded' : ''}`}>
+                <button
+                  className={`spell-btn${!known ? ' spell-btn-manual' : ''}${isExpanded ? ' spell-btn-active' : ''}`}
+                  onClick={() => handleSpellClick(spellName, activeLevel)}
+                  disabled={!canCast}
+                >
+                  <span className="spell-btn-actions">
+                    {spell?.castActions === 'free' ? '🆓' : spell?.castActions === 'reaction' ? '↩️' : spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
+                  </span>
+                  <span className="spell-btn-name">
+                    {spellName}
+                    {spell?.heighten && <span className="spell-btn-heighten">↑</span>}
+                    {!known && <span className="spell-btn-manual-label">manual</span>}
+                  </span>
+                </button>
 
-              {isExpanded && heightenOptions.length > 0 && (
-                <div className="spell-heighten-inline">
-                  <div className="spell-heighten-label">Cast {spellName} at level:</div>
-                  <div className="spell-heighten-options">
-                    {heightenOptions.map(level => {
-                      const heightenedDamage = spell ? getHeightenedDamage(spell, level) : '';
-                      const slots = getAvailableSlots(level);
-                      return (
-                        <button
-                          key={level}
-                          className="spell-heighten-btn"
-                          onClick={() => handleHeightenSelect(spellName, level)}
-                          disabled={!canCastSpell(spellName, level)}
-                        >
-                          <span className="spell-heighten-level">Lv {level}</span>
-                          {level > 0 && <span className="spell-heighten-slots">{slots.available}/{slots.total}</span>}
-                          {heightenedDamage && <span className="spell-heighten-damage">{heightenedDamage}</span>}
-                        </button>
-                      );
-                    })}
+                {isExpanded && heightenOptions.length > 0 && (
+                  <div className="spell-heighten-inline">
+                    <div className="spell-heighten-label">Cast {spellName} at level:</div>
+                    <div className="spell-heighten-options">
+                      {heightenOptions.map(level => {
+                        const heightenedDamage = spell ? getHeightenedDamage(spell, level) : '';
+                        const slots = getAvailableSlots(level);
+                        return (
+                          <button
+                            key={level}
+                            className="spell-heighten-btn"
+                            onClick={() => handleHeightenSelect(spellName, level)}
+                            disabled={!canCastSpell(spellName, level)}
+                          >
+                            <span className="spell-heighten-level">Lv {level}</span>
+                            {level > 0 && <span className="spell-heighten-slots">{slots.available}/{slots.total}</span>}
+                            {heightenedDamage && <span className="spell-heighten-damage">{heightenedDamage}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

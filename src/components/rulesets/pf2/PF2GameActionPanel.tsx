@@ -352,14 +352,12 @@ export const PF2GameActionPanel = ({
         )}
 
         {showSpellPicker && hasSpells && pf2Character && (
-          <div className="pf2-spell-picker-desktop">
-            <SpellPicker
-              spellcaster={pf2Character.spellcasters[0]}
-              onSelectSpell={handleSpellSelect}
-              onClose={() => setShowSpellPicker(false)}
-              actionsRemaining={actionsRemaining}
-            />
-          </div>
+          <SpellPicker
+            spellcaster={pf2Character.spellcasters[0]}
+            onSelectSpell={handleSpellSelect}
+            onClose={() => setShowSpellPicker(false)}
+            actionsRemaining={actionsRemaining}
+          />
         )}
         
         <div className="pf2-turn-controls">
