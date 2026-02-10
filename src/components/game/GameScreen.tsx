@@ -194,7 +194,7 @@ export const GameScreen = ({
         )}
         <MiniMap matchState={matchState} playerId={player?.id ?? null} />
         
-        <Canvas camera={{ position: [5, 5, 5], fov: 50 }} shadows>
+        <Canvas camera={{ position: [5, 5, 5], fov: 50, near: 0.01, far: 200 }} shadows>
           <color attach="background" args={['#111']} />
             <ArenaScene
               combatants={matchState?.combatants ?? []}
