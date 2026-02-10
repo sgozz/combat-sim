@@ -4468,73 +4468,147 @@
   box-shadow: 0 0 12px rgba(170, 100, 200, 0.4);
 }
 
-.pf2-spell-picker-desktop {
-  margin-top: 0.5rem;
-  border: 1px solid #555;
-  border-radius: 8px;
-  background: rgba(30, 30, 40, 0.95);
-  overflow: hidden;
+/* Spell Picker Modal */
+.spell-modal-overlay {
+  z-index: 2100;
 }
 
-.pf2-spell-picker-desktop .action-bar-maneuvers {
-  display: flex;
-  border-radius: 8px;
-  max-height: 50vh;
-}
-
-.pf2-spell-picker-desktop .pf2-spell-picker-mobile {
+.spell-modal {
+  width: 380px;
+  max-width: 90vw;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
-  position: static;
-  max-height: 50vh;
-  overflow-y: auto;
-  padding: 8px;
-  border-radius: 8px;
-  background: none;
-  border: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  animation: none;
-  gap: 0.25rem;
 }
 
-.pf2-spell-picker-desktop .pf2-spell-picker-mobile .pf2-spell-picker-header {
-  padding: 4px 0 8px;
-  margin-bottom: 8px;
-}
-
-.pf2-spell-picker-desktop .pf2-spell-btn {
+.spell-modal-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.spell-modal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.spell-modal-body {
+  padding: 0.75rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 0.2rem;
-  width: auto;
-  min-width: 64px;
-  max-width: 100px;
-  flex: 1 1 auto;
-  padding: 0.6rem 0.75rem;
-  text-align: center;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.pf2-spell-picker-desktop .pf2-spell-btn .pf2-spell-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.spell-level-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #aaa;
+  padding: 0.6rem 0.25rem 0.3rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 0.25rem;
+}
+
+.spell-level-header:first-of-type {
+  padding-top: 0.25rem;
+}
+
+.spell-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
   width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  min-height: 40px;
+  text-align: left;
+  font-size: 0.9rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.pf2-spell-picker-desktop .pf2-spell-btn.pf2-spell-manual {
+.spell-btn:not(:disabled):hover {
+  background: #3a3a4a;
+  border-color: #666;
+}
+
+.spell-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.spell-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.spell-btn-actions {
+  flex-shrink: 0;
+  min-width: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.spell-btn-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spell-btn-heighten {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-left: 0.25rem;
+}
+
+.spell-btn-manual {
   border-left: 3px solid rgba(255, 165, 0, 0.5);
 }
-.pf2-spell-picker-desktop .pf2-spell-btn .pf2-spell-manual-label {
-  font-size: 0.7rem;
+
+.spell-btn-manual:not(:disabled) {
+  opacity: 0.85;
+}
+
+.spell-btn-manual-label {
+  font-size: 0.75rem;
   color: orange;
   margin-left: 0.25rem;
+}
+
+.spell-heighten-back {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  color: #ccc;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.spell-heighten-back:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.spell-heighten-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ddd;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
 }
 
 .pf2-turn-controls {
@@ -4652,6 +4726,16 @@
 
   .pending-action-buttons button {
     min-height: 44px;
+  }
+
+  .spell-modal {
+    max-height: calc(75vh - env(safe-area-inset-bottom));
+  }
+
+  .spell-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

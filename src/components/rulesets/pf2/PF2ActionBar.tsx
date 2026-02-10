@@ -116,7 +116,7 @@ export const PF2ActionBar = ({
 
   return (
     <>
-      {(showCharacterSheet || showSpellPicker || showReadyPanel) && (
+      {(showCharacterSheet || showReadyPanel) && (
         <div 
           className="action-bar-backdrop" 
           onClick={closeAllPanels}

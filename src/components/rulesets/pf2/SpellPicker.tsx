@@ -87,93 +87,90 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
   };
 
   return (
-    <div className="pf2-spell-picker-mobile">
-      <div className="pf2-spell-picker-header">
-        <div className="pf2-spell-picker-title">{spellcaster.name} - {spellcaster.tradition}</div>
-        <button 
-          onClick={onClose}
-          className="pf2-spell-picker-close"
-        >
-          ✕
-        </button>
-      </div>
-
-      {selectedSpell ? (
-        // Heighten options view
-        <div>
-          <button
-            onClick={() => setSelectedSpell(null)}
-            className="pf2-spell-heighten-back"
-          >
-            ← Back to spell list
-          </button>
-          <div className="pf2-spell-heighten-title">
-            Cast {selectedSpell} at level:
-          </div>
-          {getHeightenOptions(selectedSpell).map(level => {
-            const spell = SPELL_DATABASE[selectedSpell];
-            const heightenedDamage = spell ? getHeightenedDamage(spell, level) : '';
-            const slots = getAvailableSlots(level);
-            
-            return (
-              <button
-                key={level}
-                className="pf2-spell-btn"
-                onClick={() => handleHeightenSelect(selectedSpell, level)}
-                disabled={!canCastSpell(selectedSpell, level)}
-              >
-                <span className="pf2-spell-actions">✨</span>
-                <span className="pf2-spell-name">
-                  Level {level} ({slots.available}/{slots.total} slots)
-                  {heightenedDamage && <div style={{ fontSize: '0.8em', opacity: 0.8 }}>{heightenedDamage}</div>}
-                </span>
-              </button>
-            );
-          })}
+    <div className="modal-overlay spell-modal-overlay" onClick={onClose}>
+      <div className="modal spell-modal" onClick={e => e.stopPropagation()}>
+        <div className="spell-modal-header">
+          <div className="spell-modal-title">{spellcaster.name} - {spellcaster.tradition}</div>
+          <button onClick={onClose} className="modal-close">✕</button>
         </div>
-      ) : (
-        // Spell list view
-        <>
-          {Object.entries(spellsByLevel)
-            .sort(([a], [b]) => Number(a) - Number(b))
-            .map(([levelStr, spells]) => {
-              const level = Number(levelStr);
-              const slots = getAvailableSlots(level);
-              const levelLabel = level === 0 ? 'Cantrips (∞)' : `Level ${level} (${slots.available}/${slots.total})`;
 
-              return (
-                <div key={level}>
-                  <div className="pf2-spell-level-header">
-                    {levelLabel}
-                  </div>
-                  {spells.map(spellName => {
-                    const spell = SPELL_DATABASE[spellName];
-                    const known = isKnownSpell(spellName);
-                    const canCast = canCastSpell(spellName, level);
-                    
-                    return (
-                      <button
-                        key={spellName}
-                        className={`pf2-spell-btn${!known ? ' pf2-spell-manual' : ''}`}
-                        onClick={() => handleSpellClick(spellName, level)}
-                        disabled={!canCast}
-                      >
-                        <span className="pf2-spell-actions">
-                          {spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
-                        </span>
-                        <span className="pf2-spell-name">
-                          {spellName}
-                          {spell?.heighten && <span className="pf2-spell-heighten">↑</span>}
-                          {!known && <span className="pf2-spell-manual-label">manual</span>}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-        </>
-      )}
+        <div className="spell-modal-body">
+          {selectedSpell ? (
+            <div>
+              <button
+                onClick={() => setSelectedSpell(null)}
+                className="spell-heighten-back"
+              >
+                ← Back to spell list
+              </button>
+              <div className="spell-heighten-title">
+                Cast {selectedSpell} at level:
+              </div>
+              {getHeightenOptions(selectedSpell).map(level => {
+                const spell = SPELL_DATABASE[selectedSpell];
+                const heightenedDamage = spell ? getHeightenedDamage(spell, level) : '';
+                const slots = getAvailableSlots(level);
+                
+                return (
+                  <button
+                    key={level}
+                    className="spell-btn"
+                    onClick={() => handleHeightenSelect(selectedSpell, level)}
+                    disabled={!canCastSpell(selectedSpell, level)}
+                  >
+                    <span className="spell-btn-actions">✨</span>
+                    <span className="spell-btn-name">
+                      Level {level} ({slots.available}/{slots.total} slots)
+                      {heightenedDamage && <div style={{ fontSize: '0.8em', opacity: 0.8 }}>{heightenedDamage}</div>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              {Object.entries(spellsByLevel)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([levelStr, spells]) => {
+                  const level = Number(levelStr);
+                  const slots = getAvailableSlots(level);
+                  const levelLabel = level === 0 ? 'Cantrips (∞)' : `Level ${level} (${slots.available}/${slots.total})`;
+
+                  return (
+                    <div key={level}>
+                      <div className="spell-level-header">
+                        {levelLabel}
+                      </div>
+                      {spells.map(spellName => {
+                        const spell = SPELL_DATABASE[spellName];
+                        const known = isKnownSpell(spellName);
+                        const canCast = canCastSpell(spellName, level);
+                        
+                        return (
+                          <button
+                            key={spellName}
+                            className={`spell-btn${!known ? ' spell-btn-manual' : ''}`}
+                            onClick={() => handleSpellClick(spellName, level)}
+                            disabled={!canCast}
+                          >
+                            <span className="spell-btn-actions">
+                              {spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
+                            </span>
+                            <span className="spell-btn-name">
+                              {spellName}
+                              {spell?.heighten && <span className="spell-btn-heighten">↑</span>}
+                              {!known && <span className="spell-btn-manual-label">manual</span>}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
