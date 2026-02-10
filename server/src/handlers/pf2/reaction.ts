@@ -367,7 +367,7 @@ export const resumeStrideAfterReaction = async (
     .map(c => ({ q: c.position.x, r: c.position.z }));
   const character = match.characters.find(ch => ch.id === triggerCombatant.characterId);
   const speed = (character && isPF2Character(character)) ? character.derived.speed : 25;
-  const reachable = getReachableSquares(startPos, speed, occupiedSquares);
+  const reachable = getReachableSquares(startPos, speed, occupiedSquares, match.mapDefinition);
   const destResult = reachable.get(`${to.q},${to.r}`);
   const movementPath = destResult
     ? destResult.path.map((p: { q: number; r: number }) => ({ x: p.q, y: 0, z: p.r }))

@@ -59,14 +59,7 @@ export const handlePF2RequestMove = async (
         reachable.set(key, { position: pos, cost: 5 });
       });
   } else {
-    reachable = getReachableSquares(startPos, speed, occupiedSquares);
-    if (match.mapDefinition) {
-      for (const [key, cell] of reachable) {
-        if (isBlocked(match.mapDefinition, cell.position.q, cell.position.r)) {
-          reachable.delete(key);
-        }
-      }
-    }
+    reachable = getReachableSquares(startPos, speed, occupiedSquares, match.mapDefinition);
   }
 
   const reachableHexes: ReachableHexInfo[] = [];
@@ -113,11 +106,11 @@ export const handlePF2Stride = async (
     .filter(c => c.playerId !== player.id)
     .map(c => gridToHex(c.position));
 
-  const reachable = getReachableSquares(startPos, speed, occupiedSquares);
+  const reachable = getReachableSquares(startPos, speed, occupiedSquares, match.mapDefinition);
   const destKey = `${payload.to.q},${payload.to.r}`;
   const destResult = reachable.get(destKey);
 
-  if (!destResult || isBlocked(match.mapDefinition, payload.to.q, payload.to.r)) {
+  if (!destResult) {
     sendMessage(socket, { type: "error", message: "Destination not reachable." });
     return;
   }
