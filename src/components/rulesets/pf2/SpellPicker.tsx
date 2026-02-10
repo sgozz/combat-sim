@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { SpellCaster } from '../../../../shared/rulesets/pf2/types';
 import { SPELL_DATABASE, getHeightenedDamage } from '../../../../shared/rulesets/pf2/spellData';
 
@@ -10,13 +10,24 @@ interface SpellPickerProps {
 }
 
 export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemaining }: SpellPickerProps) => {
-  const [selectedSpell, setSelectedSpell] = useState<string | null>(null);
+  const levels = useMemo(() =>
+    spellcaster.knownSpells
+      .map(g => g.level)
+      .sort((a, b) => a - b),
+    [spellcaster.knownSpells]
+  );
+
+  const [activeLevel, setActiveLevel] = useState<number>(levels[0] ?? 0);
+  const [expandedSpell, setExpandedSpell] = useState<string | null>(null);
 
   // Group spells by level
-  const spellsByLevel = spellcaster.knownSpells.reduce((acc, group) => {
-    acc[group.level] = group.spells;
-    return acc;
-  }, {} as Record<number, string[]>);
+  const spellsByLevel = useMemo(() =>
+    spellcaster.knownSpells.reduce((acc, group) => {
+      acc[group.level] = group.spells;
+      return acc;
+    }, {} as Record<number, string[]>),
+    [spellcaster.knownSpells]
+  );
 
   // Get available slots for each level
   const getAvailableSlots = (level: number) => {
@@ -25,18 +36,15 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
     return { available: slot.total - slot.used, total: slot.total };
   };
 
-  // Check if spell can be cast (supports both known and unknown spells)
+  // Check if spell can be cast
   const canCastSpell = (spellName: string, level: number) => {
-    // Cantrips (level 0) don't consume slots
     if (level > 0) {
       const slots = getAvailableSlots(level);
       if (slots.available <= 0) return false;
     }
-
     const spell = SPELL_DATABASE[spellName];
-    const castActions = spell?.castActions ?? 2; // Default 2 actions for unknown spells
+    const castActions = spell?.castActions ?? 2;
     if (castActions > actionsRemaining) return false;
-
     return true;
   };
 
@@ -49,33 +57,27 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
 
     const baseLevel = spell.level;
     const options: number[] = [];
-
-    // Add all levels from base to max available
     for (let level = baseLevel; level <= 9; level++) {
       const slots = getAvailableSlots(level);
-      if (slots.available > 0) {
+      if (level === 0 || slots.available > 0) {
         options.push(level);
       }
     }
-
     return options;
   };
 
   const handleSpellClick = (spellName: string, baseLevel: number) => {
     const spell = SPELL_DATABASE[spellName];
-    
+
     if (!spell) {
-      // Unknown spell — cast generically at shown level
       onSelectSpell(spellName, baseLevel);
       onClose();
       return;
     }
 
     if (spell.heighten) {
-      // Show heighten options
-      setSelectedSpell(spellName);
+      setExpandedSpell(prev => prev === spellName ? null : spellName);
     } else {
-      // Cast at base level
       onSelectSpell(spellName, baseLevel);
       onClose();
     }
@@ -86,94 +88,96 @@ export const SpellPicker = ({ spellcaster, onSelectSpell, onClose, actionsRemain
     onClose();
   };
 
+  const activeSpells = spellsByLevel[activeLevel] ?? [];
+
+  const getTabLabel = (level: number) => {
+    if (level === 0) return 'Cantrips (∞)';
+    const slots = getAvailableSlots(level);
+    return `Level ${level} (${slots.available}/${slots.total})`;
+  };
+
+  const isTabDepleted = (level: number) => {
+    if (level === 0) return false;
+    const slots = getAvailableSlots(level);
+    return slots.available <= 0;
+  };
+
   return (
-    <div className="pf2-spell-picker-mobile">
-      <div className="pf2-spell-picker-header">
-        <div className="pf2-spell-picker-title">{spellcaster.name} - {spellcaster.tradition}</div>
-        <button 
-          onClick={onClose}
-          className="pf2-spell-picker-close"
-        >
-          ✕
-        </button>
+    <div className="spell-picker">
+      <div className="spell-picker-header">
+        <div className="spell-picker-title">{spellcaster.name} - {spellcaster.tradition}</div>
+        <button onClick={onClose} className="spell-picker-close">✕</button>
       </div>
 
-      {selectedSpell ? (
-        // Heighten options view
-        <div>
+      <div className="spell-picker-tabs" role="tablist">
+        {levels.map(level => (
           <button
-            onClick={() => setSelectedSpell(null)}
-            className="pf2-spell-heighten-back"
+            key={level}
+            role="tab"
+            aria-selected={activeLevel === level}
+            className={`spell-picker-tab${activeLevel === level ? ' active' : ''}${isTabDepleted(level) ? ' depleted' : ''}`}
+            onClick={() => {
+              setActiveLevel(level);
+              setExpandedSpell(null);
+            }}
           >
-            ← Back to spell list
+            {getTabLabel(level)}
           </button>
-          <div className="pf2-spell-heighten-title">
-            Cast {selectedSpell} at level:
-          </div>
-          {getHeightenOptions(selectedSpell).map(level => {
-            const spell = SPELL_DATABASE[selectedSpell];
-            const heightenedDamage = spell ? getHeightenedDamage(spell, level) : '';
-            const slots = getAvailableSlots(level);
-            
-            return (
-              <button
-                key={level}
-                className="pf2-spell-btn"
-                onClick={() => handleHeightenSelect(selectedSpell, level)}
-                disabled={!canCastSpell(selectedSpell, level)}
-              >
-                <span className="pf2-spell-actions">✨</span>
-                <span className="pf2-spell-name">
-                  Level {level} ({slots.available}/{slots.total} slots)
-                  {heightenedDamage && <div style={{ fontSize: '0.8em', opacity: 0.8 }}>{heightenedDamage}</div>}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        // Spell list view
-        <>
-          {Object.entries(spellsByLevel)
-            .sort(([a], [b]) => Number(a) - Number(b))
-            .map(([levelStr, spells]) => {
-              const level = Number(levelStr);
-              const slots = getAvailableSlots(level);
-              const levelLabel = level === 0 ? 'Cantrips (∞)' : `Level ${level} (${slots.available}/${slots.total})`;
+        ))}
+      </div>
 
-              return (
-                <div key={level}>
-                  <div className="pf2-spell-level-header">
-                    {levelLabel}
+      <div className="spell-picker-grid" role="tabpanel">
+        {activeSpells.map(spellName => {
+          const spell = SPELL_DATABASE[spellName];
+          const known = isKnownSpell(spellName);
+          const canCast = canCastSpell(spellName, activeLevel);
+          const isExpanded = expandedSpell === spellName;
+          const heightenOptions = spell?.heighten ? getHeightenOptions(spellName) : [];
+
+          return (
+            <div key={spellName} className={`spell-card-wrapper${isExpanded ? ' expanded' : ''}`}>
+              <button
+                className={`spell-card${!known ? ' spell-card-manual' : ''}${isExpanded ? ' spell-card-active' : ''}`}
+                onClick={() => handleSpellClick(spellName, activeLevel)}
+                disabled={!canCast}
+              >
+                <span className="spell-card-actions">
+                  {spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
+                </span>
+                <span className="spell-card-name">
+                  {spellName}
+                </span>
+                {spell?.heighten && <span className="spell-card-heighten">↑</span>}
+                {!known && <span className="spell-card-manual-label">manual</span>}
+              </button>
+
+              {isExpanded && heightenOptions.length > 0 && (
+                <div className="spell-heighten-inline">
+                  <div className="spell-heighten-label">Cast {spellName} at level:</div>
+                  <div className="spell-heighten-options">
+                    {heightenOptions.map(level => {
+                      const heightenedDamage = spell ? getHeightenedDamage(spell, level) : '';
+                      const slots = getAvailableSlots(level);
+                      return (
+                        <button
+                          key={level}
+                          className="spell-heighten-btn"
+                          onClick={() => handleHeightenSelect(spellName, level)}
+                          disabled={!canCastSpell(spellName, level)}
+                        >
+                          <span className="spell-heighten-level">Lv {level}</span>
+                          {level > 0 && <span className="spell-heighten-slots">{slots.available}/{slots.total}</span>}
+                          {heightenedDamage && <span className="spell-heighten-damage">{heightenedDamage}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
-                  {spells.map(spellName => {
-                    const spell = SPELL_DATABASE[spellName];
-                    const known = isKnownSpell(spellName);
-                    const canCast = canCastSpell(spellName, level);
-                    
-                    return (
-                      <button
-                        key={spellName}
-                        className={`pf2-spell-btn${!known ? ' pf2-spell-manual' : ''}`}
-                        onClick={() => handleSpellClick(spellName, level)}
-                        disabled={!canCast}
-                      >
-                        <span className="pf2-spell-actions">
-                          {spell?.castActions === 1 ? '⚡' : spell?.castActions === 2 ? '⚡⚡' : '⚡⚡⚡'}
-                        </span>
-                        <span className="pf2-spell-name">
-                          {spellName}
-                          {spell?.heighten && <span className="pf2-spell-heighten">↑</span>}
-                          {!known && <span className="pf2-spell-manual-label">manual</span>}
-                        </span>
-                      </button>
-                    );
-                  })}
                 </div>
-              );
-            })}
-        </>
-      )}
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

@@ -30,7 +30,7 @@ describe('SpellPicker', () => {
     actionsRemaining: 3,
   }
 
-  it('renders spells grouped by level', () => {
+  it('renders spells grouped by level via tabs', () => {
     render(<SpellPicker {...defaultProps} />)
 
     expect(screen.getByText(/Cantrips/)).not.toBeNull()
@@ -39,8 +39,12 @@ describe('SpellPicker', () => {
 
     expect(screen.getByText('Electric Arc')).not.toBeNull()
     expect(screen.getByText('Ray of Frost')).not.toBeNull()
+
+    fireEvent.click(screen.getByText(/Level 1/))
     expect(screen.getByText('Magic Missile')).not.toBeNull()
     expect(screen.getByText('Fear')).not.toBeNull()
+
+    fireEvent.click(screen.getByText(/Level 3/))
     expect(screen.getByText('Fireball')).not.toBeNull()
   })
 
@@ -59,52 +63,49 @@ describe('SpellPicker', () => {
     const noSlots = makeSpellcaster({
       slots: [
         { level: 0, total: 5, used: 0 },
-        { level: 1, total: 3, used: 3 }, // all used
+        { level: 1, total: 3, used: 3 },
         { level: 3, total: 2, used: 0 },
       ],
     })
 
     render(<SpellPicker {...defaultProps} spellcaster={noSlots} />)
 
-    // Magic Missile is level 1, slots exhausted → disabled
+    fireEvent.click(screen.getByText(/Level 1/))
     const magicMissile = screen.getByText('Magic Missile').closest('button')!
     expect(magicMissile.disabled).toBe(true)
 
-    // Fireball is level 3, slots available → enabled
+    fireEvent.click(screen.getByText(/Level 3/))
     const fireball = screen.getByText('Fireball').closest('button')!
     expect(fireball.disabled).toBe(false)
   })
 
   it('disables spells when insufficient actions', () => {
-    // Most spells cost 2 actions
     render(<SpellPicker {...defaultProps} actionsRemaining={1} />)
 
-    // All spells cost 2 actions in SPELL_DATABASE, so all should be disabled
+    fireEvent.click(screen.getByText(/Level 1/))
     const magicMissile = screen.getByText('Magic Missile').closest('button')!
     expect(magicMissile.disabled).toBe(true)
 
+    fireEvent.click(screen.getByText(/Level 3/))
     const fireball = screen.getByText('Fireball').closest('button')!
     expect(fireball.disabled).toBe(true)
   })
 
-  it('shows heighten options when spell with heighten is clicked', () => {
+  it('shows inline heighten options when spell with heighten is clicked', () => {
     render(<SpellPicker {...defaultProps} />)
 
-    // Fireball has heighten data
+    fireEvent.click(screen.getByText(/Level 3/))
     const fireball = screen.getByText('Fireball')
     fireEvent.click(fireball)
 
-    // Should show heighten level selection
     expect(screen.getByText(/Cast Fireball at level/)).not.toBeNull()
-    // Back button
-    expect(screen.getByText(/Back to spell list/)).not.toBeNull()
   })
 
   it('calls onSelectSpell with spell name and level for non-heightenable spells', () => {
     const onSelectSpell = vi.fn()
     render(<SpellPicker {...defaultProps} onSelectSpell={onSelectSpell} />)
 
-    // Fear has no heighten, so clicking should immediately call onSelectSpell
+    fireEvent.click(screen.getByText(/Level 1/))
     const fear = screen.getByText('Fear')
     fireEvent.click(fear)
 
@@ -115,12 +116,11 @@ describe('SpellPicker', () => {
     const onSelectSpell = vi.fn()
     render(<SpellPicker {...defaultProps} onSelectSpell={onSelectSpell} />)
 
-    // Click Fireball to open heighten options
+    fireEvent.click(screen.getByText(/Level 3/))
     fireEvent.click(screen.getByText('Fireball'))
 
-    // Select level 3
-    const level3Btn = screen.getByText(/Level 3/).closest('button')!
-    fireEvent.click(level3Btn)
+    const lv3Btn = screen.getByText('Lv 3').closest('button')!
+    fireEvent.click(lv3Btn)
 
     expect(onSelectSpell).toHaveBeenCalledWith('Fireball', 3)
   })
@@ -144,27 +144,26 @@ describe('SpellPicker', () => {
   it('shows heighten indicator (↑) for heightenable spells', () => {
     render(<SpellPicker {...defaultProps} />)
 
-    // Fireball and Electric Arc have heighten, Fear does not
-    const fireball = screen.getByText('Fireball').closest('button')!
-    expect(fireball.innerHTML).toContain('↑')
+    const electricArc = screen.getByText('Electric Arc').closest('button')!
+    expect(electricArc.innerHTML).toContain('↑')
 
-    // Fear should not have the heighten indicator
+    fireEvent.click(screen.getByText(/Level 1/))
     const fear = screen.getByText('Fear').closest('button')!
     expect(fear.innerHTML).not.toContain('↑')
+
+    fireEvent.click(screen.getByText(/Level 3/))
+    const fireball = screen.getByText('Fireball').closest('button')!
+    expect(fireball.innerHTML).toContain('↑')
   })
 
-  it('returns to spell list from heighten view via back button', () => {
+  it('collapses heighten options when clicking the spell again', () => {
     render(<SpellPicker {...defaultProps} />)
 
-    // Open heighten view for Fireball
+    fireEvent.click(screen.getByText(/Level 3/))
     fireEvent.click(screen.getByText('Fireball'))
     expect(screen.getByText(/Cast Fireball at level/)).not.toBeNull()
 
-    // Click back
-    fireEvent.click(screen.getByText(/Back to spell list/))
-
-    // Should be back to spell list
-    expect(screen.getByText('Magic Missile')).not.toBeNull()
+    fireEvent.click(screen.getByText('Fireball'))
     expect(screen.queryByText(/Cast Fireball at level/)).toBeNull()
   })
 })
