@@ -4496,26 +4496,60 @@
   color: #ddd;
 }
 
+.spell-modal-tabs {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.spell-modal-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.spell-modal-tab {
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: #aaa;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.spell-modal-tab:hover {
+  background: #353545;
+}
+
+.spell-modal-tab.active {
+  background: #4a3a6a;
+  border-color: #8a6aba;
+  color: #e8d8ff;
+}
+
+.spell-modal-tab.depleted {
+  opacity: 0.4;
+}
+
 .spell-modal-body {
   padding: 0.75rem;
   overflow-y: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
-.spell-level-header {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #aaa;
-  padding: 0.6rem 0.25rem 0.3rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 0.25rem;
-}
-
-.spell-level-header:first-of-type {
-  padding-top: 0.25rem;
+.spell-item.expanded {
+  display: flex;
+  flex-direction: column;
 }
 
 .spell-btn {
@@ -4550,6 +4584,11 @@
   cursor: not-allowed;
 }
 
+.spell-btn-active {
+  border-color: #8a6aba;
+  background: #3a2a55;
+}
+
 .spell-btn-actions {
   flex-shrink: 0;
   min-width: 2rem;
@@ -4568,6 +4607,7 @@
   font-size: 0.75rem;
   opacity: 0.7;
   margin-left: 0.25rem;
+  color: #c8e;
 }
 
 .spell-btn-manual {
@@ -4584,31 +4624,71 @@
   margin-left: 0.25rem;
 }
 
-.spell-heighten-back {
-  width: 100%;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.spell-heighten-inline {
+  background: rgba(60, 40, 80, 0.4);
+  border: 1px solid #6a4a9a;
   border-radius: 6px;
-  cursor: pointer;
-  color: #ccc;
-  font-size: 0.85rem;
-  text-align: left;
-  transition: background 0.15s ease;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+  animation: slideUp 0.15s ease-out;
 }
 
-.spell-heighten-back:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-
-.spell-heighten-title {
-  font-size: 0.9rem;
+.spell-heighten-label {
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #ddd;
-  margin-bottom: 0.5rem;
-  padding: 0 0.25rem;
+  color: #c8b8e8;
+  margin-bottom: 0.4rem;
+}
+
+.spell-heighten-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.spell-heighten-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  background: #2a2a3a;
+  border: 1px solid #555;
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+  min-width: 50px;
+}
+
+.spell-heighten-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.spell-heighten-btn:not(:disabled):hover {
+  background: #4a3a6a;
+  border-color: #8a6aba;
+}
+
+.spell-heighten-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.spell-heighten-level {
+  font-weight: 600;
+  color: #e8d8ff;
+}
+
+.spell-heighten-slots {
+  font-size: 0.65rem;
+  color: #aaa;
+}
+
+.spell-heighten-damage {
+  font-size: 0.65rem;
+  color: #f88;
 }
 
 .pf2-turn-controls {

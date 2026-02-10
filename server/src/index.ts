@@ -5,6 +5,7 @@ import { state } from "./state";
 import { initializeDatabase, loadPersistedData, updateMatchMemberConnection, getUserMatches, removeMatchMember, updateMatchState, getMatchMemberCount, cleanupExpiredSessions } from "./db";
 import { sendMessage, sendToMatch } from "./helpers";
 import { handleMessage } from "./handlers";
+import { loadFoundrySpellData } from "./data/spellLoader";
 
 const PORT = Number(process.env.PORT ?? 8080);
 
@@ -24,6 +25,8 @@ const startServer = async () => {
   const storedCharacters = db.prepare("SELECT COUNT(*) as count FROM characters").get() as { count: number } | undefined;
   const storedMatches = db.prepare("SELECT COUNT(*) as count FROM matches WHERE status IN ('waiting', 'active', 'paused')").get() as { count: number } | undefined;
   console.log(`Loaded ${storedUsers?.count ?? 0} users, ${storedCharacters?.count ?? 0} characters, ${storedMatches?.count ?? 0} active matches.`);
+
+  loadFoundrySpellData().catch((err: unknown) => console.error('[startup] Spell loading failed:', err));
 
   wss.on("connection", (socket, req) => {
     const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';

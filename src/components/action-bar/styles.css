@@ -20,8 +20,6 @@
   display: none;
 }
 
-
-
 /* Mobile Action Bar - Screens < 768px */
 @media (max-width: 768px) {
   :root {

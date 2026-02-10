@@ -11,6 +11,7 @@ import { GameScreen } from './components/game/GameScreen'
 import { isGurpsCombatant } from '../shared/rulesets'
 
 import type { CharacterSheet, GridPosition } from '../shared/types'
+import type { PendingSpellCast } from './components/rulesets/types'
 import './App.css'
 import './components/action-bar/styles.css'
 
@@ -70,6 +71,7 @@ function AppRoutes() {
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
+  const [pendingSpellCast, setPendingSpellCast] = useState<PendingSpellCast | null>(null)
   
   const pendingJoinCodeRef = useRef<string | null>((() => {
     const params = new URLSearchParams(window.location.search)
@@ -93,6 +95,27 @@ function AppRoutes() {
       navigate('/', { replace: true })
     }
   }, [connectionState, user, navigate, location.pathname, activeMatchId, sendMessage, refreshMyMatches])
+
+  // When activeMatchId is set for an active/paused match but we have no matchState,
+  // send rejoin_match to the server to request it. This covers:
+  // - Clicking a match card in the Dashboard
+  // - Reconnecting after page reload (localStorage has the matchId)
+  // - Switching devices (server returns activeMatches in auth_ok)
+  const rejoinSentRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!activeMatchId || connectionState !== 'connected') {
+      rejoinSentRef.current = null
+      return
+    }
+    if (matchState?.id === activeMatchId) return
+    if (rejoinSentRef.current === activeMatchId) return
+
+    const match = myMatches.find(m => m.id === activeMatchId)
+    if (match && (match.status === 'active' || match.status === 'paused')) {
+      rejoinSentRef.current = activeMatchId
+      sendMessage({ type: 'rejoin_match', matchId: activeMatchId })
+    }
+  }, [activeMatchId, matchState, myMatches, connectionState, sendMessage])
 
   useEffect(() => {
     if (activeMatchId) {
@@ -129,15 +152,49 @@ function AppRoutes() {
     setActiveMatchId(matchId)
   }
 
+  const handleDismissMatch = useCallback((matchId: string) => {
+    sendMessage({ type: 'leave_match', matchId })
+  }, [sendMessage])
+
   const handleGameAction = useCallback((_action: string, payload?: { type: string; [key: string]: unknown }) => {
     if (payload && activeMatchId) {
       sendMessage({ type: 'action', matchId: activeMatchId, action: payload.type, payload })
     }
   }, [sendMessage, activeMatchId])
 
+  // Cancel spell targeting on ESC
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && pendingSpellCast) {
+        setPendingSpellCast(null)
+      }
+    }
+    document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [pendingSpellCast])
+
   const handleGridClick = useCallback((position: GridPosition) => {
     if (!matchState || !user || matchState.activeTurnPlayerId !== user.id) return
     if (matchState.status === 'finished') return
+
+    // Intercept click for area spell targeting
+    if (pendingSpellCast) {
+      sendMessage({
+        type: 'action',
+        matchId: activeMatchId!,
+        action: 'pf2_cast_spell',
+        payload: {
+          type: 'pf2_cast_spell',
+          casterIndex: pendingSpellCast.casterIndex,
+          spellName: pendingSpellCast.spellName,
+          spellLevel: pendingSpellCast.castLevel,
+          targetHex: { q: position.x, r: position.z }
+        }
+      })
+      setPendingSpellCast(null)
+      return
+    }
+
     const currentCombatant = matchState.combatants.find((c) => c.playerId === user.id)
     if (!currentCombatant) return
     
@@ -175,7 +232,7 @@ function AppRoutes() {
     }
     
     setMoveTarget(position)
-  }, [matchState, user, sendMessage, setLogs, activeMatchId])
+  }, [matchState, user, sendMessage, setLogs, activeMatchId, pendingSpellCast])
 
   const handleCombatantClick = useCallback((targetPlayerId: string) => {
     if (!matchState || !user) return
@@ -233,8 +290,9 @@ function AppRoutes() {
              onLogout={handleLogout}
              onCreateMatch={handleCreateMatch}
              onJoinByCode={handleJoinByCode}
-             onSelectMatch={handleSelectMatch}
-             setPreferredRuleset={setPreferredRuleset}
+              onSelectMatch={handleSelectMatch}
+              onDismissMatch={handleDismissMatch}
+              setPreferredRuleset={setPreferredRuleset}
            />
          ) : (
            <Navigate to="/" replace />
@@ -303,9 +361,11 @@ function AppRoutes() {
               isPlayerTurn={isPlayerTurn}
               isSpectating={!!spectatingMatchId}
               pendingAction={pendingAction}
+              pendingSpellCast={pendingSpellCast}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}
               onAction={handleGameAction}
+              onSetPendingSpellCast={setPendingSpellCast}
               onPendingActionResponse={(response) => {
                 if (activeMatchId) {
                   sendMessage({ type: 'action', matchId: activeMatchId, action: 'respond_exit', payload: { type: 'respond_exit', response } })

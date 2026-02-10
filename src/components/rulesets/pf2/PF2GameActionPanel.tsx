@@ -16,7 +16,9 @@ export const PF2GameActionPanel = ({
   logs, 
   selectedTargetId,
   isMyTurn,
+  pendingSpellCast,
   onAction,
+  onSetPendingSpellCast,
   onLeaveLobby,
 }: GameActionPanelProps) => {
    const [collapsed, setCollapsed] = useState(false)
@@ -54,29 +56,12 @@ export const PF2GameActionPanel = ({
     }
 
     if (spellDef.targetType === 'area') {
-      const hexInput = prompt('Enter target hex coordinates (format: q,r)\nExample: 5,5')
-      if (!hexInput) return
-      
-      const parts = hexInput.split(',').map(s => s.trim())
-      if (parts.length !== 2) {
-        alert('Invalid format. Use: q,r (e.g., 5,5)')
-        return
-      }
-      
-      const q = parseInt(parts[0], 10)
-      const r = parseInt(parts[1], 10)
-      
-      if (isNaN(q) || isNaN(r)) {
-        alert('Invalid coordinates. Both q and r must be numbers.')
-        return
-      }
-
-      onAction('pf2_cast_spell', {
-        type: 'pf2_cast_spell',
-        casterIndex: 0,
+      onSetPendingSpellCast({
         spellName,
-        spellLevel: castLevel,
-        targetHex: { q, r }
+        castLevel,
+        casterIndex: 0,
+        areaShape: spellDef.areaShape ?? 'burst',
+        areaSize: spellDef.areaSize ?? spellDef.areaRadius ?? 1
       })
       setShowSpellPicker(false)
       return
@@ -93,6 +78,23 @@ export const PF2GameActionPanel = ({
   }, [selectedTargetId, onAction])
 
   const renderContent = () => {
+    if (pendingSpellCast) {
+      return (
+        <div className="pf2-targeting-banner">
+          <div className="pf2-targeting-info">
+            <span className="pf2-targeting-icon">🎯</span>
+            <span>Click a hex to cast <strong>{pendingSpellCast.spellName}</strong></span>
+          </div>
+          <button 
+            className="action-btn danger"
+            onClick={() => onSetPendingSpellCast(null)}
+          >
+            Cancel (Esc)
+          </button>
+        </div>
+      )
+    }
+
     if (matchState.status === 'finished') {
       return (
         <div className="action-grid">

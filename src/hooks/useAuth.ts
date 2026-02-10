@@ -28,7 +28,6 @@ export const useAuth = ({
   
   const connectingRef = useRef(false)
   const reconnectAttemptRef = useRef(false)
-  const pendingRejoinRef = useRef<string | null>(null)
   const reconnectDelayRef = useRef(1000)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -112,10 +111,8 @@ export const useAuth = ({
           reconnectDelayRef.current = 1000
           
           const savedMatchId = localStorage.getItem(ACTIVE_MATCH_KEY)
-          
           if (savedMatchId) {
             setActiveMatchId(savedMatchId)
-            pendingRejoinRef.current = savedMatchId
           }
           return true
         }
@@ -208,14 +205,6 @@ export const useAuth = ({
     }
   }, [socket])
 
-  // Pending rejoin
-  useEffect(() => {
-    if (socket && socket.readyState === WebSocket.OPEN && pendingRejoinRef.current) {
-      const matchId = pendingRejoinRef.current
-      pendingRejoinRef.current = null
-      socket.send(JSON.stringify({ type: 'rejoin_match', matchId }))
-    }
-  }, [socket, connectionState])
 
    return {
      connectionState,

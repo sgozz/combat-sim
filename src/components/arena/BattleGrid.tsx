@@ -12,6 +12,11 @@ type FacingArcs = {
   rear: { q: number; r: number }[]
 }
 
+type SpellTargetArea = {
+  shape: string
+  size: number
+}
+
 type BattleGridProps = {
   gridType: GridType
   radius: number
@@ -25,12 +30,19 @@ type BattleGridProps = {
   reachableHexes: ReachableHexInfo[]
   onHexClick: (q: number, r: number) => void
   mapDefinition?: MapDefinition
+  spellTargetArea?: SpellTargetArea
 }
 
 type ArcType = 'front' | 'side' | 'rear' | 'none'
 
 const getGridSystem = (gridType: GridType): GridSystem => {
   return gridType === 'square' ? squareGrid8 : hexGrid
+}
+
+function hexDistance(q1: number, r1: number, q2: number, r2: number): number {
+  const s1 = -q1 - r1
+  const s2 = -q2 - r2
+  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2))
 }
 
 type CellStyle = {
@@ -231,6 +243,7 @@ export const BattleGrid = ({
   reachableHexes, 
   onHexClick,
   mapDefinition,
+  spellTargetArea,
 }: BattleGridProps) => {
   const [hoveredCell, setHoveredCell] = useState<{q: number, r: number} | null>(null)
   const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
@@ -242,6 +255,20 @@ export const BattleGrid = ({
     })
     return map
   }, [reachableHexes])
+
+  const spellAreaHexes = useMemo(() => {
+    if (!spellTargetArea || !hoveredCell) return new Set<string>()
+    const set = new Set<string>()
+    const { size } = spellTargetArea
+    for (let q = hoveredCell.q - size; q <= hoveredCell.q + size; q++) {
+      for (let r = hoveredCell.r - size; r <= hoveredCell.r + size; r++) {
+        if (hexDistance(hoveredCell.q, hoveredCell.r, q, r) <= size) {
+          set.add(`${q},${r}`)
+        }
+      }
+    }
+    return set
+  }, [spellTargetArea, hoveredCell])
 
   const tiles = useMemo(() => {
     const result: { q: number; r: number }[] = []
@@ -263,10 +290,21 @@ export const BattleGrid = ({
   }, [radius, gridType])
 
   const hoverInfo = useMemo(() => {
-    if (!hoveredCell || !isPlayerTurn) return null
+    if (!hoveredCell) return null
+
+    const worldPos = gridSystem.coordToWorld(hoveredCell)
+
+    if (spellTargetArea) {
+      return {
+        displayText: 'Click to cast',
+        color: '#ff6600',
+        position: [worldPos.x, 0.5, worldPos.z] as [number, number, number]
+      }
+    }
+
+    if (!isPlayerTurn) return null
     
     const isEnemy = enemyPositions.some(pos => pos.x === hoveredCell.q && pos.z === hoveredCell.r)
-    const worldPos = gridSystem.coordToWorld(hoveredCell)
     
     if (isEnemy) {
       return { 
@@ -285,7 +323,7 @@ export const BattleGrid = ({
     const displayText = reachable ? `${reachable.cost}` : `${dist}`
     
     return { displayText, color, position: [worldPos.x, 0.5, worldPos.z] as [number, number, number] }
-  }, [hoveredCell, playerPosition, isPlayerTurn, reachableMap, enemyPositions, gridSystem])
+  }, [hoveredCell, playerPosition, isPlayerTurn, reachableMap, enemyPositions, gridSystem, spellTargetArea])
 
   const TileComponent = gridType === 'hex' ? HexTile : SquareTile
 
@@ -318,14 +356,21 @@ export const BattleGrid = ({
           arcType = 'rear'
         }
         
-        const style = getCellStyle(
+        let style = getCellStyle(
           q, r, playerPosition, attackRange, isPlayerTurn, enemyPositions, 
           selectedTargetPosition, moveTargetPosition, arcType, isAlternate, 
           isHovered, reachableHex, gridSystem, mapDefinition
         )
+        
+        const isInSpellArea = spellAreaHexes.has(`${q},${r}`)
+        if (isInSpellArea) {
+          style = { ...style, emissive: '#ff6600', emissiveIntensity: 0.6, edgeColor: '#ff4400', edgeOpacity: 0.9 }
+        }
+
         const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
         const isReachable = reachableHex !== undefined
-        const isInteractive = isPlayerTurn && (isEnemy || isReachable)
+        const isTargeting = !!spellTargetArea
+        const isInteractive = isTargeting || (isPlayerTurn && (isEnemy || isReachable))
         return (
           <TileComponent
             key={`${q},${r}`}

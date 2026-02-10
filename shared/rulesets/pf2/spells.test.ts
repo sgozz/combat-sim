@@ -346,7 +346,7 @@ describe('Spell Casting', () => {
         const electricArc: SpellDefinition = {
           name: 'Electric Arc',
           level: 0,
-          tradition: 'arcane',
+          traditions: ['arcane', 'primal'],
           castActions: 2,
           targetType: 'single',
           save: 'reflex',
@@ -362,7 +362,7 @@ describe('Spell Casting', () => {
         const heal: SpellDefinition = {
           name: 'Heal',
           level: 1,
-          tradition: 'divine',
+          traditions: ['divine', 'primal'],
           castActions: 2,
           targetType: 'single',
           healFormula: '1d8',
@@ -375,7 +375,7 @@ describe('Spell Casting', () => {
         const fear: SpellDefinition = {
           name: 'Fear',
           level: 1,
-          tradition: 'arcane',
+          traditions: ['arcane', 'divine', 'occult', 'primal'],
           castActions: 2,
           targetType: 'single',
           save: 'will',

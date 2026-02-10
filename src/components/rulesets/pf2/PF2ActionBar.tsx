@@ -14,7 +14,9 @@ export const PF2ActionBar = ({
   isMyTurn, 
   selectedTargetId,
   logs,
+  pendingSpellCast,
   onAction,
+  onSetPendingSpellCast,
   onLeaveLobby,
 }: ActionBarProps) => {
    const [showCharacterSheet, setShowCharacterSheet] = useState(false)
@@ -54,6 +56,23 @@ export const PF2ActionBar = ({
     )
   }
 
+  if (pendingSpellCast) {
+    return (
+      <div className="action-bar">
+        <div className="action-bar-hint" style={{ flex: 1, color: '#ff6600' }}>
+          🎯 Tap hex to cast {pendingSpellCast.spellName}
+        </div>
+        <button
+          className="action-bar-btn danger"
+          onClick={() => onSetPendingSpellCast(null)}
+        >
+          <span className="action-bar-icon">✕</span>
+          <span className="action-bar-label">Cancel</span>
+        </button>
+      </div>
+    )
+  }
+
   if (!isMyTurn) {
     return (
       <div className="action-bar">
@@ -74,31 +93,13 @@ export const PF2ActionBar = ({
       return
     }
 
-    // For area spells, prompt for hex selection
     if (spellDef.targetType === 'area') {
-      const hexInput = prompt('Enter target hex coordinates (format: q,r)\nExample: 5,5')
-      if (!hexInput) return
-      
-      const parts = hexInput.split(',').map(s => s.trim())
-      if (parts.length !== 2) {
-        alert('Invalid format. Use: q,r (e.g., 5,5)')
-        return
-      }
-      
-      const q = parseInt(parts[0], 10)
-      const r = parseInt(parts[1], 10)
-      
-      if (isNaN(q) || isNaN(r)) {
-        alert('Invalid coordinates. Both q and r must be numbers.')
-        return
-      }
-
-      onAction('pf2_cast_spell', {
-        type: 'pf2_cast_spell',
-        casterIndex: 0,
+      onSetPendingSpellCast({
         spellName,
-        spellLevel: castLevel,
-        targetHex: { q, r }
+        castLevel,
+        casterIndex: 0,
+        areaShape: spellDef.areaShape ?? 'burst',
+        areaSize: spellDef.areaSize ?? spellDef.areaRadius ?? 1
       })
       setShowSpellPicker(false)
       return

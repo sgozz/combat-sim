@@ -11,6 +11,14 @@ import type {
 import type { CombatantState } from '../../../shared/rulesets'
 import type { CombatActionPayload } from '../../../shared/rulesets'
 
+export type PendingSpellCast = {
+  spellName: string
+  castLevel: number
+  casterIndex: number
+  areaShape: string
+  areaSize: number
+}
+
 export type CharacterEditorProps = {
   character: CharacterSheet
   setCharacter: (character: CharacterSheet) => void
@@ -37,7 +45,9 @@ export type GameActionPanelProps = {
   selectedTargetId: string | null
   currentManeuver: ManeuverType | null
   isMyTurn: boolean
+  pendingSpellCast: PendingSpellCast | null
   onAction: (action: string, payload?: CombatActionPayload) => void
+  onSetPendingSpellCast: (spell: PendingSpellCast | null) => void
   onLeaveLobby: () => void
 }
 
@@ -50,8 +60,10 @@ export type ActionBarProps = {
   currentManeuver: ManeuverType | null
   selectedTargetId: string | null
   logs?: string[]
+  pendingSpellCast: PendingSpellCast | null
   onAction: (action: string, payload?: CombatActionPayload) => void
   onDefend: (choice: DefenseChoice) => void
+  onSetPendingSpellCast: (spell: PendingSpellCast | null) => void
   onLeaveLobby: () => void
 }
 
