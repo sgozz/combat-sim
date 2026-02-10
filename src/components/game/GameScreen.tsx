@@ -16,6 +16,7 @@ import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 import { PF2ReactionModal } from '../rulesets/pf2/PF2ReactionModal'
 
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
+import type { PendingSpellCast } from '../rulesets/types'
 import { isGurpsCombatant, isPF2Combatant } from '../../../shared/rulesets'
 
 type GameScreenProps = {
@@ -29,9 +30,11 @@ type GameScreenProps = {
   isPlayerTurn: boolean
   isSpectating?: boolean
   pendingAction: PendingAction | null
+  pendingSpellCast: PendingSpellCast | null
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
   onAction: (action: string, payload?: { type: string; [key: string]: unknown }) => void
+  onSetPendingSpellCast: (spell: PendingSpellCast | null) => void
   onPendingActionResponse: (response: string) => void
   onLeaveLobby: () => void
 }
@@ -57,9 +60,11 @@ export const GameScreen = ({
   isPlayerTurn,
   isSpectating = false,
   pendingAction,
+  pendingSpellCast,
   onGridClick,
   onCombatantClick,
   onAction,
+  onSetPendingSpellCast,
   onPendingActionResponse,
   onLeaveLobby,
 }: GameScreenProps) => {
@@ -209,6 +214,7 @@ export const GameScreen = ({
               cameraMode={cameraMode}
               rulesetId={matchState?.rulesetId ?? 'gurps'}
               mapDefinition={matchState?.mapDefinition}
+              spellTargetArea={pendingSpellCast ? { shape: pendingSpellCast.areaShape, size: pendingSpellCast.areaSize } : undefined}
               onGridClick={onGridClick}
               onCombatantClick={onCombatantClick}
             />
@@ -229,7 +235,9 @@ export const GameScreen = ({
             selectedTargetId={selectedTargetId}
             currentManeuver={currentManeuver}
             isMyTurn={isPlayerTurn}
+            pendingSpellCast={pendingSpellCast}
             onAction={onAction}
+            onSetPendingSpellCast={onSetPendingSpellCast}
             onLeaveLobby={onLeaveLobby}
           />
        ) : (
@@ -315,8 +323,10 @@ export const GameScreen = ({
              currentManeuver={currentManeuver}
              selectedTargetId={selectedTargetId}
              logs={logs}
+             pendingSpellCast={pendingSpellCast}
              onAction={onAction}
              onDefend={handleDefenseChoice}
+             onSetPendingSpellCast={onSetPendingSpellCast}
              onLeaveLobby={onLeaveLobby}
            />
         )}

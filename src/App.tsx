@@ -11,6 +11,7 @@ import { GameScreen } from './components/game/GameScreen'
 import { isGurpsCombatant } from '../shared/rulesets'
 
 import type { CharacterSheet, GridPosition } from '../shared/types'
+import type { PendingSpellCast } from './components/rulesets/types'
 import './App.css'
 import './components/action-bar/styles.css'
 
@@ -70,6 +71,7 @@ function AppRoutes() {
 
   const [moveTarget, setMoveTarget] = useState<GridPosition | null>(null)
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
+  const [pendingSpellCast, setPendingSpellCast] = useState<PendingSpellCast | null>(null)
   
   const pendingJoinCodeRef = useRef<string | null>((() => {
     const params = new URLSearchParams(window.location.search)
@@ -135,9 +137,39 @@ function AppRoutes() {
     }
   }, [sendMessage, activeMatchId])
 
+  // Cancel spell targeting on ESC
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && pendingSpellCast) {
+        setPendingSpellCast(null)
+      }
+    }
+    document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [pendingSpellCast])
+
   const handleGridClick = useCallback((position: GridPosition) => {
     if (!matchState || !user || matchState.activeTurnPlayerId !== user.id) return
     if (matchState.status === 'finished') return
+
+    // Intercept click for area spell targeting
+    if (pendingSpellCast) {
+      sendMessage({
+        type: 'action',
+        matchId: activeMatchId!,
+        action: 'pf2_cast_spell',
+        payload: {
+          type: 'pf2_cast_spell',
+          casterIndex: pendingSpellCast.casterIndex,
+          spellName: pendingSpellCast.spellName,
+          spellLevel: pendingSpellCast.castLevel,
+          targetHex: { q: position.x, r: position.z }
+        }
+      })
+      setPendingSpellCast(null)
+      return
+    }
+
     const currentCombatant = matchState.combatants.find((c) => c.playerId === user.id)
     if (!currentCombatant) return
     
@@ -175,7 +207,7 @@ function AppRoutes() {
     }
     
     setMoveTarget(position)
-  }, [matchState, user, sendMessage, setLogs, activeMatchId])
+  }, [matchState, user, sendMessage, setLogs, activeMatchId, pendingSpellCast])
 
   const handleCombatantClick = useCallback((targetPlayerId: string) => {
     if (!matchState || !user) return
@@ -303,9 +335,11 @@ function AppRoutes() {
               isPlayerTurn={isPlayerTurn}
               isSpectating={!!spectatingMatchId}
               pendingAction={pendingAction}
+              pendingSpellCast={pendingSpellCast}
               onGridClick={handleGridClick}
               onCombatantClick={handleCombatantClick}
               onAction={handleGameAction}
+              onSetPendingSpellCast={setPendingSpellCast}
               onPendingActionResponse={(response) => {
                 if (activeMatchId) {
                   sendMessage({ type: 'action', matchId: activeMatchId, action: 'respond_exit', payload: { type: 'respond_exit', response } })

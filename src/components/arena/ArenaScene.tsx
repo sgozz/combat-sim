@@ -27,6 +27,7 @@ type ArenaSceneProps = {
   cameraMode: CameraMode
   rulesetId: RulesetId
   mapDefinition?: MapDefinition
+  spellTargetArea?: { shape: string; size: number }
   onGridClick: (position: GridPosition) => void
   onCombatantClick: (playerId: string) => void
 }
@@ -64,7 +65,7 @@ const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: 
   )
 }
 
-export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, mapDefinition, onGridClick, onCombatantClick }: ArenaSceneProps) => {
+export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, mapDefinition, spellTargetArea, onGridClick, onCombatantClick }: ArenaSceneProps) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   
   useEffect(() => {
@@ -185,6 +186,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         facingArcs={facingArcs}
         reachableHexes={reachableHexes}
         mapDefinition={mapDefinition}
+        spellTargetArea={spellTargetArea}
         onHexClick={(q: number, r: number) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {
