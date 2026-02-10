@@ -636,7 +636,7 @@ export const handlePF2SuddenCharge = async (
     .filter(c => c.playerId !== player.id)
     .map(c => gridToHex(c.position));
 
-  const reachable = getReachableSquares(startPos, doubleSpeed, occupiedSquares);
+  const reachable = getReachableSquares(startPos, doubleSpeed, occupiedSquares, match.mapDefinition);
   const destKey = `${payload.targetHex.q},${payload.targetHex.r}`;
 
   if (!reachable.has(destKey)) {

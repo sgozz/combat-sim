@@ -196,6 +196,7 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   // Waypoint-based movement: walk through path instead of straight line
   const waypointsRef = useRef<{ x: number; z: number }[]>([])
   const waypointIndexRef = useRef(0)
+  const lastPathKeyRef = useRef<string>('')
 
   const basicMove = useMemo(() => {
     if (!character) return 5
@@ -210,9 +211,15 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
   
   const isDead = combatant.currentHP <= 0
 
-  // When movementPath changes, convert to world-coordinate waypoints
+  // When movementPath changes, convert to world-coordinate waypoints.
+  // Compare by content (serialized key) to avoid replaying the same animation
+  // when the server re-broadcasts the same path on subsequent state updates.
   useEffect(() => {
     if (combatant.movementPath && combatant.movementPath.length > 1) {
+      const pathKey = combatant.movementPath.map(p => `${p.x},${p.z}`).join('|')
+      if (pathKey === lastPathKeyRef.current) return
+      lastPathKeyRef.current = pathKey
+
       // Skip first waypoint (it's the start position where we already are)
       const waypoints = combatant.movementPath.slice(1).map(p => {
         const wp = gridSystem.coordToWorld({ q: p.x, r: p.z })
@@ -220,6 +227,8 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
       })
       waypointsRef.current = waypoints
       waypointIndexRef.current = 0
+    } else {
+      lastPathKeyRef.current = ''
     }
   }, [combatant.movementPath, gridSystem])
 
