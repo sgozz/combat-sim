@@ -873,7 +873,7 @@ describe('handlePF2CastSpell', () => {
         position: { x: 5, y: 0, z: 5 },
       });
 
-      // Target 2: 3 squares away (q: 8, r: 5) - Chebyshev distance 3
+      // Target 2: 3 squares away on axis (q: 8, r: 5) - Euclidean distance 3 (inside radius 4)
       const target2Combatant = createPF2Combatant({
         playerId: 'player3',
         characterId: 'char3',
@@ -881,7 +881,7 @@ describe('handlePF2CastSpell', () => {
         position: { x: 8, y: 0, z: 5 },
       });
 
-      // Target 3: 5 squares away (q: 10, r: 5) - Chebyshev distance 5 (outside radius)
+      // Target 3: 5 squares away on axis (q: 10, r: 5) - Euclidean distance 5 (outside radius 4)
       const target3Combatant = createPF2Combatant({
         playerId: 'player4',
         characterId: 'char4',

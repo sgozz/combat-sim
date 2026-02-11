@@ -42,6 +42,12 @@ export class SquareGridSystem implements GridSystem {
     return Math.max(dq, dr);
   }
 
+  isInBurst(center: GridCoord, target: GridCoord, radius: number): boolean {
+    const dq = center.q - target.q;
+    const dr = center.r - target.r;
+    return dq * dq + dr * dr <= (radius + 0.5) * (radius + 0.5);
+  }
+
   neighbors(coord: GridCoord): GridCoord[] {
     return this.directionVectors.map(d => ({
       q: coord.q + d.q,

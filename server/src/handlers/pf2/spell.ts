@@ -153,8 +153,7 @@ export const handlePF2CastSpell = async (
     const affectedCombatants = match.combatants.filter(c => {
       if (!isPF2Combatant(c)) return false;
       const combatantCoord = gridSystem.worldToCoord({ x: c.position.x, z: c.position.z });
-      const distance = gridSystem.distance(centerHex, combatantCoord);
-      return distance <= radius;
+      return gridSystem.isInBurst(centerHex, combatantCoord, radius);
     });
 
     logEntry += ` at hex (${centerHex.q}, ${centerHex.r}) affecting ${affectedCombatants.length} target(s)`;

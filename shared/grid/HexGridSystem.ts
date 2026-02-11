@@ -21,6 +21,10 @@ export class HexGridSystem implements GridSystem {
     return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
   }
 
+  isInBurst(center: GridCoord, target: GridCoord, radius: number): boolean {
+    return this.distance(center, target) <= radius;
+  }
+
   neighbors(coord: GridCoord): GridCoord[] {
     return HEX_DIRECTIONS.map(d => ({
       q: coord.q + d.q,

@@ -257,7 +257,7 @@ export const BattleGrid = ({
     const center: GridCoord = { q: hoveredCell.q, r: hoveredCell.r }
     for (let q = hoveredCell.q - size; q <= hoveredCell.q + size; q++) {
       for (let r = hoveredCell.r - size; r <= hoveredCell.r + size; r++) {
-        if (gridSystem.distance(center, { q, r }) <= size) {
+        if (gridSystem.isInBurst(center, { q, r }, size)) {
           set.add(`${q},${r}`)
         }
       }
