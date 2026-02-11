@@ -14,6 +14,7 @@ import {
 } from "../../../../shared/rulesets/pf2/rules";
 import { getSpell, getHeightenedDamage } from "../../../../shared/rulesets/pf2/spellData";
 import type { PF2CombatantState } from "../../../../shared/rulesets/pf2/types";
+import { getServerAdapter } from "../../../../shared/rulesets/serverAdapter";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
 import {
@@ -22,40 +23,6 @@ import {
   getCombatantByPlayerId,
   getCharacterById,
 } from "../../helpers";
-
-function hexDistance(q1: number, r1: number, q2: number, r2: number): number {
-  const s1 = -q1 - r1;
-  const s2 = -q2 - r2;
-  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2));
-}
-
-function worldToHex(x: number, z: number): { q: number; r: number } {
-  const HEX_SIZE = 1;
-  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * z) / HEX_SIZE;
-  const r = (2 / 3 * z) / HEX_SIZE;
-
-  const cubeX = q;
-  const cubeZ = r;
-  const cubeY = -cubeX - cubeZ;
-
-  let rx = Math.round(cubeX);
-  let ry = Math.round(cubeY);
-  let rz = Math.round(cubeZ);
-
-  const xDiff = Math.abs(rx - cubeX);
-  const yDiff = Math.abs(ry - cubeY);
-  const zDiff = Math.abs(rz - cubeZ);
-
-  if (xDiff > yDiff && xDiff > zDiff) {
-    rx = -ry - rz;
-  } else if (yDiff > zDiff) {
-    ry = -rx - rz;
-  } else {
-    rz = -rx - ry;
-  }
-
-  return { q: rx, r: rz };
-}
 
 type CastSpellPayload = {
   type: "pf2_cast_spell";
@@ -178,13 +145,15 @@ export const handlePF2CastSpell = async (
 
   const areaSize = spellDef.areaSize ?? spellDef.areaRadius;
   if (spellDef.targetType === 'area' && payload.targetHex && spellDef.areaShape === 'burst' && areaSize !== undefined) {
+    const adapter = getServerAdapter(match.rulesetId);
+    const { gridSystem } = adapter;
     const centerHex = payload.targetHex;
     const radius = areaSize;
 
     const affectedCombatants = match.combatants.filter(c => {
       if (!isPF2Combatant(c)) return false;
-      const combatantHex = worldToHex(c.position.x, c.position.z);
-      const distance = hexDistance(centerHex.q, centerHex.r, combatantHex.q, combatantHex.r);
+      const combatantCoord = gridSystem.worldToCoord({ x: c.position.x, z: c.position.z });
+      const distance = gridSystem.distance(centerHex, combatantCoord);
       return distance <= radius;
     });
 

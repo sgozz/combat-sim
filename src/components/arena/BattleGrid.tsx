@@ -39,12 +39,6 @@ const getGridSystem = (gridType: GridType): GridSystem => {
   return gridType === 'square' ? squareGrid8 : hexGrid
 }
 
-function hexDistance(q1: number, r1: number, q2: number, r2: number): number {
-  const s1 = -q1 - r1
-  const s2 = -q2 - r2
-  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2))
-}
-
 type CellStyle = {
   color: string
   emissive: string
@@ -260,15 +254,16 @@ export const BattleGrid = ({
     if (!spellTargetArea || !hoveredCell) return new Set<string>()
     const set = new Set<string>()
     const { size } = spellTargetArea
+    const center: GridCoord = { q: hoveredCell.q, r: hoveredCell.r }
     for (let q = hoveredCell.q - size; q <= hoveredCell.q + size; q++) {
       for (let r = hoveredCell.r - size; r <= hoveredCell.r + size; r++) {
-        if (hexDistance(hoveredCell.q, hoveredCell.r, q, r) <= size) {
+        if (gridSystem.distance(center, { q, r }) <= size) {
           set.add(`${q},${r}`)
         }
       }
     }
     return set
-  }, [spellTargetArea, hoveredCell])
+  }, [spellTargetArea, hoveredCell, gridSystem])
 
   const tiles = useMemo(() => {
     const result: { q: number; r: number }[] = []

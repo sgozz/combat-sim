@@ -869,23 +869,23 @@ describe('handlePF2CastSpell', () => {
         playerId: 'player2',
         characterId: 'char2',
         currentHP: 20,
-        position: { x: 12.99, y: 0, z: 7.5 },
+        position: { x: 5, y: 0, z: 5 },
       });
 
-      // Target 2: 3 hexes away (q: 8, r: 5) - distance 3
+      // Target 2: 3 squares away (q: 8, r: 5) - Chebyshev distance 3
       const target2Combatant = createPF2Combatant({
         playerId: 'player3',
         characterId: 'char3',
         currentHP: 20,
-        position: { x: 18.19, y: 0, z: 7.5 },
+        position: { x: 8, y: 0, z: 5 },
       });
 
-      // Target 3: 5 hexes away (q: 10, r: 5) - distance 5 (outside radius)
+      // Target 3: 5 squares away (q: 10, r: 5) - Chebyshev distance 5 (outside radius)
       const target3Combatant = createPF2Combatant({
         playerId: 'player4',
         characterId: 'char4',
         currentHP: 20,
-        position: { x: 21.65, y: 0, z: 7.5 },
+        position: { x: 10, y: 0, z: 5 },
       });
 
       const player = createPlayer({ id: 'player1' });
