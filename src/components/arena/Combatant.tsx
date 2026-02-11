@@ -238,13 +238,16 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
       processedEffectsRef.current.add(effect.id)
 
       if ((effect.type === 'damage' || effect.type === 'miss') && effect.attackerId === combatant.playerId) {
-        combatAnimationRef.current = { type: 'attack', until: Date.now() + 800 }
+        const animType = effect.source === 'spell' ? 'spell' : 'attack'
+        combatAnimationRef.current = { type: animType, until: Date.now() + 800 }
       } else if (effect.type === 'damage' && effect.targetId === combatant.playerId) {
         combatAnimationRef.current = { type: 'hit', until: Date.now() + 400 }
       } else if (effect.type === 'defend' && effect.targetId === combatant.playerId) {
         combatAnimationRef.current = { type: 'dodge', until: Date.now() + 800 }
       } else if (effect.type === 'grapple' && effect.attackerId === combatant.playerId) {
         combatAnimationRef.current = { type: 'grapple', until: Date.now() + 800 }
+      } else if (effect.type === 'heal' && effect.casterId === combatant.playerId) {
+        combatAnimationRef.current = { type: 'spell', until: Date.now() + 800 }
       }
     }
   }, [visualEffects, combatant.playerId])

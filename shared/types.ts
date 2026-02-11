@@ -130,8 +130,9 @@ export type ClientToServerMessage =
    | { type: "set_preferred_ruleset"; rulesetId: RulesetId };
 
 export type VisualEffect = 
-  | { type: 'damage'; attackerId: Id; targetId: Id; value: number; position: GridPosition }
-  | { type: 'miss'; attackerId: Id; targetId: Id; position: GridPosition }
+  | { type: 'damage'; attackerId: Id; targetId: Id; value: number; position: GridPosition; source?: 'spell' }
+  | { type: 'miss'; attackerId: Id; targetId: Id; position: GridPosition; source?: 'spell' }
+  | { type: 'heal'; casterId: Id; targetId: Id; value: number; position: GridPosition }
   | { type: 'defend'; attackerId: Id; targetId: Id; position: GridPosition }
   | { type: 'grapple'; attackerId: Id; targetId: Id; position: GridPosition }
   | { type: 'close_combat'; attackerId: Id; targetId: Id; position: GridPosition };
