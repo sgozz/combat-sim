@@ -170,6 +170,9 @@ export const handlePF2CastSpell = async (
     const damageFormula = heightenedFormula.replace('{mod}', String(abilityMod));
     const baseDamageRoll = rollDamage(damageFormula, spellDef.damageType!);
 
+    type AreaDamageResult = { playerId: string; damageDealt: number; position: { x: number; y: number; z: number } };
+    const areaDamageResults: AreaDamageResult[] = [];
+
     const updatedCombatants = match.combatants.map(c => {
       const isAffected = affectedCombatants.find(ac => ac.playerId === c.playerId);
       const isCaster = c.playerId === player.id;
@@ -206,6 +209,8 @@ export const handlePF2CastSpell = async (
               damageDealt = 0;
               logEntry += `\n  ${pf2TargetChar.name}: Critical Success! No damage`;
             }
+
+            areaDamageResults.push({ playerId: c.playerId, damageDealt, position: c.position });
 
             if (damageDealt > 0) {
               const newHP = Math.max(0, updated.currentHP - damageDealt);
@@ -256,6 +261,35 @@ export const handlePF2CastSpell = async (
 
       return updated;
     });
+
+    for (const result of areaDamageResults) {
+      if (result.damageDealt > 0) {
+        sendToMatch(matchId, {
+          type: "visual_effect",
+          matchId,
+          effect: {
+            type: "damage",
+            attackerId: player.id,
+            targetId: result.playerId,
+            value: result.damageDealt,
+            position: result.position,
+            source: 'spell',
+          },
+        });
+      } else {
+        sendToMatch(matchId, {
+          type: "visual_effect",
+          matchId,
+          effect: {
+            type: "miss",
+            attackerId: player.id,
+            targetId: result.playerId,
+            position: result.position,
+            source: 'spell',
+          },
+        });
+      }
+    }
 
     const finalState: MatchState = {
       ...match,
@@ -377,6 +411,48 @@ export const handlePF2CastSpell = async (
       } else {
         logEntry += ` ${targetCharacter.name} resists the effect`;
       }
+    }
+  }
+
+  if (targetCombatant) {
+    if (damageDealt > 0) {
+      sendToMatch(matchId, {
+        type: "visual_effect",
+        matchId,
+        effect: {
+          type: "damage",
+          attackerId: player.id,
+          targetId: targetCombatant.playerId,
+          value: damageDealt,
+          position: targetCombatant.position,
+          source: 'spell',
+        },
+      });
+    } else if (spellDef.damageFormula && damageDealt === 0) {
+      sendToMatch(matchId, {
+        type: "visual_effect",
+        matchId,
+        effect: {
+          type: "miss",
+          attackerId: player.id,
+          targetId: targetCombatant.playerId,
+          position: targetCombatant.position,
+          source: 'spell',
+        },
+      });
+    }
+    if (healingApplied > 0) {
+      sendToMatch(matchId, {
+        type: "visual_effect",
+        matchId,
+        effect: {
+          type: "heal",
+          casterId: player.id,
+          targetId: targetCombatant.playerId,
+          value: healingApplied,
+          position: targetCombatant.position,
+        },
+      });
     }
   }
 

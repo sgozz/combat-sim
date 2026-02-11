@@ -4,6 +4,7 @@ import { handlePF2CastSpell } from './spell';
 import { createPF2Combatant, createPF2Character, createMatch, createMockSocket, createPlayer } from './__tests__/testUtils';
 import type { SpellCaster } from '../../../../shared/rulesets/pf2/types';
 import type { DamageRoll, D20RollResult } from '../../../../shared/rulesets/pf2/rules';
+import type { MatchState } from '../../../../shared/types';
 
 const mockSendMessage = vi.fn();
 const mockSendToMatch = vi.fn();
@@ -949,24 +950,32 @@ describe('handlePF2CastSpell', () => {
       expect(mockSendMessage).not.toHaveBeenCalled();
       expect(mockUpdateMatchState).toHaveBeenCalled();
 
-      const finalState = mockSendToMatch.mock.calls[0][1].state;
+      const matchStateCall = mockSendToMatch.mock.calls.find(
+        (call: unknown[]) => (call[1] as { type: string }).type === 'match_state'
+      );
+      const finalState = (matchStateCall![1] as { state: MatchState }).state;
 
       // Target 1 (at center) should take full damage (21), capped at 0
       const updatedTarget1 = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player2');
-      expect(updatedTarget1.currentHP).toBe(0);
+      expect(updatedTarget1!.currentHP).toBe(0);
 
       // Target 2 (3 hexes away) should take half damage (10)
       const updatedTarget2 = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player3');
-      expect(updatedTarget2.currentHP).toBe(20 - 10);
+      expect(updatedTarget2!.currentHP).toBe(20 - 10);
 
       // Target 3 (5 hexes away, outside radius) should be unaffected
       const updatedTarget3 = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player4');
-      expect(updatedTarget3.currentHP).toBe(20);
+      expect(updatedTarget3!.currentHP).toBe(20);
 
       // Caster should have used 2 actions and 1 spell slot
       const updatedCaster = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player1');
-      expect(updatedCaster.actionsRemaining).toBe(1);
-      expect(updatedCaster.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
+      expect(updatedCaster!.actionsRemaining).toBe(1);
+      expect(updatedCaster!.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
+
+      const vfxCalls = mockSendToMatch.mock.calls.filter(
+        (call: unknown[]) => (call[1] as { type: string }).type === 'visual_effect'
+      );
+      expect(vfxCalls.length).toBeGreaterThanOrEqual(1);
     });
 
     it('should roll independent saves for each target', async () => {
@@ -1062,16 +1071,17 @@ describe('handlePF2CastSpell', () => {
         targetHex: { q: 1, r: 0 },
       });
 
-      const finalState = mockSendToMatch.mock.calls[0][1].state;
+      const matchStateCall = mockSendToMatch.mock.calls.find(
+        (call: unknown[]) => (call[1] as { type: string }).type === 'match_state'
+      );
+      const finalState = (matchStateCall![1] as { state: MatchState }).state;
 
-      // Verify spell was cast and affected targets
       expect(finalState.log[finalState.log.length - 1]).toContain('Fireball');
       expect(finalState.log[finalState.log.length - 1]).toContain('affecting');
       
-      // Verify caster used resources
       const updatedCaster = finalState.combatants.find((c: { playerId: string }) => c.playerId === 'player1');
-      expect(updatedCaster.actionsRemaining).toBe(1);
-      expect(updatedCaster.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
+      expect(updatedCaster!.actionsRemaining).toBe(1);
+      expect(updatedCaster!.spellSlotUsage).toEqual([{ casterIndex: 0, level: 3, used: 1 }]);
     });
 
     it('should handle area spell with no combatants in radius', async () => {

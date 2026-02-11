@@ -48,6 +48,9 @@ const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: 
   } else if (effect.type === 'defend') {
     content = 'Blocked'
     color = '#4444ff'
+  } else if (effect.type === 'heal') {
+    content = `+${effect.value}`
+    color = '#44ff88'
   }
 
   return (

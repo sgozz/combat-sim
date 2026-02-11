@@ -28,6 +28,7 @@ type ActiveEffect = {
 const PARTICLE_CONFIGS = {
   damage: { count: 24, speed: 4, life: 0.6, size: 0.08, colors: [0xff4422, 0xff8844, 0xffcc44] },
   miss: { count: 8, speed: 2, life: 0.4, size: 0.05, colors: [0x888888, 0xaaaaaa] },
+  heal: { count: 20, speed: 2.5, life: 0.7, size: 0.07, colors: [0x22ff44, 0x44ff88, 0x88ffaa] },
   defend: { count: 16, speed: 2.5, life: 0.5, size: 0.06, colors: [0x4488ff, 0x66bbff, 0xffffff] },
   grapple: { count: 12, speed: 1.5, life: 0.5, size: 0.06, colors: [0xff8800, 0xffaa44] },
   close_combat: { count: 12, speed: 1.5, life: 0.5, size: 0.06, colors: [0xff00ff, 0xff88ff] },
@@ -62,6 +63,20 @@ function createParticles(type: VisualEffect['type'], worldX: number, worldZ: num
         life: 0.4,
         maxLife: 0.4,
         color: new THREE.Color(0x66bbff),
+        size: 0.1,
+      })
+    }
+  }
+
+  if (type === 'heal') {
+    for (let i = 0; i < 10; i++) {
+      const ringAngle = (Math.PI * 2 * i) / 10
+      particles.push({
+        position: new THREE.Vector3(worldX + Math.cos(ringAngle) * 0.4, 0.5, worldZ + Math.sin(ringAngle) * 0.4),
+        velocity: new THREE.Vector3(Math.cos(ringAngle) * 0.5, 3 + Math.random(), Math.sin(ringAngle) * 0.5),
+        life: 0.6,
+        maxLife: 0.6,
+        color: new THREE.Color(0x44ff88),
         size: 0.1,
       })
     }
