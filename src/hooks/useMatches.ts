@@ -43,7 +43,7 @@ export const useMatches = ({
   }, [sendMessage])
 
   const fetchPublicMatches = useCallback(() => {
-    sendMessage({ type: 'list_public_matches' })
+    sendMessage({ type: 'list_public_waiting' })
   }, [sendMessage])
 
   const spectateMatch = useCallback((matchId: string) => {
@@ -188,6 +188,7 @@ export const useMatches = ({
           return true
         
         case 'public_matches':
+        case 'public_waiting_list':
           setPublicMatches(message.matches)
           return true
         

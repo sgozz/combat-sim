@@ -14,7 +14,9 @@ const RULESET_LABELS: Record<RulesetId, string> = {
 type DashboardProps = {
   user: User
   myMatches: MatchSummary[]
+  publicMatches: MatchSummary[]
   refreshMyMatches: () => void
+  fetchPublicMatches: () => void
   onLogout: () => void
   onCreateMatch: (name: string, maxPlayers: number, isPublic: boolean, scenarioBiome?: string) => void
   onJoinByCode: (code: string) => void
@@ -26,7 +28,9 @@ type DashboardProps = {
 export const Dashboard = ({
   user,
   myMatches,
+  publicMatches,
   refreshMyMatches,
+  fetchPublicMatches,
   onLogout,
   onCreateMatch,
   onJoinByCode,
@@ -54,11 +58,14 @@ export const Dashboard = ({
   }, [otherRulesetId, setPreferredRuleset, refreshMyMatches])
 
   useEffect(() => {
+    refreshMyMatches()
+    fetchPublicMatches()
     const interval = setInterval(() => {
       refreshMyMatches()
+      fetchPublicMatches()
     }, 5000)
     return () => clearInterval(interval)
-  }, [refreshMyMatches])
+  }, [refreshMyMatches, fetchPublicMatches])
 
   const yourTurnMatches = myMatches.filter(m => m.status === 'active' && m.isMyTurn)
   const activeMatches = myMatches.filter(
@@ -227,6 +234,25 @@ export const Dashboard = ({
                     match={match}
                     currentUserId={user.id}
                     onSelect={onSelectMatch}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Public Matches */}
+          {publicMatches.length > 0 && (
+            <section className="dashboard-match-section">
+              <h2 className="dashboard-section-title">
+                🌐 Public Matches ({publicMatches.length})
+              </h2>
+              <div className="dashboard-match-grid">
+                {publicMatches.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    currentUserId={user.id}
+                    onSelect={() => onJoinByCode(match.code)}
                   />
                 ))}
               </div>

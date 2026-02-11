@@ -33,6 +33,7 @@ function AppRoutes() {
     connectionState,
     user,
     myMatches,
+    publicMatches,
     activeMatchId,
     matchState,
     logs,
@@ -48,6 +49,7 @@ function AppRoutes() {
     sendMessage,
     logout,
     refreshMyMatches,
+    fetchPublicMatches,
     stopSpectating,
     characters: rosterCharacters,
     loadCharacters,
@@ -284,16 +286,18 @@ function AppRoutes() {
        <Route path="/home" element={
          user ? (
            <Dashboard
-             user={user}
-             myMatches={myMatches}
-             refreshMyMatches={refreshMyMatches}
-             onLogout={handleLogout}
-             onCreateMatch={handleCreateMatch}
-             onJoinByCode={handleJoinByCode}
-              onSelectMatch={handleSelectMatch}
-              onDismissMatch={handleDismissMatch}
-              setPreferredRuleset={setPreferredRuleset}
-           />
+              user={user}
+              myMatches={myMatches}
+              publicMatches={publicMatches}
+              refreshMyMatches={refreshMyMatches}
+              fetchPublicMatches={fetchPublicMatches}
+              onLogout={handleLogout}
+              onCreateMatch={handleCreateMatch}
+              onJoinByCode={handleJoinByCode}
+               onSelectMatch={handleSelectMatch}
+               onDismissMatch={handleDismissMatch}
+               setPreferredRuleset={setPreferredRuleset}
+            />
          ) : (
            <Navigate to="/" replace />
          )
