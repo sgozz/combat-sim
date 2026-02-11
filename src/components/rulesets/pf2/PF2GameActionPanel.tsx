@@ -1,4 +1,9 @@
 import { useState, useCallback } from 'react'
+import { 
+  Sword, Footprints, ChevronRight, ArrowUpCircle, ArrowDownCircle, 
+  Shield, Hand, XCircle, Shuffle, AlertTriangle, Sparkles, Flag, 
+  Check, Crosshair
+} from 'lucide-react'
 import { Tooltip } from '../../ui/Tooltip'
 import { CombatLog } from '../../game/CombatLog'
 import { isPF2Combatant } from '../../../../shared/rulesets'
@@ -82,7 +87,7 @@ export const PF2GameActionPanel = ({
       return (
         <div className="pf2-targeting-banner">
           <div className="pf2-targeting-info">
-            <span className="pf2-targeting-icon">🎯</span>
+            <span className="pf2-targeting-icon"><Crosshair size={20} /></span>
             <span>Click a hex to cast <strong>{pendingSpellCast.spellName}</strong></span>
           </div>
           <button 
@@ -116,7 +121,7 @@ export const PF2GameActionPanel = ({
               }
             }}
           >
-            <span className="btn-icon">🏳️</span> Give Up
+            <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
         </div>
       )
@@ -136,7 +141,7 @@ export const PF2GameActionPanel = ({
             ))}
           </div>
           {mapPenalty < 0 && (
-            <div className="pf2-map-badge" style={{ color: mapPenalty < -5 ? '#f44' : '#ff4' }}>
+            <div className="pf2-map-badge" style={{ color: mapPenalty < -5 ? 'var(--accent-danger)' : 'var(--accent-warning)' }}>
               MAP: {mapPenalty}
             </div>
           )}
@@ -153,7 +158,7 @@ export const PF2GameActionPanel = ({
                 }
               }}
             >
-              <span className="pf2-action-icon">⚔️</span>
+              <span className="pf2-action-icon"><Sword size={24} /></span>
               <span className="pf2-action-label">Strike</span>
               {selectedTargetId && selectedTargetName && (
                 <span className="pf2-action-target">→ {selectedTargetName}</span>
@@ -167,7 +172,7 @@ export const PF2GameActionPanel = ({
               disabled={actionsRemaining === 0}
               onClick={() => onAction('pf2_request_move', { type: 'pf2_request_move', mode: 'stride' })}
             >
-              <span className="pf2-action-icon">🏃</span>
+              <span className="pf2-action-icon"><Footprints size={24} /></span>
               <span className="pf2-action-label">Stride</span>
             </button>
           </Tooltip>
@@ -178,7 +183,7 @@ export const PF2GameActionPanel = ({
               disabled={true}
               onClick={() => {}}
             >
-              <span className="pf2-action-icon">👣</span>
+              <span className="pf2-action-icon"><ChevronRight size={24} /></span>
               <span className="pf2-action-label">Step</span>
             </button>
           </Tooltip>
@@ -190,7 +195,7 @@ export const PF2GameActionPanel = ({
                 disabled={actionsRemaining === 0}
                 onClick={() => onAction('pf2_stand', { type: 'pf2_stand' })}
               >
-                <span className="pf2-action-icon">🧍</span>
+                <span className="pf2-action-icon"><ArrowUpCircle size={24} /></span>
                 <span className="pf2-action-label">Stand</span>
               </button>
             </Tooltip>
@@ -201,7 +206,7 @@ export const PF2GameActionPanel = ({
                 onClick={() => onAction('pf2_drop_prone', { type: 'pf2_drop_prone' })}
                 disabled={actionsRemaining === 0}
               >
-                <span className="pf2-action-icon">🔻</span>
+                <span className="pf2-action-icon"><ArrowDownCircle size={24} /></span>
                 <span className="pf2-action-label">Drop Prone</span>
               </button>
             </Tooltip>
@@ -213,7 +218,7 @@ export const PF2GameActionPanel = ({
               disabled={actionsRemaining === 0}
               onClick={() => onAction('pf2_raise_shield', { type: 'pf2_raise_shield' })}
             >
-              <span className="pf2-action-icon">🛡️</span>
+              <span className="pf2-action-icon"><Shield size={24} /></span>
               <span className="pf2-action-label">Raise Shield</span>
             </button>
           </Tooltip>
@@ -224,7 +229,7 @@ export const PF2GameActionPanel = ({
               disabled={true}
               onClick={() => {}}
             >
-              <span className="pf2-action-icon">✋</span>
+              <span className="pf2-action-icon"><Hand size={24} /></span>
               <span className="pf2-action-label">Interact</span>
             </button>
           </Tooltip>
@@ -239,7 +244,7 @@ export const PF2GameActionPanel = ({
                 }
               }}
             >
-              <span className="pf2-action-icon">🤼</span>
+              <span className="pf2-action-icon"><Hand size={24} /></span>
               <span className="pf2-action-label">Grapple</span>
             </button>
           </Tooltip>
@@ -254,7 +259,7 @@ export const PF2GameActionPanel = ({
                 }
               }}
             >
-              <span className="pf2-action-icon">🦵</span>
+              <span className="pf2-action-icon"><Footprints size={24} /></span>
               <span className="pf2-action-label">Trip</span>
             </button>
           </Tooltip>
@@ -269,7 +274,7 @@ export const PF2GameActionPanel = ({
                 }
               }}
             >
-              <span className="pf2-action-icon">🗡️</span>
+              <span className="pf2-action-icon"><XCircle size={24} /></span>
               <span className="pf2-action-label">Disarm</span>
             </button>
           </Tooltip>
@@ -284,7 +289,7 @@ export const PF2GameActionPanel = ({
                 }
               }}
             >
-              <span className="pf2-action-icon">🎭</span>
+              <span className="pf2-action-icon"><Shuffle size={24} /></span>
               <span className="pf2-action-label">Feint</span>
             </button>
           </Tooltip>
@@ -299,7 +304,7 @@ export const PF2GameActionPanel = ({
                 }
               }}
             >
-              <span className="pf2-action-icon">😱</span>
+              <span className="pf2-action-icon"><AlertTriangle size={24} /></span>
               <span className="pf2-action-label">Demoralize</span>
             </button>
           </Tooltip>
@@ -313,7 +318,7 @@ export const PF2GameActionPanel = ({
                 setShowReadyPanel(!showReadyPanel)
               }}
             >
-              <span className="pf2-action-icon">⚔️</span>
+              <span className="pf2-action-icon"><Hand size={24} /></span>
               <span className="pf2-action-label">Interact</span>
             </button>
           </Tooltip>
@@ -328,7 +333,7 @@ export const PF2GameActionPanel = ({
                   setShowSpellPicker(!showSpellPicker)
                 }}
               >
-                <span className="pf2-action-icon">✨</span>
+                <span className="pf2-action-icon"><Sparkles size={24} /></span>
                 <span className="pf2-action-label">Cast Spell</span>
               </button>
             </Tooltip>
@@ -375,7 +380,7 @@ export const PF2GameActionPanel = ({
               }
             }}
           >
-            <span className="btn-icon">🏳️</span> Give Up
+            <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
         </div>
       </div>
@@ -392,7 +397,7 @@ export const PF2GameActionPanel = ({
       <div className="panel-header">
         <span>{headerText}</span>
         <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
-          {collapsed ? '◀' : '▶'}
+          {collapsed ? <ChevronRight size={20} /> : <Check size={20} className="rotate-180" />}
         </button>
       </div>
       {!collapsed && (

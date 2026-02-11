@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Undo2, SkipForward, Check, RotateCcw, RotateCw } from 'lucide-react'
 import './styles.css'
 
 export type ActionBarProps = {
@@ -151,13 +152,13 @@ export const ActionBarMovementControls = ({
   return (
     <div className="action-bar-movement-controls">
       <ActionBarButton size="small" onClick={onUndo} title="Undo Movement">
-        <ActionBarIcon>↩</ActionBarIcon>
+        <ActionBarIcon><Undo2 size={18} /></ActionBarIcon>
       </ActionBarButton>
       <ActionBarButton size="small" onClick={onSkip} title="Skip Movement">
-        <ActionBarIcon>⏭</ActionBarIcon>
+        <ActionBarIcon><SkipForward size={18} /></ActionBarIcon>
       </ActionBarButton>
       <ActionBarButton size="small" variant="primary" onClick={onConfirm} title="Confirm Movement">
-        <ActionBarIcon>✓</ActionBarIcon>
+        <ActionBarIcon><Check size={18} /></ActionBarIcon>
       </ActionBarButton>
     </div>
   )
@@ -179,10 +180,10 @@ export const ActionBarFacingControls = ({
   return (
     <div className="action-bar-facing">
       <ActionBarButton size="small" onClick={onTurnLeft} title={inMovementPhase ? `Turn Left (${rotationCost} MP)` : 'Turn Left'}>
-        <ActionBarIcon>↶</ActionBarIcon>
+        <ActionBarIcon><RotateCcw size={18} /></ActionBarIcon>
       </ActionBarButton>
       <ActionBarButton size="small" onClick={onTurnRight} title={inMovementPhase ? `Turn Right (${rotationCost} MP)` : 'Turn Right'}>
-        <ActionBarIcon>↷</ActionBarIcon>
+        <ActionBarIcon><RotateCw size={18} /></ActionBarIcon>
       </ActionBarButton>
     </div>
   )

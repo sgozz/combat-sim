@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
+import { ArrowLeft, Pause } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
@@ -170,7 +171,7 @@ export const GameScreen = ({
               }}
               title="Back to Lobby List"
             >
-              <span className="btn-icon">←</span>
+              <ArrowLeft size={18} className="btn-icon" />
               <span className="btn-label">{isSpectating ? 'Stop' : 'Back'}</span>
             </button>
           </div>
@@ -297,7 +298,7 @@ export const GameScreen = ({
       {matchState?.status === 'paused' && (
         <div className="modal-overlay pause-overlay">
           <div className="pause-modal">
-            <div className="pause-icon">⏸</div>
+            <div className="pause-icon"><Pause size={48} /></div>
             <h2>Match Paused</h2>
             <p>
               Waiting for <strong>{matchState.players.find(p => p.id === matchState.pausedForPlayerId)?.name ?? 'player'}</strong> to reconnect...
@@ -307,7 +308,7 @@ export const GameScreen = ({
               className="action-btn secondary pause-leave-btn"
               onClick={onLeaveLobby}
             >
-              ← Back to Lobby
+              <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Back to Lobby
             </button>
           </div>
         </div>

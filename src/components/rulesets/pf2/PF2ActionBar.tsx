@@ -1,4 +1,9 @@
 import { useState, useCallback } from 'react'
+import { 
+  Sword, Footprints, ChevronRight, ArrowUpCircle, ArrowDownCircle, 
+  Hand, Shuffle, AlertTriangle, Sparkles, Flag, 
+  Undo2, SkipForward, Check, Hourglass, Scroll, LogOut, X, User
+} from 'lucide-react'
 import type { ActionBarProps } from '../types'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { isPF2Combatant } from '../../../../shared/rulesets'
@@ -38,7 +43,7 @@ export const PF2ActionBar = ({
   const maxHP = playerCharacter.derived.hitPoints
   const currentHP = playerCombatant.currentHP
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
-  const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
+  const hpColor = hpPercent > 50 ? 'var(--accent-success)' : hpPercent > 25 ? 'var(--accent-warning)' : 'var(--accent-danger)'
   
   const actionsRemaining = playerCombatant.actionsRemaining ?? 3
   
@@ -49,7 +54,7 @@ export const PF2ActionBar = ({
     return (
       <div className="action-bar">
         <button className="action-bar-btn danger" onClick={onLeaveLobby}>
-          <span className="action-bar-icon">🚪</span>
+          <span className="action-bar-icon"><LogOut size={20} /></span>
           <span className="action-bar-label">Leave</span>
         </button>
       </div>
@@ -59,14 +64,14 @@ export const PF2ActionBar = ({
   if (pendingSpellCast) {
     return (
       <div className="action-bar">
-        <div className="action-bar-hint" style={{ flex: 1, color: '#ff6600' }}>
-          🎯 Tap hex to cast {pendingSpellCast.spellName}
+        <div className="action-bar-hint" style={{ flex: 1, color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sparkles size={18} /> Tap hex to cast {pendingSpellCast.spellName}
         </div>
         <button
           className="action-bar-btn danger"
           onClick={() => onSetPendingSpellCast(null)}
         >
-          <span className="action-bar-icon">✕</span>
+          <span className="action-bar-icon"><X size={20} /></span>
           <span className="action-bar-label">Cancel</span>
         </button>
       </div>
@@ -216,7 +221,7 @@ export const PF2ActionBar = ({
 
           <button 
             className="action-bar-maneuver-btn" 
-            style={{ marginTop: '1rem', background: '#4a2a2a', borderColor: '#f44', width: '100%' }}
+            style={{ marginTop: '1rem', background: 'var(--bg-elevated)', borderColor: 'var(--accent-danger)', width: '100%' }}
             onClick={() => {
               if (confirm('Surrender and end the match?')) {
                 onAction('surrender', { type: 'surrender' })
@@ -224,7 +229,7 @@ export const PF2ActionBar = ({
               }
             }}
           >
-            <span className="action-bar-icon">🏳️</span>
+            <span className="action-bar-icon"><Flag size={20} /></span>
             <span className="action-bar-label">Give Up</span>
           </button>
         </div>
@@ -235,7 +240,7 @@ export const PF2ActionBar = ({
           className={`action-bar-btn char-btn ${showCharacterSheet ? 'active' : ''}`}
           onClick={() => setShowCharacterSheet(!showCharacterSheet)}
         >
-          <span className="action-bar-icon">👤</span>
+          <span className="action-bar-icon"><User size={20} /></span>
           <div className="char-btn-hp">
             <div className="char-btn-hp-bar">
               <div 
@@ -269,7 +274,7 @@ export const PF2ActionBar = ({
                 }
               }}
             >
-              <span className="action-bar-icon">⚔️</span>
+              <span className="action-bar-icon"><Sword size={20} /></span>
               <span className="action-bar-label">Strike</span>
             </button>
             <button
@@ -277,7 +282,7 @@ export const PF2ActionBar = ({
               disabled={actionsRemaining === 0}
               onClick={() => onAction('pf2_request_move', { type: 'pf2_request_move', mode: 'stride' })}
             >
-              <span className="action-bar-icon">🏃</span>
+              <span className="action-bar-icon"><Footprints size={20} /></span>
               <span className="action-bar-label">Stride</span>
             </button>
             <button
@@ -285,7 +290,7 @@ export const PF2ActionBar = ({
               disabled={actionsRemaining === 0}
               onClick={() => onAction('pf2_request_move', { type: 'pf2_request_move', mode: 'step' })}
             >
-              <span className="action-bar-icon">👣</span>
+              <span className="action-bar-icon"><ChevronRight size={20} /></span>
               <span className="action-bar-label">Step</span>
             </button>
             {playerCombatant.conditions.some(c => c.condition === 'prone') ? (
@@ -294,7 +299,7 @@ export const PF2ActionBar = ({
                 disabled={actionsRemaining === 0}
                 onClick={() => onAction('pf2_stand', { type: 'pf2_stand' })}
               >
-                <span className="action-bar-icon">🧍</span>
+                <span className="action-bar-icon"><ArrowUpCircle size={20} /></span>
                 <span className="action-bar-label">Stand</span>
               </button>
             ) : (
@@ -304,7 +309,7 @@ export const PF2ActionBar = ({
                 disabled={actionsRemaining === 0}
                 title="Drop to the ground. Costs 1 action."
               >
-                <span className="action-bar-icon">🔻</span>
+                <span className="action-bar-icon"><ArrowDownCircle size={20} /></span>
                 <span className="action-bar-label">Drop</span>
               </button>
             )}
@@ -318,7 +323,7 @@ export const PF2ActionBar = ({
               }}
               title="Grapple (Athletics vs Fortitude)"
             >
-              <span className="action-bar-icon">🤼</span>
+              <span className="action-bar-icon"><Hand size={20} /></span>
               <span className="action-bar-label">Grapple</span>
             </button>
             <button
@@ -331,7 +336,7 @@ export const PF2ActionBar = ({
               }}
               title="Trip (Athletics vs Reflex)"
             >
-              <span className="action-bar-icon">🦵</span>
+              <span className="action-bar-icon"><Footprints size={20} /></span>
               <span className="action-bar-label">Trip</span>
             </button>
             <button
@@ -344,7 +349,7 @@ export const PF2ActionBar = ({
               }}
               title="Feint (Deception vs Perception)"
             >
-              <span className="action-bar-icon">🎭</span>
+              <span className="action-bar-icon"><Shuffle size={20} /></span>
               <span className="action-bar-label">Feint</span>
             </button>
             <button
@@ -357,7 +362,7 @@ export const PF2ActionBar = ({
               }}
               title="Demoralize (Intimidation vs Will)"
             >
-              <span className="action-bar-icon">😱</span>
+              <span className="action-bar-icon"><AlertTriangle size={20} /></span>
               <span className="action-bar-label">Scare</span>
             </button>
             <button
@@ -369,7 +374,7 @@ export const PF2ActionBar = ({
               }}
               title="Interact: Draw or sheathe a weapon (1 action)"
             >
-              <span className="action-bar-icon">⚔️</span>
+              <span className="action-bar-icon"><Sword size={20} /></span>
               <span className="action-bar-label">Interact</span>
             </button>
             {hasSpells && (
@@ -379,7 +384,7 @@ export const PF2ActionBar = ({
                 onClick={() => setShowSpellPicker(true)}
                 title="Cast a spell (requires 2 actions)"
               >
-                <span className="action-bar-icon">✨</span>
+                <span className="action-bar-icon"><Sparkles size={20} /></span>
                 <span className="action-bar-label">Cast Spell</span>
               </button>
             )}
@@ -387,7 +392,7 @@ export const PF2ActionBar = ({
               className="action-bar-btn"
               onClick={() => onAction('end_turn', { type: 'end_turn' })}
             >
-              <span className="action-bar-icon">✓</span>
+              <span className="action-bar-icon"><Hourglass size={20} /></span>
               <span className="action-bar-label">End</span>
             </button>
           </>
@@ -398,46 +403,46 @@ export const PF2ActionBar = ({
               onClick={() => onAction('undo_movement', { type: 'undo_movement' })}
               title="Undo Movement"
             >
-              <span className="action-bar-icon">↩</span>
+              <span className="action-bar-icon"><Undo2 size={16} /></span>
             </button>
             <button
               className="action-bar-btn small"
               onClick={() => onAction('skip_movement', { type: 'skip_movement' })}
               title="Skip Movement"
             >
-              <span className="action-bar-icon">⏭</span>
+              <span className="action-bar-icon"><SkipForward size={16} /></span>
             </button>
             <button
               className="action-bar-btn primary small"
               onClick={() => onAction('confirm_movement', { type: 'confirm_movement' })}
               title="Confirm Movement"
             >
-              <span className="action-bar-icon">✓</span>
+              <span className="action-bar-icon"><Check size={16} /></span>
             </button>
           </div>
         )}
-        <button
-          className={`action-bar-btn ${showCombatLog ? 'active' : ''}`}
-          onClick={() => {
-            if (!showCombatLog) {
-              closeAllPanels()
-            }
-            setShowCombatLog(!showCombatLog)
-          }}
-        >
-          <span className="action-bar-icon">📜</span>
-          <span className="action-bar-label">Log</span>
-        </button>
-      </div>
+          <button
+            className={`action-bar-btn ${showCombatLog ? 'active' : ''}`}
+            onClick={() => {
+              if (!showCombatLog) {
+                closeAllPanels()
+              }
+              setShowCombatLog(!showCombatLog)
+            }}
+          >
+            <span className="action-bar-icon"><Scroll size={20} /></span>
+            <span className="action-bar-label">Log</span>
+          </button>
+        </div>
 
-      {showCombatLog && (
-        <>
-          <div className="action-bar-backdrop" onClick={() => setShowCombatLog(false)} />
-          <div className="action-bar-combat-log">
-            <div className="action-bar-combat-log-header">
-              <span>Combat Log</span>
-              <button className="action-bar-combat-log-close" onClick={() => setShowCombatLog(false)}>✕</button>
-            </div>
+        {showCombatLog && (
+          <>
+            <div className="action-bar-backdrop" onClick={() => setShowCombatLog(false)} />
+            <div className="action-bar-combat-log">
+              <div className="action-bar-combat-log-header">
+                <span>Combat Log</span>
+                <button className="action-bar-combat-log-close" onClick={() => setShowCombatLog(false)}><X size={16} /></button>
+              </div>
             <div className="action-bar-combat-log-entries">
               {(logs ?? []).length === 0 ? (
                 <div className="action-bar-combat-log-empty">No log entries yet.</div>
