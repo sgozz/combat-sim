@@ -44,6 +44,7 @@ const renderDashboard = (user: User = gurpsUser, myMatches: MatchSummary[] = [])
       <Dashboard
         user={user}
         myMatches={myMatches}
+        matchStats={null}
         publicMatches={[]}
         refreshMyMatches={refreshMyMatches}
         fetchPublicMatches={fetchPublicMatches}

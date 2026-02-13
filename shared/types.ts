@@ -106,6 +106,12 @@ export type MatchSummary = {
    mapBiome?: BiomeId;
 };
 
+export type UserMatchStats = {
+  totalMatches: number;
+  wins: number;
+  losses: number;
+};
+
 export type ClientToServerMessage =
    | { type: "register"; username: string; preferredRulesetId?: RulesetId }
    | { type: "auth"; sessionToken: string }
@@ -145,7 +151,7 @@ export type PendingAction =
 export type ServerToClientMessage =
     | { type: "auth_ok"; user: User; sessionToken: string; activeMatches?: MatchSummary[] }
     | { type: "session_invalid" }
-    | { type: "my_matches"; matches: MatchSummary[] }
+    | { type: "my_matches"; matches: MatchSummary[]; stats?: UserMatchStats }
     | { type: "public_matches"; matches: MatchSummary[] }
     | { type: "match_created"; match: MatchSummary }
     | { type: "match_joined"; matchId: Id; readyPlayers?: string[] }

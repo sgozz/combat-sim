@@ -115,6 +115,13 @@ export const initializeDatabase = (): BetterSqliteDatabase => {
     db.exec("ALTER TABLE users ADD COLUMN preferred_ruleset_id TEXT NOT NULL DEFAULT 'gurps'");
   }
 
+  // Migration: Add dismissed column to match_members table
+  const memberColumns = db.prepare("PRAGMA table_info(match_members)").all() as { name: string }[];
+  const hasDismissed = memberColumns.some((column) => column.name === 'dismissed');
+  if (!hasDismissed) {
+    db.exec("ALTER TABLE match_members ADD COLUMN dismissed INTEGER NOT NULL DEFAULT 0");
+  }
+
   return db;
 };
 
@@ -321,7 +328,7 @@ export const getUserMatches = (userId: string, rulesetId?: string): MatchRow[] =
       `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
        FROM matches m
        INNER JOIN match_members mm ON m.id = mm.match_id
-       WHERE mm.user_id = ?
+       WHERE mm.user_id = ? AND mm.dismissed = 0
        ORDER BY m.created_at DESC`
     ).all(userId) as MatchRow[];
   }
@@ -330,7 +337,7 @@ export const getUserMatches = (userId: string, rulesetId?: string): MatchRow[] =
     `SELECT m.id, m.code, m.name, m.max_players, m.status, m.state_json, m.created_by, m.winner_id, m.ruleset_id, m.created_at, m.finished_at
      FROM matches m
      INNER JOIN match_members mm ON m.id = mm.match_id
-     WHERE mm.user_id = ? AND (m.ruleset_id = ? OR m.status IN ('active', 'paused', 'finished'))
+     WHERE mm.user_id = ? AND mm.dismissed = 0 AND (m.ruleset_id = ? OR m.status IN ('active', 'paused', 'finished'))
      ORDER BY m.created_at DESC`
   ).all(userId, rulesetId) as MatchRow[];
 };
@@ -339,6 +346,25 @@ export const removeMatchMember = (matchId: string, userId: string): void => {
   state.db.prepare(
     "DELETE FROM match_members WHERE match_id = ? AND user_id = ?"
   ).run(matchId, userId);
+};
+
+export const dismissMatchMember = (matchId: string, userId: string): void => {
+  state.db.prepare(
+    "UPDATE match_members SET dismissed = 1 WHERE match_id = ? AND user_id = ?"
+  ).run(matchId, userId);
+};
+
+export const getUserMatchStats = (userId: string): { totalMatches: number; wins: number; losses: number } => {
+  const row = state.db.prepare(
+    `SELECT
+       COUNT(*) as totalMatches,
+       SUM(CASE WHEN m.winner_id = ? THEN 1 ELSE 0 END) as wins,
+       SUM(CASE WHEN m.winner_id IS NOT NULL AND m.winner_id != ? THEN 1 ELSE 0 END) as losses
+     FROM matches m
+     INNER JOIN match_members mm ON m.id = mm.match_id
+     WHERE mm.user_id = ? AND m.status = 'finished'`
+  ).get(userId, userId, userId) as { totalMatches: number; wins: number; losses: number } | undefined;
+  return row ?? { totalMatches: 0, wins: 0, losses: 0 };
 };
 
 export const getMatchMemberCount = (matchId: string): number => {
