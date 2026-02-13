@@ -34,25 +34,30 @@ const renderDashboard = (user: User = gurpsUser, myMatches: MatchSummary[] = [])
   const onCreateMatch = vi.fn()
   const onJoinByCode = vi.fn()
   const onSelectMatch = vi.fn()
+  const onDismissMatch = vi.fn()
   const setPreferredRuleset = vi.fn()
   const refreshMyMatches = vi.fn()
+  const fetchPublicMatches = vi.fn()
 
   render(
     <MemoryRouter>
       <Dashboard
         user={user}
         myMatches={myMatches}
+        publicMatches={[]}
         refreshMyMatches={refreshMyMatches}
+        fetchPublicMatches={fetchPublicMatches}
         onLogout={onLogout}
         onCreateMatch={onCreateMatch}
         onJoinByCode={onJoinByCode}
         onSelectMatch={onSelectMatch}
+        onDismissMatch={onDismissMatch}
         setPreferredRuleset={setPreferredRuleset}
       />
     </MemoryRouter>,
   )
 
-  return { onLogout, onCreateMatch, onJoinByCode, onSelectMatch, setPreferredRuleset, refreshMyMatches }
+  return { onLogout, onCreateMatch, onJoinByCode, onSelectMatch, onDismissMatch, setPreferredRuleset, refreshMyMatches, fetchPublicMatches }
 }
 
 describe('Dashboard', () => {

@@ -153,7 +153,7 @@ export const LobbyScreen = ({
     } else {
       navigate('/armory')
     }
-  }, [navigate, match])
+  }, [navigate, match, user])
 
   if (!match) {
     return (

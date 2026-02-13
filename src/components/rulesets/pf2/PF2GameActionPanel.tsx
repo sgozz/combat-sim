@@ -80,7 +80,7 @@ export const PF2GameActionPanel = ({
       targetId: selectedTargetId ?? undefined
     })
     setShowSpellPicker(false)
-  }, [selectedTargetId, onAction])
+  }, [selectedTargetId, onAction, onSetPendingSpellCast])
 
   const renderContent = () => {
     if (pendingSpellCast) {

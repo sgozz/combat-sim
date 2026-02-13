@@ -60,11 +60,11 @@ const FALLBACK_CONFIG: Record<string, { color: string; geometry: 'box' | 'cylind
 }
 
 export const EnvironmentProps = ({ mapDefinition, gridType }: EnvironmentPropsProps) => {
-  if (!mapDefinition) return null
-
   const gridSystem = gridType === 'square' ? squareGrid8 : hexGrid
 
   const propGroups = useMemo(() => {
+    if (!mapDefinition) return []
+
     const groups = new Map<string, PropGroup>()
 
     for (const cell of mapDefinition.cells) {
@@ -91,6 +91,8 @@ export const EnvironmentProps = ({ mapDefinition, gridType }: EnvironmentPropsPr
 
     return Array.from(groups.values())
   }, [mapDefinition, gridSystem])
+
+  if (!mapDefinition) return null
 
   return (
     <group>
@@ -157,7 +159,10 @@ const GLTFPropRenderer = ({ group }: { group: PropGroup }) => {
 
 const FallbackPropRenderer = ({ group }: { group: PropGroup }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null)
-  const config = FALLBACK_CONFIG[group.propId] ?? { color: '#FF00FF', geometry: 'box', dims: [0.5, 0.5, 0.5] }
+  const config = useMemo(
+    () => FALLBACK_CONFIG[group.propId] ?? { color: '#FF00FF', geometry: 'box' as const, dims: [0.5, 0.5, 0.5] as [number, number, number] },
+    [group.propId]
+  )
 
   const geometry = useMemo(() => {
     switch (config.geometry) {

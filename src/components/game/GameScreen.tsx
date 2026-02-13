@@ -80,9 +80,12 @@ export const GameScreen = ({
     const activeTurnId = matchState?.activeTurnPlayerId ?? null
     if (activeTurnId && activeTurnId !== prevActiveTurnRef.current) {
       prevActiveTurnRef.current = activeTurnId
-      setCameraMode('follow')
-      const timer = setTimeout(() => setCameraMode('free'), 1500)
-      return () => clearTimeout(timer)
+      const followTimer = setTimeout(() => setCameraMode('follow'), 0)
+      const freeTimer = setTimeout(() => setCameraMode('free'), 1500)
+      return () => {
+        clearTimeout(followTimer)
+        clearTimeout(freeTimer)
+      }
     }
   }, [matchState?.activeTurnPlayerId])
 
