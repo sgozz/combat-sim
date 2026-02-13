@@ -59,6 +59,7 @@ export type ReachableHexInfo = {
   r: number;
   cost: number;
   finalFacing: number;
+  path?: { q: number; r: number }[];
 };
 
 export type MatchStatus = "waiting" | "active" | "paused" | "finished";

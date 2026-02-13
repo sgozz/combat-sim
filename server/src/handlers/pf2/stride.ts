@@ -36,7 +36,7 @@ export const handlePF2RequestMove = async (
     .filter(c => c.playerId !== player.id)
     .map(c => gridToHex(c.position));
 
-  let reachable: Map<string, { position: { q: number; r: number }; cost: number }>;
+  let reachable: Map<string, { position: { q: number; r: number }; cost: number; path?: { q: number; r: number }[] }>;
   
   if (mode === 'step') {
     const adjacent = [
@@ -56,7 +56,7 @@ export const handlePF2RequestMove = async (
       .filter(pos => !isBlocked(match.mapDefinition, pos.q, pos.r))
       .forEach(pos => {
         const key = `${pos.q},${pos.r}`;
-        reachable.set(key, { position: pos, cost: 5 });
+        reachable.set(key, { position: pos, cost: 5, path: [startPos, pos] });
       });
   } else {
     reachable = getReachableSquares(startPos, speed, occupiedSquares, match.mapDefinition);
@@ -69,6 +69,7 @@ export const handlePF2RequestMove = async (
       r: cell.position.r,
       cost: cell.cost,
       finalFacing: 0,
+      path: cell.path,
     });
   });
 

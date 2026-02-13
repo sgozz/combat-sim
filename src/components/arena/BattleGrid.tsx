@@ -31,6 +31,7 @@ type BattleGridProps = {
   onHexClick: (q: number, r: number) => void
   mapDefinition?: MapDefinition
   spellTargetArea?: SpellTargetArea
+  activeMovementPath?: GridPosition[]
 }
 
 type ArcType = 'front' | 'side' | 'rear' | 'none'
@@ -238,6 +239,7 @@ export const BattleGrid = ({
   onHexClick,
   mapDefinition,
   spellTargetArea,
+  activeMovementPath,
 }: BattleGridProps) => {
   const [hoveredCell, setHoveredCell] = useState<{q: number, r: number} | null>(null)
   const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
@@ -249,6 +251,28 @@ export const BattleGrid = ({
     })
     return map
   }, [reachableHexes])
+
+  const hoverPathCells = useMemo(() => {
+    const set = new Set<string>()
+    if (!hoveredCell || !isPlayerTurn) return set
+    const reachable = reachableMap.get(`${hoveredCell.q},${hoveredCell.r}`)
+    if (reachable?.path) {
+      const pathWithoutStart = reachable.path.slice(1)
+      for (const cell of pathWithoutStart) {
+        set.add(`${cell.q},${cell.r}`)
+      }
+    }
+    return set
+  }, [hoveredCell, isPlayerTurn, reachableMap])
+
+  const activePathCells = useMemo(() => {
+    const set = new Set<string>()
+    if (!activeMovementPath) return set
+    for (const p of activeMovementPath) {
+      set.add(`${p.x},${p.z}`)
+    }
+    return set
+  }, [activeMovementPath])
 
   const spellAreaHexes = useMemo(() => {
     if (!spellTargetArea || !hoveredCell) return new Set<string>()
@@ -357,9 +381,20 @@ export const BattleGrid = ({
           isHovered, reachableHex, gridSystem, mapDefinition
         )
         
-        const isInSpellArea = spellAreaHexes.has(`${q},${r}`)
+        const cellKey = `${q},${r}`
+        const isInSpellArea = spellAreaHexes.has(cellKey)
         if (isInSpellArea) {
           style = { ...style, emissive: '#ff6600', emissiveIntensity: 0.6, edgeColor: '#ff4400', edgeOpacity: 0.9 }
+        }
+
+        const isInActivePath = activePathCells.has(cellKey)
+        if (isInActivePath) {
+          style = { ...style, emissive: '#00aaff', emissiveIntensity: 0.5, edgeColor: '#00ccff', edgeOpacity: 0.9, elevation: 0.01 }
+        }
+
+        const isInHoverPath = hoverPathCells.has(cellKey)
+        if (isInHoverPath && !isInActivePath) {
+          style = { ...style, emissive: '#44ff88', emissiveIntensity: 0.35, edgeColor: '#66ffaa', edgeOpacity: 0.8, elevation: 0 }
         }
 
         const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)
