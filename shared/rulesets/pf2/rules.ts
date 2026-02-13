@@ -607,6 +607,7 @@ export const calculateReachableHexesInfo = (
       r: cell.position.r,
       cost: cell.cost,
       finalFacing: state.currentFacing,
+      path: cell.path,
     });
   });
   

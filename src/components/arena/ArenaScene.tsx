@@ -128,7 +128,9 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     return maxRange
   }, [playerCombatant, characters])
 
-   const facingArcs = useMemo(() => {
+   const activeMovementPath = activeCombatant?.movementPath
+
+  const facingArcs = useMemo(() => {
      const emptyArcs = { front: [], side: [], rear: [] }
      if (!playerCombatant?.position) return emptyArcs
      if (!getServerAdapter(rulesetId).hasFacingArcs) return emptyArcs
@@ -190,6 +192,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
         reachableHexes={reachableHexes}
         mapDefinition={mapDefinition}
         spellTargetArea={spellTargetArea}
+        activeMovementPath={activeMovementPath}
         onHexClick={(q: number, r: number) => {
           const enemyAtHex = combatants.find(c => c.playerId !== playerId && c.position.x === q && c.position.z === r)
           if (enemyAtHex) {
