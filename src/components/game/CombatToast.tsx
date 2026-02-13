@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useGameContext } from '../../contexts/GameContext'
 
 type ToastType = 'attack' | 'defend' | 'damage' | 'death' | 'info' | 'my-turn' | 'opponent-turn' | 'error'
 
@@ -6,13 +7,6 @@ type Toast = {
   id: string
   message: string
   type: ToastType
-}
-
-type CombatToastProps = {
-  logs: string[]
-  activeTurnPlayerId?: string
-  currentPlayerId?: string
-  players?: { id: string; name: string; isBot?: boolean }[]
 }
 
 const getToastType = (message: string): ToastType => {
@@ -38,7 +32,11 @@ const getToastIcon = (type: ToastType): string => {
   }
 }
 
-export const CombatToast = ({ logs, activeTurnPlayerId, currentPlayerId, players }: CombatToastProps) => {
+export const CombatToast = () => {
+  const { matchState, player, logs } = useGameContext()
+  const activeTurnPlayerId = matchState?.activeTurnPlayerId
+  const currentPlayerId = player?.id
+  const players = matchState?.players
   const [toasts, setToasts] = useState<Toast[]>([])
   const initialLogCount = useRef(logs.length)
   const lastLogCount = useRef(logs.length)

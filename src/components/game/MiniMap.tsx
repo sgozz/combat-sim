@@ -1,13 +1,8 @@
 import { useMemo } from 'react'
 import type { GridType } from '../../../shared/grid'
-import type { MatchState } from '../../../shared/types'
 import { getGridType } from '../../../shared/rulesets'
 import { isBlocked, isDifficultTerrain, hasCover } from '../../../shared/map/terrain'
-
-type MiniMapProps = {
-  matchState: MatchState | null
-  playerId: string | null
-}
+import { useGameContext } from '../../contexts/GameContext'
 
 const CELL_SIZE = 4
 const MAP_SIZE = 150
@@ -72,7 +67,9 @@ function getSquarePoints(x: number, y: number, size: number) {
   return `${x - half},${y - half} ${x + half},${y - half} ${x + half},${y + half} ${x - half},${y + half}`
 }
 
-export const MiniMap = ({ matchState, playerId }: MiniMapProps) => {
+export const MiniMap = () => {
+  const { matchState, player } = useGameContext()
+  const playerId = player?.id ?? null
   const gridType: GridType = matchState ? getGridType(matchState.rulesetId) : 'hex'
   const toPixel = gridType === 'hex' ? hexToPixel : squareToPixel
   

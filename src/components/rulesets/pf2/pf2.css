@@ -1,0 +1,696 @@
+/* PF2 Action Economy UI */
+.pf2-action-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pf2-actions {
+  display: flex;
+  gap: 0.25rem;
+  font-size: 1.2rem;
+}
+
+.pf2-action-dot {
+  transition: opacity 0.2s;
+}
+
+.pf2-action-dot.available {
+  color: #4caf50;
+}
+
+.pf2-action-dot.used {
+  color: #333;
+}
+
+.pf2-map-indicator {
+  font-size: 0.85rem;
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.pf2-status-section {
+  background: rgba(30, 30, 40, 0.8);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #333;
+}
+
+.pf2-actions-display,
+.pf2-map-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.pf2-actions-display:last-child,
+.pf2-map-display:last-child {
+  margin-bottom: 0;
+}
+
+.pf2-label {
+  color: #888;
+  font-size: 0.85rem;
+  min-width: 80px;
+}
+
+.pf2-action-icons {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 1.1rem;
+}
+
+.pf2-action-icon.available {
+  color: #4caf50;
+}
+
+.pf2-action-icon.used {
+  color: #444;
+}
+
+.pf2-map-value {
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.action-bar-pf2-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0 0.5rem;
+  font-size: 1rem;
+}
+
+.pf2-action-pip.available {
+  color: #4caf50;
+}
+
+.pf2-action-pip.used {
+  color: #444;
+}
+
+.pf2-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card:has(.pf2-action-panel) {
+  padding: 0.5rem;
+}
+
+.pf2-action-panel .pf2-action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.pf2-actions-remaining {
+  display: flex;
+  gap: 0.3rem;
+  font-size: 1.5rem;
+}
+
+.pf2-actions-remaining .pf2-action-pip {
+  transition: color 0.2s;
+}
+
+.pf2-map-badge {
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 100, 0, 0.15);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.pf2-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 0.4rem;
+}
+
+.pf2-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 6px 8px;
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #2a2a35 0%, #1a1a25 100%);
+  border: 2px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  white-space: normal;
+}
+
+.pf2-action-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3a3a45 0%, #2a2a35 100%);
+  border-color: #666;
+  transform: translateY(-2px);
+}
+
+.pf2-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pf2-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pf2-action-btn.strike {
+  border-color: #c45;
+}
+
+.pf2-action-btn.strike:hover:not(:disabled) {
+  border-color: #f67;
+  box-shadow: 0 0 10px rgba(200, 70, 90, 0.3);
+}
+
+.pf2-action-btn.stride {
+  border-color: #4a8;
+}
+
+.pf2-action-btn.stride:hover:not(:disabled) {
+  border-color: #6ca;
+  box-shadow: 0 0 10px rgba(70, 170, 130, 0.3);
+}
+
+.pf2-action-btn.raise-shield {
+  border-color: #68a;
+}
+
+.pf2-action-btn.raise-shield:hover:not(:disabled) {
+  border-color: #8ac;
+  box-shadow: 0 0 10px rgba(100, 130, 170, 0.3);
+}
+
+.pf2-action-btn.interact {
+  border-color: #a86;
+}
+
+.pf2-action-btn.interact:hover:not(:disabled) {
+  border-color: #ca8;
+  box-shadow: 0 0 10px rgba(170, 130, 100, 0.3);
+}
+
+.pf2-action-btn.needs-target {
+  border-style: dashed;
+}
+
+.pf2-action-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.pf2-action-label {
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.pf2-action-target {
+  font-size: 0.65rem;
+  color: #aaa;
+}
+
+.pf2-action-btn.cast-spell {
+  border-color: #a6c;
+}
+
+.pf2-action-btn.cast-spell:hover:not(:disabled) {
+  border-color: #c8e;
+  box-shadow: 0 0 10px rgba(170, 100, 200, 0.3);
+}
+
+.pf2-action-btn.cast-spell.active {
+  background: linear-gradient(135deg, #3a2a45 0%, #2a1a35 100%);
+  border-color: #c8e;
+  box-shadow: 0 0 12px rgba(170, 100, 200, 0.4);
+}
+
+.pf2-spell-picker-desktop {
+  margin-top: 0.5rem;
+  border: 1px solid #555;
+  border-radius: 8px;
+  background: rgba(30, 30, 40, 0.95);
+  overflow: hidden;
+}
+
+.pf2-spell-picker-desktop .spell-picker {
+  display: flex;
+  flex-direction: column;
+  position: static;
+  max-height: 50vh;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  animation: none;
+}
+
+.pf2-spell-picker-desktop .spell-picker-header {
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.pf2-spell-picker-desktop .spell-picker-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.pf2-spell-picker-desktop .spell-picker-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: white;
+  font-size: 0.8rem;
+}
+
+.pf2-spell-picker-desktop .spell-picker-tabs {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.pf2-spell-picker-desktop .spell-picker-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.pf2-spell-picker-desktop .spell-picker-tab {
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: #aaa;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pf2-spell-picker-desktop .spell-picker-tab.active {
+  background: #4a3a6a;
+  border-color: #8a6aba;
+  color: #e8d8ff;
+}
+
+.pf2-spell-picker-desktop .spell-picker-tab.depleted {
+  opacity: 0.4;
+}
+
+.pf2-spell-picker-desktop .spell-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.3rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: 35vh;
+}
+
+.pf2-spell-picker-desktop .spell-card-wrapper {
+  display: contents;
+}
+
+.pf2-spell-picker-desktop .spell-card-wrapper.expanded {
+  display: flex;
+  flex-direction: column;
+  grid-column: 1 / -1;
+}
+
+.pf2-spell-picker-desktop .spell-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.3rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ccc;
+  cursor: pointer;
+  min-height: 44px;
+  text-align: center;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  font-size: 0.75rem;
+  position: relative;
+}
+
+.pf2-spell-picker-desktop .spell-card:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pf2-spell-picker-desktop .spell-card:not(:disabled):hover {
+  background: #3a3a4a;
+  border-color: #666;
+}
+
+.pf2-spell-picker-desktop .spell-card-active {
+  border-color: #8a6aba;
+  background: #3a2a55;
+}
+
+.pf2-spell-picker-desktop .spell-card-actions {
+  font-size: 0.65rem;
+}
+
+.pf2-spell-picker-desktop .spell-card-name {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.pf2-spell-picker-desktop .spell-card-heighten {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.6rem;
+  opacity: 0.6;
+  color: #c8e;
+}
+
+.pf2-spell-picker-desktop .spell-card-manual {
+  border-left: 3px solid rgba(255, 165, 0, 0.5);
+}
+
+.pf2-spell-picker-desktop .spell-card-manual-label {
+  font-size: 0.6rem;
+  color: orange;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-inline {
+  grid-column: 1 / -1;
+  background: rgba(60, 40, 80, 0.4);
+  border: 1px solid #6a4a9a;
+  border-radius: 6px;
+  padding: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #c8b8e8;
+  margin-bottom: 0.3rem;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.3rem 0.5rem;
+  background: #2a2a3a;
+  border: 1px solid #555;
+  border-radius: 5px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.15s ease;
+  min-width: 44px;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-btn:not(:disabled):hover {
+  background: #4a3a6a;
+  border-color: #8a6aba;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-level {
+  font-weight: 600;
+  color: #e8d8ff;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-slots {
+  font-size: 0.6rem;
+  color: #aaa;
+}
+
+.pf2-spell-picker-desktop .spell-heighten-damage {
+  font-size: 0.6rem;
+  color: #f88;
+}
+
+.pf2-turn-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #333;
+}
+
+.pf2-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pf2-class {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #c9a227;
+  text-transform: capitalize;
+}
+
+.pf2-level {
+  font-size: 0.9rem;
+  color: #888;
+  padding: 0.2rem 0.5rem;
+  background: rgba(100, 100, 100, 0.2);
+  border-radius: 4px;
+}
+
+.pf2-class-btn {
+  text-transform: capitalize;
+}
+
+.pf2-class-btn.active {
+  background: linear-gradient(135deg, #c9a227 0%, #8b6914 100%);
+  border-color: #c9a227;
+  color: #000;
+}
+
+.pf2-attr-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.pf2-derived-grid {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+}
+
+.pf2-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(50, 50, 60, 0.5);
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+.pf2-stat .stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pf2-stat .stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay,
+  .defense-modal-overlay {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+  }
+
+  .defense-modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+  }
+
+  .pending-action-modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    width: calc(100% - var(--space-md) * 2);
+    margin: 0 var(--space-md);
+  }
+
+  .pause-modal {
+    max-height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    width: calc(100% - var(--space-md) * 2);
+    padding: 1.5rem;
+  }
+
+  .pending-action-buttons {
+    flex-direction: column;
+  }
+
+  .pending-action-buttons button {
+    min-height: 44px;
+  }
+}
+
+.match-end-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.match-end-card {
+  background: linear-gradient(135deg, rgba(30, 30, 40, 0.95) 0%, rgba(20, 20, 30, 0.98) 100%);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.match-end-title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.match-end-overlay.victory .match-end-title {
+  color: var(--success-color);
+  text-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+}
+
+.match-end-overlay.defeat .match-end-title {
+  color: var(--danger-color);
+  text-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
+}
+
+.match-end-overlay.draw .match-end-title {
+  color: var(--text-secondary);
+  text-shadow: 0 0 20px rgba(158, 158, 158, 0.4);
+}
+
+.match-end-message {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  margin: 0 0 2.5rem 0;
+}
+
+.match-end-btn {
+  font-size: 1.1rem;
+  padding: 0.875rem 2.5rem;
+  min-width: 200px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+  .match-end-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .match-end-title {
+    font-size: 2rem;
+  }
+
+  .match-end-message {
+    font-size: 1rem;
+  }
+}
+
