@@ -74,7 +74,7 @@ export const GameScreen = ({
   void matchId
 
   // Auto-center camera on turn change
-  const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
+  const [cameraMode, setCameraMode] = useState<'free' | 'follow'>('free')
   const prevActiveTurnRef = useRef<string | null>(null)
 
   useEffect(() => {

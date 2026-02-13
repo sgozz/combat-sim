@@ -5,7 +5,7 @@ import { Vector3 } from 'three'
 import { hexToWorld } from '../../utils/hex'
 import type { GridPosition } from '../../../shared/types'
 
-export type CameraMode = 'free' | 'follow' | 'overview'
+export type CameraMode = 'free' | 'follow'
 
 interface OrbitControlsLike {
   enabled: boolean
@@ -15,11 +15,10 @@ interface OrbitControlsLike {
 
 type CameraControlsProps = {
   targetPosition: GridPosition | null
-  focusPositions: GridPosition[]
   mode: CameraMode
 }
 
-export const CameraControls = ({ targetPosition, focusPositions, mode }: CameraControlsProps) => {
+export const CameraControls = ({ targetPosition, mode }: CameraControlsProps) => {
   const controls = useThree((state) => state.controls) as unknown as OrbitControlsLike | null
   const { camera } = useThree()
   
@@ -45,23 +44,10 @@ export const CameraControls = ({ targetPosition, focusPositions, mode }: CameraC
     const speed = GENTLE_SUGGESTION_SPEED * delta
     const target = followTarget.current
 
-    if (mode === 'follow') {
-      const offset = new Vector3(8, 10, 8)
-      const targetCamPos = target.clone().add(offset)
-      camera.position.lerp(targetCamPos, speed)
-      controls.target.lerp(target, speed)
-    } else if (mode === 'overview' && focusPositions.length > 0) {
-      const worldPoints = focusPositions.map((pos) => {
-        const [wx, wz] = hexToWorld(pos.x, pos.z)
-        return new Vector3(wx, 0, wz)
-      })
-      const center = worldPoints.reduce((acc, cur) => acc.add(cur), new Vector3()).multiplyScalar(1 / worldPoints.length)
-      const maxDistance = worldPoints.reduce((max, cur) => Math.max(max, cur.distanceTo(center)), 0)
-      const height = Math.max(12, maxDistance * 2 + 6)
-      const overviewPos = center.clone().add(new Vector3(maxDistance, height, maxDistance))
-      camera.position.lerp(overviewPos, speed)
-      controls.target.lerp(center, speed)
-    }
+    const offset = new Vector3(8, 10, 8)
+    const targetCamPos = target.clone().add(offset)
+    camera.position.lerp(targetCamPos, speed)
+    controls.target.lerp(target, speed)
     
     camera.lookAt(controls.target)
   })
