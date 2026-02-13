@@ -7,6 +7,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: ['codevm', 'codevm.fritz.box'],
+    proxy: {
+      '/ws': {
+        target: 'http://127.0.0.1:8080',
+        ws: true,
+        rewriteWsOrigin: true,
+      },
+    },
   },
   // @ts-expect-error vitest config extends vite config
   test: {
