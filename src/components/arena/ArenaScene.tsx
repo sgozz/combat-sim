@@ -12,7 +12,8 @@ import type { CombatantState } from '../../../shared/rulesets'
 import type { MapDefinition } from '../../../shared/map/types'
 import { isPF2Character, isGurpsCharacter } from '../../../shared/rulesets/characterSheet'
 import { getGridType, getServerAdapter } from '../../../shared/rulesets'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 type ArenaSceneProps = {
   combatants: CombatantState[]
@@ -69,13 +70,7 @@ const FloatingText = ({ effect, rulesetId }: { effect: VisualEffect; rulesetId: 
 }
 
 export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerId, moveTarget, selectedTargetId, isPlayerTurn, reachableHexes, visualEffects, cameraMode, rulesetId, mapDefinition, spellTargetArea, onGridClick, onCombatantClick }: ArenaSceneProps) => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
-  
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const isMobile = useIsMobile()
 
   const playerCombatant = combatants.find(c => c.playerId === playerId)
   const playerPosition = playerCombatant?.position ?? null

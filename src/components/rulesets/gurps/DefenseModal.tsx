@@ -1,22 +1,17 @@
-import { useState, useMemo } from 'react';
 import type { 
   CharacterSheet, 
   RulesetId
 } from '../../../../shared/types';
 import type {
-  PendingDefense, 
+  PendingDefense,
   DefenseType, 
   DefenseChoice,
 } from '../../../../shared/rulesets/gurps/types';
 import type { CombatantState } from '../../../../shared/rulesets';
-import { 
-   getDefenseOptions, 
-   calculateDefenseValue, 
-   getPostureModifiers 
- } from '../../../../shared/rulesets/gurps/rules';
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots';
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet';
 import { isGurpsCombatant } from '../../../../shared/rulesets';
+import { useDefenseOptions } from '../../../hooks/useDefenseOptions';
 
 export type DefenseModalProps = {
   pendingDefense: PendingDefense;
@@ -50,49 +45,27 @@ export default function DefenseModal({
   onDefend,
   rulesetId,
 }: DefenseModalProps) {
-  const [retreat, setRetreat] = useState(false);
-  const [dodgeAndDrop, setDodgeAndDrop] = useState(false);
+  const gurpsChar = isGurpsCharacter(character) ? character : null;
+  const gurpsCombatant = isGurpsCombatant(combatant) ? combatant : null;
+  const { options: defenseOpts, retreat, setRetreat, dodgeAndDrop, setDodgeAndDrop } = useDefenseOptions(
+    gurpsChar, gurpsCombatant, pendingDefense
+  );
 
-  const baseOptions = useMemo(() => {
-    if (!isGurpsCharacter(character)) return null;
-    const derivedDodge = character.derived.dodge;
-    return getDefenseOptions(character, derivedDodge);
-  }, [character]);
-
-  if (!isGurpsCharacter(character) || !isGurpsCombatant(combatant) || !baseOptions) {
+  if (!gurpsChar || !gurpsCombatant || !defenseOpts) {
     return null;
   }
 
-  // Calculate final values based on current modifiers
-  const getFinalValue = (type: Exclude<DefenseType, 'none'>, base: number, weaponName?: string) => {
-    const postureMods = getPostureModifiers(combatant.posture);
-    const sameWeaponParry = type === 'parry' && weaponName 
-      ? (combatant.parryWeaponsUsedThisTurn ?? []).includes(weaponName)
-      : false;
-    
-    return calculateDefenseValue(base, {
-      retreat,
-      dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
-      inCloseCombat,
-      defensesThisTurn: combatant.defensesThisTurn,
-      deceptivePenalty: pendingDefense.deceptivePenalty,
-      postureModifier: postureMods.defenseVsMelee,
-      defenseType: type,
-      sameWeaponParry
-    });
-  };
-
   const getSlotForDefense = (defenseName: string | undefined) => {
     if (!defenseName) return null;
-    const item = character.equipment.find((e: typeof character.equipment[0]) => e.name === defenseName);
+    const item = gurpsChar.equipment.find((e: typeof gurpsChar.equipment[0]) => e.name === defenseName);
     if (!item) return null;
-    const equipped = combatant.equipped.find((e: typeof combatant.equipped[0]) => e.equipmentId === item.id);
+    const equipped = gurpsCombatant.equipped.find((e: typeof gurpsCombatant.equipped[0]) => e.equipmentId === item.id);
     return equipped ? equipped.slot.replace('_', ' ') : null;
   };
 
-  const dodgeValue = getFinalValue('dodge', baseOptions.dodge);
-  const parryValue = baseOptions.parry ? getFinalValue('parry', baseOptions.parry.value, baseOptions.parry.weapon) : 0;
-  const blockValue = baseOptions.block ? getFinalValue('block', baseOptions.block.value) : 0;
+  const dodgeValue = defenseOpts.dodge;
+  const parryValue = defenseOpts.parry?.value ?? 0;
+  const blockValue = defenseOpts.block?.value ?? 0;
 
   const slots = getRulesetUiSlots(rulesetId);
   const slotDefense = slots.renderDefenseOptions?.({
@@ -112,8 +85,7 @@ export default function DefenseModal({
     });
   };
 
-  const retreatDisabled = combatant.retreatedThisTurn;
-  const canRetreat = !retreatDisabled;
+  const canRetreat = defenseOpts.canRetreat;
 
   if (slotDefense) {
     return <>{slotDefense}</>;
@@ -161,16 +133,16 @@ export default function DefenseModal({
               </div>
               <span>{getSuccessChance(dodgeValue).toFixed(1)}%</span>
             </div>
-            <div className="defense-sub">Base: {baseOptions.dodge}</div>
+            <div className="defense-sub">Base: {defenseOpts.baseDodge}</div>
           </button>
 
           <button 
-            className={`defense-card parry ${!baseOptions.parry ? 'disabled' : ''}`}
-            onClick={() => baseOptions.parry && handleDefend('parry')}
-            disabled={!baseOptions.parry}
+            className={`defense-card parry ${!defenseOpts.parry ? 'disabled' : ''}`}
+            onClick={() => defenseOpts.parry && handleDefend('parry')}
+            disabled={!defenseOpts.parry}
           >
             <div className="defense-title">PARRY</div>
-            {baseOptions.parry ? (
+            {defenseOpts.parry ? (
               <>
                 <div className="defense-value">{parryValue}</div>
                 <div className="defense-chance">
@@ -182,11 +154,11 @@ export default function DefenseModal({
                   </div>
                   <span>{getSuccessChance(parryValue).toFixed(1)}%</span>
                 </div>
-                <div className="defense-sub">{baseOptions.parry.weapon}</div>
-                {getSlotForDefense(baseOptions.parry.weapon) && (
+                <div className="defense-sub">{defenseOpts.parry.weapon}</div>
+                {getSlotForDefense(defenseOpts.parry.weapon) && (
                   <div className="defense-source-indicator">
                     <span className="defense-source-icon">✋</span>
-                    <span style={{ textTransform: 'capitalize' }}>{getSlotForDefense(baseOptions.parry.weapon)}</span>
+                    <span style={{ textTransform: 'capitalize' }}>{getSlotForDefense(defenseOpts.parry.weapon)}</span>
                   </div>
                 )}
               </>
@@ -196,12 +168,12 @@ export default function DefenseModal({
           </button>
 
           <button 
-            className={`defense-card block ${!baseOptions.block ? 'disabled' : ''}`}
-            onClick={() => baseOptions.block && handleDefend('block')}
-            disabled={!baseOptions.block}
+            className={`defense-card block ${!defenseOpts.block ? 'disabled' : ''}`}
+            onClick={() => defenseOpts.block && handleDefend('block')}
+            disabled={!defenseOpts.block}
           >
             <div className="defense-title">BLOCK</div>
-            {baseOptions.block ? (
+            {defenseOpts.block ? (
               <>
                 <div className="defense-value">{blockValue}</div>
                 <div className="defense-chance">
@@ -213,11 +185,11 @@ export default function DefenseModal({
                   </div>
                   <span>{getSuccessChance(blockValue).toFixed(1)}%</span>
                 </div>
-                <div className="defense-sub">{baseOptions.block.shield}</div>
-                {getSlotForDefense(baseOptions.block.shield) && (
+                <div className="defense-sub">{defenseOpts.block.shield}</div>
+                {getSlotForDefense(defenseOpts.block.shield) && (
                   <div className="defense-source-indicator">
                     <span className="defense-source-icon">🛡️</span>
-                    <span style={{ textTransform: 'capitalize' }}>{getSlotForDefense(baseOptions.block.shield)}</span>
+                    <span style={{ textTransform: 'capitalize' }}>{getSlotForDefense(defenseOpts.block.shield)}</span>
                   </div>
                 )}
               </>
@@ -243,7 +215,7 @@ export default function DefenseModal({
                   {inCloseCombat 
                     ? '+1 Dodge/Parry/Block (Close Combat).'
                     : '+3 Dodge, +1 Parry/Block.'} Moves 1 hex back.
-                  {retreatDisabled && <span className="option-warning"> (Already retreated)</span>}
+                  {!canRetreat && <span className="option-warning"> (Already retreated)</span>}
                 </span>
               </div>
             </label>
@@ -262,10 +234,10 @@ export default function DefenseModal({
             </label>
           </div>
 
-        {combatant.defensesThisTurn > 0 && (
+        {gurpsCombatant.defensesThisTurn > 0 && (
           <div className="defense-penalty-alert">
-            ⚠️ Multiple Defenses: -{combatant.defensesThisTurn} cumulative penalty applied
-            {baseOptions.parry && combatant.parryWeaponsUsedThisTurn?.includes(baseOptions.parry.weapon) && (
+            ⚠️ Multiple Defenses: -{gurpsCombatant.defensesThisTurn} cumulative penalty applied
+            {defenseOpts.baseParry && gurpsCombatant.parryWeaponsUsedThisTurn?.includes(defenseOpts.baseParry.weapon) && (
               <span className="same-weapon-warning"> (Parry with same weapon: -4 instead of -1)</span>
             )}
           </div>

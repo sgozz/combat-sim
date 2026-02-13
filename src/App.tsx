@@ -14,6 +14,20 @@ import type { CharacterSheet, GridPosition } from '../shared/types'
 import type { PendingSpellCast } from './components/rulesets/types'
 import './App.css'
 import './components/action-bar/styles.css'
+import './components/game/GameHeader.css'
+import './components/game/GameHUD.css'
+import './components/game/InitiativeTracker.css'
+import './components/game/Tooltip.css'
+import './components/game/TurnStepper.css'
+import './components/game/MiniMap.css'
+import './components/game/MovementAndWaitTrigger.css'
+import './components/game/PostureControls.css'
+import './components/game/GameScreenModals.css'
+import './components/game/DefenseModal.css'
+import './components/game/SkillsList.css'
+import './components/rulesets/pf2/pf2.css'
+import './components/game/ConnectionStatus.css'
+import './components/ui/ConfirmDialog.css'
 
 function ConnectionBanner({ state }: { state: 'disconnected' | 'connecting' | 'connected' }) {
   if (state === 'connected') return null
@@ -202,7 +216,7 @@ function AppRoutes() {
     if (!currentCombatant) return
     
      if (isGurpsCombatant(currentCombatant) && currentCombatant.inCloseCombatWith) {
-       setLogs((prev) => [...prev, 'Cannot move while in close combat. Use Exit Close Combat first.'])
+       setLogs((prev) => [...prev, 'Error: Cannot move while in close combat. Use Exit Close Combat first.'])
        return
      }
     
@@ -211,7 +225,7 @@ function AppRoutes() {
         (hex) => hex.q === position.x && hex.r === position.z
       )
       if (!reachable) {
-        setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
+        setLogs((prev) => [...prev, 'Error: Too far! Select a highlighted hex.'])
         return
       }
       const payload: { type: string; to: { q: number; r: number } } = { type: 'move_step', to: { q: position.x, r: position.z } }
@@ -225,7 +239,7 @@ function AppRoutes() {
         (hex) => hex.q === position.x && hex.r === position.z
       )
       if (!reachable) {
-        setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
+        setLogs((prev) => [...prev, 'Error: Too far! Select a highlighted hex.'])
         return
       }
       const payload: { type: string; to: { q: number; r: number } } = { type: 'pf2_stride', to: { q: position.x, r: position.z } }

@@ -15,10 +15,11 @@ import { CombatToast } from './CombatToast'
 
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 import { PF2ReactionModal } from '../rulesets/pf2/PF2ReactionModal'
+import { GameProvider } from '../../contexts/GameContext'
 
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
 import type { PendingSpellCast } from '../rulesets/types'
-import { isGurpsCombatant, isPF2Combatant } from '../../../shared/rulesets'
+import { isGurpsCombatant } from '../../../shared/rulesets'
 
 type GameScreenProps = {
   matchState: MatchState | null
@@ -91,7 +92,6 @@ export const GameScreen = ({
 
    const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
    const currentManeuver = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.maneuver : null
-   const actionsRemaining = (currentCombatant && isPF2Combatant(currentCombatant)) ? currentCombatant.actionsRemaining : 0
 
   const pendingDefense = matchState?.pendingDefense
   const isDefending = pendingDefense?.defenderId === player?.id
@@ -137,7 +137,19 @@ export const GameScreen = ({
   const playerCharacter = matchState?.characters.find(c => c.id === currentCombatant?.characterId)
   const canRenderPanels = matchState && player && currentCombatant && playerCharacter
 
+  const gameContextValue = useMemo(() => ({
+    matchState,
+    player,
+    isPlayerTurn,
+    selectedTargetId,
+    logs,
+    onAction,
+    onLeaveLobby,
+    onCombatantClick,
+  }), [matchState, player, isPlayerTurn, selectedTargetId, logs, onAction, onLeaveLobby, onCombatantClick])
+
   return (
+    <GameProvider value={gameContextValue}>
     <div className="app-container">
    {canRenderPanels ? (
            <GameStatusPanel
@@ -179,29 +191,14 @@ export const GameScreen = ({
             </button>
           </div>
           
-          <InitiativeTracker 
-            matchState={matchState} 
-            currentPlayerId={player?.id}
-            selectedTargetId={selectedTargetId}
-            onCombatantClick={onCombatantClick}
-          />
+          <InitiativeTracker />
         </header>
 
-        <CombatToast 
-          logs={logs} 
-          activeTurnPlayerId={matchState?.activeTurnPlayerId}
-          currentPlayerId={player?.id}
-          players={matchState?.players}
-        />
+        <CombatToast />
         {matchState && matchState.status === 'active' && (
-          <TurnStepper
-            isMyTurn={isPlayerTurn}
-            currentManeuver={currentManeuver}
-            rulesetId={matchState.rulesetId}
-            actionsRemaining={actionsRemaining}
-          />
+          <TurnStepper />
         )}
-        <MiniMap matchState={matchState} playerId={player?.id ?? null} />
+        <MiniMap />
         
         <Canvas camera={{ position: [5, 5, 5], fov: 50, near: 0.01, far: 200 }} shadows>
           <color attach="background" args={['#111']} />
@@ -335,12 +332,13 @@ export const GameScreen = ({
            />
         )}
 
-        <MatchEndOverlay
+         <MatchEndOverlay
           matchStatus={matchState?.status ?? 'waiting'}
           winnerName={matchState?.winnerId ? matchState.players.find(p => p.id === matchState.winnerId)?.name : undefined}
           currentPlayerName={player?.name}
           onReturnToDashboard={onLeaveLobby}
         />
     </div>
+    </GameProvider>
   )
 }

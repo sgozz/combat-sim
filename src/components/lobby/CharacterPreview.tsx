@@ -2,12 +2,8 @@ import { useState, useCallback } from 'react'
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import { CharacterPicker } from '../armory/CharacterPicker'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import './CharacterPreview.css'
-
-const useIsMobile = () => {
-  const [isMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
-  return isMobile
-}
 
 type CharacterPreviewProps = {
   characters: CharacterSheet[]

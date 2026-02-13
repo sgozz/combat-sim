@@ -1,9 +1,5 @@
-type TurnStepperProps = {
-  isMyTurn: boolean
-  currentManeuver: string | null
-  rulesetId: 'gurps' | 'pf2'
-  actionsRemaining: number
-}
+import { useGameContext } from '../../contexts/GameContext'
+import { isGurpsCombatant, isPF2Combatant } from '../../../shared/rulesets'
 
 const MANEUVER_LABELS: Record<string, string> = {
    'move': 'Move',
@@ -20,7 +16,13 @@ const MANEUVER_LABELS: Record<string, string> = {
    'pf2_step': 'Step',
 }
 
-export const TurnStepper = ({ isMyTurn, currentManeuver, rulesetId, actionsRemaining }: TurnStepperProps) => {
+export const TurnStepper = () => {
+  const { matchState, player, isPlayerTurn } = useGameContext()
+  const isMyTurn = isPlayerTurn
+  const rulesetId = matchState?.rulesetId ?? 'gurps'
+  const currentCombatant = matchState?.combatants.find(c => c.playerId === player?.id) ?? null
+  const currentManeuver = (currentCombatant && isGurpsCombatant(currentCombatant)) ? currentCombatant.maneuver : null
+  const actionsRemaining = (currentCombatant && isPF2Combatant(currentCombatant)) ? currentCombatant.actionsRemaining : 0
   if (!isMyTurn) {
     return (
       <div className="turn-stepper compact waiting">

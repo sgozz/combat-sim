@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MatchCard } from './MatchCard'
 import { StatsBar } from './dashboard/StatsBar'
@@ -45,19 +45,10 @@ export const Dashboard = ({
   const [showJoinInput, setShowJoinInput] = useState(false)
   const [showCompleted, setShowCompleted] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showRulesetDialog, setShowRulesetDialog] = useState(false)
   const [rulesetToast, setRulesetToast] = useState<string | null>(null)
 
   const currentRulesetId = user.preferredRulesetId
   const otherRulesetId: RulesetId = currentRulesetId === 'gurps' ? 'pf2' : 'gurps'
-
-  const handleSwitchRuleset = useCallback(() => {
-    setPreferredRuleset(otherRulesetId)
-    setShowRulesetDialog(false)
-    setRulesetToast(`Switched to ${RULESET_LABELS[otherRulesetId]}`)
-    refreshMyMatches()
-    setTimeout(() => setRulesetToast(null), 3000)
-  }, [otherRulesetId, setPreferredRuleset, refreshMyMatches])
 
   useEffect(() => {
     refreshMyMatches()
@@ -102,7 +93,12 @@ export const Dashboard = ({
           <div className="dashboard-header-actions">
             <span className="dashboard-username">{user.username}</span>
             <button
-              onClick={() => setShowRulesetDialog(true)}
+              onClick={() => {
+                setPreferredRuleset(otherRulesetId)
+                setRulesetToast(`Switched to ${RULESET_LABELS[otherRulesetId]}`)
+                refreshMyMatches()
+                setTimeout(() => setRulesetToast(null), 3000)
+              }}
               className={`dashboard-ruleset-badge ruleset-${currentRulesetId}`}
               title={`Playing ${RULESET_LABELS[currentRulesetId]} — click to switch`}
             >
@@ -303,31 +299,6 @@ export const Dashboard = ({
             setShowCreateDialog(false)
           }}
         />
-      )}
-
-      {showRulesetDialog && (
-        <div className="dashboard-dialog-overlay" onClick={() => setShowRulesetDialog(false)}>
-          <div className="dashboard-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3 className="dashboard-dialog-title">Switch Ruleset</h3>
-            <p className="dashboard-dialog-text">
-              Switch to <strong>{RULESET_LABELS[otherRulesetId]}</strong>?
-            </p>
-            <div className="dashboard-dialog-actions">
-              <button
-                className="dashboard-dialog-btn dashboard-dialog-btn--cancel"
-                onClick={() => setShowRulesetDialog(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="dashboard-dialog-btn dashboard-dialog-btn--confirm"
-                onClick={handleSwitchRuleset}
-              >
-                Switch
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {rulesetToast && (
