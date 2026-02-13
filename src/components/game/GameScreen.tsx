@@ -1,6 +1,5 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
-import { useConfirmDialog } from '../../hooks/useConfirmDialog'
-import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { ArrowLeft, Pause } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
@@ -74,8 +73,6 @@ export const GameScreen = ({
   const { matchId } = useParams<{ matchId: string }>()
   void matchId
 
-  const { confirm, dialogProps } = useConfirmDialog()
-
   // Auto-center camera on turn change
   const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
   const prevActiveTurnRef = useRef<string | null>(null)
@@ -84,9 +81,12 @@ export const GameScreen = ({
     const activeTurnId = matchState?.activeTurnPlayerId ?? null
     if (activeTurnId && activeTurnId !== prevActiveTurnRef.current) {
       prevActiveTurnRef.current = activeTurnId
-      setCameraMode('follow')
-      const timer = setTimeout(() => setCameraMode('free'), 1500)
-      return () => clearTimeout(timer)
+      const followTimer = setTimeout(() => setCameraMode('follow'), 0)
+      const freeTimer = setTimeout(() => setCameraMode('free'), 1500)
+      return () => {
+        clearTimeout(followTimer)
+        clearTimeout(freeTimer)
+      }
     }
   }, [matchState?.activeTurnPlayerId])
 
@@ -179,22 +179,14 @@ export const GameScreen = ({
           <div className="game-header-left">
             <button 
               className="header-btn back-btn" 
-              onClick={async () => {
-                if (!matchState || matchState.status === 'finished') {
+              onClick={() => {
+                if (!matchState || matchState.status === 'finished' || confirm('Leave the current game?')) {
                   onLeaveLobby()
-                  return
                 }
-                const confirmed = await confirm({
-                  title: 'Leave Game?',
-                  message: 'Are you sure you want to leave the current game?',
-                  confirmLabel: 'Leave',
-                  variant: 'danger',
-                })
-                if (confirmed) onLeaveLobby()
               }}
               title="Back to Lobby List"
             >
-              <span className="btn-icon">←</span>
+              <ArrowLeft size={18} className="btn-icon" />
               <span className="btn-label">{isSpectating ? 'Stop' : 'Back'}</span>
             </button>
           </div>
@@ -306,7 +298,7 @@ export const GameScreen = ({
       {matchState?.status === 'paused' && (
         <div className="modal-overlay pause-overlay">
           <div className="pause-modal">
-            <div className="pause-icon">⏸</div>
+            <div className="pause-icon"><Pause size={48} /></div>
             <h2>Match Paused</h2>
             <p>
               Waiting for <strong>{matchState.players.find(p => p.id === matchState.pausedForPlayerId)?.name ?? 'player'}</strong> to reconnect...
@@ -316,7 +308,7 @@ export const GameScreen = ({
               className="action-btn secondary pause-leave-btn"
               onClick={onLeaveLobby}
             >
-              ← Back to Lobby
+              <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Back to Lobby
             </button>
           </div>
         </div>
@@ -340,14 +332,12 @@ export const GameScreen = ({
            />
         )}
 
-        <MatchEndOverlay
+         <MatchEndOverlay
           matchStatus={matchState?.status ?? 'waiting'}
           winnerName={matchState?.winnerId ? matchState.players.find(p => p.id === matchState.winnerId)?.name : undefined}
           currentPlayerName={player?.name}
           onReturnToDashboard={onLeaveLobby}
         />
-
-        <ConfirmDialog {...dialogProps} />
     </div>
     </GameProvider>
   )

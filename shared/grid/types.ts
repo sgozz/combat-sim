@@ -16,6 +16,7 @@ export interface GridSystem {
   readonly size: number;
 
   distance(a: GridCoord, b: GridCoord): number;
+  isInBurst(center: GridCoord, target: GridCoord, radius: number): boolean;
   neighbors(coord: GridCoord): GridCoord[];
   getNeighborInDirection(coord: GridCoord, direction: number): GridCoord;
   coordToWorld(coord: GridCoord): WorldPosition;

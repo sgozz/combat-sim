@@ -307,7 +307,7 @@ describe('useMatches', () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: 'list_my_matches' })
     })
 
-    it('fetchPublicMatches sends list_public_matches', async () => {
+    it('fetchPublicMatches sends list_public_waiting', async () => {
       const sendMessage = vi.fn()
       const messageHandlers = { current: [] as Array<(msg: ServerToClientMessage) => boolean> }
       const user = userEvent.setup()

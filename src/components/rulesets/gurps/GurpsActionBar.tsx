@@ -1,14 +1,17 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { 
+  Sword, Shield, Footprints, Crosshair, Eye, Brain, Hourglass, 
+  Hand, User, Moon, Zap, Target, AlertTriangle, Flag, LogOut,
+  RotateCcw, RotateCw, Check, SkipForward, Undo2,
+  FileText, Scroll, Backpack, X, XCircle
+} from 'lucide-react'
 import type { ManeuverType, HitLocation, AOAVariant, AODVariant, WaitTrigger } from '../../../../shared/rulesets/gurps/types'
-import { calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
+import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
 import { WaitTriggerPicker } from './WaitTriggerPicker'
 import { getSuccessChance } from '../../game/shared/useGameActions'
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
 import { rulesets, isGurpsPendingDefense, isGurpsCombatant } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
-import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
-import { useDefenseOptions } from '../../../hooks/useDefenseOptions'
-import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import type { ActionBarProps } from '../types'
 
 export const GurpsActionBar = ({ 
@@ -30,21 +33,13 @@ export const GurpsActionBar = ({
   const [showAODVariants, setShowAODVariants] = useState(false)
   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
   const [showCombatLog, setShowCombatLog] = useState(false)
+  const [retreat, setRetreat] = useState(false)
+  const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
   const [hitLocation, setHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
   const [rapidStrike, setRapidStrike] = useState(false)
   const [maneuverTooltip, setManeuverTooltip] = useState<{ label: string; desc: string } | null>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const { confirm: confirmSurrender, dialogProps: surrenderDialogProps } = useConfirmDialog()
-
-  const gurpsChar = isGurpsCharacter(playerCharacter) ? playerCharacter : null
-  const gurpsCombatant = isGurpsCombatant(playerCombatant) ? playerCombatant : null
-  const gurpsPendingDefense = matchState.pendingDefense && isGurpsPendingDefense(matchState.pendingDefense)
-    ? matchState.pendingDefense
-    : null
-  const { options: defenseOptions, retreat, setRetreat, dodgeAndDrop, setDodgeAndDrop } = useDefenseOptions(
-    gurpsChar, gurpsCombatant, gurpsPendingDefense
-  )
 
   const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -62,6 +57,44 @@ export const GurpsActionBar = ({
     setShowCombatLog(false)
   }, [])
 
+  useEffect(() => {
+    if (!matchState.pendingDefense) {
+      queueMicrotask(() => {
+        setRetreat(false)
+        setDodgeAndDrop(false)
+      })
+    }
+  }, [matchState.pendingDefense])
+
+  const defenseOptions = useMemo(() => {
+    if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) return null
+    const pd = matchState.pendingDefense
+    if (!pd || !isGurpsPendingDefense(pd)) return null
+    const derivedDodge = playerCharacter.derived.dodge
+    const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
+    const postureMods = getPostureModifiers(playerCombatant.posture)
+    
+    type ActiveDefenseType = 'dodge' | 'parry' | 'block'
+    const getFinalValue = (type: ActiveDefenseType, base: number) => {
+      return calculateDefenseValue(base, {
+        retreat,
+        dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
+        inCloseCombat: !!playerCombatant.inCloseCombatWith,
+        defensesThisTurn: playerCombatant.defensesThisTurn,
+        deceptivePenalty: pd.deceptivePenalty,
+        postureModifier: postureMods.defenseVsMelee,
+        defenseType: type
+      })
+    }
+
+    return {
+      dodge: getFinalValue('dodge', baseOpts.dodge),
+      parry: baseOpts.parry ? getFinalValue('parry', baseOpts.parry.value) : null,
+      block: baseOpts.block ? getFinalValue('block', baseOpts.block.value) : null,
+      canRetreat: !playerCombatant.retreatedThisTurn
+    }
+  }, [playerCharacter, playerCombatant, matchState.pendingDefense, retreat, dodgeAndDrop])
+
   if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) {
     return <div>Error: GURPS component received non-GURPS data</div>
   }
@@ -73,12 +106,27 @@ export const GurpsActionBar = ({
   const maxHP = playerCharacter.derived.hitPoints
   const currentHP = playerCombatant.currentHP
   const hpPercent = maxHP > 0 ? Math.max(0, (currentHP / maxHP) * 100) : 0
-  const hpColor = hpPercent > 50 ? '#4f4' : hpPercent > 25 ? '#ff0' : '#f44'
+  const hpColor = hpPercent > 50 ? 'var(--accent-success)' : hpPercent > 25 ? 'var(--accent-warning)' : 'var(--accent-danger)'
   const maxFP = playerCharacter.derived.fatiguePoints
   const currentFP = playerCombatant.currentFP
   const fpPercent = maxFP > 0 ? Math.max(0, (currentFP / maxFP) * 100) : 0
-  const fpColor = fpPercent > 50 ? '#4af' : fpPercent > 25 ? '#ff0' : '#f44'
+  const fpColor = fpPercent > 50 ? 'var(--accent-primary)' : fpPercent > 25 ? 'var(--accent-warning)' : 'var(--accent-danger)'
   const adapter = rulesets.gurps.ui
+
+  const MANEUVER_ICONS: Record<string, React.ReactNode> = {
+    move: <Footprints size={20} />,
+    attack: <Sword size={20} />,
+    all_out_attack: <Target size={20} />,
+    all_out_defense: <Shield size={20} />,
+    move_and_attack: <Zap size={20} />,
+    aim: <Crosshair size={20} />,
+    evaluate: <Eye size={20} />,
+    concentrate: <Brain size={20} />,
+    wait: <Hourglass size={20} />,
+    ready: <Hand size={20} />,
+    change_posture: <User size={20} />,
+    do_nothing: <Moon size={20} />,
+  }
   const inCloseCombat = !!playerCombatant.inCloseCombatWith
   const availableManeuvers = inCloseCombat 
     ? adapter.getManeuvers().filter(m => adapter.getCloseCombatManeuvers().includes(m.type))
@@ -101,7 +149,7 @@ export const GurpsActionBar = ({
     return (
       <div className="action-bar">
         <button className="action-bar-btn danger" onClick={onLeaveLobby}>
-          <span className="action-bar-icon">🚪</span>
+          <span className="action-bar-icon"><LogOut size={20} /></span>
           <span className="action-bar-label">Leave</span>
         </button>
       </div>
@@ -118,7 +166,7 @@ export const GurpsActionBar = ({
       <>
         <div className="action-bar-defense-overlay">
           <div className="defense-alert">
-            <span className="defense-alert-icon">⚠️</span>
+            <span className="defense-alert-icon"><AlertTriangle size={24} /></span>
             <span>{attackerName} attacks!</span>
           </div>
           
@@ -148,7 +196,7 @@ export const GurpsActionBar = ({
             className="action-bar-btn defense-btn dodge"
             onClick={() => handleDefense('dodge')}
           >
-            <span className="action-bar-icon">🏃</span>
+            <span className="action-bar-icon"><Footprints size={20} /></span>
             <span className="action-bar-label">Dodge</span>
             <span className="defense-value">{defenseOptions.dodge}</span>
             <span className="defense-chance">{getSuccessChance(defenseOptions.dodge).toFixed(0)}%</span>
@@ -159,12 +207,12 @@ export const GurpsActionBar = ({
             onClick={() => defenseOptions.parry && handleDefense('parry')}
             disabled={!defenseOptions.parry}
           >
-            <span className="action-bar-icon">🗡️</span>
+            <span className="action-bar-icon"><Sword size={20} /></span>
             <span className="action-bar-label">Parry</span>
             {defenseOptions.parry ? (
               <>
-                <span className="defense-value">{defenseOptions.parry.value}</span>
-                <span className="defense-chance">{getSuccessChance(defenseOptions.parry.value).toFixed(0)}%</span>
+                <span className="defense-value">{defenseOptions.parry}</span>
+                <span className="defense-chance">{getSuccessChance(defenseOptions.parry).toFixed(0)}%</span>
               </>
             ) : (
               <span className="defense-value">N/A</span>
@@ -176,12 +224,12 @@ export const GurpsActionBar = ({
             onClick={() => defenseOptions.block && handleDefense('block')}
             disabled={!defenseOptions.block}
           >
-            <span className="action-bar-icon">🛡️</span>
+            <span className="action-bar-icon"><Shield size={20} /></span>
             <span className="action-bar-label">Block</span>
             {defenseOptions.block ? (
               <>
-                <span className="defense-value">{defenseOptions.block.value}</span>
-                <span className="defense-chance">{getSuccessChance(defenseOptions.block.value).toFixed(0)}%</span>
+                <span className="defense-value">{defenseOptions.block}</span>
+                <span className="defense-chance">{getSuccessChance(defenseOptions.block).toFixed(0)}%</span>
               </>
             ) : (
               <span className="defense-value">N/A</span>
@@ -192,7 +240,7 @@ export const GurpsActionBar = ({
             className="action-bar-btn danger defense-btn none"
             onClick={() => handleDefense('none')}
           >
-            <span className="action-bar-icon">🚫</span>
+            <span className="action-bar-icon"><XCircle size={20} /></span>
             <span className="action-bar-label">None</span>
           </button>
         </div>
@@ -251,11 +299,11 @@ export const GurpsActionBar = ({
                  if (v.variant === 'feint') return
                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_attack', aoaVariant: v.variant as AOAVariant })
                  setShowAOAVariants(false)
-               }}
-             >
-               <span className="action-bar-icon">😡</span>
-               <span className="action-bar-label">{v.label}</span>
-             </button>
+              }}
+            >
+              <span className="action-bar-icon"><Target size={20} /></span>
+              <span className="action-bar-label">{v.label}</span>
+            </button>
            ))}
          </div>
        )}
@@ -270,11 +318,11 @@ export const GurpsActionBar = ({
                  if (v.variant === 'double') return
                  onAction('select_maneuver', { type: 'select_maneuver', maneuver: 'all_out_defense', aodVariant: v.variant as AODVariant })
                  setShowAODVariants(false)
-               }}
-             >
-               <span className="action-bar-icon">🛡️</span>
-               <span className="action-bar-label">{v.label}</span>
-             </button>
+              }}
+            >
+              <span className="action-bar-icon"><Shield size={20} /></span>
+              <span className="action-bar-label">{v.label}</span>
+            </button>
            ))}
          </div>
        )}
@@ -349,8 +397,8 @@ export const GurpsActionBar = ({
             </div>
             {encumbrance && encumbrance.level > 0 && (
               <div className="encumbrance-indicator" style={{ marginTop: '0.5rem' }}>
-                <span>Enc: <span style={{ color: encumbrance.level === 1 ? '#ff4' : encumbrance.level === 2 ? '#f80' : '#f44', fontWeight: 'bold' }}>{encumbrance.name}</span></span>
-                <span className="encumbrance-effects" style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: '#888' }}>{encumbrance.movePenalty} Move, {encumbrance.dodgePenalty} Dodge</span>
+                <span>Enc: <span style={{ color: encumbrance.level === 1 ? 'var(--accent-warning)' : encumbrance.level === 2 ? 'var(--accent-warning)' : 'var(--accent-danger)', fontWeight: 'bold' }}>{encumbrance.name}</span></span>
+                <span className="encumbrance-effects" style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{encumbrance.movePenalty} Move, {encumbrance.dodgePenalty} Dodge</span>
               </div>
             )}
           </div>
@@ -367,8 +415,8 @@ export const GurpsActionBar = ({
                     <span className="equipment-slot-label">{slot.replace('_', ' ')}</span>
                     {item && eq ? (
                       <div className="equipment-slot-content">
-                        <div className="equipment-slot-name" style={{ fontSize: '0.8rem' }}>
-                          <span>{eq.type === 'melee' ? '🗡️' : eq.type === 'ranged' ? '🏹' : eq.type === 'shield' ? '🛡️' : '📦'}</span>
+                        <div className="equipment-slot-name" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>{eq.type === 'melee' ? <Sword size={14} /> : eq.type === 'ranged' ? <Crosshair size={14} /> : eq.type === 'shield' ? <Shield size={14} /> : <Backpack size={14} />}</span>
                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{eq.name}</span>
                         </div>
                         <div className="equipment-slot-details">
@@ -402,19 +450,17 @@ export const GurpsActionBar = ({
 
           <button 
             className="action-bar-maneuver-btn" 
-            style={{ marginTop: '1rem', background: '#4a2a2a', borderColor: '#f44', width: '100%' }}
-            onClick={async () => {
-              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
-              if (confirmed) {
+            style={{ marginTop: '1rem', background: 'var(--bg-elevated)', borderColor: 'var(--accent-danger)', width: '100%' }}
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
                 onAction('surrender', { type: 'surrender' })
                 onLeaveLobby()
               }
-            }}
-          >
-            <span className="action-bar-icon">🏳️</span>
-            <span className="action-bar-label">Give Up</span>
-          </button>
-          <ConfirmDialog {...surrenderDialogProps} />
+              }}
+            >
+              <span className="action-bar-icon"><Flag size={20} /></span>
+              <span className="action-bar-label">Give Up</span>
+            </button>
         </div>
       )}
       {showManeuvers && (
@@ -455,7 +501,7 @@ export const GurpsActionBar = ({
                 clearLongPress()
               }}
             >
-              <span className="action-bar-icon">{m.icon}</span>
+              <span className="action-bar-icon">{MANEUVER_ICONS[m.type] ?? <AlertTriangle size={20} />}</span>
               <span className="action-bar-label">{m.shortLabel}</span>
             </button>
           ))}
@@ -482,7 +528,7 @@ export const GurpsActionBar = ({
             setShowCharacterSheet(!showCharacterSheet)
           }}
         >
-          <span className="action-bar-icon">👤</span>
+          <span className="action-bar-icon"><User size={20} /></span>
           <div className="char-btn-hp">
             <div className="char-btn-hp-bar">
               <div 
@@ -499,12 +545,12 @@ export const GurpsActionBar = ({
                 style={{ width: `${fpPercent}%`, background: fpColor }}
               />
             </div>
-            <span className="char-btn-hp-text" style={{ color: '#4af' }}>FP {currentFP}/{maxFP}</span>
+            <span className="char-btn-hp-text" style={{ color: 'var(--accent-primary)' }}>FP {currentFP}/{maxFP}</span>
           </div>
         </button>
         
         {inCloseCombat && (
-          <div className="action-bar-cc-indicator">⚔️ CC</div>
+          <div className="action-bar-cc-indicator"><Sword size={14} /> CC</div>
         )}
         
         {!inMovementPhase && (
@@ -520,7 +566,7 @@ export const GurpsActionBar = ({
               setShowManeuvers(!showManeuvers)
             }}
           >
-            <span className="action-bar-icon">{currentManeuver ? availableManeuvers.find(m => m.type === currentManeuver)?.icon ?? '📋' : '📋'}</span>
+            <span className="action-bar-icon">{currentManeuver ? (MANEUVER_ICONS[currentManeuver] ?? <FileText size={20} />) : <FileText size={20} />}</span>
             <span className="action-bar-label">{currentManeuver ? 'Change' : 'Maneuver'}</span>
           </button>
         )}
@@ -534,7 +580,7 @@ export const GurpsActionBar = ({
             className="action-bar-btn primary"
             onClick={() => onAction('attack', { type: 'attack', targetId: effectiveTargetId })}
           >
-            <span className="action-bar-icon">⚔️</span>
+            <span className="action-bar-icon"><Sword size={20} /></span>
             <span className="action-bar-label">{targetName}</span>
           </button>
         )}
@@ -546,21 +592,21 @@ export const GurpsActionBar = ({
               onClick={() => onAction('undo_movement', { type: 'undo_movement' })}
               title="Undo Movement"
             >
-              <span className="action-bar-icon">↩</span>
+              <span className="action-bar-icon"><Undo2 size={16} /></span>
             </button>
             <button
               className="action-bar-btn small"
               onClick={() => onAction('skip_movement', { type: 'skip_movement' })}
               title="Skip Movement"
             >
-              <span className="action-bar-icon">⏭</span>
+              <span className="action-bar-icon"><SkipForward size={16} /></span>
             </button>
             <button
               className="action-bar-btn primary small"
               onClick={() => onAction('confirm_movement', { type: 'confirm_movement' })}
               title="Confirm Movement"
             >
-              <span className="action-bar-icon">✓</span>
+              <span className="action-bar-icon"><Check size={16} /></span>
             </button>
           </div>
         )}
@@ -569,18 +615,18 @@ export const GurpsActionBar = ({
           <>
             <button
               className="action-bar-btn"
-              onClick={() => onAction('grapple', { type: 'grapple', targetId: playerCombatant.inCloseCombatWith!, action: 'grab' })}
-            >
-              <span className="action-bar-icon">🤼</span>
-              <span className="action-bar-label">Grapple</span>
-            </button>
-            <button
-              className="action-bar-btn warning"
-              onClick={() => onAction('exit_close_combat', { type: 'exit_close_combat' })}
-            >
-              <span className="action-bar-icon">🚪</span>
-              <span className="action-bar-label">Exit</span>
-            </button>
+            onClick={() => onAction('grapple', { type: 'grapple', targetId: playerCombatant.inCloseCombatWith!, action: 'grab' })}
+          >
+            <span className="action-bar-icon"><Hand size={20} /></span>
+            <span className="action-bar-label">Grapple</span>
+          </button>
+          <button
+            className="action-bar-btn warning"
+            onClick={() => onAction('exit_close_combat', { type: 'exit_close_combat' })}
+          >
+            <span className="action-bar-icon"><LogOut size={20} /></span>
+            <span className="action-bar-label">Exit</span>
+          </button>
           </>
         )}
 
@@ -602,14 +648,14 @@ export const GurpsActionBar = ({
                 onClick={() => onAction('turn_left', { type: 'turn_left' })}
                 title={inMovementPhase ? `Turn Left (${rotationCost} MP)` : 'Turn Left'}
               >
-                <span className="action-bar-icon">↶</span>
+                <span className="action-bar-icon"><RotateCcw size={16} /></span>
               </button>
               <button
                 className="action-bar-btn small"
                 onClick={() => onAction('turn_right', { type: 'turn_right' })}
                 title={inMovementPhase ? `Turn Right (${rotationCost} MP)` : 'Turn Right'}
               >
-                <span className="action-bar-icon">↷</span>
+                <span className="action-bar-icon"><RotateCw size={16} /></span>
               </button>
             </div>
           ) : null
@@ -618,11 +664,11 @@ export const GurpsActionBar = ({
         {currentManeuver && (
           <button
             className="action-bar-btn"
-            onClick={() => onAction('end_turn', { type: 'end_turn' })}
-          >
-            <span className="action-bar-icon">⌛</span>
-            <span className="action-bar-label">End</span>
-          </button>
+          onClick={() => onAction('end_turn', { type: 'end_turn' })}
+        >
+          <span className="action-bar-icon"><Hourglass size={20} /></span>
+          <span className="action-bar-label">End</span>
+        </button>
         )}
 
         <button
@@ -634,7 +680,7 @@ export const GurpsActionBar = ({
             setShowCombatLog(!showCombatLog)
           }}
         >
-          <span className="action-bar-icon">📜</span>
+          <span className="action-bar-icon"><Scroll size={20} /></span>
           <span className="action-bar-label">Log</span>
         </button>
 
@@ -646,7 +692,7 @@ export const GurpsActionBar = ({
           <div className="action-bar-combat-log">
             <div className="action-bar-combat-log-header">
               <span>Combat Log</span>
-              <button className="action-bar-combat-log-close" onClick={() => setShowCombatLog(false)}>✕</button>
+              <button className="action-bar-combat-log-close" onClick={() => setShowCombatLog(false)}><X size={16} /></button>
             </div>
             <div className="action-bar-combat-log-entries">
               {(logs ?? []).length === 0 ? (

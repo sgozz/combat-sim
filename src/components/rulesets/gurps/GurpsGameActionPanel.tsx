@@ -1,6 +1,10 @@
+import { 
+  Sword, Shield, Footprints, Crosshair, Eye, Brain, Hourglass, 
+  Hand, User, Moon, Zap, Target, AlertTriangle, Flag, LogOut,
+  RotateCcw, RotateCw, Check, SkipForward, Undo2, ChevronLeft, ChevronRight,
+  ArrowLeft 
+} from 'lucide-react'
 import { useState } from 'react'
-import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
-import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { Tooltip } from '../../ui/Tooltip'
 import { CombatLog } from '../../game/CombatLog'
 import { WaitTriggerPicker } from './WaitTriggerPicker'
@@ -33,11 +37,25 @@ export const GurpsGameActionPanel = ({
   const [rapidStrike, setRapidStrike] = useState(false)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
-  const { confirm: confirmSurrender, dialogProps: surrenderDialogProps } = useConfirmDialog()
 
   // Type guard: ensure activeCharacter is GURPS
   if (!activeCharacter || !isGurpsCharacter(activeCharacter) || !isGurpsCombatant(activeCombatant)) {
     return null
+  }
+
+  const MANEUVER_ICONS: Record<string, React.ReactNode> = {
+    move: <Footprints size={24} />,
+    attack: <Sword size={24} />,
+    all_out_attack: <Target size={24} />,
+    all_out_defense: <Shield size={24} />,
+    move_and_attack: <Zap size={24} />,
+    aim: <Crosshair size={24} />,
+    evaluate: <Eye size={24} />,
+    concentrate: <Brain size={24} />,
+    wait: <Hourglass size={24} />,
+    ready: <Hand size={24} />,
+    change_posture: <User size={24} />,
+    do_nothing: <Moon size={24} />,
   }
   
   const adapter = rulesets.gurps.ui
@@ -81,9 +99,9 @@ export const GurpsGameActionPanel = ({
     const effectiveSkill = baseSkillLevel + rangeMod + hitLocMod + shockMod + deceptiveMod + rapidStrikeMod
     const prob = getHitProbability(effectiveSkill)
     
-    let color = '#ff4444'
-    if (prob >= 70) color = '#44ff44'
-    else if (prob >= 40) color = '#ffcc00'
+    let color = 'var(--accent-danger)'
+    if (prob >= 70) color = 'var(--accent-success)'
+    else if (prob >= 40) color = 'var(--accent-warning)'
 
     hitChanceInfo = {
       dist,
@@ -104,7 +122,9 @@ export const GurpsGameActionPanel = ({
     if (matchState.status === 'finished') {
       return (
         <div className="action-grid">
-          <button className="action-btn danger" onClick={onLeaveLobby}>Leave Match</button>
+          <button className="action-btn danger" onClick={onLeaveLobby}>
+            <LogOut size={18} /> Leave Match
+          </button>
         </div>
       )
     }
@@ -115,7 +135,7 @@ export const GurpsGameActionPanel = ({
           <>
             <div className="aoa-variant-header">
               <button className="action-btn small" onClick={() => setShowAOAVariantPicker(false)}>
-                <span className="btn-icon">←</span> Back
+                <ArrowLeft size={16} /> Back
               </button>
               <span className="aoa-variant-title">All-Out Attack Variant</span>
             </div>
@@ -144,7 +164,7 @@ export const GurpsGameActionPanel = ({
           <>
             <div className="aoa-variant-header">
               <button className="action-btn small" onClick={() => setShowAODVariantPicker(false)}>
-                <span className="btn-icon">←</span> Back
+                <ArrowLeft size={16} /> Back
               </button>
               <span className="aoa-variant-title">All-Out Defense Variant</span>
             </div>
@@ -186,7 +206,7 @@ export const GurpsGameActionPanel = ({
                     }
                   }}
                 >
-                  <span className="maneuver-icon">{m.icon}</span>
+                  <span className="maneuver-icon">{MANEUVER_ICONS[m.type] ?? <AlertTriangle size={24} />}</span>
                   <span className="maneuver-label">{m.label}</span>
                   <span className="key-hint">{m.key}</span>
                 </button>
@@ -196,12 +216,13 @@ export const GurpsGameActionPanel = ({
           <button 
             className="action-btn danger"
             style={{ marginTop: '1rem' }}
-            onClick={async () => {
-              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
-              if (confirmed) onAction('surrender', { type: 'surrender' })
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
             }}
           >
-            <span className="btn-icon">🏳️</span> Give Up
+            <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
         </>
       )
@@ -214,12 +235,13 @@ export const GurpsGameActionPanel = ({
           <button 
             className="action-btn danger"
             style={{ marginTop: '1rem' }}
-            onClick={async () => {
-              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
-              if (confirmed) onAction('surrender', { type: 'surrender' })
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
             }}
           >
-            <span className="btn-icon">🏳️</span> Give Up
+            <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
         </div>
       )
@@ -246,7 +268,7 @@ export const GurpsGameActionPanel = ({
         {currentManeuver && maneuverLabel && (
           <>
             <div className="current-maneuver-banner">
-              <span className="maneuver-icon-small">{maneuverLabel.icon}</span>
+              <span className="maneuver-icon-small">{MANEUVER_ICONS[currentManeuver] ?? <AlertTriangle size={20} />}</span>
               <span className="maneuver-name">{maneuverLabel.label}</span>
             </div>
             {!inMovementPhase && (
@@ -258,7 +280,7 @@ export const GurpsGameActionPanel = ({
         {inMovementPhase && (
           <div className="movement-phase-panel">
             <div className="movement-points">
-              <span className="mp-icon">🏃</span>
+              <Footprints size={20} className="mp-icon" />
               <span className="mp-value">{movePointsRemaining}</span>
               <span className="mp-label">MP</span>
             </div>
@@ -267,19 +289,19 @@ export const GurpsGameActionPanel = ({
                 className="action-btn"
                 onClick={() => onAction('undo_movement', { type: 'undo_movement' })}
               >
-                <span className="btn-icon">↩</span> Undo
+                <Undo2 size={18} /> Undo
               </button>
               <button 
                 className="action-btn"
                 onClick={() => onAction('skip_movement', { type: 'skip_movement' })}
               >
-                <span className="btn-icon">⏭</span> Skip
+                <SkipForward size={18} /> Skip
               </button>
               <button 
                 className="action-btn primary"
                 onClick={() => onAction('confirm_movement', { type: 'confirm_movement' })}
               >
-                <span className="btn-icon">✓</span> Confirm
+                <Check size={18} /> Confirm
               </button>
             </div>
           </div>
@@ -357,7 +379,7 @@ export const GurpsGameActionPanel = ({
               disabled={!selectedTargetId}
               onClick={() => selectedTargetId && onAction('attack', { type: 'attack', targetId: selectedTargetId, hitLocation: selectedHitLocation, deceptiveLevel, rapidStrike: currentManeuver === 'attack' && rapidStrike })}
             >
-              <span className="btn-icon">⚔️</span>
+              <span className="btn-icon"><Sword size={18} /></span>
               {selectedTargetId ? `Attack ${selectedTargetName} [${selectedHitLocation.replace('_', ' ')}]` : 'Select a target on map'}
             </button>
           )}
@@ -368,7 +390,7 @@ export const GurpsGameActionPanel = ({
               disabled={!selectedTargetId}
               onClick={() => selectedTargetId && onAction('evaluate_target', { type: 'evaluate_target', targetId: selectedTargetId })}
             >
-              <span className="btn-icon">🔍</span>
+              <span className="btn-icon"><Eye size={18} /></span>
               {selectedTargetId ? `Evaluate ${selectedTargetName}` : 'Select a target on map'}
             </button>
           )}
@@ -445,7 +467,7 @@ export const GurpsGameActionPanel = ({
                   className="action-btn small"
                   onClick={() => onAction('turn_left', { type: 'turn_left' })}
                 >
-                  <span className="btn-icon">↶</span>
+                  <RotateCcw size={18} />
                 </button>
               </Tooltip>
               <span className="facing-label">Facing</span>
@@ -454,7 +476,7 @@ export const GurpsGameActionPanel = ({
                   className="action-btn small"
                   onClick={() => onAction('turn_right', { type: 'turn_right' })}
                 >
-                  <span className="btn-icon">↷</span>
+                  <RotateCw size={18} />
                 </button>
               </Tooltip>
             </div>
@@ -464,17 +486,18 @@ export const GurpsGameActionPanel = ({
             className="action-btn end-turn"
             onClick={() => onAction('end_turn', { type: 'end_turn' })}
           >
-            <span className="btn-icon">⌛</span> End Turn
+            <span className="btn-icon"><Hourglass size={18} /></span> End Turn
           </button>
 
           <button 
             className="action-btn danger"
-            onClick={async () => {
-              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
-              if (confirmed) onAction('surrender', { type: 'surrender' })
+            onClick={() => {
+              if (confirm('Surrender and end the match?')) {
+                onAction('surrender', { type: 'surrender' })
+              }
             }}
           >
-            <span className="btn-icon">🏳️</span> Give Up
+            <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
         </div>
       </div>
@@ -482,25 +505,22 @@ export const GurpsGameActionPanel = ({
   }
 
   return (
-    <>
-      <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
-        <div className="panel-header">
-          <span>{isMyTurn && !currentManeuver ? 'Choose Maneuver' : 'Actions'}</span>
-          <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
-            {collapsed ? '◀' : '▶'}
-          </button>
-        </div>
-        {!collapsed && (
-          <div className="panel-content">
-            <div className="card">
-              {renderContent()}
-            </div>
-
-            <CombatLog logs={logs} />
+    <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
+      <div className="panel-header">
+        <span>{isMyTurn && !currentManeuver ? 'Choose Maneuver' : 'Actions'}</span>
+        <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
+      {!collapsed && (
+        <div className="panel-content">
+          <div className="card">
+            {renderContent()}
           </div>
-        )}
-      </aside>
-      <ConfirmDialog {...surrenderDialogProps} />
-    </>
+
+          <CombatLog logs={logs} />
+        </div>
+      )}
+    </aside>
   )
 }

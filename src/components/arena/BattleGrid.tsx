@@ -31,18 +31,13 @@ type BattleGridProps = {
   onHexClick: (q: number, r: number) => void
   mapDefinition?: MapDefinition
   spellTargetArea?: SpellTargetArea
+  activeMovementPath?: GridPosition[]
 }
 
 type ArcType = 'front' | 'side' | 'rear' | 'none'
 
 const getGridSystem = (gridType: GridType): GridSystem => {
   return gridType === 'square' ? squareGrid8 : hexGrid
-}
-
-function hexDistance(q1: number, r1: number, q2: number, r2: number): number {
-  const s1 = -q1 - r1
-  const s2 = -q2 - r2
-  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs(s1 - s2))
 }
 
 type CellStyle = {
@@ -244,6 +239,7 @@ export const BattleGrid = ({
   onHexClick,
   mapDefinition,
   spellTargetArea,
+  activeMovementPath,
 }: BattleGridProps) => {
   const [hoveredCell, setHoveredCell] = useState<{q: number, r: number} | null>(null)
   const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
@@ -256,19 +252,42 @@ export const BattleGrid = ({
     return map
   }, [reachableHexes])
 
+  const hoverPathCells = useMemo(() => {
+    const set = new Set<string>()
+    if (!hoveredCell || !isPlayerTurn) return set
+    const reachable = reachableMap.get(`${hoveredCell.q},${hoveredCell.r}`)
+    if (reachable?.path) {
+      const pathWithoutStart = reachable.path.slice(1)
+      for (const cell of pathWithoutStart) {
+        set.add(`${cell.q},${cell.r}`)
+      }
+    }
+    return set
+  }, [hoveredCell, isPlayerTurn, reachableMap])
+
+  const activePathCells = useMemo(() => {
+    const set = new Set<string>()
+    if (!activeMovementPath) return set
+    for (const p of activeMovementPath) {
+      set.add(`${p.x},${p.z}`)
+    }
+    return set
+  }, [activeMovementPath])
+
   const spellAreaHexes = useMemo(() => {
     if (!spellTargetArea || !hoveredCell) return new Set<string>()
     const set = new Set<string>()
     const { size } = spellTargetArea
+    const center: GridCoord = { q: hoveredCell.q, r: hoveredCell.r }
     for (let q = hoveredCell.q - size; q <= hoveredCell.q + size; q++) {
       for (let r = hoveredCell.r - size; r <= hoveredCell.r + size; r++) {
-        if (hexDistance(hoveredCell.q, hoveredCell.r, q, r) <= size) {
+        if (gridSystem.isInBurst(center, { q, r }, size)) {
           set.add(`${q},${r}`)
         }
       }
     }
     return set
-  }, [spellTargetArea, hoveredCell])
+  }, [spellTargetArea, hoveredCell, gridSystem])
 
   const tiles = useMemo(() => {
     const result: { q: number; r: number }[] = []
@@ -362,9 +381,20 @@ export const BattleGrid = ({
           isHovered, reachableHex, gridSystem, mapDefinition
         )
         
-        const isInSpellArea = spellAreaHexes.has(`${q},${r}`)
+        const cellKey = `${q},${r}`
+        const isInSpellArea = spellAreaHexes.has(cellKey)
         if (isInSpellArea) {
           style = { ...style, emissive: '#ff6600', emissiveIntensity: 0.6, edgeColor: '#ff4400', edgeOpacity: 0.9 }
+        }
+
+        const isInActivePath = activePathCells.has(cellKey)
+        if (isInActivePath) {
+          style = { ...style, emissive: '#00aaff', emissiveIntensity: 0.5, edgeColor: '#00ccff', edgeOpacity: 0.9, elevation: 0.01 }
+        }
+
+        const isInHoverPath = hoverPathCells.has(cellKey)
+        if (isInHoverPath && !isInActivePath) {
+          style = { ...style, emissive: '#44ff88', emissiveIntensity: 0.35, edgeColor: '#66ffaa', edgeOpacity: 0.8, elevation: 0 }
         }
 
         const isEnemy = enemyPositions.some(pos => pos.x === q && pos.z === r)

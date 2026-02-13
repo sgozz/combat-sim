@@ -1357,6 +1357,7 @@ export const calculateReachableHexesInfo = (
       r: hex.position.r,
       cost: hex.cost,
       finalFacing: hex.finalFacing,
+      path: hex.path,
     });
   });
   

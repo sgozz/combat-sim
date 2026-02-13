@@ -65,6 +65,24 @@ describe('HexGridSystem', () => {
       }
     });
   });
+
+  describe('isInBurst', () => {
+    it('includes the center cell', () => {
+      expect(hex.isInBurst({ q: 3, r: 2 }, { q: 3, r: 2 }, 4)).toBe(true);
+    });
+
+    it('includes cells within radius', () => {
+      expect(hex.isInBurst({ q: 0, r: 0 }, { q: 2, r: 0 }, 4)).toBe(true);
+    });
+
+    it('excludes cells outside radius', () => {
+      expect(hex.isInBurst({ q: 0, r: 0 }, { q: 5, r: 0 }, 4)).toBe(false);
+    });
+
+    it('includes cells exactly at the radius boundary', () => {
+      expect(hex.isInBurst({ q: 0, r: 0 }, { q: 4, r: 0 }, 4)).toBe(true);
+    });
+  });
 });
 
 describe('SquareGridSystem', () => {
@@ -112,6 +130,30 @@ describe('SquareGridSystem', () => {
       const neighbors = sq8.neighbors(center);
       neighbors.forEach(n => {
         expect(sq8.distance(center, n)).toBe(1);
+      });
+    });
+
+    describe('isInBurst', () => {
+      it('includes the center cell', () => {
+        expect(sq8.isInBurst({ q: 5, r: 5 }, { q: 5, r: 5 }, 4)).toBe(true);
+      });
+
+      it('includes cells along axes within radius', () => {
+        expect(sq8.isInBurst({ q: 0, r: 0 }, { q: 4, r: 0 }, 4)).toBe(true);
+        expect(sq8.isInBurst({ q: 0, r: 0 }, { q: 0, r: 4 }, 4)).toBe(true);
+      });
+
+      it('excludes far diagonal cells (circular, not square)', () => {
+        expect(sq8.isInBurst({ q: 0, r: 0 }, { q: 4, r: 4 }, 4)).toBe(false);
+        expect(sq8.isInBurst({ q: 0, r: 0 }, { q: -4, r: 4 }, 4)).toBe(false);
+      });
+
+      it('includes near diagonal cells', () => {
+        expect(sq8.isInBurst({ q: 0, r: 0 }, { q: 3, r: 3 }, 4)).toBe(true);
+      });
+
+      it('excludes cells beyond radius on axis', () => {
+        expect(sq8.isInBurst({ q: 0, r: 0 }, { q: 5, r: 0 }, 4)).toBe(false);
       });
     });
   });

@@ -225,10 +225,8 @@
   .character-picker-grid {
     flex-direction: column;
     gap: var(--space-xs);
-    max-height: 200px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+    max-height: none;
+    overflow-y: visible;
   }
 
   .character-picker-card {
