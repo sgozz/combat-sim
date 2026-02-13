@@ -201,7 +201,7 @@ function AppRoutes() {
     if (!currentCombatant) return
     
      if (isGurpsCombatant(currentCombatant) && currentCombatant.inCloseCombatWith) {
-       setLogs((prev) => [...prev, 'Cannot move while in close combat. Use Exit Close Combat first.'])
+       setLogs((prev) => [...prev, 'Error: Cannot move while in close combat. Use Exit Close Combat first.'])
        return
      }
     
@@ -210,7 +210,7 @@ function AppRoutes() {
         (hex) => hex.q === position.x && hex.r === position.z
       )
       if (!reachable) {
-        setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
+        setLogs((prev) => [...prev, 'Error: Too far! Select a highlighted hex.'])
         return
       }
       const payload: { type: string; to: { q: number; r: number } } = { type: 'move_step', to: { q: position.x, r: position.z } }
@@ -224,7 +224,7 @@ function AppRoutes() {
         (hex) => hex.q === position.x && hex.r === position.z
       )
       if (!reachable) {
-        setLogs((prev) => [...prev, 'Too far! Select a highlighted hex.'])
+        setLogs((prev) => [...prev, 'Error: Too far! Select a highlighted hex.'])
         return
       }
       const payload: { type: string; to: { q: number; r: number } } = { type: 'pf2_stride', to: { q: position.x, r: position.z } }

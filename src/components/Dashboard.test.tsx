@@ -34,25 +34,30 @@ const renderDashboard = (user: User = gurpsUser, myMatches: MatchSummary[] = [])
   const onCreateMatch = vi.fn()
   const onJoinByCode = vi.fn()
   const onSelectMatch = vi.fn()
+  const onDismissMatch = vi.fn()
   const setPreferredRuleset = vi.fn()
   const refreshMyMatches = vi.fn()
+  const fetchPublicMatches = vi.fn()
 
   render(
     <MemoryRouter>
       <Dashboard
         user={user}
         myMatches={myMatches}
+        publicMatches={[]}
         refreshMyMatches={refreshMyMatches}
+        fetchPublicMatches={fetchPublicMatches}
         onLogout={onLogout}
         onCreateMatch={onCreateMatch}
         onJoinByCode={onJoinByCode}
         onSelectMatch={onSelectMatch}
+        onDismissMatch={onDismissMatch}
         setPreferredRuleset={setPreferredRuleset}
       />
     </MemoryRouter>,
   )
 
-  return { onLogout, onCreateMatch, onJoinByCode, onSelectMatch, setPreferredRuleset, refreshMyMatches }
+  return { onLogout, onCreateMatch, onJoinByCode, onSelectMatch, setPreferredRuleset, refreshMyMatches, fetchPublicMatches }
 }
 
 describe('Dashboard', () => {
@@ -79,57 +84,25 @@ describe('Dashboard', () => {
     expect(badge.className).toContain('ruleset-pf2')
   })
 
-  it('clicking ruleset badge opens switch dialog', async () => {
-    const user = userEvent.setup()
-    renderDashboard(gurpsUser)
-
-    await user.click(screen.getByText('GURPS'))
-
-    expect(screen.getByText('Switch Ruleset')).not.toBeNull()
-    expect(screen.getByText(/Switch to/)).not.toBeNull()
-    expect(screen.getByText('PF2', { selector: 'strong' })).not.toBeNull()
-  })
-
-  it('clicking Cancel in switch dialog closes it', async () => {
-    const user = userEvent.setup()
-    renderDashboard(gurpsUser)
-
-    await user.click(screen.getByText('GURPS'))
-    expect(screen.getByText('Switch Ruleset')).not.toBeNull()
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
-
-    expect(screen.queryByText('Switch Ruleset')).toBeNull()
-  })
-
-  it('clicking Switch in dialog calls setPreferredRuleset and shows toast', async () => {
+  it('clicking ruleset badge directly switches and shows toast', async () => {
     const user = userEvent.setup()
     const { setPreferredRuleset, refreshMyMatches } = renderDashboard(gurpsUser)
 
     await user.click(screen.getByText('GURPS'))
-    await user.click(screen.getByRole('button', { name: 'Switch' }))
 
     expect(setPreferredRuleset).toHaveBeenCalledWith('pf2')
     expect(refreshMyMatches).toHaveBeenCalled()
     expect(screen.getByText('Switched to PF2')).not.toBeNull()
   })
 
-  it('GURPS user sees "Switch to PF2" prompt', async () => {
+  it('PF2 user clicking badge switches to GURPS', async () => {
     const user = userEvent.setup()
-    renderDashboard(gurpsUser)
-
-    await user.click(screen.getByText('GURPS'))
-
-    expect(screen.getByText('PF2', { selector: 'strong' })).not.toBeNull()
-  })
-
-  it('PF2 user sees "Switch to GURPS" prompt', async () => {
-    const user = userEvent.setup()
-    renderDashboard(pf2User)
+    const { setPreferredRuleset } = renderDashboard(pf2User)
 
     await user.click(screen.getByText('PF2'))
 
-    expect(screen.getByText('GURPS', { selector: 'strong' })).not.toBeNull()
+    expect(setPreferredRuleset).toHaveBeenCalledWith('gurps')
+    expect(screen.getByText('Switched to GURPS')).not.toBeNull()
   })
 
   it('clicking Armory navigates to /armory', async () => {

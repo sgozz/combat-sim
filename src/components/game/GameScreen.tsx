@@ -1,4 +1,6 @@
 import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
+import { useConfirmDialog } from '../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { useParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
@@ -70,6 +72,8 @@ export const GameScreen = ({
 }: GameScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   void matchId
+
+  const { confirm, dialogProps } = useConfirmDialog()
 
   // Auto-center camera on turn change
   const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
@@ -163,10 +167,18 @@ export const GameScreen = ({
           <div className="game-header-left">
             <button 
               className="header-btn back-btn" 
-              onClick={() => {
-                if (!matchState || matchState.status === 'finished' || confirm('Leave the current game?')) {
+              onClick={async () => {
+                if (!matchState || matchState.status === 'finished') {
                   onLeaveLobby()
+                  return
                 }
+                const confirmed = await confirm({
+                  title: 'Leave Game?',
+                  message: 'Are you sure you want to leave the current game?',
+                  confirmLabel: 'Leave',
+                  variant: 'danger',
+                })
+                if (confirmed) onLeaveLobby()
               }}
               title="Back to Lobby List"
             >
@@ -337,6 +349,8 @@ export const GameScreen = ({
           currentPlayerName={player?.name}
           onReturnToDashboard={onLeaveLobby}
         />
+
+        <ConfirmDialog {...dialogProps} />
     </div>
   )
 }

@@ -6,6 +6,8 @@ import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { SpellPicker } from './SpellPicker'
 import { PF2ReadyPanel } from './PF2ReadyPanel'
 import { getSpell } from '../../../../shared/rulesets/pf2/spellData'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import type { GameActionPanelProps } from '../types'
 import type { EquipmentSlot } from '../../../../shared/rulesets/gurps/types'
 
@@ -24,6 +26,7 @@ export const PF2GameActionPanel = ({
    const [collapsed, setCollapsed] = useState(false)
    const [showSpellPicker, setShowSpellPicker] = useState(false)
    const [showReadyPanel, setShowReadyPanel] = useState(false)
+   const { confirm: confirmDialog, dialogProps } = useConfirmDialog()
   
   const selectedTarget = matchState.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
@@ -51,7 +54,7 @@ export const PF2GameActionPanel = ({
 
     // Known spells: use full automation
     if (spellDef.targetType === 'single' && !selectedTargetId) {
-      alert('Please select a target first')
+      confirmDialog({ title: 'Select Target', message: 'Please select a target first', confirmLabel: 'OK', showCancel: false })
       return
     }
 
@@ -75,7 +78,7 @@ export const PF2GameActionPanel = ({
       targetId: selectedTargetId ?? undefined
     })
     setShowSpellPicker(false)
-  }, [selectedTargetId, onAction])
+  }, [selectedTargetId, onAction, confirmDialog, onSetPendingSpellCast])
 
   const renderContent = () => {
     if (pendingSpellCast) {
@@ -110,8 +113,9 @@ export const PF2GameActionPanel = ({
           <button 
             className="action-btn danger"
             style={{ marginTop: '1rem' }}
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
+            onClick={async () => {
+              const confirmed = await confirmDialog({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
+              if (confirmed) {
                 onAction('surrender', { type: 'surrender' })
               }
             }}
@@ -371,8 +375,9 @@ export const PF2GameActionPanel = ({
           </button>
           <button 
             className="action-btn danger"
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
+            onClick={async () => {
+              const confirmed = await confirmDialog({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
+              if (confirmed) {
                 onAction('surrender', { type: 'surrender' })
               }
             }}
@@ -406,6 +411,7 @@ export const PF2GameActionPanel = ({
           <CombatLog logs={logs} />
         </div>
       )}
+      <ConfirmDialog {...dialogProps} />
     </aside>
   )
 }

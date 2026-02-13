@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { Tooltip } from '../../ui/Tooltip'
 import { CombatLog } from '../../game/CombatLog'
 import { WaitTriggerPicker } from './WaitTriggerPicker'
@@ -31,6 +33,7 @@ export const GurpsGameActionPanel = ({
   const [rapidStrike, setRapidStrike] = useState(false)
   const [showAOAVariantPicker, setShowAOAVariantPicker] = useState(false)
   const [showAODVariantPicker, setShowAODVariantPicker] = useState(false)
+  const { confirm: confirmSurrender, dialogProps: surrenderDialogProps } = useConfirmDialog()
 
   // Type guard: ensure activeCharacter is GURPS
   if (!activeCharacter || !isGurpsCharacter(activeCharacter) || !isGurpsCombatant(activeCombatant)) {
@@ -193,10 +196,9 @@ export const GurpsGameActionPanel = ({
           <button 
             className="action-btn danger"
             style={{ marginTop: '1rem' }}
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-              }
+            onClick={async () => {
+              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
+              if (confirmed) onAction('surrender', { type: 'surrender' })
             }}
           >
             <span className="btn-icon">🏳️</span> Give Up
@@ -212,10 +214,9 @@ export const GurpsGameActionPanel = ({
           <button 
             className="action-btn danger"
             style={{ marginTop: '1rem' }}
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-              }
+            onClick={async () => {
+              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
+              if (confirmed) onAction('surrender', { type: 'surrender' })
             }}
           >
             <span className="btn-icon">🏳️</span> Give Up
@@ -468,10 +469,9 @@ export const GurpsGameActionPanel = ({
 
           <button 
             className="action-btn danger"
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-              }
+            onClick={async () => {
+              const confirmed = await confirmSurrender({ title: 'Surrender?', message: 'Surrender and end the match?', confirmLabel: 'Surrender', variant: 'danger' })
+              if (confirmed) onAction('surrender', { type: 'surrender' })
             }}
           >
             <span className="btn-icon">🏳️</span> Give Up
@@ -482,22 +482,25 @@ export const GurpsGameActionPanel = ({
   }
 
   return (
-    <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
-      <div className="panel-header">
-        <span>{isMyTurn && !currentManeuver ? 'Choose Maneuver' : 'Actions'}</span>
-        <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
-          {collapsed ? '◀' : '▶'}
-        </button>
-      </div>
-      {!collapsed && (
-        <div className="panel-content">
-          <div className="card">
-            {renderContent()}
-          </div>
-
-          <CombatLog logs={logs} />
+    <>
+      <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
+        <div className="panel-header">
+          <span>{isMyTurn && !currentManeuver ? 'Choose Maneuver' : 'Actions'}</span>
+          <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? '◀' : '▶'}
+          </button>
         </div>
-      )}
-    </aside>
+        {!collapsed && (
+          <div className="panel-content">
+            <div className="card">
+              {renderContent()}
+            </div>
+
+            <CombatLog logs={logs} />
+          </div>
+        )}
+      </aside>
+      <ConfirmDialog {...surrenderDialogProps} />
+    </>
   )
 }

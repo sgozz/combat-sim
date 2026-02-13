@@ -315,7 +315,7 @@ describe('useMatches', () => {
 
       await user.click(screen.getByRole('button', { name: 'Public' }))
 
-      expect(sendMessage).toHaveBeenCalledWith({ type: 'list_public_matches' })
+      expect(sendMessage).toHaveBeenCalledWith({ type: 'list_public_waiting' })
     })
   })
 })
