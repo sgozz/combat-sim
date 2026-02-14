@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import { Tooltip } from '../../ui/Tooltip'
 import { CombatLog } from '../../game/CombatLog'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { isPF2Combatant } from '../../../../shared/rulesets'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { SpellPicker } from './SpellPicker'
@@ -29,6 +31,20 @@ export const PF2GameActionPanel = ({
    const [collapsed, setCollapsed] = useState(false)
    const [showSpellPicker, setShowSpellPicker] = useState(false)
    const [showReadyPanel, setShowReadyPanel] = useState(false)
+   const { confirm: confirmSurrender, dialogProps: surrenderDialogProps } = useConfirmDialog()
+   const { confirm: confirmAlert, dialogProps: alertDialogProps } = useConfirmDialog()
+
+   const handleSurrender = useCallback(async () => {
+     const confirmed = await confirmSurrender({
+       title: 'Surrender?',
+       message: 'Surrender and end the match?',
+       confirmLabel: 'Surrender',
+       variant: 'danger',
+     })
+     if (confirmed) {
+       onAction('surrender', { type: 'surrender' })
+     }
+   }, [confirmSurrender, onAction])
   
   const selectedTarget = matchState.combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetName = selectedTarget 
@@ -56,7 +72,13 @@ export const PF2GameActionPanel = ({
 
     // Known spells: use full automation
     if (spellDef.targetType === 'single' && !selectedTargetId) {
-      alert('Please select a target first')
+      confirmAlert({
+        title: 'Target Required',
+        message: 'Please select a target first',
+        confirmLabel: 'OK',
+        showCancel: false,
+        variant: 'warning',
+      })
       return
     }
 
@@ -115,11 +137,7 @@ export const PF2GameActionPanel = ({
           <button 
             className="action-btn danger"
             style={{ marginTop: '1rem' }}
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-              }
-            }}
+            onClick={handleSurrender}
           >
             <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
@@ -374,11 +392,7 @@ export const PF2GameActionPanel = ({
           </button>
           <button 
             className="action-btn danger"
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-              }
-            }}
+            onClick={handleSurrender}
           >
             <span className="btn-icon"><Flag size={18} /></span> Give Up
           </button>
@@ -393,22 +407,26 @@ export const PF2GameActionPanel = ({
     : 'Actions'
 
   return (
-    <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
-      <div className="panel-header">
-        <span>{headerText}</span>
-        <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
-          {collapsed ? <ChevronRight size={20} /> : <Check size={20} className="rotate-180" />}
-        </button>
-      </div>
-      {!collapsed && (
-        <div className="panel-content">
-          <div className="card">
-            {renderContent()}
-          </div>
-
-          <CombatLog logs={logs} />
+    <>
+      <aside className={`panel panel-right ${collapsed ? 'collapsed' : ''}`}>
+        <div className="panel-header">
+          <span>{headerText}</span>
+          <button className="panel-toggle" onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? <ChevronRight size={20} /> : <Check size={20} className="rotate-180" />}
+          </button>
         </div>
-      )}
-    </aside>
+        {!collapsed && (
+          <div className="panel-content">
+            <div className="card">
+              {renderContent()}
+            </div>
+
+            <CombatLog logs={logs} />
+          </div>
+        )}
+      </aside>
+      <ConfirmDialog {...surrenderDialogProps} />
+      <ConfirmDialog {...alertDialogProps} />
+    </>
   )
 }

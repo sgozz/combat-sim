@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react'
 import { 
   Sword, Footprints, ChevronRight, ArrowUpCircle, ArrowDownCircle, 
-  Hand, Shuffle, AlertTriangle, Sparkles, Flag, 
+  Hand, Shuffle, AlertTriangle, Sparkles, Flag, MoreHorizontal,
   Undo2, SkipForward, Check, Hourglass, Scroll, LogOut, X, User
 } from 'lucide-react'
 import type { ActionBarProps } from '../types'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { isPF2Character } from '../../../../shared/rulesets/characterSheet'
 import { isPF2Combatant } from '../../../../shared/rulesets'
 import { SpellPicker } from './SpellPicker'
@@ -28,12 +30,29 @@ export const PF2ActionBar = ({
    const [showSpellPicker, setShowSpellPicker] = useState(false)
    const [showReadyPanel, setShowReadyPanel] = useState(false)
    const [showCombatLog, setShowCombatLog] = useState(false)
+   const [showMoreActions, setShowMoreActions] = useState(false)
+   const { confirm: confirmSurrender, dialogProps: surrenderDialogProps } = useConfirmDialog()
+   const { confirm: confirmAlert, dialogProps: alertDialogProps } = useConfirmDialog()
+
+   const handleSurrender = useCallback(async () => {
+     const confirmed = await confirmSurrender({
+       title: 'Surrender?',
+       message: 'Surrender and end the match?',
+       confirmLabel: 'Surrender',
+       variant: 'danger',
+     })
+     if (confirmed) {
+       onAction('surrender', { type: 'surrender' })
+       onLeaveLobby()
+     }
+   }, [confirmSurrender, onAction, onLeaveLobby])
    
    const closeAllPanels = useCallback(() => {
      setShowCharacterSheet(false)
      setShowSpellPicker(false)
      setShowReadyPanel(false)
      setShowCombatLog(false)
+     setShowMoreActions(false)
    }, [])
 
    if (!isPF2Character(playerCharacter) || !isPF2Combatant(playerCombatant)) {
@@ -94,7 +113,13 @@ export const PF2ActionBar = ({
 
     // Check if single-target spell requires target
     if (spellDef.targetType === 'single' && !selectedTargetId) {
-      alert('Please select a target first')
+      confirmAlert({
+        title: 'Target Required',
+        message: 'Please select a target first',
+        confirmLabel: 'OK',
+        showCancel: false,
+        variant: 'warning',
+      })
       return
     }
 
@@ -222,12 +247,7 @@ export const PF2ActionBar = ({
           <button 
             className="action-bar-maneuver-btn" 
             style={{ marginTop: '1rem', background: 'var(--bg-elevated)', borderColor: 'var(--accent-danger)', width: '100%' }}
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-                onLeaveLobby()
-              }
-            }}
+            onClick={handleSurrender}
           >
             <span className="action-bar-icon"><Flag size={20} /></span>
             <span className="action-bar-label">Give Up</span>
@@ -293,107 +313,19 @@ export const PF2ActionBar = ({
               <span className="action-bar-icon"><ChevronRight size={20} /></span>
               <span className="action-bar-label">Step</span>
             </button>
-            {playerCombatant.conditions.some(c => c.condition === 'prone') ? (
-              <button
-                className="action-bar-btn"
-                disabled={actionsRemaining === 0}
-                onClick={() => onAction('pf2_stand', { type: 'pf2_stand' })}
-              >
-                <span className="action-bar-icon"><ArrowUpCircle size={20} /></span>
-                <span className="action-bar-label">Stand</span>
-              </button>
-            ) : (
-              <button
-                className="action-bar-btn"
-                onClick={() => onAction('pf2_drop_prone', { type: 'pf2_drop_prone' })}
-                disabled={actionsRemaining === 0}
-                title="Drop to the ground. Costs 1 action."
-              >
-                <span className="action-bar-icon"><ArrowDownCircle size={20} /></span>
-                <span className="action-bar-label">Drop</span>
-              </button>
-            )}
-            <button
-              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
-              disabled={actionsRemaining === 0 || !selectedTargetId}
-              onClick={() => {
-                if (selectedTargetId) {
-                  onAction('pf2_grapple', { type: 'pf2_grapple', targetId: selectedTargetId })
-                }
-              }}
-              title="Grapple (Athletics vs Fortitude)"
-            >
-              <span className="action-bar-icon"><Hand size={20} /></span>
-              <span className="action-bar-label">Grapple</span>
-            </button>
-            <button
-              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
-              disabled={actionsRemaining === 0 || !selectedTargetId}
-              onClick={() => {
-                if (selectedTargetId) {
-                  onAction('pf2_trip', { type: 'pf2_trip', targetId: selectedTargetId })
-                }
-              }}
-              title="Trip (Athletics vs Reflex)"
-            >
-              <span className="action-bar-icon"><Footprints size={20} /></span>
-              <span className="action-bar-label">Trip</span>
-            </button>
-            <button
-              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
-              disabled={actionsRemaining === 0 || !selectedTargetId}
-              onClick={() => {
-                if (selectedTargetId) {
-                  onAction('pf2_feint', { type: 'pf2_feint', targetId: selectedTargetId })
-                }
-              }}
-              title="Feint (Deception vs Perception)"
-            >
-              <span className="action-bar-icon"><Shuffle size={20} /></span>
-              <span className="action-bar-label">Feint</span>
-            </button>
-            <button
-              className={`action-bar-btn ${selectedTargetId ? '' : 'disabled'}`}
-              disabled={actionsRemaining === 0 || !selectedTargetId}
-              onClick={() => {
-                if (selectedTargetId) {
-                  onAction('pf2_demoralize', { type: 'pf2_demoralize', targetId: selectedTargetId })
-                }
-              }}
-              title="Demoralize (Intimidation vs Will)"
-            >
-              <span className="action-bar-icon"><AlertTriangle size={20} /></span>
-              <span className="action-bar-label">Scare</span>
-            </button>
-            <button
-              className="action-bar-btn"
-              disabled={actionsRemaining < 1}
-              onClick={() => {
-                closeAllPanels()
-                setShowReadyPanel(true)
-              }}
-              title="Interact: Draw or sheathe a weapon (1 action)"
-            >
-              <span className="action-bar-icon"><Sword size={20} /></span>
-              <span className="action-bar-label">Interact</span>
-            </button>
-            {hasSpells && (
-              <button
-                className="action-bar-btn"
-                disabled={actionsRemaining < 2}
-                onClick={() => setShowSpellPicker(true)}
-                title="Cast a spell (requires 2 actions)"
-              >
-                <span className="action-bar-icon"><Sparkles size={20} /></span>
-                <span className="action-bar-label">Cast Spell</span>
-              </button>
-            )}
             <button
               className="action-bar-btn"
               onClick={() => onAction('end_turn', { type: 'end_turn' })}
             >
               <span className="action-bar-icon"><Hourglass size={20} /></span>
               <span className="action-bar-label">End</span>
+            </button>
+            <button
+              className={`action-bar-btn ${showMoreActions ? 'active' : ''}`}
+              onClick={() => setShowMoreActions(!showMoreActions)}
+            >
+              <span className="action-bar-icon"><MoreHorizontal size={20} /></span>
+              <span className="action-bar-label">More</span>
             </button>
           </>
         ) : (
@@ -435,6 +367,83 @@ export const PF2ActionBar = ({
           </button>
         </div>
 
+        {showMoreActions && (
+          <>
+            <div className="action-bar-backdrop" onClick={() => setShowMoreActions(false)} />
+            <div className="action-bar-maneuvers">
+              {playerCombatant.conditions.some(c => c.condition === 'prone') ? (
+                <button
+                  className="action-bar-maneuver-btn"
+                  disabled={actionsRemaining === 0}
+                  onClick={() => { onAction('pf2_stand', { type: 'pf2_stand' }); setShowMoreActions(false) }}
+                >
+                  <span className="action-bar-icon"><ArrowUpCircle size={20} /></span>
+                  <span className="action-bar-label">Stand</span>
+                </button>
+              ) : (
+                <button
+                  className="action-bar-maneuver-btn"
+                  onClick={() => { onAction('pf2_drop_prone', { type: 'pf2_drop_prone' }); setShowMoreActions(false) }}
+                  disabled={actionsRemaining === 0}
+                >
+                  <span className="action-bar-icon"><ArrowDownCircle size={20} /></span>
+                  <span className="action-bar-label">Drop</span>
+                </button>
+              )}
+              <button
+                className={`action-bar-maneuver-btn ${!selectedTargetId ? 'disabled' : ''}`}
+                disabled={actionsRemaining === 0 || !selectedTargetId}
+                onClick={() => { if (selectedTargetId) { onAction('pf2_grapple', { type: 'pf2_grapple', targetId: selectedTargetId }); setShowMoreActions(false) } }}
+              >
+                <span className="action-bar-icon"><Hand size={20} /></span>
+                <span className="action-bar-label">Grapple</span>
+              </button>
+              <button
+                className={`action-bar-maneuver-btn ${!selectedTargetId ? 'disabled' : ''}`}
+                disabled={actionsRemaining === 0 || !selectedTargetId}
+                onClick={() => { if (selectedTargetId) { onAction('pf2_trip', { type: 'pf2_trip', targetId: selectedTargetId }); setShowMoreActions(false) } }}
+              >
+                <span className="action-bar-icon"><Footprints size={20} /></span>
+                <span className="action-bar-label">Trip</span>
+              </button>
+              <button
+                className={`action-bar-maneuver-btn ${!selectedTargetId ? 'disabled' : ''}`}
+                disabled={actionsRemaining === 0 || !selectedTargetId}
+                onClick={() => { if (selectedTargetId) { onAction('pf2_feint', { type: 'pf2_feint', targetId: selectedTargetId }); setShowMoreActions(false) } }}
+              >
+                <span className="action-bar-icon"><Shuffle size={20} /></span>
+                <span className="action-bar-label">Feint</span>
+              </button>
+              <button
+                className={`action-bar-maneuver-btn ${!selectedTargetId ? 'disabled' : ''}`}
+                disabled={actionsRemaining === 0 || !selectedTargetId}
+                onClick={() => { if (selectedTargetId) { onAction('pf2_demoralize', { type: 'pf2_demoralize', targetId: selectedTargetId }); setShowMoreActions(false) } }}
+              >
+                <span className="action-bar-icon"><AlertTriangle size={20} /></span>
+                <span className="action-bar-label">Scare</span>
+              </button>
+              <button
+                className="action-bar-maneuver-btn"
+                disabled={actionsRemaining < 1}
+                onClick={() => { closeAllPanels(); setShowReadyPanel(true) }}
+              >
+                <span className="action-bar-icon"><Sword size={20} /></span>
+                <span className="action-bar-label">Interact</span>
+              </button>
+              {hasSpells && (
+                <button
+                  className="action-bar-maneuver-btn"
+                  disabled={actionsRemaining < 2}
+                  onClick={() => { setShowMoreActions(false); setShowSpellPicker(true) }}
+                >
+                  <span className="action-bar-icon"><Sparkles size={20} /></span>
+                  <span className="action-bar-label">Cast Spell</span>
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
         {showCombatLog && (
           <>
             <div className="action-bar-backdrop" onClick={() => setShowCombatLog(false)} />
@@ -455,6 +464,8 @@ export const PF2ActionBar = ({
           </div>
         </>
       )}
+      <ConfirmDialog {...surrenderDialogProps} />
+      <ConfirmDialog {...alertDialogProps} />
     </>
   )
 }
