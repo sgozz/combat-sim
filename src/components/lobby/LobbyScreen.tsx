@@ -28,7 +28,7 @@ export const LobbyScreen = ({
   const { matchId } = useParams<{ matchId: string }>()
   const navigate = useNavigate()
   const [codeCopied, setCodeCopied] = useState(false)
-  const [botCount, setBotCount] = useState(0)
+  const [botSlots, setBotSlots] = useState<(string | undefined)[]>([])
   const [showStartConfirm, setShowStartConfirm] = useState(false)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
@@ -61,8 +61,16 @@ export const LobbyScreen = ({
 
   const isCreator = user?.id === match?.creatorId
 
-  const handleUpdateBotCount = useCallback((count: number) => {
-    setBotCount(count)
+  const handleAddBot = useCallback(() => {
+    setBotSlots(prev => [...prev, undefined])
+  }, [])
+
+  const handleRemoveBot = useCallback(() => {
+    setBotSlots(prev => prev.slice(0, -1))
+  }, [])
+
+  const handleSetBotTemplate = useCallback((index: number, templateId: string | undefined) => {
+    setBotSlots(prev => prev.map((t, i) => i === index ? templateId : t))
   }, [])
 
   const handleToggleVisibility = useCallback(() => {
@@ -97,7 +105,7 @@ export const LobbyScreen = ({
 
   const playerCount = match?.playerCount ?? 0
   const allPlayersReady = playerCount === 1 || (match?.players.every(p => match.readyPlayers?.includes(p.id)) ?? false)
-  const totalCombatants = playerCount + botCount
+  const totalCombatants = playerCount + botSlots.length
   const canStart = isCreator && allPlayersReady && totalCombatants >= 2
 
   const getStartButtonTooltip = (): string => {
@@ -114,8 +122,13 @@ export const LobbyScreen = ({
     if (!match) return
     setIsStarting(true)
     setShowStartConfirm(false)
-    sendMessage({ type: 'start_combat', matchId: match.id, botCount: botCount > 0 ? botCount : undefined })
-  }, [match, botCount, sendMessage])
+    sendMessage({
+      type: 'start_combat',
+      matchId: match.id,
+      botCount: botSlots.length > 0 ? botSlots.length : undefined,
+      botTemplateIds: botSlots.length > 0 ? botSlots.map(t => t ?? '') : undefined,
+    })
+  }, [match, botSlots, sendMessage])
 
   const handleCancelStart = useCallback(() => {
     setShowStartConfirm(false)
@@ -232,7 +245,11 @@ export const LobbyScreen = ({
           <MatchSettings
             match={match}
             isCreator={isCreator ?? false}
-            onUpdateBotCount={handleUpdateBotCount}
+            botSlots={botSlots}
+            onAddBot={handleAddBot}
+            onRemoveBot={handleRemoveBot}
+            onSetBotTemplate={handleSetBotTemplate}
+            rulesetId={match.rulesetId}
             onToggleVisibility={handleToggleVisibility}
             onShareInvite={handleShareInvite}
             onCopyCode={handleCopyCode}
@@ -327,7 +344,7 @@ export const LobbyScreen = ({
             <h3 className="lobby-dialog-title">Start Match?</h3>
             <p className="lobby-dialog-text">
               Start match with <strong>{match.playerCount} player{match.playerCount !== 1 ? 's' : ''}</strong>
-              {botCount > 0 && <> and <strong>{botCount} bot{botCount !== 1 ? 's' : ''}</strong></>}?
+              {botSlots.length > 0 && <> and <strong>{botSlots.length} bot{botSlots.length !== 1 ? 's' : ''}</strong></>}?
             </p>
             <div className="lobby-dialog-actions">
               <button className="lobby-dialog-btn lobby-dialog-btn--cancel" onClick={handleCancelStart}>

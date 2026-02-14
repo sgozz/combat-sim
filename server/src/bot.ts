@@ -21,12 +21,24 @@ import { getServerAdapter } from "../../shared/rulesets/serverAdapter";
 import { getRulesetServerFactory } from "./rulesets";
 import { decidePF2BotAction, executeBotStrike, executeBotStride, executeBotInteract } from "./rulesets/pf2/bot";
 import { executeAoOStrike, resumeStrideAfterReaction } from "./handlers/pf2/reaction";
+import { getTemplateById, getMonsterTemplates } from "../../shared/rulesets/templates";
+import { generateUUID } from "../../shared/utils/uuid";
 
-
-
-export const createBotCharacter = (name: string, rulesetId: RulesetId): CharacterSheet => {
+export const createBotCharacter = (name: string, rulesetId: RulesetId, templateId?: string): CharacterSheet => {
+  if (templateId) {
+    const template = getTemplateById(rulesetId, templateId);
+    if (template) {
+      return { ...template.data, id: generateUUID(), name } as CharacterSheet;
+    }
+  }
   const factory = getRulesetServerFactory(rulesetId);
   return factory.createDefaultCharacter(name);
+};
+
+const pickRandomMonsterTemplate = (rulesetId: RulesetId): string | undefined => {
+  const monsters = getMonsterTemplates(rulesetId);
+  if (monsters.length === 0) return undefined;
+  return monsters[Math.floor(Math.random() * monsters.length)].id;
 };
 
 export const createBot = async (): Promise<User> => {
@@ -36,9 +48,10 @@ export const createBot = async (): Promise<User> => {
   return bot;
 };
 
-export const addBotToMatch = async (matchId: string, rulesetId: RulesetId): Promise<{ bot: User; character: CharacterSheet }> => {
+export const addBotToMatch = async (matchId: string, rulesetId: RulesetId, templateId?: string): Promise<{ bot: User; character: CharacterSheet }> => {
   const bot = await createBot();
-  const character = createBotCharacter(bot.username, rulesetId);
+  const resolvedTemplateId = templateId ?? pickRandomMonsterTemplate(rulesetId);
+  const character = createBotCharacter(bot.username, rulesetId, resolvedTemplateId);
   await upsertCharacter(character, bot.id);
   state.characters.set(character.id, character);
   await addMatchMember(matchId, bot.id, character.id);
