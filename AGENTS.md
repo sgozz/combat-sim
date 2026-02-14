@@ -94,6 +94,11 @@ nvm use 22.12.0
 
 ## Commands
 
+### Start Everything
+```bash
+bash scripts/start-all.sh   # Starts both client + server, Ctrl+C to stop
+```
+
 ### Client (root)
 ```bash
 npm install          # Install dependencies

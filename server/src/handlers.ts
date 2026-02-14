@@ -543,7 +543,7 @@ export const handleMessage = async (
       const rulesetId = assertRulesetId(matchRow.ruleset_id as unknown as RulesetId | undefined);
       
       for (let i = 0; i < botsToAdd; i++) {
-        const templateId = message.botTemplateIds?.[i];
+        const templateId = message.botTemplateIds?.[i] || undefined;
         await addBotToMatch(message.matchId, rulesetId, templateId);
       }
       
