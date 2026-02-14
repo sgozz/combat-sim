@@ -192,6 +192,7 @@ const goblin = createTemplate(
     { name: 'Cowardice', description: 'Flees when outmatched' },
     { name: 'Social Stigma', description: 'Monster' },
   ],
+  'monster_goblin'
 );
 
 const orc_warrior = createTemplate(
@@ -215,6 +216,7 @@ const orc_warrior = createTemplate(
     { name: 'Bad Temper', description: 'Quick to anger' },
     { name: 'Bloodlust', description: 'Fights to the death' },
   ],
+  'monster_orc'
 );
 
 const skeleton = createTemplate(
@@ -236,6 +238,7 @@ const skeleton = createTemplate(
     { name: 'Cannot Speak', description: 'Undead, no voice' },
     { name: 'Fragile (Brittle)', description: 'Destroyed at -HP' },
   ],
+  'monster_skeleton'
 );
 
 const dire_wolf = createTemplate(
@@ -258,6 +261,7 @@ const dire_wolf = createTemplate(
     { name: 'Cannot Speak', description: 'Animal intelligence' },
     { name: 'Wild Animal', description: 'Untamed predator' },
   ],
+  'monster_wolf'
 );
 
 const bandit_monster = createTemplate(
