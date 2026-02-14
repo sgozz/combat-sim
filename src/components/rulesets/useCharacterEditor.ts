@@ -21,8 +21,9 @@ export const useCharacterEditor = ({ character, setCharacter, rulesetId }: UseCh
   const [selectedClass, setSelectedClass] = useState<string>('fighter')
   
   const loadTemplate = (templateKey: string) => {
-    const template = templates[templateKey]
-    if (!template) return
+    const entry = templates.find(t => t.id === templateKey)
+    if (!entry) return
+    const template = entry.data
     
     if ('abilities' in template) {
       const pf2Template = template as Omit<import('../../../shared/rulesets/pf2/characterSheet').PF2CharacterSheet, 'id'>

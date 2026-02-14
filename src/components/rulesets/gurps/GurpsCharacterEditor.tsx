@@ -44,7 +44,7 @@ export const GurpsCharacterEditor = ({ character, setCharacter, onSave, onCancel
                 className="template-btn"
                 onClick={() => loadTemplate(key)}
               >
-                {templates[key].name}
+                {templates.find(t => t.id === key)?.label ?? key}
               </button>
             ))}
           </div>
