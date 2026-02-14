@@ -77,6 +77,25 @@ export const MatchSettings = ({
         </label>
         {isCreator ? (
           <div className="match-settings-bot-section">
+            <div className="match-settings-bot-controls">
+              <button
+                className="match-settings-bot-btn"
+                onClick={onRemoveBot}
+                disabled={botSlots.length === 0}
+                aria-label="Remove bot"
+              >
+                −
+              </button>
+              <span className="match-settings-bot-count">{botSlots.length}</span>
+              <button
+                className="match-settings-bot-btn"
+                onClick={onAddBot}
+                disabled={botSlots.length >= MAX_BOTS}
+                aria-label="Add bot"
+              >
+                +
+              </button>
+            </div>
             {botSlots.length > 0 && (
               <div className="match-settings-bot-slots">
                 {botSlots.map((templateId, i) => (
@@ -107,25 +126,6 @@ export const MatchSettings = ({
                 ))}
               </div>
             )}
-            <div className="match-settings-bot-controls">
-              <button
-                className="match-settings-bot-btn"
-                onClick={onRemoveBot}
-                disabled={botSlots.length === 0}
-                aria-label="Remove bot"
-              >
-                −
-              </button>
-              <span className="match-settings-bot-count">{botSlots.length}</span>
-              <button
-                className="match-settings-bot-btn"
-                onClick={onAddBot}
-                disabled={botSlots.length >= MAX_BOTS}
-                aria-label="Add bot"
-              >
-                +
-              </button>
-            </div>
           </div>
         ) : (
           <span className="match-settings-readonly">{botSlots.length} bots</span>
