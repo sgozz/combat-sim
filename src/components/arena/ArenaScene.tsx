@@ -83,6 +83,7 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     .map(c => c.position)
 
   const allCombatantPositions = combatants.map(c => c.position)
+  const gridSystem = getGridType(rulesetId) === 'square' ? squareGrid8 : hexGrid
 
   const selectedTarget = combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetPosition = selectedTarget?.position ?? null
@@ -200,18 +201,27 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
 
       <EnvironmentProps mapDefinition={mapDefinition} gridType={getGridType(rulesetId)} />
       
-       {combatants.map((combatant) => (
-         <Combatant
-           key={combatant.playerId}
-           combatant={combatant}
-           character={characters.find(c => c.id === combatant.characterId)}
-           isPlayer={combatant.playerId === playerId}
-           isSelected={combatant.playerId === selectedTargetId}
-           visualEffects={visualEffects}
-           gridType={getGridType(rulesetId)}
-          onClick={() => onCombatantClick(combatant.playerId)}
-        />
-      ))}
+       {combatants.map((combatant) => {
+         const others = combatants
+           .filter(c => c.playerId !== combatant.playerId)
+           .map(c => {
+             const wp = gridSystem.coordToWorld({ q: c.position.x, r: c.position.z })
+             return { x: wp.x, z: wp.z }
+           })
+         return (
+           <Combatant
+             key={combatant.playerId}
+             combatant={combatant}
+             character={characters.find(c => c.id === combatant.characterId)}
+             isPlayer={combatant.playerId === playerId}
+             isSelected={combatant.playerId === selectedTargetId}
+             visualEffects={visualEffects}
+             gridType={getGridType(rulesetId)}
+             otherWorldPositions={others}
+             onClick={() => onCombatantClick(combatant.playerId)}
+           />
+         )
+       })}
 
       {visualEffects.map((effect) => (
         <FloatingText key={effect.id} effect={effect} rulesetId={rulesetId} />

@@ -25,6 +25,8 @@ type CombatantProps = {
   isSelected: boolean
   visualEffects: (VisualEffect & { id: string })[]
   gridType: GridType
+  /** World-space positions of all other combatants, used for visual facing in rulesets without mechanical facing (PF2). */
+  otherWorldPositions?: { x: number; z: number }[]
   onClick: () => void
 }
 
@@ -177,17 +179,20 @@ const RUN_TO_WALK_DISTANCE = 1.0
 const WALK_SPEED_MULTIPLIER = 0.5
 const ROTATION_SPEED = 8
 
-export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEffects, gridType, onClick }: CombatantProps) => {
+export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEffects, gridType, otherWorldPositions, onClick }: CombatantProps) => {
   const emissive = isSelected ? '#ffff00' : '#000000'
   const gridSystem = useMemo(() => getGridSystem(gridType), [gridType])
   const worldPos = gridSystem.coordToWorld({ q: combatant.position.x, r: combatant.position.z })
   const targetX = worldPos.x
   const targetZ = worldPos.z
-  const targetRotation = -combatant.facing * (Math.PI / 3)
+
+  const hasMechanicalFacing = isGurpsCombatant(combatant)
+  const mechanicalRotation = -combatant.facing * (Math.PI / 3)
+  const visualFacingRef = useRef<number>(mechanicalRotation)
 
   const groupRef = useRef<THREE.Group>(null)
   const currentPos = useRef(new THREE.Vector3(targetX, 0, targetZ))
-  const currentRot = useRef(targetRotation)
+  const currentRot = useRef(mechanicalRotation)
   const [animationState, setAnimationState] = useState<AnimationState>('idle')
   const wasMovingRef = useRef(false)
   const combatAnimationRef = useRef<{ type: AnimationKey; until: number } | null>(null)
@@ -345,6 +350,32 @@ export const Combatant = ({ combatant, character, isPlayer, isSelected, visualEf
       const ratio = Math.min(moveDistance / distanceToTarget, 1)
       currentPos.current.x += (moveTargetX - currentPos.current.x) * ratio
       currentPos.current.z += (moveTargetZ - currentPos.current.z) * ratio
+    }
+
+    let targetRotation: number
+    if (hasMechanicalFacing) {
+      targetRotation = mechanicalRotation
+    } else if (moveSpeed > 0 && distanceToTarget > IDLE_THRESHOLD) {
+      const dx = moveTargetX - currentPos.current.x
+      const dz = moveTargetZ - currentPos.current.z
+      targetRotation = Math.atan2(dx, dz)
+      visualFacingRef.current = targetRotation
+    } else if (otherWorldPositions && otherWorldPositions.length > 0) {
+      let nearestDist = Infinity
+      let nearestAngle = visualFacingRef.current
+      const cx = currentPos.current.x
+      const cz = currentPos.current.z
+      for (const other of otherWorldPositions) {
+        const d = (other.x - cx) ** 2 + (other.z - cz) ** 2
+        if (d > 0.01 && d < nearestDist) {
+          nearestDist = d
+          nearestAngle = Math.atan2(other.x - cx, other.z - cz)
+        }
+      }
+      targetRotation = nearestAngle
+      visualFacingRef.current = targetRotation
+    } else {
+      targetRotation = visualFacingRef.current
     }
 
     let rotDiff = targetRotation - currentRot.current
