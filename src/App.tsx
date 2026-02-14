@@ -113,8 +113,10 @@ function AppRoutes() {
     }
   }, [connectionState, user, navigate, location.pathname, activeMatchId, sendMessage, refreshMyMatches])
 
-  // When activeMatchId is set for an active/paused match but we have no matchState,
-  // send rejoin_match to the server to request it. This covers:
+  // When activeMatchId is set but we have no matchState, send rejoin_match to the
+  // server to request it. Don't wait for myMatches — send immediately on connect.
+  // The server validates membership and returns match_state or an error.
+  // This covers:
   // - Clicking a match card in the Dashboard
   // - Reconnecting after page reload (localStorage has the matchId)
   // - Switching devices (server returns activeMatches in auth_ok)
@@ -127,25 +129,20 @@ function AppRoutes() {
     if (matchState?.id === activeMatchId) return
     if (rejoinSentRef.current === activeMatchId) return
 
-    const match = myMatches.find(m => m.id === activeMatchId)
-    if (match && (match.status === 'active' || match.status === 'paused')) {
-      rejoinSentRef.current = activeMatchId
-      sendMessage({ type: 'rejoin_match', matchId: activeMatchId })
-    }
-  }, [activeMatchId, matchState, myMatches, connectionState, sendMessage])
+    rejoinSentRef.current = activeMatchId
+    sendMessage({ type: 'rejoin_match', matchId: activeMatchId })
+  }, [activeMatchId, matchState, connectionState, sendMessage])
 
   useEffect(() => {
-    if (activeMatchId) {
-      // Don't redirect away from armory (user may be creating a character mid-lobby)
-      if (location.pathname.startsWith('/armory')) return
-      const match = myMatches.find(m => m.id === activeMatchId)
-      if (match) {
-        if (match.status === 'waiting') {
-          navigate(`/lobby/${activeMatchId}`, { replace: true })
-        } else if (match.status === 'active' || match.status === 'paused' || match.status === 'finished') {
-          navigate(`/game/${activeMatchId}`, { replace: true })
-        }
-      }
+    if (!activeMatchId) return
+    if (location.pathname.startsWith('/armory')) return
+    if (location.pathname === `/game/${activeMatchId}` || location.pathname === `/lobby/${activeMatchId}`) return
+
+    const match = myMatches.find(m => m.id === activeMatchId)
+    if (match?.status === 'waiting') {
+      navigate(`/lobby/${activeMatchId}`, { replace: true })
+    } else {
+      navigate(`/game/${activeMatchId}`, { replace: true })
     }
   }, [activeMatchId, myMatches, navigate, location.pathname])
 

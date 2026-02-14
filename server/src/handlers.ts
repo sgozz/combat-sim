@@ -453,6 +453,7 @@ export const handleMessage = async (
           state.matches.set(matchRow.id, resumed);
           await updateMatchState(matchRow.id, resumed);
           await sendToMatch(matchRow.id, { type: "match_state", state: resumed });
+          scheduleBotTurn(matchRow.id, resumed);
         }
         
         await sendToMatch(matchRow.id, { 
