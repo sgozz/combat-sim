@@ -206,7 +206,7 @@ describe('LobbyScreen', () => {
     const startButtons = screen.getAllByRole('button', { name: 'Start Match' })
     await userEventInstance.click(startButtons[startButtons.length - 1])
 
-    expect(sendMessage).toHaveBeenCalledWith({ type: 'start_combat', matchId: 'match-1', botCount: 1 })
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'start_combat', matchId: 'match-1', botCount: 1, botTemplateIds: [''] })
   })
 
   it('clicking Leave Match shows confirmation dialog', async () => {

@@ -5,6 +5,8 @@ import { rulesets } from '../../../shared/rulesets'
 import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/characterSheet'
 import { ModelPreview } from './ModelPreview'
 import { PathbuilderImport } from '../rulesets/pf2/PathbuilderImport'
+import { getTemplatesForRuleset } from '../../../shared/rulesets/templates'
+import type { TemplateEntry } from '../../../shared/rulesets/templates'
 import type { CharacterSheet, RulesetId } from '../../../shared/types'
 import type { GurpsCharacterSheet } from '../../../shared/rulesets/gurps/characterSheet'
 import type { PF2CharacterSheet } from '../../../shared/rulesets/pf2/characterSheet'
@@ -36,6 +38,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
   const [character, setCharacter] = useState<CharacterSheet | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [showPathbuilderImport, setShowPathbuilderImport] = useState(false)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(isNew)
 
   useEffect(() => {
     if (isNew) {
@@ -54,6 +57,18 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
       }
     }
   }, [id, isNew, characters, navigate, preferredRulesetId, defaultName])
+
+  const handleSelectTemplate = useCallback((template: TemplateEntry<CharacterSheet>) => {
+    setCharacter(prev => {
+      if (!prev) return prev
+      return { ...template.data, id: prev.id } as CharacterSheet
+    })
+    setShowTemplatePicker(false)
+  }, [])
+
+  const handleSkipTemplate = useCallback(() => {
+    setShowTemplatePicker(false)
+  }, [])
 
   if (!character) {
     return (
@@ -155,21 +170,30 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
         </div>
       </header>
 
-      <nav className="editor-tabs" role="tablist">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`editor-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      {!showTemplatePicker && (
+        <nav className="editor-tabs" role="tablist">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`editor-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      )}
 
       <main className="editor-content">
+        {showTemplatePicker ? (
+          <TemplatePicker
+            rulesetId={character.rulesetId}
+            onSelectTemplate={handleSelectTemplate}
+            onSkip={handleSkipTemplate}
+          />
+        ) : (<>
         {activeTab === 'attributes' && (
           <div className="editor-tab-panel" role="tabpanel">
             {isGurpsCharacter(character) && (
@@ -259,6 +283,7 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
             )}
           </div>
         )}
+        </>)}
       </main>
 
       {showPathbuilderImport && (
@@ -270,6 +295,76 @@ export const CharacterEditor = ({ characters, onSaveCharacter, preferredRulesetI
           onCancel={() => setShowPathbuilderImport(false)}
         />
       )}
+    </div>
+  )
+}
+
+/* ─── Template Picker ─── */
+
+type TemplatePickerProps = {
+  rulesetId: RulesetId
+  onSelectTemplate: (template: TemplateEntry<CharacterSheet>) => void
+  onSkip: () => void
+}
+
+const TemplatePicker = ({ rulesetId, onSelectTemplate, onSkip }: TemplatePickerProps) => {
+  const templates = getTemplatesForRuleset(rulesetId)
+  const heroes = templates.filter(t => t.category === 'hero')
+  const monsters = templates.filter(t => t.category === 'monster')
+
+  return (
+    <div className="editor-tab-panel" role="tabpanel">
+      <div className="template-picker">
+        <div className="template-picker-header">
+          <h2 className="template-picker-title">Choose a Template</h2>
+          <p className="template-picker-subtitle">Start from a pre-built character or create one from scratch</p>
+        </div>
+
+        <button
+          className="template-card template-card--blank"
+          onClick={onSkip}
+        >
+          <span className="template-card-icon">+</span>
+          <span className="template-card-label">Blank Character</span>
+          <span className="template-card-desc">Start from scratch</span>
+        </button>
+
+        {heroes.length > 0 && (
+          <div className="template-group">
+            <h3 className="template-group-title">Heroes</h3>
+            <div className="template-grid">
+              {heroes.map(t => (
+                <button
+                  key={t.id}
+                  className="template-card"
+                  onClick={() => onSelectTemplate(t)}
+                >
+                  <span className="template-card-badge template-card-badge--hero">Hero</span>
+                  <span className="template-card-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {monsters.length > 0 && (
+          <div className="template-group">
+            <h3 className="template-group-title">Monsters</h3>
+            <div className="template-grid">
+              {monsters.map(t => (
+                <button
+                  key={t.id}
+                  className="template-card"
+                  onClick={() => onSelectTemplate(t)}
+                >
+                  <span className="template-card-badge template-card-badge--monster">Monster</span>
+                  <span className="template-card-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

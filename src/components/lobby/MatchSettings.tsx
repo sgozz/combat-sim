@@ -1,11 +1,16 @@
-import { useState, useCallback } from 'react'
-import type { MatchSummary } from '../../../shared/types'
+import { useCallback, useMemo } from 'react'
+import { getTemplatesForRuleset } from '../../../shared/rulesets/templates'
+import type { RulesetId, MatchSummary } from '../../../shared/types'
 import './MatchSettings.css'
 
 type MatchSettingsProps = {
   match: MatchSummary
   isCreator: boolean
-  onUpdateBotCount: (count: number) => void
+  botSlots: (string | undefined)[]
+  onAddBot: () => void
+  onRemoveBot: () => void
+  onSetBotTemplate: (index: number, templateId: string | undefined) => void
+  rulesetId: RulesetId
   onToggleVisibility: () => void
   onShareInvite: () => void
   onCopyCode: () => void
@@ -30,7 +35,6 @@ const EyeIcon = () => (
 )
 
 const MAX_BOTS = 4
-const MIN_BOTS = 0
 
 const ShareIcon = () => (
   <svg className="match-settings-label-icon" viewBox="0 0 16 16" fill="none">
@@ -44,31 +48,25 @@ const ShareIcon = () => (
 export const MatchSettings = ({
   match,
   isCreator,
-  onUpdateBotCount,
+  botSlots,
+  onAddBot,
+  onRemoveBot,
+  onSetBotTemplate,
+  rulesetId,
   onToggleVisibility,
   onShareInvite,
   onCopyCode,
   codeCopied,
 }: MatchSettingsProps) => {
-  const [botCount, setBotCount] = useState(0)
-
   const isPublic = match.isPublic ?? false
 
-  const handleIncrementBots = useCallback(() => {
-    if (botCount < MAX_BOTS) {
-      const newCount = botCount + 1
-      setBotCount(newCount)
-      onUpdateBotCount(newCount)
-    }
-  }, [botCount, onUpdateBotCount])
+  const templates = useMemo(() => getTemplatesForRuleset(rulesetId), [rulesetId])
+  const heroes = useMemo(() => templates.filter(t => t.category === 'hero'), [templates])
+  const monsters = useMemo(() => templates.filter(t => t.category === 'monster'), [templates])
 
-  const handleDecrementBots = useCallback(() => {
-    if (botCount > MIN_BOTS) {
-      const newCount = botCount - 1
-      setBotCount(newCount)
-      onUpdateBotCount(newCount)
-    }
-  }, [botCount, onUpdateBotCount])
+  const handleTemplateChange = useCallback((index: number, value: string) => {
+    onSetBotTemplate(index, value || undefined)
+  }, [onSetBotTemplate])
 
   return (
     <div className="match-settings">
@@ -78,27 +76,59 @@ export const MatchSettings = ({
           Bot Players
         </label>
         {isCreator ? (
-          <div className="match-settings-bot-controls">
-            <button
-              className="match-settings-bot-btn"
-              onClick={handleDecrementBots}
-              disabled={botCount === MIN_BOTS}
-              aria-label="Remove bot"
-            >
-              −
-            </button>
-            <span className="match-settings-bot-count">{botCount}</span>
-            <button
-              className="match-settings-bot-btn"
-              onClick={handleIncrementBots}
-              disabled={botCount === MAX_BOTS}
-              aria-label="Add bot"
-            >
-              +
-            </button>
+          <div className="match-settings-bot-section">
+            {botSlots.length > 0 && (
+              <div className="match-settings-bot-slots">
+                {botSlots.map((templateId, i) => (
+                  <div key={i} className="match-settings-bot-slot">
+                    <span className="match-settings-bot-slot-label">Bot {i + 1}</span>
+                    <select
+                      className="match-settings-bot-template-select"
+                      value={templateId ?? ''}
+                      onChange={(e) => handleTemplateChange(i, e.target.value)}
+                    >
+                      <option value="">Random Monster</option>
+                      {heroes.length > 0 && (
+                        <optgroup label="Heroes">
+                          {heroes.map(t => (
+                            <option key={t.id} value={t.id}>{t.label}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {monsters.length > 0 && (
+                        <optgroup label="Monsters">
+                          {monsters.map(t => (
+                            <option key={t.id} value={t.id}>{t.label}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="match-settings-bot-controls">
+              <button
+                className="match-settings-bot-btn"
+                onClick={onRemoveBot}
+                disabled={botSlots.length === 0}
+                aria-label="Remove bot"
+              >
+                −
+              </button>
+              <span className="match-settings-bot-count">{botSlots.length}</span>
+              <button
+                className="match-settings-bot-btn"
+                onClick={onAddBot}
+                disabled={botSlots.length >= MAX_BOTS}
+                aria-label="Add bot"
+              >
+                +
+              </button>
+            </div>
           </div>
         ) : (
-          <span className="match-settings-readonly">{botCount} bots</span>
+          <span className="match-settings-readonly">{botSlots.length} bots</span>
         )}
       </section>
 

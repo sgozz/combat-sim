@@ -117,7 +117,7 @@ export type ClientToServerMessage =
    | { type: "list_public_matches" }
    | { type: "spectate_match"; matchId: Id }
    | { type: "stop_spectating"; matchId: Id }
-   | { type: "start_combat"; matchId: Id; botCount?: number }
+   | { type: "start_combat"; matchId: Id; botCount?: number; botTemplateIds?: string[] }
    | { type: "select_character"; matchId: Id; character: CharacterSheet }
    | { type: "action"; matchId: Id; action: CombatActionPayload["type"]; payload?: CombatActionPayload }
    | { type: "list_characters" }
