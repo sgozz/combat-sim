@@ -41,17 +41,29 @@ const pickRandomMonsterTemplate = (rulesetId: RulesetId): string | undefined => 
   return monsters[Math.floor(Math.random() * monsters.length)].id;
 };
 
-export const createBot = async (): Promise<User> => {
-  const botName = `Bot ${state.botCount++}`;
-  const bot = await createUser(botName, true);
+export const createBot = async (name?: string): Promise<User> => {
+  const baseName = name ?? `Bot ${state.botCount}`;
+  state.botCount++;
+  const bot = await createBotUser(baseName);
   state.users.set(bot.id, bot);
   return bot;
 };
 
+const createBotUser = async (baseName: string): Promise<User> => {
+  try {
+    return await createUser(baseName, true);
+  } catch {
+    state.db.prepare("DELETE FROM users WHERE username = ? AND is_bot = 1").run(baseName);
+    return await createUser(baseName, true);
+  }
+};
+
 export const addBotToMatch = async (matchId: string, rulesetId: RulesetId, templateId?: string): Promise<{ bot: User; character: CharacterSheet }> => {
-  const bot = await createBot();
   const resolvedTemplateId = templateId ?? pickRandomMonsterTemplate(rulesetId);
-  const character = createBotCharacter(bot.username, rulesetId, resolvedTemplateId);
+  const template = resolvedTemplateId ? getTemplateById(rulesetId, resolvedTemplateId) : undefined;
+  const botName = template?.label ?? `Bot ${state.botCount}`;
+  const bot = await createBot(botName);
+  const character = createBotCharacter(botName, rulesetId, resolvedTemplateId);
   await upsertCharacter(character, bot.id);
   state.characters.set(character.id, character);
   await addMatchMember(matchId, bot.id, character.id);
