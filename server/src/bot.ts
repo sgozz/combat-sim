@@ -53,7 +53,15 @@ const createBotUser = async (baseName: string): Promise<User> => {
   try {
     return await createUser(baseName, true);
   } catch {
-    state.db.prepare("DELETE FROM users WHERE username = ? AND is_bot = 1").run(baseName);
+    const old = state.db.prepare("SELECT id FROM users WHERE username = ? AND is_bot = 1").get(baseName) as { id: string } | undefined;
+    if (old) {
+      state.db.prepare("DELETE FROM match_members WHERE user_id = ?").run(old.id);
+      state.db.prepare("DELETE FROM characters WHERE owner_id = ?").run(old.id);
+      state.db.prepare("DELETE FROM sessions WHERE user_id = ?").run(old.id);
+      state.db.prepare("UPDATE matches SET winner_id = NULL WHERE winner_id = ?").run(old.id);
+      state.db.prepare("DELETE FROM users WHERE id = ?").run(old.id);
+      state.users.delete(old.id);
+    }
     return await createUser(baseName, true);
   }
 };
