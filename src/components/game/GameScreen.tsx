@@ -73,17 +73,18 @@ export const GameScreen = ({
   const { matchId } = useParams<{ matchId: string }>()
   void matchId
 
-  // Auto-center camera on turn change
-  const [cameraMode, setCameraMode] = useState<'free' | 'follow'>('free')
+  const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
   const prevActiveTurnRef = useRef<string | null>(null)
 
   useEffect(() => {
     const activeTurnId = matchState?.activeTurnPlayerId ?? null
     if (activeTurnId && activeTurnId !== prevActiveTurnRef.current) {
       prevActiveTurnRef.current = activeTurnId
-      const followTimer = setTimeout(() => setCameraMode('follow'), 0)
-      const freeTimer = setTimeout(() => setCameraMode('free'), 1500)
+      const overviewTimer = setTimeout(() => setCameraMode('overview'), 0)
+      const followTimer = setTimeout(() => setCameraMode('follow'), 2000)
+      const freeTimer = setTimeout(() => setCameraMode('free'), 3500)
       return () => {
+        clearTimeout(overviewTimer)
         clearTimeout(followTimer)
         clearTimeout(freeTimer)
       }

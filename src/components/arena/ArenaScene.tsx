@@ -82,7 +82,8 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
     .filter(c => c.playerId !== playerId)
     .map(c => c.position)
 
-  
+  const allCombatantPositions = combatants.map(c => c.position)
+
   const selectedTarget = combatants.find(c => c.playerId === selectedTargetId)
   const selectedTargetPosition = selectedTarget?.position ?? null
 
@@ -220,7 +221,12 @@ export const ArenaScene = ({ combatants, characters, playerId, activeTurnPlayerI
 
        {moveTarget && <MoveMarker position={moveTarget} gridType={getGridType(rulesetId)} />}
 
-      <CameraControls targetPosition={activeCombatantPosition} mode={cameraMode} />
+      <CameraControls
+        targetPosition={activeCombatantPosition}
+        allPositions={allCombatantPositions}
+        selectedTargetPosition={selectedTargetPosition}
+        mode={cameraMode}
+      />
       <OrbitControls makeDefault />
       
       {!isMobile && (
