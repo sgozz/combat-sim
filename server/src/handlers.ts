@@ -32,6 +32,8 @@ import {
   updateMatchMemberCharacter,
   updateMatchMemberConnection,
   removeMatchMember,
+  dismissMatchMember,
+  getUserMatchStats,
   getMatchMemberCount,
   getActiveMatches,
   buildPublicMatchSummary,
@@ -169,7 +171,8 @@ export const handleMessage = async (
       const summaries = await Promise.all(
         userMatches.map(row => buildMatchSummary(row, user.id))
       );
-      sendMessage(socket, { type: "my_matches", matches: summaries });
+      const stats = getUserMatchStats(user.id);
+      sendMessage(socket, { type: "my_matches", matches: summaries, stats });
       
       return;
     }
@@ -199,7 +202,8 @@ export const handleMessage = async (
       const summaries = await Promise.all(
         userMatches.map(row => buildMatchSummary(row, user.id))
       );
-      sendMessage(socket, { type: "my_matches", matches: summaries });
+      const stats = getUserMatchStats(user.id);
+      sendMessage(socket, { type: "my_matches", matches: summaries, stats });
       return;
     }
     
@@ -369,8 +373,8 @@ export const handleMessage = async (
         return;
       }
       
-      // Don't remove match_members for finished matches — needed for stats/history
       if (matchRow.status === 'finished') {
+        dismissMatchMember(message.matchId, user.id);
         sendMessage(socket, { type: "match_left", matchId: message.matchId });
         return;
       }

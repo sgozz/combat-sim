@@ -1,19 +1,14 @@
-import type { MatchSummary } from '../../../shared/types'
+import type { UserMatchStats } from '../../../shared/types'
 import './StatsBar.css'
 
 type StatsBarProps = {
-  myMatches: MatchSummary[]
-  currentUserId: string
+  stats: UserMatchStats | null
 }
 
-export const StatsBar = ({ myMatches, currentUserId }: StatsBarProps) => {
-  const finishedMatches = myMatches.filter(m => m.status === 'finished')
-  const totalMatches = finishedMatches.length
-
-  const wins = finishedMatches.filter(m => m.winnerId === currentUserId).length
-  const losses = finishedMatches.filter(
-    m => m.winnerId && m.winnerId !== currentUserId
-  ).length
+export const StatsBar = ({ stats }: StatsBarProps) => {
+  const totalMatches = stats?.totalMatches ?? 0
+  const wins = stats?.wins ?? 0
+  const losses = stats?.losses ?? 0
 
   const winRate = totalMatches > 0
     ? (wins / totalMatches * 100).toFixed(1)

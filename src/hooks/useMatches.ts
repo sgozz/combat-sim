@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { ServerToClientMessage, MatchSummary, MatchState } from '../../shared/types'
+import type { ServerToClientMessage, MatchSummary, MatchState, UserMatchStats } from '../../shared/types'
 
 type UseMatchesParams = {
   sendMessage: (payload: unknown) => void
@@ -19,6 +19,7 @@ export const useMatches = ({
   setLogs,
 }: UseMatchesParams) => {
   const [myMatches, setMyMatches] = useState<MatchSummary[]>([])
+  const [matchStats, setMatchStats] = useState<UserMatchStats | null>(null)
   const [publicMatches, setPublicMatches] = useState<MatchSummary[]>([])
   const [spectatingMatchId, setSpectatingMatchId] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -62,6 +63,7 @@ export const useMatches = ({
       switch (message.type) {
         case 'my_matches':
           setMyMatches(message.matches)
+          if (message.stats) setMatchStats(message.stats)
           return true
         
         case 'match_created':
@@ -219,6 +221,7 @@ export const useMatches = ({
 
   return {
     myMatches,
+    matchStats,
     publicMatches,
     spectatingMatchId,
     isSyncing,

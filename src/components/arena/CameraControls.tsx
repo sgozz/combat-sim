@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/immutability */
 import { useFrame, useThree } from '@react-three/fiber'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { Vector3 } from 'three'
 import { hexToWorld } from '../../utils/hex'
 import type { GridPosition } from '../../../shared/types'
@@ -15,11 +15,17 @@ interface OrbitControlsLike {
 
 type CameraControlsProps = {
   targetPosition: GridPosition | null
-  focusPositions: GridPosition[]
+  allPositions: GridPosition[]
+  selectedTargetPosition: GridPosition | null
   mode: CameraMode
 }
 
-export const CameraControls = ({ targetPosition, focusPositions, mode }: CameraControlsProps) => {
+const gridToWorld = (pos: GridPosition): Vector3 => {
+  const [wx, wz] = hexToWorld(pos.x, pos.z)
+  return new Vector3(wx, 0, wz)
+}
+
+export const CameraControls = ({ targetPosition, allPositions, selectedTargetPosition, mode }: CameraControlsProps) => {
   const controls = useThree((state) => state.controls) as unknown as OrbitControlsLike | null
   const { camera } = useThree()
   
@@ -27,42 +33,70 @@ export const CameraControls = ({ targetPosition, focusPositions, mode }: CameraC
   
   useEffect(() => {
     if (targetPosition) {
-      const [wx, wz] = hexToWorld(targetPosition.x, targetPosition.z)
-      followTarget.current.set(wx, 0, wz)
+      followTarget.current.copy(gridToWorld(targetPosition))
     }
   }, [targetPosition])
+
+  const overviewGoal = useMemo(() => {
+    if (mode !== 'overview' || allPositions.length === 0) return null
+
+    const worldPoints = allPositions.map(gridToWorld)
+
+    const activeWorld = targetPosition ? gridToWorld(targetPosition) : null
+    const targetWorld = selectedTargetPosition ? gridToWorld(selectedTargetPosition) : null
+
+    const geoCenter = worldPoints
+      .reduce((acc, cur) => acc.add(cur), new Vector3())
+      .multiplyScalar(1 / worldPoints.length)
+
+    const focusPoint = new Vector3()
+    let totalWeight = 0
+
+    for (const wp of worldPoints) {
+      focusPoint.add(wp)
+      totalWeight += 1
+    }
+    if (activeWorld) {
+      focusPoint.add(activeWorld.clone().multiplyScalar(2))
+      totalWeight += 2
+    }
+    if (targetWorld) {
+      focusPoint.add(targetWorld.clone().multiplyScalar(1.5))
+      totalWeight += 1.5
+    }
+    focusPoint.multiplyScalar(1 / totalWeight)
+
+    const maxDist = worldPoints.reduce(
+      (max, cur) => Math.max(max, cur.distanceTo(geoCenter)),
+      0
+    )
+    const spread = Math.max(6, maxDist + 4)
+    const height = Math.max(10, spread * 1.1)
+
+    const camPos = focusPoint.clone().add(new Vector3(spread * 0.7, height, spread * 0.7))
+
+    return { lookAt: focusPoint, camPos }
+  }, [mode, allPositions, targetPosition, selectedTargetPosition])
 
   useFrame((_, delta) => {
     if (!controls) return
 
     if (!controls.enabled) controls.enabled = true
 
-    if (mode === 'free') {
-      return
-    }
+    if (mode === 'free') return
 
-    const GENTLE_SUGGESTION_SPEED = 0.4
-    const speed = GENTLE_SUGGESTION_SPEED * delta
-    const target = followTarget.current
+    const speed = 0.4 * delta
 
     if (mode === 'follow') {
+      const target = followTarget.current
       const offset = new Vector3(8, 10, 8)
-      const targetCamPos = target.clone().add(offset)
-      camera.position.lerp(targetCamPos, speed)
+      camera.position.lerp(target.clone().add(offset), speed)
       controls.target.lerp(target, speed)
-    } else if (mode === 'overview' && focusPositions.length > 0) {
-      const worldPoints = focusPositions.map((pos) => {
-        const [wx, wz] = hexToWorld(pos.x, pos.z)
-        return new Vector3(wx, 0, wz)
-      })
-      const center = worldPoints.reduce((acc, cur) => acc.add(cur), new Vector3()).multiplyScalar(1 / worldPoints.length)
-      const maxDistance = worldPoints.reduce((max, cur) => Math.max(max, cur.distanceTo(center)), 0)
-      const height = Math.max(12, maxDistance * 2 + 6)
-      const overviewPos = center.clone().add(new Vector3(maxDistance, height, maxDistance))
-      camera.position.lerp(overviewPos, speed)
-      controls.target.lerp(center, speed)
+    } else if (mode === 'overview' && overviewGoal) {
+      camera.position.lerp(overviewGoal.camPos, speed)
+      controls.target.lerp(overviewGoal.lookAt, speed)
     }
-    
+
     camera.lookAt(controls.target)
   })
 

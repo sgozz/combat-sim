@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MatchCard } from './MatchCard'
 import { StatsBar } from './dashboard/StatsBar'
 import { CreateMatchDialog } from './dashboard/CreateMatchDialog'
-import type { MatchSummary, User, RulesetId } from '../../shared/types'
+import type { MatchSummary, User, RulesetId, UserMatchStats } from '../../shared/types'
 import './Dashboard.css'
 
 const RULESET_LABELS: Record<RulesetId, string> = {
@@ -14,6 +14,7 @@ const RULESET_LABELS: Record<RulesetId, string> = {
 type DashboardProps = {
   user: User
   myMatches: MatchSummary[]
+  matchStats: UserMatchStats | null
   publicMatches: MatchSummary[]
   refreshMyMatches: () => void
   fetchPublicMatches: () => void
@@ -28,6 +29,7 @@ type DashboardProps = {
 export const Dashboard = ({
   user,
   myMatches,
+  matchStats,
   publicMatches,
   refreshMyMatches,
   fetchPublicMatches,
@@ -124,7 +126,7 @@ export const Dashboard = ({
 
       <main className="dashboard-main">
         <div className="dashboard-container">
-          <StatsBar myMatches={myMatches} currentUserId={user.id} />
+          <StatsBar stats={matchStats} />
 
           {/* Quick Actions */}
           <section className="dashboard-quick-actions">
