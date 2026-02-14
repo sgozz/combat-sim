@@ -1,6 +1,6 @@
 export type AnimationKey = 'idle' | 'walk' | 'run' | 'death' | 'dodge' | 'attack' | 'hit' | 'grapple' | 'crouch' | 'spell'
 
-export type AnimationLibrary = 'classic' | 'quaternius'
+export type AnimationLibrary = 'classic' | 'quaternius' | 'monster'
 
 export type WeaponType = 'sword' | 'dagger' | 'staff' | 'bow' | 'unarmed' | 'spell'
 
@@ -162,6 +162,169 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     weaponType: 'sword',
   },
 
+  // --- Monster models (Quaternius, CC0) ---
+
+  monster_goblin: {
+    id: 'monster_goblin',
+    label: 'Goblin',
+    path: '/models/monsters/goblin.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'CharacterArmature|Idle',
+      walk: 'CharacterArmature|Walk',
+      run: 'CharacterArmature|Run',
+      death: 'CharacterArmature|Death',
+      dodge: 'CharacterArmature|Duck',
+      attack: 'CharacterArmature|Punch',
+      hit: 'CharacterArmature|HitReact',
+      grapple: 'CharacterArmature|Weapon',
+      crouch: 'CharacterArmature|Duck',
+      spell: 'CharacterArmature|Wave',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+  monster_orc: {
+    id: 'monster_orc',
+    label: 'Orc',
+    path: '/models/monsters/orc.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'CharacterArmature|Idle',
+      walk: 'CharacterArmature|Walk',
+      run: 'CharacterArmature|Run',
+      death: 'CharacterArmature|Death',
+      dodge: 'CharacterArmature|Duck',
+      attack: 'CharacterArmature|Punch',
+      hit: 'CharacterArmature|HitReact',
+      grapple: 'CharacterArmature|Weapon',
+      crouch: 'CharacterArmature|Duck',
+      spell: 'CharacterArmature|Wave',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+  monster_skeleton: {
+    id: 'monster_skeleton',
+    label: 'Skeleton',
+    path: '/models/monsters/skeleton.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'EnemyArmature|EnemyArmature|EnemyArmature|Idle',
+      walk: 'EnemyArmature|EnemyArmature|EnemyArmature|Walk',
+      run: 'EnemyArmature|EnemyArmature|EnemyArmature|Run',
+      death: 'EnemyArmature|EnemyArmature|EnemyArmature|Death',
+      dodge: 'EnemyArmature|EnemyArmature|EnemyArmature|Jump',
+      attack: 'EnemyArmature|EnemyArmature|EnemyArmature|Attack',
+      hit: 'EnemyArmature|EnemyArmature|EnemyArmature|HitRecieve',
+      grapple: 'EnemyArmature|EnemyArmature|EnemyArmature|Attack',
+      crouch: 'EnemyArmature|EnemyArmature|EnemyArmature|Idle',
+      spell: 'EnemyArmature|EnemyArmature|EnemyArmature|Jump',
+    },
+    library: 'monster',
+    weaponType: 'sword',
+  },
+  monster_demon: {
+    id: 'monster_demon',
+    label: 'Demon',
+    path: '/models/monsters/demon.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'CharacterArmature|Flying_Idle',
+      walk: 'CharacterArmature|Fast_Flying',
+      run: 'CharacterArmature|Fast_Flying',
+      death: 'CharacterArmature|Death',
+      dodge: 'CharacterArmature|No',
+      attack: 'CharacterArmature|Punch',
+      hit: 'CharacterArmature|HitReact',
+      grapple: 'CharacterArmature|Headbutt',
+      crouch: 'CharacterArmature|Flying_Idle',
+      spell: 'CharacterArmature|Yes',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+  monster_ghost: {
+    id: 'monster_ghost',
+    label: 'Ghost',
+    path: '/models/monsters/ghost.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'CharacterArmature|Flying_Idle',
+      walk: 'CharacterArmature|Fast_Flying',
+      run: 'CharacterArmature|Fast_Flying',
+      death: 'CharacterArmature|Death',
+      dodge: 'CharacterArmature|No',
+      attack: 'CharacterArmature|Punch',
+      hit: 'CharacterArmature|HitReact',
+      grapple: 'CharacterArmature|Headbutt',
+      crouch: 'CharacterArmature|Flying_Idle',
+      spell: 'CharacterArmature|Yes',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+  monster_wolf: {
+    id: 'monster_wolf',
+    label: 'Wolf',
+    path: '/models/monsters/wolf.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'AnimalArmature|Idle',
+      walk: 'AnimalArmature|Walk',
+      run: 'AnimalArmature|Gallop',
+      death: 'AnimalArmature|Death',
+      dodge: 'AnimalArmature|Gallop_Jump',
+      attack: 'AnimalArmature|Attack',
+      hit: 'AnimalArmature|Idle_HitReact_Left',
+      grapple: 'AnimalArmature|Attack',
+      crouch: 'AnimalArmature|Eating',
+      spell: 'AnimalArmature|Idle_2',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+  monster_spider: {
+    id: 'monster_spider',
+    label: 'Spider',
+    path: '/models/monsters/spider.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'SpiderArmature|Spider_Idle',
+      walk: 'SpiderArmature|Spider_Walk',
+      run: 'SpiderArmature|Spider_Walk',
+      death: 'SpiderArmature|Spider_Death',
+      dodge: 'SpiderArmature|Spider_Jump',
+      attack: 'SpiderArmature|Spider_Attack',
+      hit: 'SpiderArmature|Spider_Jump',
+      grapple: 'SpiderArmature|Spider_Attack',
+      crouch: 'SpiderArmature|Spider_Idle',
+      spell: 'SpiderArmature|Spider_Jump',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+  monster_skull: {
+    id: 'monster_skull',
+    label: 'Skull',
+    path: '/models/monsters/skull.glb',
+    rotationOffset: 0,
+    animations: {
+      idle: 'MonsterArmature|Idle',
+      walk: 'MonsterArmature|Walk',
+      run: 'MonsterArmature|Walk',
+      death: 'MonsterArmature|Death',
+      dodge: 'MonsterArmature|Jump',
+      attack: 'MonsterArmature|Bite_Front',
+      hit: 'MonsterArmature|HitRecieve',
+      grapple: 'MonsterArmature|Bite_InPlace',
+      crouch: 'MonsterArmature|Idle',
+      spell: 'MonsterArmature|Dance',
+    },
+    library: 'monster',
+    weaponType: 'unarmed',
+  },
+
 }
 
 export const DEFAULT_MODEL_ID = 'quaternius_ual1'
@@ -186,4 +349,8 @@ export function getClassicModels(): ModelEntry[] {
 
 export function getQuaterniusModels(): ModelEntry[] {
   return getModelsByLibrary('quaternius')
+}
+
+export function getMonsterModels(): ModelEntry[] {
+  return getModelsByLibrary('monster')
 }

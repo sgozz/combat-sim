@@ -9,6 +9,7 @@ import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/chara
 import { isGurpsCombatant } from '../../../shared/rulesets'
 import { getModelEntry, getAllPreloadPaths } from '../../data/modelRegistry'
 import type { AnimationKey, ModelEntry } from '../../data/modelRegistry'
+import { normalizeFBXScales, computeNormalizedScale } from '../../utils/modelNormalize'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -44,17 +45,6 @@ const STATUS_ICONS: Record<string, string> = {
 
 for (const path of getAllPreloadPaths()) {
   useGLTF.preload(path)
-}
-
-/** Target character height in world units */
-const TARGET_HEIGHT = 1.8
-
-/** Compute a uniform scale factor so the object's bounding-box height equals TARGET_HEIGHT */
-function computeNormalizedScale(obj: THREE.Object3D): number {
-  const box = new THREE.Box3().setFromObject(obj)
-  const height = box.max.y - box.min.y
-  if (height <= 0) return 1
-  return TARGET_HEIGHT / height
 }
 
 const INDICATOR_DISTANCE = 0.7
@@ -133,6 +123,7 @@ function CombatantModelView({ model, isPlayer, emissive, animationState }: {
 
   const { clonedScene, normalizedScale } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
+    normalizeFBXScales(clone)
     applyTeamMaterials(clone, isPlayer, emissive)
     return { clonedScene: clone, normalizedScale: computeNormalizedScale(clone) }
   }, [scene, isPlayer, emissive])

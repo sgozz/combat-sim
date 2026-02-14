@@ -4,15 +4,7 @@ import { useGLTF, OrbitControls, Stage } from '@react-three/drei'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { getModelEntry } from '../../data/modelRegistry'
-
-const TARGET_HEIGHT = 1.8
-
-function computeNormalizedScale(obj: THREE.Object3D): number {
-  const box = new THREE.Box3().setFromObject(obj)
-  const height = box.max.y - box.min.y
-  if (height <= 0) return 1
-  return TARGET_HEIGHT / height
-}
+import { normalizeFBXScales, computeNormalizedScale } from '../../utils/modelNormalize'
 
 type ModelPreviewProps = {
   modelId?: string
@@ -24,6 +16,7 @@ const PreviewModel = ({ modelId }: { modelId?: string }) => {
 
   const { clonedScene, normalizedScale } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
+    normalizeFBXScales(clone)
     clone.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
         child.castShadow = true

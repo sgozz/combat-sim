@@ -220,6 +220,7 @@ const goblin_warrior = createPF2Template({
   level: 1,
   classHP: 6,
   abilities: { strength: 12, dexterity: 16, constitution: 10, intelligence: 8, wisdom: 10, charisma: 8 },
+  modelId: 'monster_goblin',
   className: 'Warrior',
   ancestry: 'Goblin',
   skills: [
@@ -240,6 +241,7 @@ const skeleton_guard = createPF2Template({
   level: 1,
   classHP: 6,
   abilities: { strength: 14, dexterity: 12, constitution: 10, intelligence: 8, wisdom: 10, charisma: 8 },
+  modelId: 'monster_skeleton',
   className: 'Undead',
   ancestry: 'Skeleton',
   skills: [
@@ -259,6 +261,7 @@ const wolf = createPF2Template({
   level: 1,
   classHP: 8,
   abilities: { strength: 14, dexterity: 14, constitution: 12, intelligence: 4, wisdom: 12, charisma: 6 },
+  modelId: 'monster_wolf',
   className: 'Animal',
   ancestry: 'Wolf',
   skills: [
@@ -280,6 +283,7 @@ const kobold_scout = createPF2Template({
   level: 1,
   classHP: 6,
   abilities: { strength: 8, dexterity: 16, constitution: 10, intelligence: 12, wisdom: 10, charisma: 10 },
+  modelId: 'monster_goblin',
   className: 'Rogue',
   ancestry: 'Kobold',
   skills: [
