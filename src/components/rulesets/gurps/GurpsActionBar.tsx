@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { 
   Sword, Shield, Footprints, Crosshair, Eye, Brain, Hourglass, 
   Hand, User, Moon, Zap, Target, AlertTriangle, Flag, LogOut,
@@ -6,13 +6,16 @@ import {
   FileText, Scroll, Backpack, X, XCircle
 } from 'lucide-react'
 import type { ManeuverType, HitLocation, AOAVariant, AODVariant, WaitTrigger } from '../../../../shared/rulesets/gurps/types'
-import { getDefenseOptions, calculateDefenseValue, getPostureModifiers, calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
+import { calculateEncumbrance } from '../../../../shared/rulesets/gurps/rules'
 import { WaitTriggerPicker } from './WaitTriggerPicker'
 import { getSuccessChance } from '../../game/shared/useGameActions'
 import { getRulesetUiSlots } from '../../game/shared/rulesetUiSlots'
 import { rulesets, isGurpsPendingDefense, isGurpsCombatant } from '../../../../shared/rulesets'
 import { isGurpsCharacter } from '../../../../shared/rulesets/characterSheet'
 import type { ActionBarProps } from '../types'
+import { useDefenseOptions } from '../../../hooks/useDefenseOptions'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../../ui/ConfirmDialog'
 
 export const GurpsActionBar = ({ 
   matchState,
@@ -33,8 +36,6 @@ export const GurpsActionBar = ({
   const [showAODVariants, setShowAODVariants] = useState(false)
   const [showCharacterSheet, setShowCharacterSheet] = useState(false)
   const [showCombatLog, setShowCombatLog] = useState(false)
-  const [retreat, setRetreat] = useState(false)
-  const [dodgeAndDrop, setDodgeAndDrop] = useState(false)
   const [hitLocation, setHitLocation] = useState<HitLocation>('torso')
   const [deceptiveLevel, setDeceptiveLevel] = useState<0 | 1 | 2>(0)
   const [rapidStrike, setRapidStrike] = useState(false)
@@ -48,6 +49,21 @@ export const GurpsActionBar = ({
     }
   }, [])
 
+  const { confirm: confirmSurrender, dialogProps: surrenderDialogProps } = useConfirmDialog()
+
+  const handleSurrender = useCallback(async () => {
+    const confirmed = await confirmSurrender({
+      title: 'Surrender?',
+      message: 'Surrender and end the match?',
+      confirmLabel: 'Surrender',
+      variant: 'danger',
+    })
+    if (confirmed) {
+      onAction('surrender', { type: 'surrender' })
+      onLeaveLobby()
+    }
+  }, [confirmSurrender, onAction, onLeaveLobby])
+
   const closeAllPanels = useCallback(() => {
     setShowManeuvers(false)
     setShowCharacterSheet(false)
@@ -57,43 +73,19 @@ export const GurpsActionBar = ({
     setShowCombatLog(false)
   }, [])
 
-  useEffect(() => {
-    if (!matchState.pendingDefense) {
-      queueMicrotask(() => {
-        setRetreat(false)
-        setDodgeAndDrop(false)
-      })
-    }
-  }, [matchState.pendingDefense])
-
-  const defenseOptions = useMemo(() => {
-    if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) return null
-    const pd = matchState.pendingDefense
-    if (!pd || !isGurpsPendingDefense(pd)) return null
-    const derivedDodge = playerCharacter.derived.dodge
-    const baseOpts = getDefenseOptions(playerCharacter, derivedDodge)
-    const postureMods = getPostureModifiers(playerCombatant.posture)
-    
-    type ActiveDefenseType = 'dodge' | 'parry' | 'block'
-    const getFinalValue = (type: ActiveDefenseType, base: number) => {
-      return calculateDefenseValue(base, {
-        retreat,
-        dodgeAndDrop: type === 'dodge' ? dodgeAndDrop : false,
-        inCloseCombat: !!playerCombatant.inCloseCombatWith,
-        defensesThisTurn: playerCombatant.defensesThisTurn,
-        deceptivePenalty: pd.deceptivePenalty,
-        postureModifier: postureMods.defenseVsMelee,
-        defenseType: type
-      })
-    }
-
-    return {
-      dodge: getFinalValue('dodge', baseOpts.dodge),
-      parry: baseOpts.parry ? getFinalValue('parry', baseOpts.parry.value) : null,
-      block: baseOpts.block ? getFinalValue('block', baseOpts.block.value) : null,
-      canRetreat: !playerCombatant.retreatedThisTurn
-    }
-  }, [playerCharacter, playerCombatant, matchState.pendingDefense, retreat, dodgeAndDrop])
+  const gurpsChar = isGurpsCharacter(playerCharacter) ? playerCharacter : null
+  const gurpsCombatant = isGurpsCombatant(playerCombatant) ? playerCombatant : null
+  const gurpsPendingDefense = matchState.pendingDefense && isGurpsPendingDefense(matchState.pendingDefense)
+    ? matchState.pendingDefense : null
+  const { options: defenseOpts, retreat, setRetreat, dodgeAndDrop, setDodgeAndDrop } = useDefenseOptions(
+    gurpsChar, gurpsCombatant, gurpsPendingDefense
+  )
+  const defenseOptions = defenseOpts ? {
+    dodge: defenseOpts.dodge,
+    parry: defenseOpts.parry?.value ?? null,
+    block: defenseOpts.block?.value ?? null,
+    canRetreat: defenseOpts.canRetreat,
+  } : null
 
   if (!isGurpsCombatant(playerCombatant) || !isGurpsCharacter(playerCharacter)) {
     return <div>Error: GURPS component received non-GURPS data</div>
@@ -451,12 +443,7 @@ export const GurpsActionBar = ({
           <button 
             className="action-bar-maneuver-btn" 
             style={{ marginTop: '1rem', background: 'var(--bg-elevated)', borderColor: 'var(--accent-danger)', width: '100%' }}
-            onClick={() => {
-              if (confirm('Surrender and end the match?')) {
-                onAction('surrender', { type: 'surrender' })
-                onLeaveLobby()
-              }
-              }}
+            onClick={handleSurrender}
             >
               <span className="action-bar-icon"><Flag size={20} /></span>
               <span className="action-bar-label">Give Up</span>
@@ -706,6 +693,7 @@ export const GurpsActionBar = ({
           </div>
         </>
       )}
+      <ConfirmDialog {...surrenderDialogProps} />
     </>
   )
 }

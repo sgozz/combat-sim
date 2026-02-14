@@ -16,6 +16,8 @@ import { CombatToast } from './CombatToast'
 import { getRulesetUiSlots } from './shared/rulesetUiSlots'
 import { PF2ReactionModal } from '../rulesets/pf2/PF2ReactionModal'
 import { GameProvider } from '../../contexts/GameContext'
+import { useConfirmDialog } from '../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 import type { MatchState, Player, GridPosition, VisualEffect, PendingAction } from '../../../shared/types'
 import type { PendingSpellCast } from '../rulesets/types'
@@ -72,6 +74,8 @@ export const GameScreen = ({
 }: GameScreenProps) => {
   const { matchId } = useParams<{ matchId: string }>()
   void matchId
+
+  const { confirm: confirmLeave, dialogProps: leaveDialogProps } = useConfirmDialog()
 
   // Auto-center camera on turn change
   const [cameraMode, setCameraMode] = useState<'free' | 'follow' | 'overview'>('free')
@@ -179,10 +183,18 @@ export const GameScreen = ({
           <div className="game-header-left">
             <button 
               className="header-btn back-btn" 
-              onClick={() => {
-                if (!matchState || matchState.status === 'finished' || confirm('Leave the current game?')) {
+              onClick={async () => {
+                if (!matchState || matchState.status === 'finished') {
                   onLeaveLobby()
+                  return
                 }
+                const confirmed = await confirmLeave({
+                  title: 'Leave Game?',
+                  message: 'Leave the current game?',
+                  confirmLabel: 'Leave',
+                  variant: 'danger',
+                })
+                if (confirmed) onLeaveLobby()
               }}
               title="Back to Lobby List"
             >
@@ -338,6 +350,7 @@ export const GameScreen = ({
           currentPlayerName={player?.name}
           onReturnToDashboard={onLeaveLobby}
         />
+        <ConfirmDialog {...leaveDialogProps} />
     </div>
     </GameProvider>
   )
