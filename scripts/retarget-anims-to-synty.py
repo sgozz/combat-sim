@@ -66,6 +66,7 @@ ANIMATIONS_TO_TRANSFER = {
 
 SYNTY_GLB = '/home/fabio/dev/combat-sim/public/models/synty-starter/Characters.glb'
 UAL1_GLB = '/home/fabio/dev/combat-sim/public/models/quaternius/UAL1_Standard.glb'
+TEXTURE_PATH = '/home/fabio/dev/combat-sim/polygon-starter/Assets/Synty/PolygonStarter/Textures/PolygonStarter_Texture_01.png'
 OUTPUT_MALE = '/home/fabio/dev/combat-sim/public/models/synty-starter/SyntyBean_Male.glb'
 OUTPUT_FEMALE = '/home/fabio/dev/combat-sim/public/models/synty-starter/SyntyBean_Female.glb'
 
@@ -199,7 +200,45 @@ def main():
         if obj.type in ('LIGHT', 'CAMERA'):
             bpy.data.objects.remove(obj, do_unlink=True)
         elif obj.type == 'MESH' and obj not in (synty_male, synty_female):
+            print(f"  Removing extra mesh: {obj.name}")
             bpy.data.objects.remove(obj, do_unlink=True)
+
+    # Assign texture atlas to character meshes
+    if os.path.exists(TEXTURE_PATH):
+        print(f"\n  Assigning texture: {TEXTURE_PATH}")
+        img = bpy.data.images.load(TEXTURE_PATH)
+        for mesh_obj in [synty_male, synty_female]:
+            if mesh_obj is None:
+                continue
+            for slot in mesh_obj.material_slots:
+                mat = slot.material
+                if mat is None:
+                    continue
+                mat.use_nodes = True
+                bsdf = mat.node_tree.nodes.get('Principled BSDF')
+                if bsdf is None:
+                    continue
+                tex_node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+                tex_node.image = img
+                mat.node_tree.links.new(tex_node.outputs['Color'], bsdf.inputs['Base Color'])
+                print(f"    Textured: {mesh_obj.name} / {mat.name}")
+    else:
+        print(f"\n  WARNING: Texture not found at {TEXTURE_PATH}")
+
+    # Apply armature scale (FBX import leaves 0.01 scale on armature)
+    # This converts vertices from centimeters to meters in-place
+    print(f"\n  Applying armature scale: {list(synty_armature.scale)}")
+    bpy.context.view_layer.objects.active = synty_armature
+    synty_armature.select_set(True)
+    if synty_male:
+        synty_male.select_set(True)
+    if synty_female:
+        synty_female.select_set(True)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    # Deselect all after applying
+    for obj in bpy.context.scene.objects:
+        obj.select_set(False)
+    print(f"  Scale after apply: {list(synty_armature.scale)}")
 
     # Export Male
     print("\n=== Step 4: Export Male ===")
