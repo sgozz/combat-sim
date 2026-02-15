@@ -6,11 +6,12 @@ import { isPF2Character } from "../../../../shared/types";
 import type { Posture } from "../../../../shared/rulesets/gurps/types";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
-import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
+import { sendMessage, sendToMatch, getCharacterById, calculateFacing } from "../../helpers";
 
 type CombatantUpdate = {
   posture?: Posture;
   position?: { x: number; y: number; z: number };
+  facing?: number;
 };
 
 const updateCombatantActions = (
@@ -146,10 +147,12 @@ export const handlePF2Step = async (
     return;
   }
 
+  const newFacing = calculateFacing(actorCombatant.position, { x: payload.to.q, y: 0, z: payload.to.r });
   const updatedCombatants = match.combatants.map((c) =>
     c.playerId === player.id
       ? updateCombatantActions(c, 1, { 
-          position: { x: payload.to.q, y: c.position.y, z: payload.to.r } 
+          position: { x: payload.to.q, y: c.position.y, z: payload.to.r },
+          facing: newFacing,
         })
       : c
   );

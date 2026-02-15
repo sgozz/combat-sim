@@ -5,7 +5,7 @@ import { isPF2Combatant } from "../../../../shared/rulesets";
 import { getReachableSquares, gridToHex } from "../../../../shared/rulesets/pf2/rules";
 import { state } from "../../state";
 import { updateMatchState } from "../../db";
-import { sendMessage, sendToMatch, getCharacterById } from "../../helpers";
+import { sendMessage, sendToMatch, getCharacterById, calculateFacing } from "../../helpers";
 import { isPF2Character } from "../../../../shared/rulesets/characterSheet";
 import { getAoOReactors, executeAoOStrike } from "./reaction";
 import { isBlocked } from "../../../../shared/map/terrain";
@@ -153,9 +153,10 @@ export const handlePF2Stride = async (
         return;
       }
 
+      const newFacing = calculateFacing(actorCombatant.position, { x: payload.to.q, y: 0, z: payload.to.r });
       const movedCombatants = updatedMatch.combatants.map(c =>
         c.playerId === player.id
-          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r }, movementPath }
+          ? { ...c, position: { x: payload.to.q, y: c.position.y, z: payload.to.r }, facing: newFacing, movementPath }
           : c
       );
 
@@ -197,14 +198,16 @@ export const handlePF2Stride = async (
     return;
   }
 
+  const newFacing = calculateFacing(actorCombatant.position, { x: payload.to.q, y: 0, z: payload.to.r });
   const updatedCombatants = match.combatants.map((c) =>
     c.playerId === player.id
       ? {
-          ...c,
-          ...(isPF2Combatant(c) ? { actionsRemaining: c.actionsRemaining - 1 } : {}),
-          position: { x: payload.to.q, y: c.position.y, z: payload.to.r },
-          movementPath,
-        }
+            ...c,
+            ...(isPF2Combatant(c) ? { actionsRemaining: c.actionsRemaining - 1 } : {}),
+            position: { x: payload.to.q, y: c.position.y, z: payload.to.r },
+            facing: newFacing,
+            movementPath,
+          }
       : c
   );
 

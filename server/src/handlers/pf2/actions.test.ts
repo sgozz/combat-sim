@@ -28,11 +28,15 @@ vi.mock('../../db', () => ({
   updateMatchState: (...args: unknown[]) => mockUpdateMatchState(...args),
 }));
 
-vi.mock('../../helpers', () => ({
-  sendMessage: (...args: unknown[]) => mockSendMessage(...args),
-  sendToMatch: (...args: unknown[]) => mockSendToMatch(...args),
-  getCharacterById: (...args: unknown[]) => mockGetCharacterById(...args),
-}));
+vi.mock('../../helpers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../helpers')>();
+  return {
+    ...actual,
+    sendMessage: (...args: unknown[]) => mockSendMessage(...args),
+    sendToMatch: (...args: unknown[]) => mockSendToMatch(...args),
+    getCharacterById: (...args: unknown[]) => mockGetCharacterById(...args),
+  };
+});
 
 vi.mock('../../bot', () => ({
   scheduleBotTurn: vi.fn(),
