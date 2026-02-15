@@ -11,6 +11,7 @@ import {
   sendMessage,
   sendToMatch,
   getCharacterById,
+  calculateFacing,
   calculateGridDistance,
   getGridSystemForMatch,
   checkVictory,
@@ -373,11 +374,13 @@ export const resumeStrideAfterReaction = async (
     ? destResult.path.map((p: { q: number; r: number }) => ({ x: p.q, y: 0, z: p.r }))
     : undefined;
 
+  const newFacing = calculateFacing(triggerCombatant.position, { x: to.q, y: 0, z: to.r });
   const updatedCombatants = match.combatants.map(c =>
     c.playerId === pending.triggerId
       ? {
           ...c,
           position: { x: to.q, y: c.position.y, z: to.r },
+          facing: newFacing,
           movementPath,
         }
       : c
