@@ -18,6 +18,10 @@ export function removeStrayMeshes(root: THREE.Object3D): void {
 }
 
 export function computeNormalizedScale(obj: THREE.Object3D): number {
+  // SkinnedMesh.computeBoundingBox() uses bone.matrixWorld, which may be stale
+  // after SkeletonUtils.clone(). Force a full world matrix update so bone
+  // transforms are correct before measuring the bounding box.
+  obj.updateMatrixWorld(true)
   const box = new THREE.Box3().setFromObject(obj)
   const height = box.max.y - box.min.y
   if (height <= 0) return 1
