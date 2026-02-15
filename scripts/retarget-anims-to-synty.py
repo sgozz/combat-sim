@@ -64,7 +64,7 @@ ANIMATIONS_TO_TRANSFER = {
     'Spell_Simple_Shoot_Armature': 'Spell_Simple_Shoot',
 }
 
-SYNTY_GLB = '/home/fabio/dev/combat-sim/public/models/synty-starter/Characters.glb'
+SYNTY_FBX = '/home/fabio/dev/combat-sim/polygon-starter/Assets/Synty/PolygonStarter/Models/Characters.fbx'
 UAL1_GLB = '/home/fabio/dev/combat-sim/public/models/quaternius/UAL1_Standard.glb'
 TEXTURE_PATH = '/home/fabio/dev/combat-sim/polygon-starter/Assets/Synty/PolygonStarter/Textures/PolygonStarter_Texture_01.png'
 OUTPUT_MALE = '/home/fabio/dev/combat-sim/public/models/synty-starter/SyntyBean_Male.glb'
@@ -110,6 +110,19 @@ def export_glb(armature, mesh, actions, output_path):
         track.name = action.name
         strip = track.strips.new(action.name, int(action.frame_range[0]), action)
         strip.name = action.name
+
+    # Remove any stray meshes that aren't the target (e.g. Icosphere from UAL1 import)
+    for obj in list(bpy.context.scene.objects):
+        if obj.type == 'MESH' and obj != mesh and obj.parent != armature:
+            bpy.data.objects.remove(obj, do_unlink=True)
+    # Force-purge ALL orphan mesh data blocks so they don't leak into the GLB
+    for m in list(bpy.data.meshes):
+        if m.users == 0:
+            bpy.data.meshes.remove(m)
+    # Also force-remove named strays (Icosphere from UAL1 leaks through glTF exporter)
+    for name in ['Icosphere', 'Cube', 'Sphere']:
+        if name in bpy.data.meshes and bpy.data.meshes[name].users <= 1:
+            bpy.data.meshes.remove(bpy.data.meshes[name])
 
     # Deselect all, then select only what we want
     for obj in bpy.context.scene.objects:
@@ -162,9 +175,14 @@ def main():
     for obj in list(bpy.context.scene.objects):
         bpy.data.objects.remove(obj, do_unlink=True)
 
-    # Step 3: Import Synty characters into same scene (actions survive!)
+    # Remove orphan mesh data blocks (Icosphere etc.) so they don't leak into exports
+    for mesh in list(bpy.data.meshes):
+        if mesh.users == 0:
+            bpy.data.meshes.remove(mesh)
+
+    # Step 3: Import Synty characters from FBX (actions survive in bpy.data!)
     print("\n=== Step 3: Load Synty characters ===")
-    bpy.ops.import_scene.gltf(filepath=SYNTY_GLB)
+    bpy.ops.import_scene.fbx(filepath=SYNTY_FBX)
 
     # Verify actions survived
     action_names = [a.name for a in bpy.data.actions if a.name in ANIMATIONS_TO_TRANSFER.values()]

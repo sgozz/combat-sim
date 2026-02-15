@@ -3,6 +3,20 @@ import * as THREE from 'three'
 const TARGET_HEIGHT = 1.8
 const FBX_SCALE_THRESHOLD = 10
 
+const STRAY_NODE_NAMES = new Set(['Icosphere', 'Cube', 'Sphere', 'Plane'])
+
+export function removeStrayMeshes(root: THREE.Object3D): void {
+  const toRemove: THREE.Object3D[] = []
+  root.traverse((node) => {
+    if (STRAY_NODE_NAMES.has(node.name)) {
+      toRemove.push(node)
+    }
+  })
+  for (const node of toRemove) {
+    node.removeFromParent()
+  }
+}
+
 export function computeNormalizedScale(obj: THREE.Object3D): number {
   const box = new THREE.Box3().setFromObject(obj)
   const height = box.max.y - box.min.y

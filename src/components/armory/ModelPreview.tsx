@@ -4,7 +4,7 @@ import { useGLTF, OrbitControls, Stage } from '@react-three/drei'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { getModelEntry } from '../../data/modelRegistry'
-import { normalizeFBXScales, computeNormalizedScale } from '../../utils/modelNormalize'
+import { normalizeFBXScales, computeNormalizedScale, removeStrayMeshes } from '../../utils/modelNormalize'
 
 type ModelPreviewProps = {
   modelId?: string
@@ -16,6 +16,7 @@ const PreviewModel = ({ modelId }: { modelId?: string }) => {
 
   const { clonedScene, normalizedScale } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
+    removeStrayMeshes(clone)
     normalizeFBXScales(clone)
     clone.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {

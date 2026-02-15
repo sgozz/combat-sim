@@ -9,7 +9,7 @@ import { isGurpsCharacter, isPF2Character } from '../../../shared/rulesets/chara
 import { isGurpsCombatant } from '../../../shared/rulesets'
 import { getModelEntry, getAllPreloadPaths } from '../../data/modelRegistry'
 import type { AnimationKey, ModelEntry } from '../../data/modelRegistry'
-import { normalizeFBXScales, computeNormalizedScale } from '../../utils/modelNormalize'
+import { normalizeFBXScales, computeNormalizedScale, removeStrayMeshes } from '../../utils/modelNormalize'
 import * as THREE from 'three'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -123,6 +123,7 @@ function CombatantModelView({ model, isPlayer, emissive, animationState }: {
 
   const { clonedScene, normalizedScale } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
+    removeStrayMeshes(clone)
     normalizeFBXScales(clone)
     applyTeamMaterials(clone, isPlayer, emissive)
     return { clonedScene: clone, normalizedScale: computeNormalizedScale(clone) }
