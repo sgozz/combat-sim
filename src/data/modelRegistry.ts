@@ -1,6 +1,6 @@
 export type AnimationKey = 'idle' | 'walk' | 'run' | 'death' | 'dodge' | 'attack' | 'hit' | 'grapple' | 'crouch' | 'spell'
 
-export type AnimationLibrary = 'classic' | 'quaternius' | 'monster'
+export type AnimationLibrary = 'classic' | 'quaternius' | 'monster' | 'synty'
 
 export type WeaponType = 'sword' | 'dagger' | 'staff' | 'bow' | 'unarmed' | 'spell'
 
@@ -159,6 +159,24 @@ export const MODEL_REGISTRY: Record<string, ModelEntry> = {
     rotationOffset: 0,
     animations: { ...UAL1_ANIMS },
     library: 'quaternius',
+    weaponType: 'sword',
+  },
+  synty_bean_male: {
+    id: 'synty_bean_male',
+    label: 'Bean Male (Synty)',
+    path: '/models/synty-starter/SyntyBean_Male.glb',
+    rotationOffset: 0,
+    animations: { ...UAL1_ANIMS },
+    library: 'synty',
+    weaponType: 'sword',
+  },
+  synty_bean_female: {
+    id: 'synty_bean_female',
+    label: 'Bean Female (Synty)',
+    path: '/models/synty-starter/SyntyBean_Female.glb',
+    rotationOffset: 0,
+    animations: { ...UAL1_ANIMS },
+    library: 'synty',
     weaponType: 'sword',
   },
 
@@ -353,4 +371,8 @@ export function getQuaterniusModels(): ModelEntry[] {
 
 export function getMonsterModels(): ModelEntry[] {
   return getModelsByLibrary('monster')
+}
+
+export function getSyntyModels(): ModelEntry[] {
+  return getModelsByLibrary('synty')
 }
